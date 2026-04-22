@@ -2,19 +2,25 @@ import os
 from flask import Flask, render_template
 from config import Config
 from core.models import db
+from jinja2 import ChoiceLoader, FileSystemLoader
 
 def create_app():
-    # نحدد هنا أن المجلد الرئيسي للقوالب هو 'templates'
-    app = Flask(__name__, template_folder='templates')
+    app = Flask(__name__)
     app.config.from_object(Config)
 
+    # 1. تهيئة قاعدة البيانات
     db.init_app(app)
 
-    # استيراد البلوبرنت داخل الدالة لتجنب مشاكل المسارات
+    # 2. إجبار Flask على البحث في كل مجلدات الـ templates
+    app.jinja_loader = ChoiceLoader([
+        FileSystemLoader(os.path.join(os.getcwd(), 'templates')),
+        FileSystemLoader(os.path.join(os.getcwd(), 'admin_panel/templates')),
+        FileSystemLoader(os.path.join(os.getcwd(), 'supplier_panel/templates')),
+    ])
+
+    # 3. تسجيل البوابات
     from admin_panel.routes import admin_bp
     from supplier_panel.routes import supplier_bp
-    
-    # تسجيل البوابات
     app.register_blueprint(admin_bp)
     app.register_blueprint(supplier_bp)
 
@@ -22,7 +28,7 @@ def create_app():
         try:
             db.create_all()
         except Exception as e:
-            print(f"Database connection error: {e}")
+            print(f"Database error: {e}")
 
     @app.route('/')
     def index():
