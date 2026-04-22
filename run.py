@@ -1,31 +1,20 @@
 from flask import Flask, render_template
-from core.models import db
-import os
+from config import Config
 
-def create_app():
-    app = Flask(__name__, 
-                template_folder='admin_panel/templates', 
-                static_folder='static')
-    
-    # رابط قاعدة البيانات السحابية (Render)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://mahjoub_online_1_db_user:S7dxtVGcKwrsM1QEzGOuPPcRL8dKxgXk@dpg-d79tuthr0fns73epej4g-a/mahjoub_online_1_db'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = 'mahjoub_2026_key'
+app = Flask(__name__)
+app.config.from_object(Config)
 
-    db.init_app(app)
+@app.route('/')
+def home():
+    return """
+    <div style="text-align:center; margin-top:100px; font-family:Arial;">
+        <h1 style="color:#D4AF37;">Mahjoub Online - محجوب أونلاين</h1>
+        <p style="color:#555;">النظام يعمل بنجاح على Railway!</p>
+        <div style="color:gold; font-size:50px;">★</div>
+    </div>
+    """
 
-    @app.route('/')
-    def index():
-        return render_template('admin/login.html')
-
-    return app
-
-if __name__ == '__main__':
-    app = create_app()
-    with app.app_context():
-        print("⏳ جاري تنظيف وتجهيز قاعدة بيانات Render...")
-        db.drop_all()
-        db.create_all()
-        print("✅ تم إنشاء الهيكل بنجاح أونلاين!")
-    
-    app.run(debug=True, port=5000)
+if __name__ == "__main__":
+    # Railway يطلب تشغيل التطبيق على البورت 8080 غالباً
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
