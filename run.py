@@ -1,42 +1,53 @@
+import os
 from flask import Flask
-from admin_panel.models import db, User  # استيراد القاعدة والموديل
+from admin_panel.models import db, User
 from admin_panel.admin_routes import admin_bp
 from flask_login import LoginManager
 
 app = Flask(__name__)
 
-# 1. إعدادات المفتاح السري وقاعدة البيانات
-app.config['SECRET_KEY'] = 'mahjoub_secret_key_2026' # مفتاح تشفير الجلسات
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mahjoub_online.db'
+# 1. إعدادات الأمان وقاعدة البيانات
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'mahjoub_secret_key_2026')
+
+# رابط قاعدة البيانات من Render (تأكد أن الرابط يبدأ بـ postgresql:// وليس postgres://)
+uri = "رابط_القاعدة_الذي_أرسلته_هنا" 
+if uri and uri.startswith("postgres://"):
+    uri = uri.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# 2. ربط قاعدة البيانات بالتطبيق
+# 2. ربط قاعدة البيانات
 db.init_app(app)
 
-# 3. إعداد نظام إدارة الدخول (Login Manager)
+# 3. نظام إدارة الدخول
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'admin.login' # توجيه المستخدم لهنا إذا حاول الدخول دون إذن
+login_manager.login_view = 'admin.login'
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# 4. تسجيل الـ Blueprint الخاص بالإدارة
+# 4. تسجيل الـ Blueprint
 app.register_blueprint(admin_bp, url_prefix='/admin')
 
-# 5. إنشاء قاعدة البيانات وإضافة "علي محجوب" إذا لم يكن موجوداً
+# 5. تهيئة الجداول والمستخدم الأول
 with app.app_context():
-    db.create_all()  # إنشاء الملف والجداول
-    
-    # كود التحقق من وجود القائد
-    admin_user = User.query.filter_by(username='علي محجوب').first()
-    if not admin_user:
-        new_admin = User(username='علي محجوب', role='SuperAdmin')
-        new_admin.set_password('123456') # غيرها لاحقاً
-        db.session.add(new_admin)
-        db.session.commit()
-        print("✅ تم إنشاء حساب القائد: علي محجوب")
+    try:
+        db.create_all()
+        # إضافة القائد علي محجوب إذا لم يكن موجوداً
+        admin_user = User.query.filter_by(username='علي محجوب').first()
+        if not admin_user:
+            new_admin = User(username='علي محجوب', role='SuperAdmin')
+            new_admin.set_password('ضع_كلمة_مرورك_هنا') # غيرها لكلمة سر قوية
+            db.session.add(new_admin)
+            db.session.commit()
+            print("✅ تم ربط القاعدة بنجاح وإنشاء حساب القائد.")
+    except Exception as e:
+        print(f"❌ Database error: {e}")
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Render يطلب المنفذ 8080 غالباً
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
