@@ -1,81 +1,61 @@
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>دخول الإدارة | محجوب أونلاين</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background-color: #0a0a0a; /* أسود عميق */
-            color: #d4af37; /* ذهبي ملكي */
-            font-family: 'Cairo', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-        }
-        /* خلفية هندسية بسيطة (المثلثات) */
-        .geometry-bg {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(45deg, #0f0f0f 25%, transparent 25%) -50px 0,
-                        linear-gradient(-45deg, #0f0f0f 25%, transparent 25%) -50px 0;
-            background-size: 100px 100px;
-            z-index: -1;
-            opacity: 0.5;
-        }
-        .login-card {
-            background: rgba(20, 20, 20, 0.9);
-            padding: 40px;
-            border: 1px solid #d4af37;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
-            text-align: center;
-            width: 350px;
-        }
-        .eye-icon {
-            font-size: 50px;
-            margin-bottom: 20px;
-            /* هنا يمكن وضع أيقونة العين داخل المثلث */
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            color: white;
-            border-radius: 5px;
-            text-align: center;
-        }
-        button {
-            background: #d4af37;
-            color: black;
-            border: none;
-            padding: 12px 30px;
-            cursor: pointer;
-            font-weight: bold;
-            border-radius: 5px;
-            transition: 0.3s;
-        }
-        button:hover {
-            box-shadow: 0 0 15px #d4af37;
-        }
-    </style>
-</head>
-<body>
-    <div class="geometry-bg"></div>
-    <div class="login-card">
-        <div class="eye-icon">👁️</div> <h2>محجوب أونلاين</h2>
-        <form>
-            <input type="text" placeholder="اسم المستخدم (بالعربي)" required>
-            <input type="password" placeholder="كلمة المرور" required>
-            <br><br>
-            <button type="submit">دخول السيادة</button>
-        </form>
-    </div>
-</body>
-</html>
+# تعريف كائن قاعدة البيانات
+db = SQLAlchemy()
+
+class User(db.Model):
+    """جدول المستخدمين: يدعم المدير العام، المورد، والموظف"""
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False) # هنا نكتب الاسم بالعربي
+    password = db.Column(db.String(255), nullable=False) # كلمة المرور مشفرة
+    
+    # الصلاحيات: 'admin' (أنت), 'supplier' (المورد), 'employee' (موظف المورد)
+    role = db.Column(db.String(20), nullable=False, default='employee')
+    
+    # ربط المستخدم بمورد معين (إذا كان موظفاً أو صاحب شركة توريد)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
+
+class Supplier(db.Model):
+    """جدول الموردين (شركاء النجاح)"""
+    __tablename__ = 'suppliers'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False) # اسم شركة المورد
+    currency = db.Column(db.String(10), default='YER') # العملة: يمني، دولار، إلخ
+    
+    # المحفظة المالية (الرصيد المستحق للمورد)
+    balance = db.Column(db.Float, default=0.0)
+    
+    # علاقة عكسية لجلب جميع موظفي هذا المورد
+    staff = db.relationship('User', backref='employer', lazy=True)
+    # علاقة لجلب جميع الطلبات المحولة لهذا المورد
+    assigned_orders = db.relationship('Order', backref='assigned_supplier', lazy=True)
+
+class Order(db.Model):
+    """جدول الطلبات القادمة من قمرة (التعامل برقم الطلب فقط)"""
+    __tablename__ = 'orders'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(db.String(50), unique=True, nullable=False) # رقم الطلب من قمرة
+    
+    amount_sar = db.Column(db.Float, nullable=False) # المبلغ الأصلي بالريال السعودي
+    amount_local = db.Column(db.Float) # المبلغ بعد تحويله لعملة المورد
+    
+    # ربط الطلب بالمورد الذي اخترته أنت (تحويل المسار)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
+    
+    # حالة الطلب: (قيد المراجعة، جاري التنفيذ، مكتمل)
+    status = db.Column(db.String(30), default='قيد المراجعة')
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class SystemLog(db.Model):
+    """جدول سجل العمليات (لسرية وتحركات النظام)"""
+    __tablename__ = 'system_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    action = db.Column(db.String(255)) # وصف العملية (مثلاً: تحويل طلب رقم X للمورد Y)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
