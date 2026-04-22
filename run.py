@@ -1,20 +1,29 @@
-from flask import Flask, render_template
+import os
+from flask import Flask
 from config import Config
+from core.models import db
 
-app = Flask(__name__)
-app.config.from_object(Config)
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
 
-@app.route('/')
-def home():
-    return """
-    <div style="text-align:center; margin-top:100px; font-family:Arial;">
-        <h1 style="color:#D4AF37;">Mahjoub Online - محجوب أونلاين</h1>
-        <p style="color:#555;">النظام يعمل بنجاح على Railway!</p>
-        <div style="color:gold; font-size:50px;">★</div>
-    </div>
-    """
+    # تهيئة قاعدة البيانات مع التطبيق
+    db.init_app(app)
+
+    with app.app_context():
+        # إنشاء الجداول في قاعدة البيانات إذا لم تكن موجودة
+        db.create_all()
+        print("قاعدة البيانات جاهزة والجداول تم إنشاؤها بنجاح!")
+
+    @app.route('/')
+    def index():
+        return "<h1>محجوب أونلاين - السيرفر يعمل وقاعدة البيانات متصلة!</h1>"
+
+    return app
+
+app = create_app()
 
 if __name__ == "__main__":
-    # Railway يطلب تشغيل التطبيق على البورت 8080 غالباً
+    # الحصول على المنفذ (Port) من رويال أو استخدام 8080 كافتراضي
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
