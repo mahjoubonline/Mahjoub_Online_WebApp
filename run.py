@@ -1,6 +1,6 @@
-import os
-from core import create_app
+from flask_sqlalchemy import SQLAlchemy
 
+db = SQLAlchemy()
 # 1. تهيئة التطبيق
 app = create_app()
 
