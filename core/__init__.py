@@ -21,3 +21,7 @@ def create_app(config_class=Config):
             print(f"--- ❌ DB Error: {str(e)} ---")
 
     return app
+from core.currency_engine import currency_engine
+
+# مثال: تحويل 100 ريال سعودي لليمني
+yemeni_amount = currency_engine.convert(100, 'SAR', 'YER')
