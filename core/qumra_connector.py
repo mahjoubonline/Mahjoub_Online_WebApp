@@ -1,61 +1,54 @@
 import requests
-from flask import current_app
+import os
+from .models import db, Product, Supplier
 
-class QumraEngine:
-    """محرك الربط مع منصة قمرة عبر GraphQL"""
-    
-    @staticmethod
-    def get_headers():
-        """تجهيز ترويسة المصادقة باستخدام مفتاحك"""
-        return {
-            "Authorization": f"Bearer {current_app.config['QUMRA_API_KEY']}",
-            "Content-Type": "application/json"
+class QumraSync:
+    def __init__(self):
+        self.api_key = os.environ.get('QUMRA_API_KEY')
+        self.api_url = os.environ.get('QUMRA_API_URL')
+        self.headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json'
         }
 
-    @classmethod
-    def fetch_products(cls):
-        """سحب قائمة المنتجات من قمرة لمراجعتها"""
-        query = """
-        query {
-          findAllProducts {
-            id
-            name
-            price
-            images {
-              url
-            }
-          }
-        }
-        """
+    def fetch_and_sync(self):
+        """جلب المنتجات من قمرة وتخزينها في Render"""
+        if not self.api_key or not self.api_url:
+            return False, "بيانات الربط مع قمرة مفقودة في إعدادات رويال"
+
         try:
-            response = requests.post(
-                current_app.config['QUMRA_API_URL'],
-                json={'query': query},
-                headers=cls.get_headers(),
-                timeout=10 # رشيقة: لا تنتظر أكثر من 10 ثوانٍ
-            )
-            if response.status_code == 200:
-                return response.json().get('data', {}).get('findAllProducts', [])
-            return []
-        except Exception as e:
-            print(f"Error fetching from Qumra: {e}")
-            return []
+            # طلب البيانات من قمرة (هنا نستخدم GraphQL كما يظهر في رابطك)
+            query = """
+            {
+              products(first: 10) {
+                nodes {
+                  id
+                  name
+                  price
+                }
+              }
+            }
+            """
+            response = requests.post(self.api_url, json={'query': query}, headers=self.headers)
+            data = response.json()
 
-    @classmethod
-    def sync_order_status(cls, qumra_order_id, status):
-        """تحديث حالة الطلب في قمرة (مثل: تم التجهيز)"""
-        mutation = """
-        mutation($id: ID!, $status: String!) {
-          updateOrderStatus(id: $id, status: $status) {
-            id
-            status
-          }
-        }
-        """
-        variables = {"id": qumra_order_id, "status": status}
-        response = requests.post(
-            current_app.config['QUMRA_API_URL'],
-            json={'query': mutation, 'variables': variables},
-            headers=cls.get_headers()
-        )
-        return response.status_code == 200
+            products = data.get('data', {}).get('products', {}).get('nodes', [])
+            
+            for item in products:
+                # التأكد إذا كان المنتج موجوداً مسبقاً لتحديثه أو إضافته
+                existing = Product.query.filter_by(qumra_id=item['id']).first()
+                if not existing:
+                    new_prod = Product(
+                        qumra_id=item['id'],
+                        name=item['name'],
+                        price=float(item['price'])
+                    )
+                    db.session.add(new_prod)
+            
+            db.session.commit()
+            return True, f"تمت مزامنة {len(products)} منتج بنجاح!"
+        
+        except Exception as e:
+            return False, f"خطأ أثناء المزامنة: {str(e)}"
+
+qumra_manager = QumraSync()
