@@ -1,12 +1,9 @@
 import os
-from core import create_app, db
+from core import create_app
 
-# إنشاء التطبيق
 app = create_app()
 
 if __name__ == '__main__':
-    # الحصول على المنفذ (Port) من نظام التشغيل
+    # Railway يمرر المنفذ عبر متغير PORT، وإذا لم يجده سيستخدم 8080 كما حددت أنت
     port = int(os.environ.get("PORT", 8080))
-    
-    # تشغيل السيرفر
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port)
