@@ -1,22 +1,19 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from core import create_app, db
 import os
 
-db = SQLAlchemy()
+# إنشاء نسخة التطبيق
+app = create_app()
 
-def create_app():
-    app = Flask(__name__)
+# كود اختياري: إنشاء الجداول في قاعدة البيانات إذا لم تكن موجودة
+with app.app_context():
+    try:
+        db.create_all()
+        print("✅ Database tables checked/created successfully.")
+    except Exception as e:
+        print(f"⚠️ Note: Database connection failed during startup: {e}")
 
-    # جلب الرابط من المتغيرات التي وضعناها في رويال
-    database_url = os.environ.get('DATABASE_URL')
-
-    # تصحيح الرابط إذا كان يبدأ بـ postgres:// (ضروري لـ SQLAlchemy 3+)
-    if database_url and database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
-
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-    db.init_app(app)
-
-    return app
+if __name__ == "__main__":
+    # الحصول على المنفذ من إعدادات البيئة (مهم لـ Railway)
+    port = int(os.environ.get("PORT", 8080))
+    # تشغيل التطبيق محلياً للتجربة
+    app.run(host='0.0.0.0', port=port)
