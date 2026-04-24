@@ -1,28 +1,25 @@
 from core import create_app, db
 import os
 
-# 1. إنشاء نسخة التطبيق من دالة المصنع (Factory Function)
-# تأكد أن دالة create_app تقوم بتسجيل admin_bp في ملف core/__init__.py
+# 1. إنشاء التطبيق
+# دالة create_app هي التي تقوم بربط الـ Blueprints (الإدارة والموردين)
 app = create_app()
 
-# 2. التأكد من وجود الجداول عند الإقلاع
-# هذه الخطوة حاسمة لضمان أن قاعدة بيانات Render جاهزة لاستقبال البيانات
+# 2. التأكد من إنشاء الجداول في قاعدة بيانات Render عند الإقلاع
 with app.app_context():
     try:
-        # الأمر db.create_all() ينشئ الجداول (Products, Suppliers, etc.) إذا لم تكن موجودة
         db.create_all()
-        print("✅ Database connection verified and tables are ready.")
+        print("✅ [Database] Connection verified and tables are ready.")
     except Exception as e:
-        # في حال وجود خطأ في DATABASE_URL سيظهر هنا في السجلات
-        print(f"⚠️ Startup Note: Could not connect to database or create tables: {e}")
+        print(f"⚠️ [Database] Connection issue: {e}")
 
 if __name__ == "__main__":
-    # 3. الحصول على المنفذ (Port) من المتغيرات البيئية لـ Railway
-    # إذا لم يجد Railway المنفذ، سيستخدم 8080 كافتراضي
+    # 3. الحصول على المنفذ من بيئة تشغيل Railway
     port = int(os.environ.get("PORT", 8080))
     
-    # 4. تشغيل التطبيق في وضع الإنتاج
-    # host='0.0.0.0' ضروري جداً لكي يظهر الموقع على الإنترنت
-    # debug=False يُفضل استخدامه عند الرفع الفعلي لضمان استقرار السيرفر
-    print(f"🚀 Mahjoub Online is starting on port {port}...")
+    # 4. التشغيل الرسمي للموقع
+    # host='0.0.0.0' ضروري جداً ليتمكن الجمهور من دخول الموقع
+    print(f"🚀 Mahjoub Online is running on port {port}...")
+    
+    # نضع debug=False في الرفع الفعلي (Production) لضمان الأمان والسرعة
     app.run(host='0.0.0.0', port=port, debug=False)
