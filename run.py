@@ -1,38 +1,23 @@
 from core import create_app, db
-from flask import render_template, jsonify
 import os
 
-# إنشاء نسخة التطبيق
+# 1. إنشاء نسخة التطبيق من دالة المصنع
 app = create_app()
 
-# --- [ قسم المسارات الاختبارية والأساسية ] ---
-
-@app.route('/')
-def home():
-    """الصفحة الرئيسية للمتجر"""
-    return "<h1>مرحباً بك في محجوب أونلاين</h1><p>السيرفر يعمل بنجاح!</p>"
-
-@app.route('/test-db')
-def test_db():
-    """مسار لاختبار الاتصال بقاعدة البيانات"""
-    try:
-        db.engine.connect()
-        return jsonify({"status": "success", "message": "اتصال قاعدة البيانات سليم 100%"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-# --- [ نهاية المسارات ] ---
-
-# كود إنشاء الجداول
+# 2. التأكد من وجود الجداول عند الإقلاع (اختياري ولكن مفيد في رندر)
 with app.app_context():
     try:
+        # هذا الأمر لن يمسح البيانات القديمة، سيفقط ينشئ الجداول الناقصة
         db.create_all()
-        print("✅ Database tables checked/created successfully.")
+        print("✅ Database connection verified and tables are ready.")
     except Exception as e:
-        print(f"⚠️ Note: Database connection failed during startup: {e}")
+        print(f"⚠️ Startup Note: Could not connect to database or create tables: {e}")
 
 if __name__ == "__main__":
-    # الحصول على المنفذ من إعدادات البيئة (مهم جداً لـ Railway)
+    # 3. الحصول على المنفذ من المتغيرات البيئية (ضروري جداً لـ Railway)
+    # القيمة الافتراضية 8080 هي المعتمدة في أغلب إعداداتك
     port = int(os.environ.get("PORT", 8080))
-    # تشغيل التطبيق
-    app.run(host='0.0.0.0', port=port)
+    
+    # 4. تشغيل التطبيق
+    # host='0.0.0.0' تسمح باستقبال الاتصالات الخارجية من الويب
+    app.run(host='0.0.0.0', port=port, debug=False)س
