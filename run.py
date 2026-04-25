@@ -7,14 +7,14 @@ app = create_app()
 # 2. إدارة قاعدة البيانات وإنشاء الحسابات السيادية
 with app.app_context():
     try:
-        # ملاحظة للقائد: تفعيل drop_all سيقوم بمسح الجداول القديمة وبناء الجديدة بناءً على التقسيم الجديد
-        # db.drop_all() 
+        # ⚠️ الإجراء الجراحي: تفعيل المسح الشامل لتصحيح خطأ "column password does not exist"
+        db.drop_all() 
         
-        # إنشاء الجداول بناءً على الملفات الموزعة (user, supplier, product)
+        # إنشاء الجداول بناءً على الهيكل الموزع الجديد (user, supplier, product)
         db.create_all()
-        print("✅ [Database] تم مزامنة الهيكل الموزع (MAH-9046) بنجاح.")
+        print("✅ [Database] تم تصفير الهيكل القديم ومزامنة الهيكل الجديد (MAH-9046) بنجاح.")
 
-        # --- التعديل هنا: استيراد الموديلات من مساراتها الجديدة داخل المجلد ---
+        # استيراد الموديلات من المسارات الجديدة المقسمة
         from core.models.user import User
         from core.models.supplier import Supplier
         
