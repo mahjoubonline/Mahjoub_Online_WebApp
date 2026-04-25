@@ -1,12 +1,23 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_user, logout_user, login_required, current_user
+from core import db # تأكد من استيراد db من مكانها الصحيح
 import os
 
-# 1. إعداد مسار القوالب
+# 1. إعداد المسار
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 admin_bp = Blueprint('admin_panel', __name__, template_folder=template_dir)
 
-# 2. لوحة التحكم (محمية بـ @login_required)
+# --- معالج السياق لإظهار التنبيهات في الشريط الجانبي ---
+@admin_bp.context_processor
+def inject_counts():
+    from core.models import Supplier
+    try:
+        pending_count = Supplier.query.filter_by(is_approved=False).count()
+        return dict(pending_suppliers_count=pending_count)
+    except:
+        return dict(pending_suppliers_count=0)
+
+# 2. لوحة التحكم (الرئيسية)
 @admin_bp.route('/', strict_slashes=False)
 @login_required
 def dashboard():
@@ -14,15 +25,35 @@ def dashboard():
     try:
         s_count = Supplier.query.count()
         p_count = Product.query.count()
-        return render_template('dashboard.html', s_count=s_count, p_count=p_count)
+        # جلب أحدث الموردين للعرض السريع
+        latest_suppliers = Supplier.query.order_by(Supplier.created_at.desc()).limit(5).all()
+        return render_template('dashboard.html', s_count=s_count, p_count=p_count, latest_suppliers=latest_suppliers)
     except Exception as e:
         print(f"⚠️ خطأ في الإحصائيات: {e}")
         return render_template('dashboard.html', s_count=0, p_count=0)
 
-# 3. بوابة الولوج السيادي (برج الرقابة المركزية)
+# 3. إدارة الموردين واعتمادهم (القسم الجديد)
+@admin_bp.route('/suppliers/pending', strict_slashes=False)
+@login_required
+def manage_suppliers():
+    from core.models import Supplier
+    # جلب الموردين الذين ينتظرون الاعتماد
+    pending_suppliers = Supplier.query.filter_by(is_approved=False).all()
+    return render_template('admin_suppliers_management.html', suppliers=pending_suppliers)
+
+@admin_bp.route('/suppliers/approve/<int:supplier_id>')
+@login_required
+def approve_supplier(supplier_id):
+    from core.models import Supplier
+    supplier = Supplier.query.get_or_404(supplier_id)
+    supplier.is_approved = True
+    db.session.commit()
+    flash(f'✅ تم منح الاعتماد السيادي للمورد {supplier.name}', 'success')
+    return redirect(url_for('admin_panel.manage_suppliers'))
+
+# 4. بوابة الولوج السيادي
 @admin_bp.route('/login', methods=['GET', 'POST'], strict_slashes=False)
 def login():
-    # إذا كان القائد مسجلاً دخوله بالفعل، يذهب للداشبورد مباشرة
     if current_user.is_authenticated:
         return redirect(url_for('admin_panel.dashboard'))
 
@@ -31,12 +62,10 @@ def login():
         password = request.form.get('password')
 
         from core.models import User
-        # البحث عن القائد في قاعدة البيانات
         user = User.query.filter_by(username=username).first()
 
-        # التحقق من الهوية (ملاحظة: يفضل استخدام werkzeug.security لاحقاً لتشفير الباسورد)
-        if user and user.password == password:
-            login_user(user) # تثبيت الجلسة أمنياً
+        if user and user.password == password: # يفضل تشفيرها لاحقاً
+            login_user(user)
             flash('أهلاً بك أيها القائد في برج الرقابة', 'success')
             return redirect(url_for('admin_panel.dashboard'))
         else:
@@ -44,7 +73,7 @@ def login():
             
     return render_template('login.html')
 
-# 4. المزامنة (محمية أيضاً)
+# 5. المزامنة والمنتجات
 @admin_bp.route('/sync_now', strict_slashes=False)
 @login_required
 def sync_now():
@@ -52,35 +81,12 @@ def sync_now():
         from core.qumra_sync import qumra_manager
         live_products = qumra_manager.fetch_live_products(limit=15)
         return render_template('product_review.html', products=live_products)
-    except Exception:
+    except:
         return render_template('product_review.html', products=[])
 
-# 5. تسجيل الخروج وتأمين البرج
 @admin_bp.route('/logout')
 @login_required
 def logout():
     logout_user()
     flash('تم تأمين النظام وتسجيل الخروج بنجاح', 'info')
     return redirect(url_for('admin_panel.login'))
-@admin_bp.route('/product/<int:id>', methods=['GET', 'POST'])
-@login_required
-def edit_product(id):
-    product = Product.query.get_or_404(id)
-    # جلب بيانات المورد لعرض المحفظة
-    supplier = Supplier.query.get(product.supplier_id)
-    
-    if request.method == 'POST':
-        # صلاحيات الإدارة المطلقة في التعديل
-        product.name = request.form.get('name')
-        product.description = request.form.get('description')
-        product.original_price = float(request.form.get('original_price')) # تعديل التكلفة
-        product.sale_price = float(request.form.get('sale_price'))         # تعديل سعر البيع
-        product.category = request.form.get('category')
-        product.image_url = request.form.get('image_url')
-        product.is_synced = 'is_synced' in request.form # تفعيل المزامنة مع قمرة
-        
-        db.session.commit()
-        flash(f'✅ تم تحديث بيانات المنتج {product.name} بنجاح!', 'success')
-        return redirect(url_for('admin_panel.dashboard'))
-
-    return render_template('product_detail.html', product=product, supplier=supplier)
