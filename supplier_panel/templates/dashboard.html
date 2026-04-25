@@ -32,6 +32,7 @@
         position: relative;
         overflow: hidden;
         transition: 0.4s;
+        cursor: pointer;
     }
     
     .wallet-card-main:hover {
@@ -39,18 +40,16 @@
         transform: translateY(-5px);
     }
 
-    /* 👁️ اللمسة الهندسية (الميزان الشفاف) */
     .masonic-bg {
         position: absolute;
         top: 0; right: 0; width: 100%; height: 100%;
         display: flex; align-items: center; justify-content: center;
-        opacity: 0.04; /* شفافية فائقة للغموض */
+        opacity: 0.04;
         z-index: 1;
         pointer-events: none;
     }
     .masonic-icon { font-size: 18rem; color: var(--mahjoub-gold); transform: rotate(-10deg); }
 
-    /* تأثيرات التبديل */
     .currency-container { position: relative; z-index: 2; padding: 35px; }
     .animate-fade { transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
     .fade-out { opacity: 0; transform: scale(0.9) translateY(20px); }
@@ -59,10 +58,10 @@
     .dot-indicator {
         height: 6px; width: 6px; background: rgba(255,255,255,0.2);
         border-radius: 50%; display: inline-block; margin: 0 5px; transition: 0.3s;
+        cursor: pointer;
     }
     .dot-indicator.active { background: var(--mahjoub-gold); width: 25px; border-radius: 10px; }
 
-    /* جداول الحركة المالية */
     .glass-card {
         background: white;
         border-radius: 25px;
@@ -76,7 +75,7 @@
     <div class="welcome-banner shadow">
         <div class="row align-items-center">
             <div class="col-md-7">
-                <h1 class="fw-black mb-2">مرحباً بالقائد، {{ current_user.name }}</h1>
+                <h1 class="fw-black mb-2">مرحباً بالقائد، {{ current_user.name or current_user.username }}</h1>
                 <p class="opacity-75 fs-5">أهلاً بك في مركز العمليات السيادي لـ "محجوب أونلاين".</p>
             </div>
             <div class="col-md-5 text-md-start">
@@ -110,7 +109,7 @@
                 <div class="col-md-6">
                     <div class="glass-card shadow-sm">
                         <h6 class="text-muted fw-bold mb-3">إجمالي الأصول</h6>
-                        <h2 class="fw-black text-primary">{{ products_count or 0 }} <small class="fs-6">منتج</small></h2>
+                        <h2 class="fw-black text-primary">{{ products|length if products else 0 }} <small class="fs-6">منتج</small></h2>
                         <hr>
                         <p class="small text-muted">جميع المنتجات تخضع لرقابة المعايير السيادية.</p>
                     </div>
@@ -161,11 +160,30 @@
 </div>
 
 <script>
-    // بيانات المحفظة من النظام
+    // بيانات المحفظة المصححة لتجنب الخطأ 500
+    // نستخدم حقل wallet_balance الموجود فعلياً ونضع قيم افتراضية للباقي
     const walletData = [
-        { label: "الدولار الأمريكي", code: "USD", symbol: "$", balance: {{ "%.2f"|format(current_user.wallet_usd or 0) }}, color: "#27ae60" },
-        { label: "الريال السعودي", code: "SAR", symbol: "ر.س", balance: {{ "%.2f"|format(current_user.wallet_sar or 0) }}, color: "#2980b9" },
-        { label: "الريال اليمني", code: "YER", symbol: "ر.ي", balance: {{ "{:,.0f}".format(current_user.wallet_yer or 0) }}, color: "#e67e22" }
+        { 
+            label: "الدولار الأمريكي", 
+            code: "USD", 
+            symbol: "$", 
+            balance: {{ "%.2f"|format(current_user.wallet_balance or 0) }}, 
+            color: "#27ae60" 
+        },
+        { 
+            label: "الريال السعودي", 
+            code: "SAR", 
+            symbol: "ر.س", 
+            balance: 0.00, 
+            color: "#2980b9" 
+        },
+        { 
+            label: "الريال اليمني", 
+            code: "YER", 
+            symbol: "ر.ي", 
+            balance: 0, 
+            color: "#e67e22" 
+        }
     ];
 
     let currentIndex = 0;
@@ -173,6 +191,7 @@
     const dots = document.querySelectorAll('.dot-indicator');
 
     function updateWalletUI(index) {
+        if (!walletDiv) return;
         const data = walletData[index];
         
         walletDiv.classList.remove('fade-in');
@@ -186,9 +205,9 @@
                         ${data.code}
                     </div>
                 </div>
-                <h1 class="display-4 fw-black mb-2 text-white">${data.balance} <small style="font-size: 1.5rem">${data.symbol}</small></h1>
+                <h1 class="display-4 fw-black mb-2 text-white">${data.balance.toLocaleString()} <small style="font-size: 1.5rem">${data.symbol}</small></h1>
                 <div class="mt-4 opacity-50 small fw-bold">
-                    <i class="fas fa-lock me-1"></i> محفظة مشفرة سيادياً
+                    <i class="fas fa-lock me-1"></i> محفظة مشفرة سيادياً MAH-9046
                 </div>
             `;
             
@@ -203,7 +222,7 @@
         setInterval(() => {
             currentIndex = (currentIndex + 1) % walletData.length;
             updateWalletUI(currentIndex);
-        }, 5000); // التبديل كل 5 ثوانٍ
+        }, 5000);
     }
 
     function showCurrency(index) {
@@ -216,8 +235,10 @@
         updateWalletUI(currentIndex);
     }
 
-    // الإطلاق الأولي
-    updateWalletUI(0);
-    startCycle();
+    // إطلاق النظام عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', () => {
+        updateWalletUI(0);
+        startCycle();
+    });
 </script>
 {% endblock %}
