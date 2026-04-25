@@ -55,3 +55,11 @@ def logout():
     logout_user()
     flash('تم تسجيل الخروج من نظام الترسانة بنجاح.', 'info')
     return redirect(url_for('supplier_panel.login'))
+# في أعلى ملف routes.py
+from .decorators import sovereign_approval_required
+
+@supplier_panel.route('/dashboard') # أو أي مسار يمثل لوحة المورد
+@login_required
+@sovereign_approval_required # 🛡️ هنا يتم تفعيل الحارس الشخصي
+def dashboard():
+    return render_template('supplier_dashboard.html')
