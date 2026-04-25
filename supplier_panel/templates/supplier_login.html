@@ -17,7 +17,6 @@
             --error-red: #c53030;
         }
 
-        /* منع شريط التمرير والعمود الجانبي نهائياً */
         html, body {
             overflow: hidden;
             width: 100%;
@@ -27,7 +26,6 @@
             background: var(--bg-soft);
         }
 
-        /* إخفاء شريط التمرير تماماً */
         ::-webkit-scrollbar { display: none; }
         body { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -58,7 +56,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* القسم التسويقي */
         .marketing-side {
             flex: 1;
             background: linear-gradient(145deg, var(--p-deep) 0%, #0c0512 100%);
@@ -88,7 +85,6 @@
         .benefit-item h4 { margin: 0; font-size: 14px; font-weight: 700; }
         .benefit-item p { margin: 5px 0 0; font-size: 11px; color: rgba(255,255,255,0.7); }
 
-        /* قسم تسجيل الدخول */
         .login-side {
             flex: 0.9;
             padding: clamp(30px, 5vw, 50px);
@@ -139,7 +135,7 @@
         }
 
         @media (max-width: 992px) {
-            body { align-items: flex-start; overflow-y: auto; } /* السماح بالتمرير في الجوال فقط لضمان النفاذ للفورم */
+            body { align-items: flex-start; overflow-y: auto; }
             .main-container { flex-direction: column; border-radius: 25px; max-width: 500px; height: auto; min-height: auto; }
             .marketing-side { padding: 40px 25px; text-align: center; }
             .benefit-item { text-align: right; }
@@ -196,13 +192,13 @@
                 <div class="input-box">
                     <label>هوية الشريك (التاجر)</label>
                     <i class="fa-solid fa-id-card-clip"></i>
-                    <input type="text" name="username" placeholder="اسم المستخدم" required>
+                    <input type="text" name="username" placeholder="اسم المستخدم" required autocomplete="username">
                 </div>
 
                 <div class="input-box">
                     <label>شفرة العبور</label>
                     <i class="fa-solid fa-vault"></i>
-                    <input type="password" name="password" placeholder="••••••••" required>
+                    <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
                 </div>
 
                 <div class="auth-actions">
@@ -218,7 +214,7 @@
             <div style="text-align:center; margin-top:25px; font-size:12px; color:#cbd5e1; font-weight:700;">— أو —</div>
 
             <div class="join-options">
-                <a href="{{ url_for('supplier_panel.register') }}" class="join-btn btn-vendor">انضم كتاجر 📦</a>
+                <a href="{{ url_for('supplier_panel.register') if 'supplier_panel.register' in url_for.__globals__ else '#' }}" class="join-btn btn-vendor">انضم كتاجر 📦</a>
                 <a href="#" class="join-btn btn-affiliate">انضم كمسوق 📣</a>
             </div>
             
