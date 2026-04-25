@@ -2,116 +2,61 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>بوابة التدقيق السيادي | محجوب أونلاين</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
-        :root {
-            --royal-purple: #1a0b2e;
-            --mahjoub-gold: #D4AF37;
-        }
-
         body { 
-            background: radial-gradient(circle at center, #2e114d 0%, var(--royal-purple) 100%); 
+            background: #1a0b2e; 
             color: white; 
             font-family: 'Cairo', sans-serif;
             display: flex; 
             align-items: center; 
             justify-content: center; 
             height: 100vh; 
-            margin: 0;
-            overflow: hidden;
+            margin: 0; 
         }
-
         .card { 
-            background: rgba(255, 255, 255, 0.03); 
-            backdrop-filter: blur(15px);
-            padding: 60px 40px; 
-            border-radius: 40px; 
+            background: rgba(255, 255, 255, 0.05); 
+            padding: 50px; 
+            border-radius: 30px; 
             text-align: center; 
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-            max-width: 500px;
-            width: 90%;
-            position: relative;
+            border: 1px solid #D4AF37;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 450px;
         }
-
-        .gold-glow {
-            color: var(--mahjoub-gold);
-            text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-            font-weight: 900;
-        }
-
-        h1 { font-weight: 900; font-size: 2rem; margin-bottom: 15px; }
-        p { opacity: 0.8; font-size: 1.1rem; line-height: 1.6; }
-
-        .status-badge {
-            background: rgba(212, 175, 55, 0.1);
-            border: 1px solid var(--mahjoub-gold);
-            padding: 10px 25px;
-            border-radius: 50px;
-            display: inline-block;
-            margin-top: 20px;
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-
-        .logout-link {
-            display: inline-block;
-            margin-top: 40px;
-            color: rgba(255,255,255,0.5);
-            text-decoration: none;
-            transition: 0.3s;
-            font-weight: 600;
-        }
-
-        .logout-link:hover { color: #ff7675; }
-
-        /* أنيميشن نبض خفيف للأيقونة */
-        .shield-icon {
-            font-size: 4rem;
-            margin-bottom: 25px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.7; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+        .gold { color: #D4AF37; }
+        .shield-icon { font-size: 50px; margin-bottom: 20px; display: block; }
     </style>
 </head>
 <body>
-
     <div class="card">
-        <div class="shield-icon gold-glow">
-            <i class="fas fa-user-shield"></i>
-        </div>
-        
-        <h1>مرحباً بك يا <span class="gold-glow">{{ current_user.name }}</span></h1>
-        
-        <p>لقد تم استلام طلبك بنجاح. حسابك الآن يخضع لمرحلة <b>التدقيق السيادي</b> لضمان أمان وخصوصية الترسانة الرقمية.</p>
-        
-        <div class="status-badge gold-glow">
-            <i class="fas fa-hourglass-half me-2"></i> الحالة: قيد المراجعة الإدارية
+        <div class="shield-icon gold">
+            <i class="fas fa-shield-halved"></i>
         </div>
 
-        <br>
+        <h1>مرحباً بك يا 
+            <span class="gold">
+                {{ current_user.name or current_user.username or "شريكنا العزيز" }}
+            </span>
+        </h1>
         
-        <a href="{{ url_for('supplier_panel.logout') }}" class="logout-link">
-            <i class="fas fa-sign-out-alt me-1"></i> تسجيل الخروج وتأمين الجلسة
+        <p>حسابك الآن في مرحلة التدقيق السيادي لـ "محجوب أونلاين".</p>
+        
+        <div style="border: 1px solid #D4AF37; padding: 10px; border-radius: 10px; background: rgba(212, 175, 55, 0.1);">
+            الحالة الحالية: <b class="gold text-uppercase">قيد الانتظار</b>
+        </div>
+        
+        <br>
+        <a href="{{ url_for('supplier_panel.logout') }}" style="color: #ff7675; text-decoration: none; font-weight: bold;">
+            <i class="fas fa-power-off"></i> تسجيل الخروج
         </a>
     </div>
 
     <script>
-        // التحقق التلقائي كل 20 ثانية إذا تم اعتماد الحساب
-        // سيقوم بتحديث الصفحة، وإذا أصبح معتمداً، سيقوم الـ Route بتحويله فوراً للداشبورد
-        setTimeout(function(){
-            location.reload();
-        }, 20000);
+        // تحديث ذكي كل 15 ثانية
+        setTimeout(function(){ location.reload(); }, 15000);
     </script>
 </body>
 </html>
