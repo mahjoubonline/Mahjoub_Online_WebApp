@@ -1,52 +1,46 @@
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
-from core import db
 from core.models import Supplier, Product
 from . import supplier_bp 
+from .auth_logic import verify_supplier_credentials # استدعاء ملف المنطق
 
-# --- 1. مسار تسجيل الدخول مع التحقق الصارم ---
+# --- 1. مسار تسجيل الدخول اللامركزي ---
 @supplier_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    # إذا كان المستخدم مسجلاً بالفعل، لا داعي لإظهار صفحة الدخول
-    if current_user.is_authenticated:
-        if isinstance(current_user, Supplier):
-            return redirect(url_for('supplier_panel.dashboard'))
+    if current_user.is_authenticated and isinstance(current_user, Supplier):
+        return redirect(url_for('supplier_panel.dashboard'))
 
     if request.method == 'POST':
-        # استقبال البيانات من الواجهة الملكية
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # 🛡️ التحقق الأول: هل الحقول فارغة؟
-        if not username or not password:
-            flash('يرجى إدخال اسم المورد وكلمة المرور معاً.', 'warning')
-            return render_template('supplier_login.html')
+        # استدعاء منطق التحقق الخارجي
+        message, category, supplier = verify_supplier_credentials(username, password)
+        
+        flash(message, category)
 
-        # 🔍 التحقق الثاني: البحث عن المورد في قاعدة البيانات
-        # نستخدم .first() لضمان جلب مورد واحد فقط بدقة
-        supplier = Supplier.query.filter_by(name=username).first()
-
-        # 🔑 التحقق الثالث: مطابقة كلمة المرور
-        if supplier and supplier.password == password:
-            # تم التحقق بنجاح -> تسجيل الدخول
+        if supplier: # في حال النجاح (supplier ليس None)
             login_user(supplier)
-            flash(f'مرحباً بك يا {supplier.name}.. تم التحقق من الهوية بنجاح.', 'success')
             return redirect(url_for('supplier_panel.dashboard'))
-        else:
-            # فشل التحقق -> رسالة أمان غامضة (لأغراض أمنية)
-            flash('عذراً، بيانات الدخول غير صحيحة. يرجى التثبت والمحاولة مجدداً.', 'danger')
             
     return render_template('supplier_login.html')
 
-# --- 2. حماية لوحة التحكم ---
+# --- 2. لوحة التحكم المحمية ---
 @supplier_bp.route('/dashboard')
-@login_required # لا يمكن الدخول هنا إلا بحساب نشط
+@login_required
 def dashboard():
-    # 🚫 منع "الأدمن" من دخول لوحة "المورد" والعكس
     if not isinstance(current_user, Supplier):
-        logout_user() # طرد أي مستخدم ليس مورداً
+        logout_user()
         flash('هذا المسار مخصص لشركاء النجاح فقط.', 'danger')
         return redirect(url_for('supplier_panel.login'))
         
     my_products = Product.query.filter_by(supplier_id=current_user.id).all()
     return render_template('supplier_dashboard.html', products=my_products)
+
+# --- 3. خروج المورد ---
+@supplier_bp.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('تم تسجيل الخروج بنجاح من بوابة الموردين.', 'info')
+    return redirect(url_for('supplier_panel.login'))
