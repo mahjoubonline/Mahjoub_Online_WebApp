@@ -1,101 +1,157 @@
 {% extends "base.html" %}
 
+{% block title %}لوحة التحكم السيادية | إدارة الترسانة{% endblock %}
+
 {% block content %}
 <style>
     :root {
-        --royal-purple: #632C8F;
-        --m-gold: #D4AF37;
+        --royal-purple: #1a0b2e;
+        --deep-black: #08020d;
+        --mahjoub-gold: #D4AF37;
+        --gold-glow: rgba(212, 175, 55, 0.15);
     }
-    .stat-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(212, 175, 55, 0.2);
-        border-radius: 15px;
-        padding: 20px;
-        backdrop-filter: blur(5px);
+
+    /* هيدر الترحيب */
+    .welcome-banner {
+        background: linear-gradient(135deg, var(--royal-purple) 0%, #3b185f 100%);
+        border-radius: 25px;
+        padding: 40px;
+        color: white;
+        margin-bottom: 40px;
+        border-right: 6px solid var(--mahjoub-gold);
+        position: relative;
+        overflow: hidden;
     }
-    .table-royal {
-        border-collapse: separate;
-        border-spacing: 0 10px;
+
+    /* --- بطاقة المحفظة الديناميكية السيادية --- */
+    .wallet-card-main {
+        min-height: 240px;
+        background: linear-gradient(145deg, #130722 0%, #2e114d 100%);
+        border-radius: 30px;
+        border: 1px solid var(--mahjoub-gold);
+        position: relative;
+        overflow: hidden;
+        transition: 0.4s;
     }
-    .table-royal tr {
-        background: rgba(255, 255, 255, 0.02);
-        transition: all 0.3s ease;
+    
+    .wallet-card-main:hover {
+        box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        transform: translateY(-5px);
     }
-    .table-royal tr:hover {
-        background: rgba(99, 44, 143, 0.1);
-        transform: scale(1.01);
+
+    /* 👁️ اللمسة الهندسية (الميزان الشفاف) */
+    .masonic-bg {
+        position: absolute;
+        top: 0; right: 0; width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0.04; /* شفافية فائقة للغموض */
+        z-index: 1;
+        pointer-events: none;
     }
-    .badge-pending { background-color: #ffc107; color: #000; }
-    .badge-approved { background-color: #28a745; color: #fff; }
+    .masonic-icon { font-size: 18rem; color: var(--mahjoub-gold); transform: rotate(-10deg); }
+
+    /* تأثيرات التبديل */
+    .currency-container { position: relative; z-index: 2; padding: 35px; }
+    .animate-fade { transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    .fade-out { opacity: 0; transform: scale(0.9) translateY(20px); }
+    .fade-in { opacity: 1; transform: scale(1) translateY(0); }
+
+    .dot-indicator {
+        height: 6px; width: 6px; background: rgba(255,255,255,0.2);
+        border-radius: 50%; display: inline-block; margin: 0 5px; transition: 0.3s;
+    }
+    .dot-indicator.active { background: var(--mahjoub-gold); width: 25px; border-radius: 10px; }
+
+    /* جداول الحركة المالية */
+    .glass-card {
+        background: white;
+        border-radius: 25px;
+        border: 1px solid #f0f0f0;
+        padding: 30px;
+        height: 100%;
+    }
 </style>
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom border-secondary">
-        <div>
-            <h2 class="fw-bold">لوحة تحكم <span style="color: var(--m-gold);">شركاء النجاح</span></h2>
-            <p class="text-muted small">أهلاً بك يا قائد، إليك ملخص نشاطك التجاري اليوم.</p>
-        </div>
-        <div class="stat-card text-center shadow-lg" style="min-width: 200px; border-right: 4px solid var(--m-gold);">
-            <small class="text-muted d-block mb-1">رصيد المحفظة الحالي</small>
-            <span class="h3 fw-bold text-success">{{ "%.2f"|format(current_user.wallet_balance) }} $</span>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-md-12 text-end">
-            <a href="{{ url_for('supplier_panel.add_product') }}" class="btn btn-outline-light px-4 py-2" style="border-radius: 10px; border-color: var(--royal-purple); color: var(--royal-purple)">
-                <i class="fas fa-plus-circle me-2"></i> رفع منتج جديد للمراجعة
-            </a>
+<div class="container-fluid">
+    <div class="welcome-banner shadow">
+        <div class="row align-items-center">
+            <div class="col-md-7">
+                <h1 class="fw-black mb-2">مرحباً بالقائد، {{ current_user.name }}</h1>
+                <p class="opacity-75 fs-5">أهلاً بك في مركز العمليات السيادي لـ "محجوب أونلاين".</p>
+            </div>
+            <div class="col-md-5 text-md-start">
+                <div class="badge p-3 rounded-pill bg-white text-dark shadow-sm">
+                    <i class="fas fa-fingerprint me-2 text-primary"></i> نظام الحوكمة: MAH-9046
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-12">
-            <div class="stat-card shadow-sm">
-                <h5 class="mb-4 d-flex align-items-center">
-                    <i class="fas fa-boxes me-2 text-warning"></i> أحدث المنتجات المرفوعة للمنصة
-                </h5>
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="wallet-card-main shadow-lg" onclick="forceNextCurrency()">
+                <div class="masonic-bg">
+                    <i class="fas fa-balance-scale masonic-icon"></i>
+                </div>
+                
+                <div id="wallet-content" class="currency-container animate-fade">
+                    </div>
+
+                <div class="text-center pb-4" style="position: relative; z-index: 3;">
+                    <span class="dot-indicator active" onclick="showCurrency(0)"></span>
+                    <span class="dot-indicator" onclick="showCurrency(1)"></span>
+                    <span class="dot-indicator" onclick="showCurrency(2)"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="row g-3 h-100">
+                <div class="col-md-6">
+                    <div class="glass-card shadow-sm">
+                        <h6 class="text-muted fw-bold mb-3">إجمالي الأصول</h6>
+                        <h2 class="fw-black text-primary">{{ products_count or 0 }} <small class="fs-6">منتج</small></h2>
+                        <hr>
+                        <p class="small text-muted">جميع المنتجات تخضع لرقابة المعايير السيادية.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="glass-card shadow-sm border-start border-4 border-warning">
+                        <h6 class="text-muted fw-bold mb-3">حالة النظام</h6>
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-grow spinner-grow-sm text-success me-3"></div>
+                            <span class="fw-bold">متصل بالشبكة المركزية</span>
+                        </div>
+                        <hr>
+                        <button class="btn btn-sm btn-outline-dark rounded-pill px-4">سجل العمليات</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="glass-card shadow-sm">
+                <h5 class="fw-bold mb-4"><i class="fas fa-history me-2 text-warning"></i> آخر التحركات المالية</h5>
                 <div class="table-responsive">
-                    <table class="table table-dark table-hover table-royal align-middle">
-                        <thead>
-                            <tr class="text-muted">
-                                <th class="border-0">اسم المنتج</th>
-                                <th class="border-0">سعر التكلفة (للمورد)</th>
-                                <th class="border-0">الحالة السيادية</th>
-                                <th class="border-0">تاريخ الرفع</th>
+                    <table class="table align-middle border-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">العملية</th>
+                                <th class="border-0">المنتج</th>
+                                <th class="border-0">القيمة</th>
+                                <th class="border-0">التوقيت</th>
+                                <th class="border-0">الحالة</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for product in products %}
                             <tr>
-                                <td class="fw-bold">{{ product.name }}</td>
-                                <td class="text-warning fw-bold">{{ "%.2f"|format(product.original_price) }} $</td>
-                                <td>
-                                    {% if product.status == 'pending' %}
-                                        <span class="badge badge-pending px-3 py-2">
-                                            <i class="fas fa-clock me-1"></i> قيد المراجعة
-                                        </span>
-                                    {% elif product.status == 'approved' %}
-                                        <span class="badge badge-approved px-3 py-2">
-                                            <i class="fas fa-check-circle me-1"></i> تم الاعتماد
-                                        </span>
-                                    {% else %}
-                                        <span class="badge bg-danger px-3 py-2">
-                                            <i class="fas fa-times-circle me-1"></i> مرفوض
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-muted small">
-                                    {{ product.created_at.strftime('%Y-%m-%d') if product.created_at else 'N/A' }}
+                                <td colspan="5" class="text-center py-5">
+                                    <i class="fas fa-database fa-3x mb-3 text-light"></i>
+                                    <p class="text-muted">لا يوجد حركات مالية مسجلة حالياً في السجل السيادي.</p>
                                 </td>
                             </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center py-5 text-muted italic">
-                                    لا يوجد منتجات مرفوعة حالياً.. ابدأ بإضافة منتجاتك لتدخل سوق محجوب أونلاين.
-                                </td>
-                            </tr>
-                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -103,4 +159,65 @@
         </div>
     </div>
 </div>
+
+<script>
+    // بيانات المحفظة من النظام
+    const walletData = [
+        { label: "الدولار الأمريكي", code: "USD", symbol: "$", balance: {{ "%.2f"|format(current_user.wallet_usd or 0) }}, color: "#27ae60" },
+        { label: "الريال السعودي", code: "SAR", symbol: "ر.س", balance: {{ "%.2f"|format(current_user.wallet_sar or 0) }}, color: "#2980b9" },
+        { label: "الريال اليمني", code: "YER", symbol: "ر.ي", balance: {{ "{:,.0f}".format(current_user.wallet_yer or 0) }}, color: "#e67e22" }
+    ];
+
+    let currentIndex = 0;
+    const walletDiv = document.getElementById('wallet-content');
+    const dots = document.querySelectorAll('.dot-indicator');
+
+    function updateWalletUI(index) {
+        const data = walletData[index];
+        
+        walletDiv.classList.remove('fade-in');
+        walletDiv.classList.add('fade-out');
+
+        setTimeout(() => {
+            walletDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span style="color: var(--mahjoub-gold); font-weight: 900; letter-spacing: 2px;">${data.label}</span>
+                    <div style="background: ${data.color}22; color: ${data.color}; padding: 5px 15px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">
+                        ${data.code}
+                    </div>
+                </div>
+                <h1 class="display-4 fw-black mb-2 text-white">${data.balance} <small style="font-size: 1.5rem">${data.symbol}</small></h1>
+                <div class="mt-4 opacity-50 small fw-bold">
+                    <i class="fas fa-lock me-1"></i> محفظة مشفرة سيادياً
+                </div>
+            `;
+            
+            walletDiv.classList.remove('fade-out');
+            walletDiv.classList.add('fade-in');
+            
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        }, 600);
+    }
+
+    function startCycle() {
+        setInterval(() => {
+            currentIndex = (currentIndex + 1) % walletData.length;
+            updateWalletUI(currentIndex);
+        }, 5000); // التبديل كل 5 ثوانٍ
+    }
+
+    function showCurrency(index) {
+        currentIndex = index;
+        updateWalletUI(index);
+    }
+    
+    function forceNextCurrency() {
+        currentIndex = (currentIndex + 1) % walletData.length;
+        updateWalletUI(currentIndex);
+    }
+
+    // الإطلاق الأولي
+    updateWalletUI(0);
+    startCycle();
+</script>
 {% endblock %}
