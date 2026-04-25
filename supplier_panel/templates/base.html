@@ -2,35 +2,207 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>بوابة الموردين | محجوب أونلاين</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}سوقك الذكي | لوحة المورد السيادية{% endblock %}</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/all.min.css">
+    
     <style>
-        :root { --p-purple: #632C8F; --m-gold: #D4AF37; }
-        body { background-color: #0d0d0d; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .sidebar { background: #1a1a1a; min-height: 100vh; border-left: 1px solid var(--m-gold); }
-        .nav-link { color: #ccc; transition: 0.3s; border-radius: 8px; margin-bottom: 5px; }
-        .nav-link:hover, .nav-link.active { background: var(--p-purple); color: white; }
-        .stat-card { background: #1a1a1a; border: 1px solid #333; border-radius: 15px; padding: 20px; }
+        :root {
+            --royal-purple: #1a0b2e;
+            --deep-black: #08020d;
+            --mahjoub-gold: #D4AF37;
+            --sidebar-width: 280px;
+            --sidebar-mini: 85px;
+            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background: #f4f6f9; 
+            margin: 0; display: flex; direction: rtl; min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- السايدبار الرئيسي --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--royal-purple) 0%, var(--deep-black) 100%);
+            height: 100vh; position: fixed; right: 0; top: 0;
+            z-index: 1100; display: flex; flex-direction: column;
+            transition: var(--transition);
+            box-shadow: -5px 0 20px rgba(0,0,0,0.3);
+        }
+
+        .sidebar-header { 
+            padding: 1.5rem 1rem; text-align: center; 
+            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+        }
+        .logo-img { width: 50px; filter: brightness(0) invert(1); margin-bottom: 10px; }
+        .sidebar-header h2 { color: white; font-size: 1.2rem; margin: 0; font-weight: 800; }
+        .platform-desc { color: var(--mahjoub-gold); font-size: 0.7rem; font-weight: 600; margin-top: 5px; line-height: 1.4; }
+
+        .nav-menu { padding: 1.5rem 0.8rem; flex-grow: 1; overflow-y: auto; }
+        .nav-link {
+            display: flex; align-items: center; padding: 12px 15px;
+            color: rgba(255, 255, 255, 0.7); text-decoration: none;
+            border-radius: 12px; margin-bottom: 8px; transition: var(--transition);
+            cursor: pointer; white-space: nowrap;
+        }
+
+        .nav-link i { min-width: 40px; font-size: 1.2rem; text-align: center; }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(212, 175, 55, 0.15); color: var(--mahjoub-gold);
+        }
+
+        .main-wrapper { 
+            margin-right: var(--sidebar-width); width: 100%; 
+            transition: var(--transition); display: flex; flex-direction: column;
+            min-width: 0;
+        }
+
+        .top-bar {
+            background: white; height: 70px; display: flex; align-items: center;
+            justify-content: space-between; padding: 0 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: sticky; top: 0; z-index: 1000;
+        }
+
+        .store-badge {
+            background: #f8f9fa; padding: 8px 18px; border-radius: 30px;
+            border: 1px solid #eee; display: flex; align-items: center; gap: 10px;
+        }
+
+        .user-profile { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { 
+            width: 40px; height: 40px; background: var(--royal-purple); 
+            border-radius: 10px; display: flex; align-items: center; 
+            justify-content: center; color: var(--mahjoub-gold);
+        }
+
+        @media (max-width: 992px) {
+            .sidebar { width: var(--sidebar-mini); }
+            .sidebar-header h2, .platform-desc, .nav-link span, .chevron { display: none !important; }
+            .logo-img { width: 35px; }
+            .main-wrapper { margin-right: var(--sidebar-mini); }
+            .top-bar { padding: 0 1rem; }
+        }
+
+        .dropdown-content {
+            display: none; list-style: none; padding: 0; margin-right: 1rem;
+            border-right: 2px solid var(--mahjoub-gold);
+            background: rgba(255,255,255,0.03);
+            border-radius: 0 0 10px 10px;
+        }
+        .dropdown-content li a {
+            padding: 10px 20px; color: rgba(255,255,255,0.6);
+            display: flex; align-items: center; gap: 10px; text-decoration: none; font-size: 0.9rem;
+        }
+        .dropdown-content li a:hover { color: var(--mahjoub-gold); }
+
+        .content-area { padding: 2rem; }
+
+        .alert {
+            padding: 15px; margin-bottom: 20px; border-radius: 10px; 
+            font-size: 0.9rem; font-weight: 700; text-align: center;
+        }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-2 d-none d-md-block sidebar p-3">
-                <h4 class="text-center fw-bold mb-4" style="color: var(--m-gold);">شريك النجاح</h4>
-                <div class="nav flex-column">
-                    <a class="nav-link active" href="{{ url_for('supplier_panel.dashboard') }}"><i class="fas fa-home me-2"></i> الإحصائيات</a>
-                    <a class="nav-link" href="{{ url_for('supplier_panel.add_product') }}"><i class="fas fa-plus-circle me-2"></i> إضافة منتج</a>
-                    <a class="nav-link" href="#"><i class="fas fa-boxes me-2"></i> منتجاتي</a>
-                    <hr>
-                    <a class="nav-link text-danger" href="{{ url_for('supplier_panel.logout') }}"><i class="fas fa-sign-out-alt me-2"></i> تسجيل الخروج</a>
-                </div>
-            </nav>
-            <main class="col-md-10 ms-sm-auto p-4">
-                {% block content %}{% endblock %}
-            </main>
+
+    <aside class="sidebar shadow">
+        <div class="sidebar-header">
+            <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" class="logo-img" onerror="this.src='https://via.placeholder.com/50'">
+            <h2>سوقك الذكي</h2>
+            <div class="platform-desc">محجوب أونلاين | حوكمة التجارة الرقمية</div>
         </div>
-    </div>
+
+        <nav class="nav-menu">
+            <a href="{{ url_for('supplier_panel.dashboard') }}" class="nav-link {% if request.endpoint == 'supplier_panel.dashboard' %}active{% endif %}">
+                <i class="fas fa-chart-line"></i>
+                <span>الإحصائيات العامة</span>
+            </a>
+
+            <div class="nav-item">
+                <div class="nav-link" onclick="toggleDropdown(this)">
+                    <i class="fas fa-box-open"></i>
+                    <span>إدارة المخزون</span>
+                    <i class="fas fa-chevron-down chevron" style="font-size: 0.7rem; margin-right: auto; transition: 0.3s;"></i>
+                </div>
+                <ul class="dropdown-content">
+                    <li><a href="#"><i class="fas fa-plus-circle"></i> <span>رفع منتج جديد</span></a></li>
+                    <li><a href="#"><i class="fas fa-list"></i> <span>جميع المنتجات</span></a></li>
+                </ul>
+            </div>
+
+            <div class="nav-item">
+                <div class="nav-link" onclick="toggleDropdown(this)">
+                    <i class="fas fa-wallet"></i>
+                    <span>المالية</span>
+                    <i class="fas fa-chevron-down chevron" style="font-size: 0.7rem; margin-right: auto; transition: 0.3s;"></i>
+                </div>
+                <ul class="dropdown-content">
+                    <li><a href="#"><i class="fas fa-file-invoice-dollar"></i> <span>كشف حساب</span></a></li>
+                </ul>
+            </div>
+
+            <a href="{{ url_for('supplier_panel.logout') }}" class="nav-link mt-auto" style="color: #ff7675; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                <i class="fas fa-power-off"></i>
+                <span>تسجيل الخروج</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-wrapper">
+        <header class="top-bar">
+            <div class="user-profile">
+                <div class="user-avatar"><i class="fas fa-user-tie"></i></div>
+                <div>
+                    <div style="font-weight: 800; color: var(--royal-purple);">{{ current_user.name }}</div>
+                    <small style="color: #999;">ID: {{ current_user.sovereign_id }}</small>
+                </div>
+            </div>
+
+            <div class="store-badge d-none d-md-flex">
+                <i class="fas fa-award" style="color: var(--mahjoub-gold);"></i>
+                <strong style="color: var(--royal-purple);">نظام الحوكمة الرقمية</strong>
+            </div>
+        </header>
+
+        <div class="content-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show shadow-sm">
+                      {{ message }}
+                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleDropdown(element) {
+            const content = element.nextElementSibling;
+            const chevron = element.querySelector('.chevron');
+            const isCurrentlyOpen = content.style.display === "block";
+
+            document.querySelectorAll('.dropdown-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.chevron').forEach(ch => ch.style.transform = "rotate(0deg)");
+
+            if (!isCurrentlyOpen) {
+                content.style.display = "block";
+                if(chevron) chevron.style.transform = "rotate(180deg)";
+            }
+        }
+    </script>
 </body>
 </html>
