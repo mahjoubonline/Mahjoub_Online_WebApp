@@ -6,8 +6,11 @@ import os
 
 # 1. إعداد المسار والـ Blueprint
 # تم ضبط المجلدات لضمان وصول النظام للقوالب (Templates) الخاصة بالإدارة
-template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-admin_bp = Blueprint('admin_panel', __name__, template_folder=template_dir)
+admin_bp = Blueprint(
+    'admin_panel', 
+    __name__, 
+    template_folder='templates'
+)
 
 # --- معالج السياق (Sidebar Counts) ---
 @admin_bp.context_processor
@@ -22,6 +25,7 @@ def inject_counts():
 
 # 2. لوحة التحكم (برج الرقابة الرئيسي)
 @admin_bp.route('/', strict_slashes=False)
+@admin_bp.route('/dashboard') # إضافة مسار صريح للداشبورد
 @login_required
 def dashboard():
     # التأكد من أن الهوية هي "أدمن" حصراً لمنع الموردين من دخول هذا المسار
@@ -35,9 +39,11 @@ def dashboard():
         s_count = Supplier.query.count()
         p_count = Product.query.count()
         latest_suppliers = Supplier.query.order_by(Supplier.created_at.desc()).limit(5).all()
-        return render_template('dashboard.html', s_count=s_count, p_count=p_count, latest_suppliers=latest_suppliers)
+        # تصحيح المسار ليشمل المجلد الفرعي admin_panel كما في صورك
+        return render_template('admin_panel/dashboard.html', s_count=s_count, p_count=p_count, latest_suppliers=latest_suppliers)
     except Exception as e:
-        return render_template('dashboard.html', s_count=0, p_count=0, latest_suppliers=[])
+        print(f"Error in dashboard: {e}")
+        return render_template('admin_panel/dashboard.html', s_count=0, p_count=0, latest_suppliers=[])
 
 # 3. بوابة مراجعة المنتجات (Sync Room)
 @admin_bp.route('/sync_now', strict_slashes=False)
@@ -49,7 +55,7 @@ def sync_now():
     from core.models.product import Product
     # جلب المنتجات التي رفعها الموردون وحالتها "pending" فقط لمراجعتها ونشرها
     pending_products = Product.query.filter_by(status='pending').all()
-    return render_template('product_review.html', products=pending_products)
+    return render_template('admin_panel/product_review.html', products=pending_products)
 
 # 4. النشر السيادي: إرسال البيانات لقمرة (Direct Push)
 @admin_bp.route('/product/approve/<int:product_id>', methods=['POST'])
@@ -81,7 +87,7 @@ def approve_product(product_id):
             "collections": [product.q_collection_id] if product.q_collection_id else [],
             "variants": [{
                 "price": float(final_price_sar),
-                "inventoryQuantity": 10 # كمية افتراضية أولية
+                "inventoryQuantity": 10 
             }]
         }
     }
@@ -90,7 +96,6 @@ def approve_product(product_id):
         result = query_qumra(mutation, variables)
         
         if result and 'data' in result and result['data']['productCreate']['product']:
-            # تحديث حالة المنتج محلياً وربطه بمعرف قمرة الرسمي
             product.q_product_id = result['data']['productCreate']['product']['id']
             product.status = 'active'
             product.is_synced = True
@@ -98,7 +103,6 @@ def approve_product(product_id):
             
             flash(f'✅ تم النشر بنجاح. معرف المنتج في قمرة: {product.q_product_id}', 'success')
         else:
-            # استخراج الخطأ من رد قمرة إن وجد
             error_msg = "خطأ في الاتصال بسيرفر قمرة"
             if result and 'data' in result and result['data']['productCreate']['userErrors']:
                 error_msg = result['data']['productCreate']['userErrors'][0]['message']
@@ -113,7 +117,6 @@ def approve_product(product_id):
 # 5. تسجيل الدخول (القائد علي محجوب)
 @admin_bp.route('/login', methods=['GET', 'POST'], strict_slashes=False)
 def login():
-    # إذا كان مسجل دخول كأدمن مسبقاً، وجهه للوحة التحكم فوراً
     if current_user.is_authenticated and session.get('user_type') == 'admin':
         return redirect(url_for('admin_panel.dashboard'))
 
@@ -122,11 +125,10 @@ def login():
         password = request.form.get('password')
 
         from core.models.user import User
-        # البحث عن اسم المستخدم (مثل: ali_mahjoub)
         user = User.query.filter_by(username=username).first()
 
-        if user and user.password == password: # يفضل مستقبلاً استخدام hash
-            session.clear() # تطهير أي جلسة سابقة لمورد أو غيره
+        if user and user.password == password:
+            session.clear() 
             session['user_type'] = 'admin'
             login_user(user)
             flash('أهلاً بك أيها القائد في برج الرقابة السيادي', 'success')
@@ -134,7 +136,7 @@ def login():
         else:
             flash('بيانات الولوج غير صحيحة، الوصول للمنطقة السيادية مرفوض.', 'danger')
             
-    return render_template('login.html')
+    return render_template('admin_panel/login.html')
 
 # 6. تسجيل الخروج وتطهير الجلسة
 @admin_bp.route('/logout')
