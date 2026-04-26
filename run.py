@@ -1,17 +1,25 @@
 import os
 from core import create_app, db
+from flask import redirect, url_for
 
 # 1. إنشاء نسخة التطبيق عبر دالة المصنع
 app = create_app()
 
+# --- مسار الإيقاظ السيادي (لحل مشكلة عدم الاستجابة) ---
+@app.route('/')
+def index():
+    # توجيه المستخدم تلقائياً إلى صفحة دخول الموردين بدلاً من إظهار صفحة فارغة
+    return redirect(url_for('supplier_panel.login'))
+
 # 2. إدارة قاعدة البيانات وإنشاء الحسابات السيادية
 with app.app_context():
     try:
-        # ⚠️ الإجراء الجراحي: مسح شامل لضمان تطابق الحقول الجديدة (q_product_id, currency, wallets)
+        # ⚠️ الإجراء الجراحي: مسح شامل لضمان تطابق الحقول الجديدة
         # سيتم مسح قاعدة البيانات القديمة تماماً لإنهاء أي تعارض في الهيكل
+        # ملاحظة: احذف سطر drop_all بعد التأكد من عمل النظام لاستقرار البيانات
         db.drop_all() 
         
-        # إنشاء الجداول بناءً على الهيكل السيادي المطور (يشمل الآن ربط قمرة)
+        # إنشاء الجداول بناءً على الهيكل السيادي المطور
         db.create_all()
         print("✅ [Database] تم تصفير الهيكل ومزامنة الأعمدة الجديدة (q_product_id) بنجاح.")
 
@@ -56,12 +64,12 @@ with app.app_context():
                 wallet_yer=35000.0
             )
             db.session.add(test_supplier)
-            db.session.flush() # للحصول على ID المورد قبل الإضافة التالية
+            db.session.flush() # للحصول على ID المورد
 
-            # --- إضافة منتج تجريبي مرتبط بـ "قمرة" كاختبار للربط ---
+            # --- إضافة منتج تجريبي مرتبط بـ "قمرة" ---
             test_product = Product(
                 name="منتج تجريبي سيادي",
-                q_product_id="Q-TEST-9046", # معرف وهمي للاختبار
+                q_product_id="Q-TEST-9046", 
                 cost_price=10.0,
                 currency="USD",
                 status="active",
@@ -78,12 +86,11 @@ with app.app_context():
         db.session.rollback()
 
 if __name__ == "__main__":
-    # 3. إعدادات المنفذ لـ Railway
+    # 3. إعدادات المنفذ لـ Railway (هام جداً للرد على السيرفر)
     port = int(os.environ.get("PORT", 8080))
     
     # 4. الإقلاع الرسمي لمنصة محجوب أونلاين
-    print(f"🚀 [Mahjoub Online] المنصة اللامركزية تعمل الآن على المنفذ {port}...")
+    print(f"🚀 [Mahjoub Online] المنصة تعمل الآن على المنفذ {port}...")
     
-    # ملاحظة: debug=False في الإنتاج (Railway)
+    # استخدام host='0.0.0.0' ضروري جداً ليتمكن Railway من توجيه حركة المرور للتطبيق
     app.run(host='0.0.0.0', port=port, debug=False)
-    
