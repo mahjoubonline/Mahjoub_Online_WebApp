@@ -86,3 +86,4 @@ if __name__ == "__main__":
     
     # ملاحظة: debug=False في الإنتاج (Railway)
     app.run(host='0.0.0.0', port=port, debug=False)
+    
