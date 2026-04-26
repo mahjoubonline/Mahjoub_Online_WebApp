@@ -10,6 +10,7 @@ from core.models.supplier import Supplier
 from services.qumra_handler import fetch_qumra_collections
 
 # --- 1. بوابة الدخول للموردين ---
+# ملاحظة: المسار هنا يصبح تلقائياً /supplier/login
 @supplier_bp.route('/login', methods=['GET', 'POST'])
 def login():
     # منع التداخل: إذا كان المستخدم "أدمن" يحاول دخول بوابة المورد، نقوم بتطهير جلسته
@@ -29,7 +30,7 @@ def login():
             flash('يرجى إدخال بيانات الهوية السيادية للمورد.', 'warning')
             return render_template('supplier_login.html')
 
-        # استخدام المحرك الذي راجعناه سابقاً للتحقق من المورد
+        # استخدام المحرك للتحقق من المورد (موجود في auth_logic.py)
         message, category, supplier = verify_supplier_credentials(username, password)
         
         if supplier: 
@@ -41,6 +42,7 @@ def login():
         else:
             flash(message, category)
             
+    # تأكد أن الملف موجود في supplier_panel/templates/supplier_login.html
     return render_template('supplier_login.html')
 
 # --- 2. لوحة تحكم المورد (الترسانة الخاصة) ---
@@ -48,25 +50,28 @@ def login():
 @login_required
 @sovereign_approval_required 
 def dashboard():
-    # التأكد من الهوية: منع الأدمن من رؤية لوحة المورد (والعكس)
+    # التأكد الصارم من الهوية لمنع التداخل مع الإدارة
     if session.get('user_type') != 'supplier':
         session.clear()
         logout_user()
         return redirect(url_for('supplier_panel.login'))
         
     try:
-        # جلب المنتجات التابعة لهذا المورد فقط
+        # جلب المنتجات التابعة لهذا المورد حصراً
         my_products = Product.query.filter_by(supplier_id=current_user.id).all()
         return render_template('dashboard.html', products=my_products)
     except Exception as e:
-        return f"خطأ في استعراض البيانات: {str(e)}", 500
+        return f"خطأ في استعراض البيانات السيادية: {str(e)}", 500
 
-# --- 3. إضافة منتج جديد (الربط مع قمرة) ---
+# --- 3. إضافة منتج جديد (الربط مع سحابة قمرة) ---
 @supplier_bp.route('/add-product', methods=['GET', 'POST'])
 @login_required
 @sovereign_approval_required
 def add_product():
-    # جلب الأقسام (Collections) من قمرة لحظياً ليختار المورد القسم المناسب
+    if session.get('user_type') != 'supplier':
+        return redirect(url_for('supplier_panel.login'))
+
+    # جلب الأقسام (Collections) من قمرة لحظياً
     collections = fetch_qumra_collections()
 
     if request.method == 'POST':
@@ -74,7 +79,7 @@ def add_product():
         description = request.form.get('description')
         collection_id = request.form.get('collection_id')
         cost_price = request.form.get('cost_price')
-        currency = request.form.get('currency', 'YER') # الافتراضي ريال يمني
+        currency = request.form.get('currency', 'YER') 
         
         if not name or not cost_price:
             flash('اسم المنتج وسعر التكلفة حقول إلزامية للتعميد.', 'danger')
@@ -94,29 +99,29 @@ def add_product():
             
             db.session.add(new_product)
             db.session.commit()
-            flash('✅ تم رفع المنتج بنجاح. سيتم إشعارك فور تعميده ونشره من قبل الإدارة.', 'success')
+            flash('✅ تم رفع المنتج بنجاح. سيتم مراجعته ونشره قريباً.', 'success')
             return redirect(url_for('supplier_panel.dashboard'))
         except Exception as e:
             db.session.rollback()
-            flash(f'⚠️ فشل الحفظ: {str(e)}', 'danger')
+            flash(f'⚠️ فشل في حفظ البيانات: {str(e)}', 'danger')
 
     return render_template('add_product.html', collections=collections)
 
-# --- 4. غرفة الانتظار (للموردين الجدد) ---
+# --- 4. غرفة الانتظار (للموردين غير المعتمدين بعد) ---
 @supplier_bp.route('/waiting-room')
 @login_required
 def waiting_room():
-    # التحقق من قاعدة البيانات مباشرة لرؤية ما إذا كان الأدمن قد وافق على المورد
     supplier = Supplier.query.get(current_user.id)
     if supplier and supplier.is_approved:
         return redirect(url_for('supplier_panel.dashboard'))
     
     return render_template('waiting_approval.html')
 
-# --- 5. خروج المورد وتطهير الهوية ---
+# --- 5. خروج المورد وتطهير الجلسة ---
 @supplier_bp.route('/logout')
 @login_required
 def logout():
-    session.clear() # مسح وسم 'supplier' من الجلسة
+    session.pop('user_type', None)
+    session.clear()
     logout_user()
     return redirect(url_for('supplier_panel.login'))
