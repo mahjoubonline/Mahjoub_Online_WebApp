@@ -10,15 +10,12 @@ from core.models.supplier import Supplier
 from services.qumra_handler import fetch_qumra_collections
 
 # --- 1. بوابة الدخول للموردين ---
-# ملاحظة: المسار هنا يصبح تلقائياً /supplier/login
 @supplier_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    # منع التداخل: إذا كان المستخدم "أدمن" يحاول دخول بوابة المورد، نقوم بتطهير جلسته
     if current_user.is_authenticated:
         if session.get('user_type') == 'supplier':
             return redirect(url_for('supplier_panel.dashboard'))
         else:
-            # إذا كان أدمن يحاول الدخول هنا، نسجل خروجه ليدخل بهوية مورد
             logout_user()
             session.clear()
 
@@ -28,42 +25,41 @@ def login():
 
         if not username or not password:
             flash('يرجى إدخال بيانات الهوية السيادية للمورد.', 'warning')
-            return render_template('supplier_login.html')
+            # التعديل هنا: إضافة مسار المجلد الفرعي
+            return render_template('supplier_panel/supplier_login.html')
 
-        # استخدام المحرك للتحقق من المورد (موجود في auth_logic.py)
         message, category, supplier = verify_supplier_credentials(username, password)
         
         if supplier: 
             session.permanent = True
-            session['user_type'] = 'supplier' # الختم السيادي للمورد
+            session['user_type'] = 'supplier' 
             login_user(supplier)
             flash(f'مرحباً بك يا {supplier.name} في منصة محجوب أونلاين.', 'success')
             return redirect(url_for('supplier_panel.dashboard'))
         else:
             flash(message, category)
             
-    # تأكد أن الملف موجود في supplier_panel/templates/supplier_login.html
-    return render_template('supplier_login.html')
+    # التعديل هنا: التوجه للمجلد الفرعي حسب الصورة
+    return render_template('supplier_panel/supplier_login.html')
 
-# --- 2. لوحة تحكم المورد (الترسانة الخاصة) ---
+# --- 2. لوحة تحكم المورد ---
 @supplier_bp.route('/dashboard')
 @login_required
 @sovereign_approval_required 
 def dashboard():
-    # التأكد الصارم من الهوية لمنع التداخل مع الإدارة
     if session.get('user_type') != 'supplier':
         session.clear()
         logout_user()
         return redirect(url_for('supplier_panel.login'))
         
     try:
-        # جلب المنتجات التابعة لهذا المورد حصراً
         my_products = Product.query.filter_by(supplier_id=current_user.id).all()
-        return render_template('dashboard.html', products=my_products)
+        # التعديل هنا: التوجه للمجلد الفرعي
+        return render_template('supplier_panel/dashboard.html', products=my_products)
     except Exception as e:
         return f"خطأ في استعراض البيانات السيادية: {str(e)}", 500
 
-# --- 3. إضافة منتج جديد (الربط مع سحابة قمرة) ---
+# --- 3. إضافة منتج جديد ---
 @supplier_bp.route('/add-product', methods=['GET', 'POST'])
 @login_required
 @sovereign_approval_required
@@ -71,7 +67,6 @@ def add_product():
     if session.get('user_type') != 'supplier':
         return redirect(url_for('supplier_panel.login'))
 
-    # جلب الأقسام (Collections) من قمرة لحظياً
     collections = fetch_qumra_collections()
 
     if request.method == 'POST':
@@ -86,7 +81,6 @@ def add_product():
             return redirect(request.url)
 
         try:
-            # إنشاء المنتج محلياً في حالة "Pending" بانتظار مراجعة القائد علي محجوب
             new_product = Product(
                 name=name,
                 description=description,
@@ -105,9 +99,10 @@ def add_product():
             db.session.rollback()
             flash(f'⚠️ فشل في حفظ البيانات: {str(e)}', 'danger')
 
-    return render_template('add_product.html', collections=collections)
+    # التعديل هنا: التوجه للمجلد الفرعي
+    return render_template('supplier_panel/add_product.html', collections=collections)
 
-# --- 4. غرفة الانتظار (للموردين غير المعتمدين بعد) ---
+# --- 4. غرفة الانتظار ---
 @supplier_bp.route('/waiting-room')
 @login_required
 def waiting_room():
@@ -115,9 +110,10 @@ def waiting_room():
     if supplier and supplier.is_approved:
         return redirect(url_for('supplier_panel.dashboard'))
     
-    return render_template('waiting_approval.html')
+    # التعديل هنا: التوجه للمجلد الفرعي
+    return render_template('supplier_panel/waiting_approval.html')
 
-# --- 5. خروج المورد وتطهير الجلسة ---
+# --- 5. الخروج ---
 @supplier_bp.route('/logout')
 @login_required
 def logout():
