@@ -1,38 +1,111 @@
-<div class="table-responsive table-sovereign-wrapper">
-    <table class="table table-sovereign align-middle">
-        <thead>
-            <tr>
-                <th>المنتج (سحب آلي)</th>
-                <th>معرف Q-ID</th>
-                <th>تكلفة المصدر</th>
-                <th>حالة الربط</th>
-                <th>التحكم الإستراتيجي</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in pulled_data %}
-            <tr>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <img src="{{ item.image_url }}" class="rounded-circle me-3" style="width: 40px; border: 1px solid var(--mahjoub-gold);">
-                        <span class="text-white fw-bold">{{ item.name }}</span>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4" dir="rtl">
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-dark text-white border-gold shadow-lg">
+                <div class="card-header border-bottom-gold d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0 fw-black"><i class="fas fa-microscope text-gold"></i> مراجعة وتعيد المنتجات</h4>
+                    <span class="badge bg-purple border-gold p-2">عدد المنتجات بانتظار المراجعة: {{ products|length }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover align-middle border-secondary text-center">
+                            <thead class="text-gold">
+                                <tr>
+                                    <th>المنتج</th>
+                                    <th>المورد</th>
+                                    <th>التكلفة المحلية</th>
+                                    <th>التحويل التقديري</th>
+                                    <th>السعر النهائي (SAR)</th>
+                                    <th>السيادة والقرار</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr id="row-{{ product.id }}">
+                                    <td>
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <div class="ms-3 text-start">
+                                                <div class="fw-bold">{{ product.name }}</div>
+                                                <small class="text-muted">القسم: {{ product.q_collection_id or 'غير محدد' }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge border-purple">{{ product.supplier_owner.name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="cost-value fw-bold text-info" data-cost="{{ product.cost_price }}" data-currency="{{ product.currency }}">
+                                            {{ "{:,.2f}".format(product.cost_price) }} {{ product.currency }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="calculation-box bg-black p-1 rounded border-secondary">
+                                            <small class="d-block text-muted">المعادل التقريبي</small>
+                                            <span class="estimated-sar text-gold fw-bold">...</span> <small>SAR</small>
+                                        </div>
+                                    </td>
+                                    <form action="{{ url_for('admin_panel.approve_product', product_id=product.id) }}" method="POST">
+                                        <td>
+                                            <input type="number" step="0.01" name="final_price" class="form-control bg-dark text-white border-gold text-center sale-input" 
+                                                   placeholder="أدخل سعر البيع" required>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="submit" class="btn btn-success btn-sm">
+                                                    <i class="fas fa-check-double"></i> تعميد ونشر
+                                                </button>
+                                                <a href="#" class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-trash"></i> رفض
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                </td>
-                <td><code class="text-gold">{{ item.qumra_id }}</code></td>
-                <td class="text-info fw-bold">{{ item.source_price }} $</td>
-                <td>
-                    <span class="badge rounded-pill {% if item.is_synced %}bg-success{% else %}bg-warning{% endif %} bg-opacity-10 text-{{ 'success' if item.is_synced else 'warning' }}">
-                        {{ 'متزامن' if item.is_synced else 'قيد المراجعة' }}
-                    </span>
-                </td>
-                <td>
-                    <div class="btn-group">
-                        <button class="btn btn-sm btn-outline-success border-0"><i class="fas fa-check-double"></i> اعتماد</button>
-                        <button class="btn btn-sm btn-outline-light border-0"><i class="fas fa-eye"></i> معاينة</button>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    :root {
+        --mahjoub-purple: #632C8F;
+        --mahjoub-gold: #D4AF37;
+    }
+    .border-gold { border: 1px solid var(--mahjoub-gold) !important; }
+    .border-bottom-gold { border-bottom: 2px solid var(--mahjoub-gold) !important; }
+    .bg-purple { background-color: var(--mahjoub-purple) !important; }
+    .text-gold { color: var(--mahjoub-gold) !important; }
+    .fw-black { font-weight: 900; }
+    .sale-input:focus { box-shadow: 0 0 10px var(--mahjoub-gold); border-color: white; }
+</style>
+
+<script>
+    // أسعار الصرف (يمكنك تعديلها يدوياً هنا أو جلبها من الـ API)
+    const rates = {
+        'SAR': 1.0,
+        'USD': 3.75,
+        'YER': 0.0062 // مثال لـ 1 ريال يمني مقابل السعودي
+    };
+
+    document.querySelectorAll('tr[id^="row-"]').forEach(row => {
+        const costElement = row.querySelector('.cost-value');
+        const cost = parseFloat(costElement.dataset.cost);
+        const currency = costElement.dataset.currency;
+        const estDisplay = row.querySelector('.estimated-sar');
+
+        // حساب القيمة المعادلة بالسعودي فور تحميل الصفحة
+        if (rates[currency]) {
+            const sarEquivalent = cost * rates[currency];
+            estDisplay.innerText = sarEquivalent.toLocaleString('en-US', {minimumFractionDigits: 2});
+        }
+    });
+</script>
+{% endblock %}
