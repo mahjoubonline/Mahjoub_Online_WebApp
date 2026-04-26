@@ -10,8 +10,12 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 
 def create_app():
-    # 1. إنشاء نسخة التطبيق وتحديد مسارات الموارد الثابتة والقوالب السيادية
-    app = Flask(__name__, static_folder='../static', template_folder='../templates')
+    # 1. إنشاء نسخة التطبيق وتحديد مسارات الموارد
+    # تم ضبط المسارات لضمان وصول السيرفر للملفات الثابتة والقوالب بدقة
+    app = Flask(__name__, 
+                static_folder='../static', 
+                template_folder='../templates')
+    
     app.config.from_object(Config)
     
     # 2. ربط المكتبات بنواة التطبيق
@@ -33,14 +37,14 @@ def create_app():
         @login_manager.user_loader
         def load_user(user_id):
             try:
-                # نعتمد على 'user_type' المخزن في الجلسة عند تسجيل الدخول
-                # لضمان عدم حدوث تداخل في حال تشابهت المعرفات (IDs) في الجداول
+                # نعتمد على 'user_type' المخزن في الجلسة (Session) عند تسجيل الدخول
+                # لضمان عدم حدوث تداخل في حال تشابهت المعرفات (IDs) بين جدول القادة والموردين
                 user_type = session.get('user_type')
 
                 if user_type == 'supplier':
                     return Supplier.query.get(int(user_id))
                 
-                # الافتراضي هو البحث في جدول المستخدمين (الأدمن/الموظفين)
+                # الافتراضي هو البحث في جدول المستخدمين (الأدمن/القادة)
                 return User.query.get(int(user_id))
             
             except Exception as e:
@@ -49,12 +53,13 @@ def create_app():
 
         # --- 🔗 تسجيل بوابات النظام (Blueprints Registration) ---
         try:
-            # 1. بوابة الإدارة المركزية
+            # 1. بوابة الإدارة المركزية (برج الرقابة)
             from admin_panel.routes import admin_bp
             app.register_blueprint(admin_bp, url_prefix='/admin')
             
             # 2. بوابة الموردين (نظام الحوكمة اللامركزي)
-            from supplier_panel import supplier_bp
+            # تأكد من أن المجلد يحتوي على ملف __init__.py يُعرف الـ blueprint
+            from supplier_panel.routes import supplier_bp
             app.register_blueprint(supplier_bp, url_prefix='/supplier')
             
             print("✅ [System] تم تفعيل البوابات السيادية وفصل الصلاحيات بنجاح.")
@@ -62,14 +67,18 @@ def create_app():
             print(f"❌ [Critical Error] خطأ في ربط بوابات النظام: {e}")
 
         # --- 📊 معالج البيانات الشامل (Context Processor) ---
-        # لجعل البيانات الهامة متوفرة في كل القوالب تلقائياً
+        # جعل البيانات الهامة متوفرة في كل القوالب تلقائياً (مثل تنبيهات الشريط الجانبي)
         @app.context_processor
         def inject_global_data():
             try:
-                # عدد الموردين الذين ينتظرون الموافقة للظهور في الإشعارات
+                # حساب عدد الموردين الذين ينتظرون "الاعتماد السيادي"
                 p_suppliers = Supplier.query.filter_by(is_approved=False).count()
                 return dict(pending_suppliers_count=p_suppliers)
             except Exception:
                 return dict(pending_suppliers_count=0)
+
+        # --- 🛠️ تهيئة قاعدة البيانات اللحظية ---
+        # يقوم بإنشاء الجداول في Postgres إذا لم تكن موجودة عند أول تشغيل
+        db.create_all()
 
     return app
