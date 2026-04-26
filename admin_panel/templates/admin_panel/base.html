@@ -64,7 +64,6 @@
         .nav-item:hover, .nav-item.active { background: rgba(99, 44, 143, 0.15); color: white; border-right-color: var(--mahjoub-gold); }
         .nav-item i:not(.chevron) { width: 20px; font-size: 1.1rem; }
 
-        /* --- التحكم بالمحتوى --- */
         .main-content { 
             margin-right: var(--sidebar-width); 
             flex: 1; 
@@ -92,7 +91,6 @@
 
         .content-body { padding: 25px; flex: 1; color: white; }
 
-        /* --- الإشعارات الحية --- */
         .badge-notify { background: #ef4444; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 50px; margin-right: auto; font-weight: 800; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
         
         .dropdown-container { 
@@ -142,7 +140,7 @@
                     <a href="#" class="sub-nav-item">
                         <i class="fas fa-plus-circle"></i> <span>رفع منتج</span>
                     </a>
-                    <a href="{{ url_for('admin_panel.sync_now') }}" class="sub-nav-item">
+                    <a href="{{ url_for('admin_panel.sync_now') }}" class="sub-nav-item {% if request.endpoint == 'admin_panel.sync_now' %}active{% endif %}">
                         <i class="fas fa-clipboard-check"></i> <span>مراجعة المنتجات</span>
                         {% if pending_products_count and pending_products_count > 0 %}
                             <span class="badge-notify">{{ pending_products_count }}</span>
@@ -161,14 +159,14 @@
                     <i class="fas fa-chevron-down chevron" style="margin-right: auto; font-size: 0.7rem;"></i>
                 </div>
                 <div class="dropdown-container">
-                    <a href="{{ url_for('admin_panel.manage_suppliers') }}" class="sub-nav-item">
+                    <a href="{{ url_for('admin_panel.manage_suppliers') }}" class="sub-nav-item {% if request.endpoint == 'admin_panel.manage_suppliers' %}active{% endif %}">
                         <i class="fas fa-user-clock" style="color: var(--mahjoub-gold);"></i> 
                         <span>طلبات الانتظار</span>
                         {% if pending_suppliers_count and pending_suppliers_count > 0 %}
                             <span class="badge-notify" style="background: var(--mahjoub-gold); color: #000; border:none; box-shadow:none;">{{ pending_suppliers_count }}</span>
                         {% endif %}
                     </a>
-                    <a href="{{ url_for('admin_panel.dashboard') }}" class="sub-nav-item">
+                    <a href="#" class="sub-nav-item">
                         <i class="fas fa-address-book"></i> <span>سجل الموردين</span>
                     </a>
                 </div>
