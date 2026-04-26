@@ -1,33 +1,31 @@
 import requests
 import os
 
-# جلب الإعدادات من متغيرات البيئة التي رأيناها في Railway
-QUMRA_API_URL = os.getenv("QUMRA_API_URL")  # https://mahjoub.online/admin/graphql
-QUMRA_API_KEY = os.getenv("QUMRA_API_KEY")  # qmr_79e068ae...
+# جلب المفاتيح السيادية من متغيرات البيئة (Railway)
+QUMRA_API_URL = os.getenv("QUMRA_API_URL")  # الرابط الذي ينتهي بـ /admin/graphql
+QUMRA_TOKEN = os.getenv("QUMRA_API_KEY")    # التوكن qmr_...
 
 def query_qumra(query, variables=None):
-    """
-    الدالة السيادية لإرسال استعلامات GraphQL إلى قمرة
-    """
+    """المحرك الأساسي لإرسال استعلامات GraphQL إلى قمرة"""
     headers = {
-        "Authorization": f"Bearer {QUMRA_API_KEY}",
+        "Authorization": f"Bearer {QUMRA_TOKEN}",
         "Content-Type": "application/json"
     }
     payload = {"query": query, "variables": variables}
     
     try:
         response = requests.post(QUMRA_API_URL, json=payload, headers=headers)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"🔴 خطأ في الاتصال بـ Qumra GraphQL: {e}")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"🔴 فشل الاتصال بقمرة: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"🔴 خطأ تقني في المحرك: {e}")
         return None
 
-def fetch_collections_from_qumra():
-    """
-    جلب الأقسام (Collections) لعرضها في قائمة اختيار المورد
-    """
-    # استعلام GraphQL لجلب المعرف والاسم لكل قسم
+def fetch_qumra_collections():
+    """جلب الأقسام من قمرة لتظهر للمورد كقائمة اختيار جاهزة"""
     query = """
     query {
       collections(first: 50) {
@@ -42,7 +40,7 @@ def fetch_collections_from_qumra():
     """
     result = query_qumra(query)
     if result and 'data' in result:
-        # تبسيط البيانات لتكون قائمة (ID, Name)
+        # تحويل البيانات إلى تنسيق (ID, Name) لاستخدامها في Select Field
         return [
             (edge['node']['id'], edge['node']['name']) 
             for edge in result['data']['collections']['edges']
