@@ -1,26 +1,21 @@
 from flask import Blueprint
 
-# 1. تعريف البلوبرنت (Blueprint) مع تحديد مسار فرعي
-# إضافة url_prefix='/supplier' تضمن أن روابط الموردين معزولة تماماً عن الإدارة
-supplier_bp = Blueprint(
-    'supplier_panel', 
+# 1. تعريف البلوبرنت (Blueprint) للإدارة
+# تم تحديد template_folder لضمان قراءة القوالب من المجلد الفرعي المنظم
+admin_bp = Blueprint(
+    'admin_panel', 
     __name__, 
     template_folder='templates',
-    static_folder='static',
-    url_prefix='/supplier'  # 👈 هذا السطر يحل مشكلة تداخل المسارات
+    static_folder='static'
 )
 
-# 2. ربط المكونات (🚨 ضمان تسجيل الروابط والحماية)
+# 2. استيراد المسارات (Routes)
+# يجب الاستيراد في الأسفل لتجنب خطأ الاستيراد الدائري (Circular Import)
 try:
-    # الاستيراد داخل البلوبرنت يمنع التداخل البرمجي (Circular Import)
-    from . import routes 
-    from . import auth_logic
-    from . import decorators
-    
-    print("🚀 [System] تم تفعيل بوابة الموردين (المسار: /supplier) بنجاح.")
-    
+    from . import routes
+    print("🏰 [System] تم تجهيز بوابة الإدارة السيادية.")
 except ImportError as e:
-    print(f"⚠️ [Critical Error] فشل في ربط مكونات بوابة الموردين: {e}")
+    print(f"⚠️ [Error] فشل في تحميل مسارات الإدارة: {e}")
 
-# تصدير الكائن ليكون متاحاً للنواة المركزية في core/__init__.py
-__all__ = ['supplier_bp']
+# تصدير الكائن ليكون متاحاً للنواة
+__all__ = ['admin_bp']
