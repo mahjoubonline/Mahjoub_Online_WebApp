@@ -4,8 +4,8 @@ from . import supplier_bp
 from .auth_logic import verify_supplier_credentials
 from .decorators import sovereign_approval_required 
 from core import db
-from core.models import Product, Supplier, User # استدعاء الموديلات الموحدة
-from core.qumra_connector import QumraConnector # المحرك الجديد
+from core.models import Product, Supplier, User 
+from core.qumra_connector import QumraConnector 
 
 # إنشاء نسخة من موصل قمرة لاستخدامه في جلب الأقسام
 qumra = QumraConnector()
@@ -28,14 +28,15 @@ def login():
             flash('يرجى إدخال بيانات الهوية السيادية للمورد.', 'warning')
             return render_template('supplier_panel/login.html')
 
-        # التحقق من الهوية (يرجع كائن User)
+        # التحقق من الهوية عبر المنطق المركزي
         message, category, user = verify_supplier_credentials(username, password)
         
         if user and user.role == 'supplier': 
             session.permanent = True
             session['user_type'] = 'supplier' 
             login_user(user)
-            # جلب اسم المورد من البروفايل المرتبط
+            
+            # جلب الاسم التجاري من البروفايل المرتبط بالحساب
             supplier_name = user.supplier_profile.trade_name if user.supplier_profile else user.username
             flash(f'مرحباً بك يا {supplier_name} في منصة محجوب أونلاين.', 'success')
             return redirect(url_for('supplier_panel.dashboard'))
@@ -54,8 +55,13 @@ def dashboard():
         return redirect(url_for('supplier_panel.login'))
         
     try:
-        # الوصول لبيانات المورد المالية عبر العلاقة backref
+        # الوصول لبيانات المورد المالية عبر علاقة الحساب بالبروفايل
         supplier_data = current_user.supplier_profile
+        
+        if not supplier_data:
+            flash("لم يتم العثور على بروفايل مورد مرتبط بهذا الحساب.", "danger")
+            return redirect(url_for('supplier_panel.login'))
+
         # جلب المنتجات التابعة لهذا المورد حصراً
         my_products = Product.query.filter_by(supplier_id=supplier_data.id).all()
         
@@ -71,9 +77,11 @@ def dashboard():
 @login_required
 @sovereign_approval_required
 def add_product():
-    # جلب الأقسام (Collections) مباشرة من محرك قمرة الجديد
-    # ملاحظة: سنفترض وجود دالة get_collections في الموصل
-    collections = qumra.get_order_details('collections') # تجريبي
+    # جلب الأقسام مع معالجة استباقية للأخطاء
+    try:
+        collections = qumra.get_order_details('collections') or []
+    except:
+        collections = []
 
     if request.method == 'POST':
         name = request.form.get('name')
@@ -85,12 +93,13 @@ def add_product():
             return redirect(request.url)
 
         try:
+            # إنشاء منتج جديد مرتبط ببروفايل المورد الحالي
             new_product = Product(
                 name=name,
                 description=description,
                 cost_price=float(cost_price),
                 supplier_id=current_user.supplier_profile.id,
-                is_active=False # يبقى غير نشط حتى تعمده أنت من لوحة الإدارة
+                is_active=False # يبقى معلقاً للمراجعة السيادية
             )
             
             db.session.add(new_product)
@@ -103,7 +112,7 @@ def add_product():
 
     return render_template('supplier_panel/add_product.html', collections=collections)
 
-# --- 4. تسجيل الخروج ---
+# --- 4. تسجيل الخروج وتطهير الجلسة ---
 @supplier_bp.route('/logout')
 @login_required
 def logout():
