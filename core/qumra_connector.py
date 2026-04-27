@@ -1,55 +1,42 @@
-from services.qumra_handler import query_qumra
-from core.models.product import Product
-from core import db
+import requests
+import os
+from flask import current_app
 
-class QumraSyncManager:
+class QumraConnector:
     """
-    مدير المزامنة السيادي: يعمل بنظام "العبور اللحظي" 
-    دون تخزين أصول المنتج محلياً للحفاظ على خفة السيرفر.
+    محرك الربط مع منصة قمرة - Qumra API Engine
+    المسؤول عن مزامنة المنتجات واستقبال الويب هوك.
     """
-
-    def fetch_live_status(self, q_product_id):
-        """التحقق من حالة منتج معين في قمرة دون حفظه"""
-        query = """
-        query getProduct($id: ID!) {
-          product(id: $id) {
-            id
-            status
-            variants(first: 1) {
-              edges {
-                node {
-                  price
-                  inventoryQuantity
-                }
-              }
-            }
-          }
+    def __init__(self):
+        self.api_key = os.getenv('QUMRA_API_KEY')
+        self.base_url = "https://api.qumra.com/v1" # تأكد من رابط الـ API الرسمي من وثائقهم
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
         }
-        """
-        variables = {"id": q_product_id}
-        result = query_qumra(query, variables)
-        return result.get('data', {}).get('product') if result else None
 
-    def sync_all_active_products(self):
-        """
-        تحديث حالات المزامنة للمنتجات النشطة فقط 
-        للتأكد من مطابقة السعر والمخزون.
-        """
-        active_products = Product.query.filter_by(status='active').all()
-        sync_results = {"success": 0, "failed": 0}
-
-        for product in active_products:
-            live_data = self.fetch_live_status(product.q_product_id)
-            if live_data:
-                # تحديث مؤشر المزامنة فقط (بيانات خفيفة جداً)
-                product.is_synced = True
-                sync_results["success"] += 1
+    def sync_product_to_qumra(self, product_data):
+        """إرسال بيانات المنتج من لوحة المورد إلى متجر قمرة"""
+        endpoint = f"{self.base_url}/products"
+        try:
+            response = requests.post(endpoint, json=product_data, headers=self.headers)
+            if response.status_code in [200, 201]:
+                return response.json()
             else:
-                product.is_synced = False
-                sync_results["failed"] += 1
-        
-        db.session.commit()
-        return sync_results
+                print(f"Error syncing to Qumra: {response.text}")
+                return None
+        except Exception as e:
+            print(f"Exception during Qumra sync: {str(e)}")
+            return None
 
-# إنشاء نسخة واحدة من المدير لاستخدامها في التطبيق
-qumra_manager = QumraSyncManager()
+    def get_order_details(self, order_id):
+        """جلب تفاصيل الطلب لمعالجة العمولات والمحافظ الموردين"""
+        endpoint = f"{self.base_url}/orders/{order_id}"
+        response = requests.get(endpoint, headers=self.headers)
+        return response.json() if response.status_code == 200 else None
+
+    def verify_webhook(self, payload, signature):
+        """التحقق من صحة إشارة الويب هوك القادمة من قمرة (للأمان السيادي)"""
+        # هنا يتم وضع منطق التحقق باستخدام الـ Webhook Secret
+        pass
