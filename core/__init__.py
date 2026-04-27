@@ -12,56 +12,51 @@ migrate = Migrate()
 def create_app():
     app = Flask(__name__)
 
-    # 2. جلب الإعدادات من بيئة Render (Environment Variables)
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'mahjoub_online_default_key_9046')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # 2. جلب الإعدادات من ملف Config
+    from config import Config
+    app.config.from_object(Config)
 
     # 3. تهيئة الإضافات
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
 
-    login_manager.login_view = 'supplier_panel.login'
+    # تحديد صفحة تسجيل الدخول الافتراضية
+    login_manager.login_view = 'admin_panel.admin_login'
 
-    # 4. نظام التوجيه الذكي (بدون أسماء ثابتة معقدة)
+    # 4. نظام التوجيه الذكي (تجاوز رسالة unauthorized)
     @login_manager.unauthorized_handler
     def unauthorized():
-        if request.path.startswith('/admin_control_9046'):
-            return redirect(url_for('admin_panel.admin_login'))
-        return redirect(url_for('supplier_panel.login'))
+        # إذا حاول أي شخص الدخول لصفحة محمية، نوجهه فوراً لصفحة تسجيل الدخول
+        return redirect(url_for('admin_panel.admin_login'))
 
     with app.app_context():
-        # استيراد النماذج (Models)
+        # استيراد النماذج
         from core import models
         
-        # 5. تسجيل البوابات (Blueprints) بطريقة مرنة
-        # تسجيل الموردين
+        # 5. تسجيل البوابات (Blueprints)
         try:
             from supplier_panel import supplier_bp
             app.register_blueprint(supplier_bp, url_prefix='/supplier')
         except Exception as e:
-            print(f"⚠️ لم يتم تحميل بوابة الموردين: {e}")
+            print(f"⚠️ بوابة الموردين غير متوفرة: {e}")
 
-        # تسجيل الإدارة (البحث التلقائي عن أي كائن Blueprint داخل المجلد)
         try:
-            import admin_panel
-            for item in dir(admin_panel):
-                obj = getattr(admin_panel, item)
-                # إذا وجدنا أي كائن من نوع Blueprint، نقوم بتسجيله فوراً
-                if str(type(obj)) == "<class 'flask.blueprints.Blueprint'>":
-                    app.register_blueprint(obj, url_prefix='/admin_control_9046')
-                    print(f"✅ تم تفعيل بوابة الإدارة بنجاح")
+            from admin_panel import admin_bp 
+            app.register_blueprint(admin_bp, url_prefix='/admin_control_9046')
+            print("✅ تم تفعيل بوابة الإدارة بنجاح")
         except Exception as e:
-            print(f"⚠️ فشل استيراد مجلد الإدارة: {e}")
+            print(f"⚠️ فشل تسجيل بوابة الإدارة: {e}")
 
+        # إنشاء الجداول في قاعدة البيانات
         db.create_all()
 
     return app
 
-app = create_app()
-
 @login_manager.user_loader
 def load_user(user_id):
     from core.models import User
-    return User.query.get(int(user_id))
+    try:
+        return User.query.get(int(user_id))
+    except:
+        return None
