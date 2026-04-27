@@ -14,5 +14,5 @@ def query_qumra(query, variables=None):
         response = requests.post(QUMRA_API_URL, json=payload, headers=headers)
         return response.json()
     except Exception as e:
-        print(f"🔴 Error: {e}")
+        print(f"🔴 خطأ في اتصال قمرة: {e}")
         return None
