@@ -1,22 +1,22 @@
-from flask import render_template, request, redirect, url_for
-from flask_login import login_required
+from flask import render_template, request, redirect, url_for, flash
+from flask_login import login_user
 from . import supplier_bp
+from core.models import User # تأكد من استيراد موديل المستخدم
 
-@supplier_bp.route('/login')
+@supplier_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    # استخدام اسم الملف الذي ذكرته في القائمة
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # البحث عن المستخدم في قاعدة البيانات
+        user = User.query.filter_by(username=username).first()
+        
+        # التحقق من صحة البيانات (بفرض أنك تستخدم التحقق من الباسورد)
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for('supplier_panel.dashboard'))
+        else:
+            flash('⚠️ خطأ في هوية الشريك أو شفرة العبور')
+            
     return render_template('supplier_panel/supplier_login.html')
-
-@supplier_bp.route('/dashboard')
-@login_required
-def dashboard():
-    return render_template('supplier_panel/dashboard.html')
-
-@supplier_bp.route('/add-product')
-@login_required
-def add_product():
-    return render_template('supplier_panel/add_product.html')
-
-@supplier_bp.route('/waiting-approval')
-def waiting_approval():
-    return render_template('supplier_panel/waiting_approval.html')
