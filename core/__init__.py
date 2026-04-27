@@ -21,46 +21,41 @@ def create_app():
     login_manager.init_app(app)
     
     # --- 3. بروتوكولات الحماية ---
+    # جعل الدخول الافتراضي هو بوابة الإدارة
     login_manager.login_view = 'admin_panel.login'  
     login_manager.login_message = "يرجى إثبات هويتك للوصول إلى هذه المنطقة السيادية."
     login_manager.login_message_category = "info"
 
     with app.app_context():
-        # استيراد الموديلات داخل السياق لضمان تسجيلها في قاعدة البيانات
+        # استيراد الموديلات الموحدة
         from core.models import User, Supplier, Product
 
-        # --- 🔐 نظام الفصل الذكي بين الهويات (Multi-Auth) ---
+        # --- 🔐 نظام التحميل الموحد (Unified User Loader) ---
         @login_manager.user_loader
         def load_user(user_id):
-            try:
-                # نعتمد على user_type المخزن في الجلسة لتوجيه الاستعلام للجدول الصحيح
-                user_type = session.get('user_type')
-                if user_type == 'supplier':
-                    return Supplier.query.get(int(user_id))
-                return User.query.get(int(user_id))
-            except Exception:
-                return None
+            # الآن كل المستخدمين (أدمن أو مورد) يعيشون في جدول User
+            # التفرقة تتم داخل النظام عبر حقل role
+            return User.query.get(int(user_id))
 
         # --- 🔗 تسجيل بوابات النظام (Blueprints) ---
         try:
-            # تسجيل بوابة الإدارة
-            from admin_panel.routes import admin_bp
+            # تسجيل بوابة الإدارة (تأكد من وجود الكائن admin_bp داخل admin_panel)
+            from admin_panel import admin_bp
             app.register_blueprint(admin_bp, url_prefix='/admin')
             
-            # تسجيل بوابة الموردين (استيراد supplier_bp من الملف الذي أنشأناه)
-            # التأكد من استيرادها من المجلد الذي يحتوي على __init__.py الجديد
+            # تسجيل بوابة الموردين
             from supplier_panel import supplier_bp
             app.register_blueprint(supplier_bp, url_prefix='/supplier')
             
-            print("✅ [System] تم ربط جميع البوابات السيادية بنجاح.")
+            print("✅ [System] تم ربط البوابات السيادية (Admin & Supplier) بنجاح.")
         except Exception as e:
             print(f"❌ [Critical Error] فشل في ربط البوابات السيادية: {e}")
 
-        # --- 📊 معالج البيانات الشامل ---
+        # --- 📊 معالج البيانات الشامل (Context Processor) ---
         @app.context_processor
         def inject_global_data():
             try:
-                # جلب عدد الطلبات المعلقة للموردين لعرضها في شريط التنبيهات للأدمن
+                # جلب عدد الموردين الذين ينتظرون "التعميد" من القائد علي
                 p_suppliers = Supplier.query.filter_by(is_approved=False).count()
                 return dict(pending_suppliers_count=p_suppliers)
             except Exception:
