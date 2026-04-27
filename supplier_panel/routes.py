@@ -1,25 +1,15 @@
-from flask import render_template, request, redirect, url_for, flash, session
-from flask_login import login_user, logout_user, login_required, current_user
-from . import supplier_bp 
-from core.models import User, Supplier, Product
-from core import db
-
-@supplier_bp.route('/login', methods=['GET', 'POST'])
+# صفحة دخول المورد
+@supplier_bp.route('/login')
 def login():
-    if request.method == 'POST':
-        # منطق تسجيل الدخول المبسط للمورد
-        username = request.form.get('username')
-        user = User.query.filter_by(username=username, role='supplier').first()
-        if user:
-            session['user_type'] = 'supplier'
-            login_user(user)
-            return redirect(url_for('supplier_panel.dashboard'))
-    return render_template('supplier_panel/login.html')
+    return render_template('supplier_panel/supplier_login.html')
 
-@supplier_bp.route('/dashboard')
+# صفحة انتظار التعميد (Waiting Approval)
+@supplier_bp.route('/pending')
+def pending():
+    return render_template('supplier_panel/waiting_approval.html')
+
+# صفحة إضافة منتج جديد
+@supplier_bp.route('/add-product')
 @login_required
-def dashboard():
-    if session.get('user_type') != 'supplier':
-        return redirect(url_for('supplier_panel.login'))
-    products = Product.query.filter_by(supplier_id=current_user.supplier_profile.id).all()
-    return render_template('supplier_panel/dashboard.html', products=products)
+def add_product():
+    return render_template('supplier_panel/add_product.html')
