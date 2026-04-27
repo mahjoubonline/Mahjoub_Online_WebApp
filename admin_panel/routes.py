@@ -1,24 +1,21 @@
 from flask import render_template, redirect, url_for, flash, request
-from flask_login import login_user, logout_user, login_required
 from . import admin_bp
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
+        # منطق التحقق من البيانات (اسم المستخدم وكلمة المرور)
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # هنا تضع منطق التحقق الخاص بك (مثال مؤقت)
-        if username == "ali_admin" and password == "9046":
-            # تفاصيل تسجيل الدخول...
+        if username == "ali_admin" and password == "9046": # مثال
             return redirect(url_for('admin_panel.admin_dashboard'))
         else:
-            flash('خطأ في بيانات العبور السيادية', 'danger')
+            flash('فشل التحقق السيادي: بيانات غير صحيحة', 'danger')
             
-    # لاحظ المسار هنا: يتوافق تماماً مع هيكل مجلداتك
+    # المسار المنظم للقالب كما طلبته
     return render_template('admin_panel/login.html')
 
 @admin_bp.route('/dashboard')
-@login_required
 def admin_dashboard():
-    return "مرحباً بك في برج الرقابة المركزية"
+    return "مرحباً بك في لوحة تحكم محجوب أونلاين - برج الرقابة المركزية"
