@@ -1,54 +1,24 @@
+from flask import Blueprint
 import os
-import sys
-from flask import Flask
-from flask_login import LoginManager
-from config import Config
-from flask_sqlalchemy import SQLAlchemy
 
-# تعريف الكائنات المركزية
-db = SQLAlchemy()
-login_manager = LoginManager()
+# 1. تعريف البلوبرنت (Blueprint) الخاص بلوحة الإدارة
+# تم تحديد المسارات بدقة لضمان وصول المحرك للقوالب والملفات الساكنة
+admin_bp = Blueprint(
+    'admin_panel', 
+    __name__, 
+    template_folder='templates',  # المجلد الذي يحتوي على login.html و dashboard.html
+    static_folder='static'        # المجلد الذي يحتوي على ملفات CSS/JS الخاصة بالإدارة
+)
 
-def create_app():
-    # تأمين المسارات لبيئة Linux
-    base_dir = os.path.abspath(os.path.dirname(__file__))
-    project_root = os.path.abspath(os.path.join(base_dir, '..'))
-    
-    # إضافة الجذر لمسار النظام لضمان رؤية المجلدات المجاورة
-    if project_root not in sys.path:
-        sys.path.insert(0, project_root)
+# 2. استيراد المسارات (Routes)
+# يتم الاستيراد في أسفل الملف لكسر حلقة الاستيراد الدائري (Circular Import)
+# لضمان أن كائن admin_bp قد تم تعريفه بالكامل قبل أن يطلبه ملف routes.py
+try:
+    from . import routes
+    print("🏰 [System] تم تعميد بوابة الإدارة بنجاح.")
+except Exception as e:
+    # هذا التنبيه سيظهر في سجلات (Logs) Railway إذا كان هناك خلل في ملف routes.py
+    print(f"⚠️ [Error] فشل في تحميل مسارات الإدارة: {str(e)}")
 
-    app = Flask(__name__, 
-                static_folder=os.path.join(project_root, 'static'), 
-                template_folder=os.path.join(project_root, 'templates'))
-    
-    app.config.from_object(Config)
-    
-    # ربط المحركات
-    db.init_app(app)
-    login_manager.init_app(app)
-    
-    login_manager.login_view = 'supplier_panel.login'
-    login_manager.login_message = "هذه المنطقة تتطلب تعميداً سيادياً للدخول."
-    login_manager.login_message_category = "info"
-
-    with app.app_context():
-        from core.models import User
-
-        @login_manager.user_loader
-        def load_user(user_id):
-            return User.query.get(int(user_id))
-
-        # ربط البوابات السيادية (Blueprints)
-        try:
-            from admin_panel import admin_bp
-            from supplier_panel import supplier_bp
-            
-            app.register_blueprint(admin_bp, url_prefix='/admin')
-            app.register_blueprint(supplier_bp, url_prefix='/supplier')
-            
-            print("✅ [System] تم توحيد المحرك وربط البوابات بنجاح.")
-        except Exception as e:
-            print(f"❌ [Critical Error] فشل في ربط البوابات: {str(e)}")
-
-    return app
+# تصدير الكائن ليكون متاحاً للاستدعاء من المحرك المركزي core/__init__.py
+__all__ = ['admin_bp']
