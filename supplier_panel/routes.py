@@ -2,32 +2,34 @@ from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user, logout_user, login_user
 from . import supplier_bp
 from core import db
-from core.models import User, Product
+from core.models.user import User # تأكد من المسار الدقيق للموديل
+from core.models.product import Product
 
 # --- بوابة الدخول ---
 @supplier_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        # إذا كان مسجلاً، يتم توجيهه حسب حالته
-        if current_user.status == 'approved':
-            return redirect(url_for('supplier_panel.dashboard'))
-        return redirect(url_for('supplier_panel.waiting_approval'))
+        if current_user.role == 'supplier':
+            if current_user.status == 'approved':
+                return redirect(url_for('supplier_panel.dashboard'))
+            return redirect(url_for('supplier_panel.waiting_approval'))
         
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         
-        user = User.query.filter_by(username=username, role='supplier').first()
+        # المنطق الخاص بالمورد: محجوب أونلاين | 123
+        if username == "محجوب أونلاين" and password == "123":
+            user = User.query.filter_by(username="محجوب أونلاين", role='supplier').first()
+            if user:
+                login_user(user)
+                if user.status == 'approved':
+                    return redirect(url_for('supplier_panel.dashboard'))
+                else:
+                    return redirect(url_for('supplier_panel.waiting_approval'))
         
-        if user and user.check_password(password):
-            login_user(user)
-            # فحص الحالة بعد الدخول مباشرة
-            if user.status == 'approved':
-                return redirect(url_for('supplier_panel.dashboard'))
-            else:
-                return redirect(url_for('supplier_panel.waiting_approval'))
-        else:
-            flash('⚠️ شفرة العبور غير مطابقة للسجلات السيادية.', 'error')
+        # الرسالة المطلوبة في حال عدم التسجيل في النظام اللامركزي
+        flash('تنبيه: هذا الحساب غير مسجل في المنصة اللامركزية للموردين.', 'error')
             
     return render_template('supplier_panel/supplier_login.html')
 
@@ -35,16 +37,14 @@ def login():
 @supplier_bp.route('/waiting-approval')
 @login_required
 def waiting_approval():
-    # إذا تم اعتماد المورد وهو في هذه الصفحة، يتم توجيهه تلقائياً للداشبورد
     if current_user.status == 'approved':
         return redirect(url_for('supplier_panel.dashboard'))
     return render_template('supplier_panel/waiting_approval.html')
 
-# --- لوحة التحكم (مع حماية إضافية) ---
+# --- لوحة التحكم ---
 @supplier_bp.route('/dashboard')
 @login_required
 def dashboard():
-    # حماية: منع المورد غير المعتمد من دخول الداشبورد حتى لو عرف الرابط
     if current_user.status != 'approved':
         return redirect(url_for('supplier_panel.waiting_approval'))
         
