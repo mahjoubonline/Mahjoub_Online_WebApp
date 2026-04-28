@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 
-# 1. تعريف الكائنات الأساسية للنظام
+# 1. تعريف الكائنات الأساسية للنظام (Globally)
 db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
@@ -13,8 +13,14 @@ def create_app():
     app = Flask(__name__)
 
     # 2. جلب الإعدادات من ملف config.py
-    from config import Config
-    app.config.from_object(Config)
+    try:
+        from config import Config
+        app.config.from_object(Config)
+    except ImportError:
+        # إعدادات افتراضية في حال عدم وجود ملف config
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mahjoub_online.db'
+        app.config['SECRET_KEY'] = 'mahjoub-secret-key-123'
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # 3. تهيئة الإضافات وربطها بالتطبيق
     db.init_app(app)
@@ -40,28 +46,29 @@ def create_app():
         # 6. تسجيل بوابة الموردين (Supplier Panel)
         try:
             from supplier_panel.routes import supplier_bp
-            app.register_blueprint(supplier_bp, url_prefix='/supplier')
-            print("✅ تم تفعيل بوابة الموردين")
+            # نتحقق مما إذا كان البلوبرينت مسجلاً مسبقاً لمنع التكرار
+            if 'supplier_panel' not in app.blueprints:
+                app.register_blueprint(supplier_bp, url_prefix='/supplier')
+                print("✅ تم تفعيل بوابة الموردين بنجاح")
         except Exception as e:
             print(f"⚠️ تنبيه: بوابة الموردين لم تفعل بعد: {e}")
 
         # 7. تسجيل بوابة الإدارة (Admin Panel - برج الرقابة 🏛️)
-        # تم تعديل الاستيراد هنا ليكون مباشراً من ملف routes لحل خطأ Unknown Location
         try:
             from admin_panel.routes import admin_bp 
-            app.register_blueprint(admin_bp, url_prefix='/admin')
-            print("✅ تم تفعيل برج الرقابة المركزية بنجاح")
-        except ImportError as e:
-            print(f"❌ خطأ فادح في الاستيراد: {e}")
+            if 'admin_panel' not in app.blueprints:
+                app.register_blueprint(admin_bp, url_prefix='/admin')
+                print("✅ تم تفعيل برج الرقابة المركزية بنجاح")
         except Exception as e:
-            print(f"⚠️ خطأ عام في بوابة الإدارة: {e}")
+            print(f"⚠️ خطأ في بوابة الإدارة: {e}")
 
-        # 8. إنشاء الجداول في قاعدة البيانات
+        # 8. إنشاء الجداول في قاعدة البيانات (سيقوم بإنشاء الملف إذا لم يكن موجوداً)
         db.create_all()
 
+    # 9. إرجاع كائن التطبيق لملف run.py و setup_supplier.py
     return app
 
-# 9. محمل المستخدم (User Loader) - المحرك الأساسي للتعرف على الهوية
+# 10. محمل المستخدم (User Loader) - خارج create_app ليعمل عالمياً
 @login_manager.user_loader
 def load_user(user_id):
     from core.models.user import User
