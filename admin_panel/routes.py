@@ -2,7 +2,7 @@ from flask import render_template, redirect, url_for, flash, request, Blueprint
 from flask_login import login_required, current_user, login_user, logout_user
 from core.models.user import User  # استيراد الموديل من قلب النظام
 
-# 1. تعريف البلوبرينت (هذا هو السطر الذي كان ينقصك ويسبب الخطأ الفادح)
+# 1. تعريف البلوبرينت
 admin_bp = Blueprint(
     'admin_panel', 
     __name__, 
@@ -10,23 +10,27 @@ admin_bp = Blueprint(
 )
 
 # ==========================================
-# 1. بوابة الدخول (login.html)
+# 1. بوابة الدخول السيادية (login.html)
 # ==========================================
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
+    # إذا كان مسجلاً كأدمن بالفعل، يدخل فوراً
     if current_user.is_authenticated and current_user.role == 'admin':
         return redirect(url_for('admin_panel.admin_dashboard'))
     
     if request.method == 'POST':
-        email = request.form.get('email')
+        username = request.form.get('username') # تغيير من email إلى username
         password = request.form.get('password')
-        user = User.query.filter_by(email=email, role='admin').first()
         
-        if user and user.check_password(password):
-            login_user(user)
-            return redirect(url_for('admin_panel.admin_dashboard'))
-        else:
-            flash('بيانات الدخول غير صحيحة يا قائد.', 'danger')
+        # التحقق من الهوية الملكية (علي محجوب | 123)
+        if username == "علي محجوب" and password == "123":
+            user = User.query.filter_by(username="علي محجوب", role='admin').first()
+            if user:
+                login_user(user)
+                return redirect(url_for('admin_panel.admin_dashboard'))
+        
+        # الرسالة المطلوبة في حال عدم التسجيل أو الخطأ
+        flash('عذراً يا قائد، أنت غير مسجل في المنصة اللامركزية للإدارة.', 'danger')
             
     return render_template('admin_panel/login.html')
 
@@ -44,7 +48,6 @@ def admin_dashboard():
 @admin_bp.route('/suppliers')
 @login_required
 def admin_suppliers_management():
-    # هنا سيتم لاحقاً جلب قائمة الموردين من قاعدة البيانات
     return render_template('admin_panel/admin_suppliers_management.html')
 
 # ==========================================
