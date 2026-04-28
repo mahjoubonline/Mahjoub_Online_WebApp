@@ -21,12 +21,12 @@ def create_app():
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'mahjoub-secret-key-123'
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # 3. تهيئة الإضافات
+    # 3. تهيئة الإضافات وربطها بالتطبيق
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
 
-    # 4. إعدادات إدارة الدخول
+    # 4. إعدادات إدارة الدخول والوصول السيادي
     login_manager.login_view = 'admin_panel.admin_login'
     login_manager.login_message = "يرجى تسجيل الدخول للوصول إلى النظام السيادي."
     login_manager.login_message_category = "info"
@@ -36,12 +36,12 @@ def create_app():
         return redirect(url_for('admin_panel.admin_login'))
 
     with app.app_context():
-        # 5. استيراد الموديلات
+        # 5. استيراد الموديلات لضمان التعرف على الجداول
         from core.models.user import User
         from core.models.product import Product
         from core.models.supplier import Supplier
         
-        # 6. تسجيل بوابة الموردين (بشكل آمن)
+        # 6. تسجيل بوابة الموردين (بشكل آمن لتفادي أخطاء الاستيراد)
         try:
             from supplier_panel.routes import supplier_bp
             if 'supplier_panel' not in app.blueprints:
@@ -50,7 +50,7 @@ def create_app():
         except Exception as e:
             print(f"⚠️ تنبيه: خطأ في استيراد بوابة الموردين: {e}")
 
-        # 7. تسجيل بوابة الإدارة
+        # 7. تسجيل بوابة الإدارة (برج الرقابة 🏛️)
         try:
             from admin_panel.routes import admin_bp 
             if 'admin_panel' not in app.blueprints:
@@ -61,14 +61,15 @@ def create_app():
 
         # 8. إدارة قاعدة البيانات والبيانات السابقة
         try:
-            db.create_all()  # يحاول إنشاء الجداول الجديدة فقط دون مسح القديم
+            # محاولة إنشاء الجداول الجديدة فقط دون التأثير على البيانات القديمة
+            db.create_all() 
             
             # 9. تعميد حساب المورد الأول (بشكل مرن لامتصاص أخطاء الجداول القديمة)
             if not User.query.filter_by(username="محجوب أونلاين").first():
                 print("🚀 جاري محاولة تعميد حساب المورد...")
                 sys_supplier = User(username="محجوب أونلاين", role="supplier")
                 
-                # نتحقق إذا كان العمود 'status' موجوداً فعلياً في الجدول القديم لتجنب الانهيار
+                # التحقق البرمجي من وجود العمود 'status' لتجنب انهيار السيرفر في حال قدم الجدول
                 if hasattr(sys_supplier, 'status'):
                     sys_supplier.status = "approved"
                 
@@ -83,11 +84,12 @@ def create_app():
 
     return app
 
-# 10. محمل المستخدم
+# 10. محمل المستخدم (User Loader)
 @login_manager.user_loader
 def load_user(user_id):
     from core.models.user import User
     try:
+        # استخدام الطريقة المستقرة لجلب الهوية السيادية
         return db.session.get(User, int(user_id))
     except Exception as e:
         return None
