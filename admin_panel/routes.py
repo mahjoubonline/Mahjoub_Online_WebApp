@@ -3,8 +3,8 @@ from flask_login import login_user, logout_user, login_required, current_user
 from core.models.user import User
 from core import db
 
-# تعريف البلوبرينت - هذا هو السطر الذي كان يسبب الخطأ
-# تأكد أن الاسم admin_bp مطابق لما تستدعيه في core/__init__.py
+# تعريف البلوبرينت - هذا هو السطر الحاسم الذي يربط المسارات بمجلد القوالب
+# تأكد أن الاسم admin_bp مطابق لما تستدعيه في ملف create_app
 admin_bp = Blueprint('admin_panel', __name__, template_folder='templates')
 
 # --- مسارات الهوية (Authentication) ---
@@ -29,7 +29,7 @@ def admin_login():
         else:
             flash('بيانات الدخول غير صحيحة أو ليس لديك صلاحية الوصول.', 'danger')
 
-    # المسار الفعلي: admin_panel/templates/admin_panel/login.html
+    # Flask سيبحث تلقائياً في admin_panel/templates/admin_panel/login.html
     return render_template('admin_panel/login.html')
 
 @admin_bp.route('/logout')
@@ -56,6 +56,13 @@ def admin_suppliers_management():
     if current_user.role != 'admin':
         return redirect(url_for('admin_panel.admin_login'))
     return render_template('admin_panel/admin_suppliers_management.html')
+
+@admin_bp.route('/product-review')
+@login_required
+def product_review():
+    if current_user.role != 'admin':
+        return redirect(url_for('admin_panel.admin_login'))
+    return render_template('admin_panel/product_review.html')
 
 @admin_bp.route('/wallets')
 @login_required
