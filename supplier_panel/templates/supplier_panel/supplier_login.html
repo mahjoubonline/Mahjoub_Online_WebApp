@@ -124,7 +124,8 @@
               {% endif %}
             {% endwith %}
 
-            <form action="{{ url_for('supplier_panel.login') }}" method="POST">
+            <!-- التعديل الجوهري هنا: ربط المسار بالدالة الصحيحة supplier_login -->
+            <form action="{{ url_for('supplier_panel.supplier_login') }}" method="POST">
                 <div class="input-box">
                     <label>هوية الشريك (التاجر)</label>
                     <i class="fa-solid fa-id-card-clip"></i>
