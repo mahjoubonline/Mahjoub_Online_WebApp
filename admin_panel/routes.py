@@ -3,23 +3,18 @@ from flask_login import login_user, logout_user, login_required, current_user
 from core.models.user import User
 from core import db
 
-# تعريف البلوبرينت - هذا هو السطر الحاسم الذي يربط المسارات بمجلد القوالب
-# تأكد أن الاسم admin_bp مطابق لما تستدعيه في ملف create_app
 admin_bp = Blueprint('admin_panel', __name__, template_folder='templates')
 
 # --- مسارات الهوية (Authentication) ---
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
-    # منع الدخول المتكرر إذا كان المستخدم مسجلاً بالفعل كمدير
     if current_user.is_authenticated and current_user.role == 'admin':
         return redirect(url_for('admin_panel.admin_dashboard'))
 
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
-        # البحث عن المدير في قاعدة البيانات
         user = User.query.filter_by(username=username, role='admin').first()
         
         if user and user.check_password(password):
@@ -27,16 +22,15 @@ def admin_login():
             flash('مرحباً بك في برج الرقابة.', 'success')
             return redirect(url_for('admin_panel.admin_dashboard'))
         else:
-            flash('بيانات الدخول غير صحيحة أو ليس لديك صلاحية الوصول.', 'danger')
+            flash('بيانات الدخول غير صحيحة.', 'danger')
 
-    # Flask سيبحث تلقائياً في admin_panel/templates/admin_panel/login.html
     return render_template('admin_panel/login.html')
 
 @admin_bp.route('/logout')
 @login_required
-def admin_logout():
+def logout(): # تم تغيير الاسم ليتطابق مع القالب
     logout_user()
-    flash('تم تسجيل الخروج من النظام السيادي بنجاح.', 'info')
+    flash('تم تسجيل الخروج من النظام بنجاح.', 'info')
     return redirect(url_for('admin_panel.admin_login'))
 
 # --- مسارات لوحة التحكم (Dashboard) ---
@@ -44,22 +38,20 @@ def admin_logout():
 @admin_bp.route('/dashboard')
 @login_required
 def admin_dashboard():
-    # تأمين المسار: التأكد من أن المستخدم مدير وليس مورداً
     if current_user.role != 'admin':
-        return redirect(url_for('supplier_panel.supplier_login'))
-        
+        return redirect(url_for('admin_panel.admin_login'))
     return render_template('admin_panel/dashboard.html')
 
 @admin_bp.route('/suppliers-management')
 @login_required
-def admin_suppliers_management():
+def manage_suppliers(): # تم تغيير الاسم ليتطابق مع القالب
     if current_user.role != 'admin':
         return redirect(url_for('admin_panel.admin_login'))
     return render_template('admin_panel/admin_suppliers_management.html')
 
 @admin_bp.route('/product-review')
 @login_required
-def product_review():
+def sync_now(): # تم تغيير الاسم ليتطابق مع القالب (مراجعة المنتجات)
     if current_user.role != 'admin':
         return redirect(url_for('admin_panel.admin_login'))
     return render_template('admin_panel/product_review.html')
