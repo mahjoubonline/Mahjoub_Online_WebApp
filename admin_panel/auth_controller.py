@@ -19,15 +19,10 @@ class AdminAuthController:
                 flash('مرحباً بك في برج الرقابة السيادية.', 'success')
                 return redirect(url_for('admin_panel.admin_dashboard'))
             else:
-                flash('بيانات الدخول غير صحيحة أو الصلاحيات غير كافية.', 'danger')
+                flash('بيانات الدخول غير صحيحة.', 'danger')
 
+        # تأكد أن المسار يبدأ بـ اسم المجلد الفرعي
         return render_template('admin_panel/login.html')
-
-    @staticmethod
-    def logout_logic():
-        logout_user()
-        flash('تم إنهاء الجلسة السيادية بنجاح.', 'info')
-        return redirect(url_for('admin_panel.admin_login'))
 
     @staticmethod
     def dashboard_logic():
@@ -52,3 +47,9 @@ class AdminAuthController:
         if current_user.role != 'admin':
             return redirect(url_for('admin_panel.admin_login'))
         return render_template('admin_panel/wallets.html')
+
+    @staticmethod
+    def logout_logic():
+        logout_user()
+        flash('تم إنهاء الجلسة السيادية بنجاح.', 'info')
+        return redirect(url_for('admin_panel.admin_login'))
