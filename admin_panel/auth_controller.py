@@ -6,7 +6,6 @@ from core import db
 class AdminAuthController:
     @staticmethod
     def login_logic():
-        # التأكد من صحة المسار: admin_panel/login.html
         if current_user.is_authenticated and current_user.role == 'admin':
             return redirect(url_for('admin_panel.admin_dashboard'))
 
@@ -22,11 +21,26 @@ class AdminAuthController:
             else:
                 flash('بيانات الدخول غير صحيحة.', 'danger')
 
-        # هذا هو السطر الحاسم
         return render_template('admin_panel/login.html')
 
     @staticmethod
     def dashboard_logic():
-        if current_user.role != 'admin':
-            return redirect(url_for('admin_panel.admin_login'))
         return render_template('admin_panel/dashboard.html')
+
+    @staticmethod
+    def suppliers_logic():
+        return render_template('admin_panel/admin_suppliers_management.html')
+
+    @staticmethod
+    def sync_logic():
+        return render_template('admin_panel/product_review.html')
+
+    @staticmethod
+    def wallets_logic():
+        return render_template('admin_panel/wallets.html')
+
+    @staticmethod
+    def logout_logic():
+        logout_user()
+        flash('تم إنهاء الجلسة السيادية بنجاح.', 'info')
+        return redirect(url_for('admin_panel.admin_login'))
