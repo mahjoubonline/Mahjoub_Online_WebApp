@@ -1,12 +1,11 @@
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
 from core.models.user import User
-from core import db
 
 class SupplierAuthLogic:
     @staticmethod
     def login_process():
-        # إذا كان المورد مسجلاً دخوله بالفعل، يتم توجيهه للوحة تحكمه
+        # إذا كان المستخدم مسجلاً بالفعل كمورد، يتم توجيهه للوحة التحكم
         if current_user.is_authenticated and current_user.role == 'supplier':
             return redirect(url_for('supplier_panel.supplier_dashboard'))
 
@@ -14,32 +13,33 @@ class SupplierAuthLogic:
             username = request.form.get('username')
             password = request.form.get('password')
             
-            # البحث عن المورد والتأكد من دوره في النظام
+            # البحث عن المورد والتأكد من هويته ودوره
             user = User.query.filter_by(username=username, role='supplier').first()
             
             if user and user.check_password(password):
-                # التأكد من أن الحساب "معمد" (Approved) من قبل الإدارة
+                # التحقق من حالة الحساب (Approved) لضمان الحوكمة السيادية
                 if user.status == 'approved':
                     login_user(user)
                     flash('مرحباً بك في منصة التوريد الخاصة بك.', 'success')
                     return redirect(url_for('supplier_panel.supplier_dashboard'))
                 else:
-                    flash('حسابك لا يزال قيد المراجعة السيادية من قبل الإدارة.', 'warning')
+                    flash('عذراً، حسابك لا يزال قيد المراجعة والاعتماد.', 'warning')
             else:
-                flash('بيانات الدخول غير صحيحة.', 'danger')
+                flash('بيانات الدخول غير صحيحة، يرجى التحقق.', 'danger')
 
-        # سيبحث Flask في supplier_panel/templates/supplier_panel/login.html
+        # استدعاء قالب الدخول من المجلد الفرعي (حسب هيكل مجلداتك)
         return render_template('supplier_panel/login.html')
 
     @staticmethod
     def dashboard_process():
-        if current_user.role != 'supplier':
+        # التأكد من أن المستخدم "مورد" قبل عرض اللوحة
+        if not current_user.is_authenticated or current_user.role != 'supplier':
             return redirect(url_for('supplier_panel.supplier_login'))
         return render_template('supplier_panel/dashboard.html')
 
     @staticmethod
     def products_list_process():
-        if current_user.role != 'supplier':
+        if not current_user.is_authenticated or current_user.role != 'supplier':
             return redirect(url_for('supplier_panel.supplier_login'))
         return render_template('supplier_panel/my_products.html')
 
