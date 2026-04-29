@@ -1,40 +1,42 @@
-import os
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
-from dotenv import load_dotenv
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_user, logout_user, current_user, login_required
+from core.models.user import User
 
-load_dotenv()
-db = SQLAlchemy()
-login_manager = LoginManager()
+# تعريف البلوبرينت
+admin_bp = Blueprint(
+    'admin_panel', 
+    __name__, 
+    template_folder='templates'
+)
 
-def create_app():
-    app = Flask(__name__)
-    
-    # تصحيح مسار قاعدة بيانات Render
-    db_url = os.getenv("DATABASE_URL", "sqlite:///mahjoub.db")
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-    app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "MAHJOUB_2026_KEY")
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+@admin_bp.route('/login', methods=['GET', 'POST'])
+def admin_login():
+    # 1. إذا كان المسؤول مسجلاً دخوله بالفعل، توجه للوحة التحكم
+    if current_user.is_authenticated and current_user.is_admin():
+        return redirect(url_for('admin_panel.admin_dashboard'))
 
-    db.init_app(app)
-    login_manager.init_app(app)
-    login_manager.login_view = 'supplier_panel.supplier_login'
-
-    with app.app_context():
-        # استيراد وتسجيل البوابات المبسطة
-        from admin_panel.routes import admin_bp
-        from supplier_panel.routes import supplier_bp
+    if request.method == 'POST':
+        username = request.form.get('username') # تأكد أن هذا الاسم مطابق للـ HTML
+        password = request.form.get('password')
         
-        app.register_blueprint(admin_bp, url_prefix='/admin')
-        app.register_blueprint(supplier_bp, url_prefix='/supplier')
+        user = User.query.filter_by(username=username).first()
 
-    return app
+        # 2. التحقق من الهوية والصلاحية الإدارية
+        if user and user.check_password(password) and user.is_admin():
+            login_user(user)
+            return redirect(url_for('admin_panel.admin_dashboard'))
+        
+        flash('بيانات الدخول غير صحيحة أو لا تملك صلاحيات إدارية.', 'danger')
 
-@login_manager.user_loader
-def load_user(user_id):
-    from core.models.user import User
-    return User.query.get(int(user_id))
+    # استدعاء القالب بناءً على مسارك: admin_panel/templates/admin_panel/login.html
+    return render_template('admin_panel/login.html')
+
+@admin_bp.route('/dashboard')
+@login_required
+def admin_dashboard():
+    # حماية اللوحة من وصول الموردين
+    if not current_user.is_admin():
+        flash('هذه المنطقة مخصصة لمدير النظام فقط.', 'warning')
+        return redirect(url_for('admin_panel.admin_login'))
+    
+    return render_template('admin_panel/dashboard.html')
