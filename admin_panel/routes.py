@@ -32,3 +32,10 @@ def sync_now():
 @login_required
 def wallets():
     return AdminAuthController.wallets_logic()
+
+# تأكد من وجود template_folder='templates'
+admin_bp = Blueprint('admin_panel', __name__, template_folder='templates')
+
+@admin_bp.route('/login', methods=['GET', 'POST'])
+def admin_login():
+    return AdminAuthController.login_logic()
