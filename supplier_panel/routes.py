@@ -20,7 +20,7 @@ def supplier_login():
                 return redirect(url_for('supplier_panel.supplier_dashboard'))
             flash('حسابك قيد المراجعة.', 'info')
         else:
-            flash('بيانات الدخول غير صحيحة.', 'danger')
+            flash('بيانات دخول المورد غير صحيحة.', 'danger')
     return render_template('supplier_panel/supplier_login.html')
 
 @supplier_bp.route('/dashboard')
@@ -29,8 +29,3 @@ def supplier_dashboard():
     if not current_user.is_supplier():
         return redirect(url_for('supplier_panel.supplier_login'))
     return render_template('supplier_panel/dashboard.html')
-
-@supplier_bp.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('supplier_panel.supplier_login'))
