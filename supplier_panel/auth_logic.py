@@ -1,55 +1,58 @@
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
-# استيراد الموديل والمكتبة الخاصة بقاعدة البيانات من النواة
+# استيراد قاعدة البيانات والموديل من النواة (core)
 from core import db
-from core.models.user import User  # تأكد من أن مسار موديل المستخدم صحيح
+from core.models.user import User
 
 class SupplierController:
     """
     متحكم منطق المصادقة الخاص بالموردين (شركاء النجاح).
-    تم تصميمه لضمان أمن العمليات داخل السوق الذكي.
+    يعتمد على موديل User للتحقق من الصلاحيات والحالة.
     """
     
     def __init__(self):
-        # يمكن إضافة إعدادات التشفير أو الترددات الأمنية هنا مستقبلاً
         pass
 
     def login_logic(self):
         # إذا كان المستخدم مسجلاً دخوله بالفعل، يتم توجيهه للوحة التحكم
-        if current_user.is_authenticated:
+        if current_user.is_authenticated and current_user.is_supplier():
             return redirect(url_for('supplier_panel.supplier_dashboard'))
 
         if request.method == 'POST':
-            email = request.form.get('email')
+            username = request.form.get('username')  # نستخدم username بناءً على الموديل الخاص بك
             password = request.form.get('password')
             remember = True if request.form.get('remember') else False
 
-            # البحث عن المستخدم في قاعدة البيانات
-            user = User.query.filter_by(email=email).first()
+            # البحث عن المستخدم بواسطة اسم المستخدم
+            user = User.query.filter_by(username=username).first()
 
-            # التحقق من كلمة المرور (تأكد أن الموديل يحتوي على دالة check_password)
+            # 1. التحقق من وجود المستخدم وكلمة المرور
             if not user or not user.check_password(password):
-                flash('يرجى التحقق من بيانات الدخول والمحاولة مرة أخرى.', 'danger')
+                flash('اسم المستخدم أو كلمة المرور غير صحيحة.', 'danger')
                 return render_template('supplier_panel/supplier_login.html')
 
-            # تسجيل الدخول
+            # 2. التحقق من الرتبة (يجب أن يكون مورد)
+            if not user.is_supplier():
+                flash('عذراً، هذا الحساب ليس لديه صلاحيات المورد.', 'warning')
+                return render_template('supplier_panel/supplier_login.html')
+
+            # 3. التحقق من حالة الحساب (يجب أن يكون مفعل/مقبول)
+            if not user.is_approved():
+                flash('حسابك قيد المراجعة حالياً، يرجى التواصل مع الإدارة.', 'info')
+                return render_template('supplier_panel/supplier_login.html')
+
+            # تسجيل الدخول بنجاح
             login_user(user, remember=remember)
-            
-            # توجيه المورد إلى لوحته الخاصة
             return redirect(url_for('supplier_panel.supplier_dashboard'))
 
         return render_template('supplier_panel/supplier_login.html')
 
     def dashboard_logic(self):
-        """عرض إحصائيات المورد وسلاسل التوريد الخاصة به."""
+        """لوحة تحكم شريك النجاح."""
         return render_template('supplier_panel/dashboard.html')
 
     def logout_logic(self):
-        """إنهاء الجلسة بأمان."""
+        """إنهاء الجلسة والعودة لصفحة الدخول."""
         logout_user()
-        flash('تم تسجيل الخروج بنجاح. ننتظر عودتك قريباً.', 'info')
+        flash('تم تسجيل الخروج بنجاح. ننتظر عودتك لشاشات "السوق الذكي" قريباً.', 'info')
         return redirect(url_for('supplier_panel.supplier_login'))
-
-    def profile_logic(self):
-        """إدارة بيانات المورد التقنية والشخصية."""
-        return render_template('supplier_panel/profile.html')
