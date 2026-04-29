@@ -2,7 +2,6 @@ from flask import Blueprint
 from flask_login import login_required
 from .auth_controller import AdminAuthController
 
-# تعريف البلوبرينت
 admin_bp = Blueprint('admin_panel', __name__, template_folder='templates')
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
@@ -11,7 +10,7 @@ def admin_login():
 
 @admin_bp.route('/dashboard')
 @login_required
-def admin_dashboard(): # تم توحيد الاسم هنا ليطابق سجلات الخطأ
+def admin_dashboard():
     return AdminAuthController.dashboard_logic()
 
 @admin_bp.route('/suppliers-management')
