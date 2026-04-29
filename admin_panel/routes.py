@@ -1,21 +1,17 @@
 from flask import Blueprint
 from flask_login import login_required
-from .auth_controller import AdminAuthController # استيراد المنطق
+from .auth_controller import AdminAuthController
 
+# تعريف البلوبرينت
 admin_bp = Blueprint('admin_panel', __name__, template_folder='templates')
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
     return AdminAuthController.login_logic()
 
-@admin_bp.route('/logout')
-@login_required
-def logout():
-    return AdminAuthController.logout_logic()
-
 @admin_bp.route('/dashboard')
 @login_required
-def admin_dashboard():
+def admin_dashboard(): # تم توحيد الاسم هنا ليطابق سجلات الخطأ
     return AdminAuthController.dashboard_logic()
 
 @admin_bp.route('/suppliers-management')
@@ -33,9 +29,7 @@ def sync_now():
 def wallets():
     return AdminAuthController.wallets_logic()
 
-# تأكد من وجود template_folder='templates'
-admin_bp = Blueprint('admin_panel', __name__, template_folder='templates')
-
-@admin_bp.route('/login', methods=['GET', 'POST'])
-def admin_login():
-    return AdminAuthController.login_logic()
+@admin_bp.route('/logout')
+@login_required
+def logout():
+    return AdminAuthController.logout_logic()
