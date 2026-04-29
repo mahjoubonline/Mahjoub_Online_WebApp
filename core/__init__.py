@@ -3,37 +3,39 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 import os
 
-# تعريف الكائنات الأساسية
+# تعريف الكائنات هنا لضمان إمكانية استيرادها في الملفات الأخرى دون أخطاء
 db = SQLAlchemy()
 login_manager = LoginManager()
 
 def create_app():
-    # إنشاء التطبيق (تلقائياً سيبحث عن المجلدات الفرعية للبلوبرينت)
     app = Flask(__name__)
     
-    # تحميل الإعدادات من ملف config.py الخارجي
+    # تحميل الإعدادات
     app.config.from_object('config.Config')
 
-    # تهيئة قاعدة البيانات ونظام الدخول
+    # تهيئة الإضافات
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'admin_panel.admin_login'
 
     with app.app_context():
-        # تسجيل بوابة الإدارة (برج الرقابة)
-        from admin_panel.routes import admin_bp
-        app.register_blueprint(admin_bp, url_prefix='/admin')
-
-        # تسجيل بوابة الموردين
-        from supplier_panel.routes import supplier_bp
-        app.register_blueprint(supplier_bp, url_prefix='/supplier')
-
-        # استيراد الموديلات وإنشاء الجداول
+        # استيراد الموديلات أولاً لبناء الجداول
         from core.models.user import User
         db.create_all()
+
+        # استيراد وتسجيل البوابات (الاستيراد هنا يمنع خطأ 500)
+        from admin_panel.routes import admin_bp
+        from supplier_panel.routes import supplier_bp
+        
+        app.register_blueprint(admin_bp, url_prefix='/admin')
+        app.register_blueprint(supplier_bp, url_prefix='/supplier')
 
     @app.route('/')
     def index():
         return redirect(url_for('admin_panel.admin_login'))
 
     return app
+
+@login_manager.user_loader
+def load_user(user_id):
+    from core.models.user import User
+    return db.session.get(User, int(user_id))
