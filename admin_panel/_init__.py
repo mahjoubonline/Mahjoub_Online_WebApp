@@ -1,7 +1,10 @@
 from flask import Blueprint
 
-# 1. تعريف البلوبرنت
+# تعريف البلوبرنت بوضوح
 admin_panel = Blueprint('admin_panel', __name__, template_folder='templates')
 
-# 2. استدعاء المسارات لربطها بالبلوبرنت (هذا السطر هو المحرك)
+# استيراد المسارات لربطها بالبلوبرنت
 from . import routes
+
+# هذا السطر يضمن تصدير الكائن بشكل صحيح للسيرفر
+__all__ = ['admin_panel']
