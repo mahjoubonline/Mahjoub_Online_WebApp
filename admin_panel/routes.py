@@ -1,6 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
-from . import admin_panel
+# تأمين الاستيراد النسبي لضمان قراءة البلوبرنت من __init__.py المجاور
+from . import admin_panel 
 from core.models import User, Supplier, Product, db
 from core.utils.security import admin_required
 
@@ -15,7 +16,7 @@ def admin_login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # التحقق من الهوية الرقمية
+        # البحث عن المستخدم في قاعدة بيانات محجوب أونلاين
         user = User.query.filter_by(username=username, role='admin').first()
 
         if user and user.check_password(password):
@@ -32,7 +33,7 @@ def admin_login():
 @login_required
 @admin_required
 def admin_dashboard():
-    # إحصائيات الترسانة لعام 2026
+    # إحصائيات الترسانة المحدثة لعام 2026
     stats = {
         'orders_count': 0, 
         's_count': Supplier.query.count(),
@@ -62,6 +63,7 @@ def manage_suppliers():
 @login_required
 @admin_required
 def verify_supplier(supplier_id):
+    # استخدام معرف المورد لتفعيل حسابه رسمياً في المنصة
     supplier = Supplier.query.get_or_404(supplier_id)
     supplier.is_verified = True
     db.session.commit()
