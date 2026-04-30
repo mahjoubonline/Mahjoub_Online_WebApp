@@ -1,7 +1,0 @@
-[phases.setup]
-# نحدد المتطلبات الأساسية للنظام فقط
-nixPkgs = ["python311", "postgresql"]
-
-[start]
-# نترك لـ Railway مهمة التثبيت التلقائي ونحدد فقط أمر التشغيل
-cmd = "gunicorn -b 0.0.0.0:8080 run:app"
