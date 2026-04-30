@@ -1,30 +1,31 @@
+import os
 from core import create_app, db
-from core.models import User
 
+# إنشاء نسخة من التطبيق للوصول إلى سياق قاعدة البيانات
 app = create_app()
 
-with app.app_context():
-    print("--- بدء عملية الربط مع قاعدة Render ---")
-    # إنشاء الجداول إذا لم تكن موجودة
-    db.create_all()
-    print("1. تم إنشاء هيكلية الجداول بنجاح.")
+def initialize_database():
+    with app.app_context():
+        try:
+            print("جاري الاتصال بقاعدة البيانات وبناء الترسانة الرقمية...")
+            
+            # استيراد الموديلات صراحة لضمان أن SQLAlchemy يراها قبل إنشاء الجداول
+            from core.models.user import User
+            from core.models.supplier import Supplier
+            from core.models.product import Product
+            
+            # إنشاء الجداول
+            db.create_all()
+            
+            print("--------------------------------")
+            print("✅ تم بناء الترسانة بنجاح!")
+            print("🚀 منصة محجوب أونلاين جاهزة للعمل.")
+            print("--------------------------------")
+            
+        except Exception as e:
+            print("--------------------------------")
+            print(f"❌ حدث خطأ أثناء بناء قاعدة البيانات: {e}")
+            print("--------------------------------")
 
-    # التأكد من عدم تكرار الحساب
-    admin_exists = User.query.filter_by(username='ali_mahjoub').first()
-    
-    if not admin_exists:
-        # إنشاء حساب الأدمن الخاص بك
-        new_admin = User(
-            username='ali_mahjoub',
-            email='ali@mahjoub-online.com',
-            role='admin' # تحديد الصفة السيادية للمنصة
-        )
-        new_admin.set_password('Ali@2026') # كلمة مرور مؤقتة (قم بتغييرها لاحقاً)
-        
-        db.session.add(new_admin)
-        db.session.commit()
-        print(f"2. تم إنشاء حساب الأدمن بنجاح: {new_admin.username}")
-    else:
-        print("2. حساب الأدمن موجود مسبقاً في القاعدة.")
-
-    print("--- انتهت العملية، المنصة الآن جاهزة للتشغيل ---")
+if __name__ == "__main__":
+    initialize_database()
