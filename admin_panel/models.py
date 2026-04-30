@@ -1,24 +1,17 @@
-# =================================================================
-# مشروع محجوب أونلاين - نظام السيادة والقرار (MAH-9046)
-# ملف الموديلات للوحة التحكم: استدعاء النواة المركزية
-# =================================================================
+from core import db
+from datetime import datetime
 
-from core.models import db, User, Supplier, Product
-
-# ملاحظة سيادية: 
-# تم توحيد كافة الموديلات في core.models لمنع تضارب الجداول.
-# أي تعديل في هيكل قاعدة البيانات يتم من خلال النواة المركزية،
-# وهنا نقوم فقط بعملية الاستدعاء لضمان استقرار لوحة التحكم.
-
-def init_admin_db(app):
+class AdminLog(db.Model):
     """
-    وظيفة لربط قاعدة البيانات بتطبيق الأدمن عند التشغيل.
-    تضمن أن كافة الجداول (User, Supplier, Product) تم تعميدها.
+    سجل العمليات السيادية - لمراقبة تحركات الإدارة داخل المنصة.
     """
-    with app.app_context():
-        # إنشاء الجداول إذا لم تكن موجودة (بدون حذف البيانات الحالية)
-        db.create_all()
-        print("🏛️ تم التأكد من ربط الجداول بالمسار الإداري بنجاح.")
+    __tablename__ = 'admin_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    action = db.Column(db.String(255), nullable=False) # وصف العملية (مثلاً: تعميد مورد)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(50))
 
-# يمكنك الآن استخدام الكائنات مباشرة في ملف views.py الخاص بالأدمن:
-# مثال: suppliers = Supplier.query.all()
+    def __repr__(self):
+        return f'<AdminLog {self.action} by Admin {self.admin_id}>'
