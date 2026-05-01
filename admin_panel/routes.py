@@ -5,53 +5,54 @@ from . import admin_bp
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
-    # إذا كان المستخدم مسجلاً دخوله بالفعل، يتم توجيهه حسب رتبته
+    # إذا كان المستخدم مسجلاً دخوله بالفعل، يتم توجيهه حسب رتبته السيادية
     if current_user.is_authenticated:
         return redirect_by_role(current_user)
     
     if request.method == 'POST':
-        # جلب البيانات من نموذج تسجيل الدخول
-        username = request.form.get('username')
-        password = request.form.get('password')
+        # جلب البيانات مع تنظيف المسافات الزائدة (strip) لضمان الدقة
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
         
-        # 1. البحث عن المستخدم أولاً في الترسانة الرقمية
+        # 1. البحث عن المستخدم في قاعدة البيانات (الترسانة الرقمية)
         user = User.query.filter_by(username=username).first()
         
-        # فحص وجود المستخدم
+        # المرحلة الأولى: فحص وجود الهوية
         if not user:
             flash(f'⚠️ تنبيه: اسم المستخدم "{username}" غير موجود في قاعدة البيانات.', 'danger')
             return redirect(url_for('admin.admin_login'))
         
-        # 2. فحص كلمة المرور إذا وجدنا المستخدم
+        # المرحلة الثانية: فحص مطابقة مفتاح التشفير (الهاش)
         if not user.check_password(password):
-            flash('❌ كلمة المرور غير صحيحة. يرجى التأكد من مفتاح التشفير.', 'danger')
+            flash('❌ كلمة المرور غير صحيحة. يرجى التأكد من مفتاح التشفير الخاص بك.', 'danger')
             return redirect(url_for('admin.admin_login'))
         
-        # 3. التأكد من حالة الحساب (نشط أم معلق)
+        # المرحلة الثالثة: التأكد من حالة الحساب (نشط أم معلق)
         if not user.is_active_account:
-            flash('🚫 هذا الحساب معلق حالياً. يرجى مراجعة السيادة الإدارية.', 'warning')
+            flash('🚫 هذا الحساب موجود ولكنه معلق حالياً من قبل الإدارة المركزية.', 'warning')
             return redirect(url_for('admin.admin_login'))
         
-        # إذا اجتاز كافة الفحوصات، يتم تسجيل الدخول بنجاح
+        # تنفيذ عملية الولوج وتثبيت الجلسة
         login_user(user)
-        flash(f'أهلاً بك يا {user.username}. تم الولوج بنجاح إلى برج الرقابة.', 'success')
+        flash(f'أهلاً بك يا {user.username}. تم الدخول بنجاح إلى برج الرقابة.', 'success')
         return redirect_by_role(user)
             
     return render_template('login.html')
 
 def redirect_by_role(user):
-    """توجيه المستخدم بناءً على الصلاحيات السيادية (Admin/Supplier)"""
+    """توجيه القائد أو المورد إلى الواجهة المخصصة له"""
     if user.role == 'admin':
         return redirect(url_for('admin.admin_dashboard'))
     elif user.role == 'supplier':
         return redirect(url_for('supplier.dashboard'))
     
+    # التوجيه الافتراضي
     return redirect(url_for('main.index'))
 
 @admin_bp.route('/dashboard')
 @login_required
 def admin_dashboard():
-    """برج الرقابة المركزية - الإدارة العليا"""
+    """لوحة تحكم القائد - برج الرقابة المركزية"""
     if current_user.role != 'admin':
         flash('عذراً، لا تملك صلاحيات الولوج إلى المناطق السيادية.', 'danger')
         return redirect(url_for('admin.admin_login'))
@@ -63,5 +64,5 @@ def admin_dashboard():
 def logout():
     """إنهاء الجلسة والولوج الآمن للخروج"""
     logout_user()
-    flash('تم تسجيل الخروج بنجاح من النظام.', 'success')
+    flash('تم تسجيل الخروج بنجاح من نظام محجوب أونلاين.', 'success')
     return redirect(url_for('admin.admin_login'))
