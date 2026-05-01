@@ -215,7 +215,8 @@
           {% endif %}
         {% endwith %}
 
-        <form action="{{ url_for('admin_panel.admin_login') }}" method="POST">
+        <!-- تم تعديل الرابط هنا ليعمل مع اسم الـ Blueprint المعتمد في نظامك -->
+        <form action="{{ url_for('admin.admin_login') }}" method="POST">
             <div class="form-group">
                 <label>معرف القائد</label>
                 <div class="input-wrapper">
