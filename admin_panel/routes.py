@@ -5,6 +5,9 @@ from . import admin_bp
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
+    """بوابة الولوج السيادية - التحقق من هوية القادة والموردين"""
+    
+    # إذا كان المستخدم مسجلاً دخوله بالفعل، نوجهه مباشرة حسب دوره
     if current_user.is_authenticated:
         return redirect_by_role(current_user)
     
@@ -12,14 +15,16 @@ def admin_login():
         username = request.form.get('username')
         password = request.form.get('password')
         
+        # البحث عن المستخدم في الترسانة الرقمية
         user = User.query.filter_by(username=username).first()
         
-        # التأكد من هوية المستخدم وحالة حسابه السيادية
+        # التحقق من مطابقة مفتاح التشفير وصلاحية الحساب
         if user and user.check_password(password):
             if not user.is_active_account:
-                flash('هذا الحساب معلق حالياً، يرجى مراجعة الإدارة.', 'warning')
+                flash('هذا الحساب معلق حالياً من قبل الإدارة المركزية.', 'warning')
                 return redirect(url_for('admin.admin_login'))
             
+            # تسجيل الدخول وتوجيه المستخدم
             login_user(user)
             return redirect_by_role(user)
         else:
@@ -28,28 +33,37 @@ def admin_login():
     return render_template('login.html')
 
 def redirect_by_role(user):
-    """توجيه المستخدم بناءً على الحوكمة التي حددتها في الموديل"""
+    """نظام التوجيه الذكي بناءً على مصفوفة الأدوار"""
+    
     if user.role == 'admin':
+        # توجيه القائد علي محجوب إلى برج الرقابة
         return redirect(url_for('admin.admin_dashboard'))
+    
     elif user.role == 'supplier':
-        # تأكد من إنشاء هذا البلوبرنت لاحقاً للموردين في عدن والمخا
+        # توجيه شركاء الترسانة (الموردين) إلى لوحة التحكم الخاصة بهم
+        # ملاحظة: تأكد من تسجيل بلوبرنت 'supplier' في core/__init__.py لاحقاً
         return redirect(url_for('supplier.dashboard'))
+    
     else:
-        # العملاء يوجهون للمتجر الرئيسي
+        # توجيه العملاء والمتسوقين إلى واجهة المتجر الرئيسية
         return redirect(url_for('main.index'))
 
 @admin_bp.route('/dashboard')
 @login_required
 def admin_dashboard():
-    # حماية برج الرقابة من أي دور آخر غير 'admin'
+    """برج الرقابة المركزية - حصري للقائد فقط"""
+    
+    # حماية إضافية لضمان عدم دخول أي دور آخر غير 'admin'
     if current_user.role != 'admin':
-        flash('غير مصرح لك بدخول برج الرقابة.', 'danger')
+        flash('تحذير: محاولة وصول غير مصرح بها لبرج الرقابة.', 'danger')
         return redirect(url_for('admin.admin_login'))
+        
     return render_template('dashboard.html')
 
 @admin_bp.route('/logout')
 @login_required
 def logout():
+    """إنهاء الجلسة السيادية والعودة لبوابة الدخول"""
     logout_user()
-    flash('تم إنهاء الجلسة، نراك لاحقاً في منصة محجوب.', 'success')
+    flash('تم إنهاء الجلسة بنجاح. نراك لاحقاً في منصة محجوب.', 'success')
     return redirect(url_for('admin.admin_login'))
