@@ -5,41 +5,36 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(db.Model, UserMixin):
     """
-    موديل المستخدمين - النواة السيادية للهوية الرقمية لمنصة محجوب أونلاين.
-    تم تجريد الموديل من البريد الإلكتروني ليعتمد كلياً على اسم المستخدم بالعربي.
+    موديل المستخدمين المعدل ليتوافق مع قيود قاعدة البيانات الحالية.
     """
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    
-    # المعرف الأساسي والوحيد للدخول (مثل: علي محجوب)
     username = db.Column(db.String(150), unique=True, nullable=False)
     
-    # حقل التشفير الأساسي لكلمة المرور
+    # أضفنا هذا الحقل لأن قاعدة البيانات تطلبه إجبارياً (NotNullViolation)
+    password = db.Column(db.String(255), nullable=True) 
+    
+    # الحقل الذي نستخدمه في الكود
     password_hash = db.Column(db.String(255), nullable=False)
     
-    # الرتبة الوظيفية: admin للقائد، supplier للموردين
     role = db.Column(db.String(20), nullable=False, default='supplier')
-    
-    # حالة الحساب (نشط/معلق) لضمان التحكم المركزي
     is_active_account = db.Column(db.Boolean, default=True)
-    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
     def is_admin(self):
-        """تحقق سريع لصلاحيات الإدارة المركزية"""
         return self.role == 'admin'
 
     def set_password(self, password):
-        """تشفير كلمة المرور وتحويلها إلى رمز 'هاش' آمن"""
-        self.password_hash = generate_password_hash(password)
+        # نقوم بتخزين الهاش في الحقلين لضمان تجاوز قيود قاعدة البيانات
+        hashed = generate_password_hash(password)
+        self.password_hash = hashed
+        self.password = hashed # ليرضي قاعدة البيانات في العمود القديم
 
     def check_password(self, password):
-        """مطابقة مفتاح التشفير المدخل مع المخزن في القاعدة"""
-        if not self.password_hash:
-            return False
+        # التحقق من الهاش الرئيسي
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-        return f'<User {self.username} - Role: {self.role}>'
+        return f'<User {self.username}>'
