@@ -1,12 +1,14 @@
 from flask import Blueprint
 
-# قمنا بتغيير اسم الكائن إلى admin_blueprint لتمييزه عن اسم المجلد
-# وتحديد مسار القوالب ليكون المجلد templates داخل admin_panel
+# تعريف البلوبرنت المركزي للإدارة
+# ملاحظة: تم تثبيت الاسم 'admin' ليتوافق مع روابط url_for('admin.login') في القوالب
 admin_blueprint = Blueprint(
-    'admin_panel', 
+    'admin', 
     __name__, 
-    template_folder='templates'
+    template_folder='templates',
+    static_folder='static'  # أضفنا هذا تحسباً لإضافة ملفات CSS/JS خاصة لاحقاً
 )
 
-# استيراد المسارات لربطها بالبلوبرنت
+# استيراد المسارات (routes) لربطها بالبلوبرنت وتفعيلها
+# نضعه في الأسفل لتجنب مشاكل الاستيراد الدائري (Circular Import)
 from . import routes
