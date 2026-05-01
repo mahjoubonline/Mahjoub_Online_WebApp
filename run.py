@@ -1,44 +1,40 @@
 # run.py
-# الملف الرئيسي لتشغيل محرك منصة محجوب أونلاين السيادي
 from core import create_app, db
 from core.models.user import User
 
-# بناء التطبيق
 app = create_app()
 
 if __name__ == "__main__":
     with app.app_context():
         try:
-            # 1. إنشاء الجداول إذا لم تكن موجودة
+            # 1. تحديث الهيكل (مهم جداً بعد حذف الإيميل)
             db.create_all()
             
-            # 2. تثبيت بيانات الإدارة (علي محجوب)
-            # نبحث عن الحساب للتأكد من عدم التكرار
-            admin = User.query.filter_by(username='علي محجوب').first()
+            # 2. البحث عن المستخدم بدقة
+            target_username = "علي محجوب"
+            admin = User.query.filter_by(username=target_username).first()
             
-            if admin:
-                # تحديث البيانات الحالية لضمان مطابقتها لطلبك
-                admin.role = 'admin'
-                admin.set_password('123') # سيتم تشفيرها لـ Hash تلقائياً
-                admin.is_active_account = True
-                print("🔄 تم تحديث بيانات القائد (علي محجوب) بنجاح.")
-            else:
-                # إنشاء الحساب لأول مرة إذا لم يكن موجوداً
-                new_admin = User(
-                    username='علي محجوب',
+            if not admin:
+                print(f"🚀 البدء في إنشاء حساب القائد: {target_username}")
+                # إنشاء الحساب بدون إيميل (كما عدلنا في الموديل)
+                admin = User(
+                    username=target_username,
                     role='admin',
-                    is_active_account=True,
-                    email='ali@mahjoub.online'
+                    is_active_account=True
                 )
-                new_admin.set_password('123')
-                db.session.add(new_admin)
-                print("🚀 تم تسجيل القائد (علي محجوب) في القاعدة الدائمة.")
-            
-            db.session.commit()
-            
+                admin.set_password('123')
+                db.session.add(admin)
+                db.session.commit()
+                print(f"✅ تم بنجاح زرع حساب {target_username} في القاعدة.")
+            else:
+                # التأكد من تحديث كلمة المرور لـ 123 في حال كانت قديمة
+                admin.set_password('123')
+                admin.role = 'admin'
+                db.session.commit()
+                print(f"ℹ️ حساب {target_username} موجود مسبقاً وتم تحديث مفتاح التشفير.")
+                
         except Exception as e:
-            db.session.rollback()
-            print(f"⚠️ فشل في تثبيت بيانات الإدارة: {e}")
+            print(f"⚠️ فشل في تثبيت البيانات السيادية: {e}")
 
-    # تشغيل السيرفر
+    # تشغيل المحرك
     app.run(host='0.0.0.0', port=8080)
