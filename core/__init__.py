@@ -18,6 +18,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     
     login_manager.login_view = 'admin.admin_login'
+    login_manager.login_message_category = 'info'
 
     from core.models.user import User 
     
@@ -26,14 +27,20 @@ def create_app(config_class=Config):
         return User.query.get(int(user_id))
 
     with app.app_context():
-        # تحديث تلقائي لقاعدة البيانات لضمان عدم الانهيار
+        # --- منطق الترميم التلقائي الشامل لقاعدة البيانات ---
         try:
-            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(120);'))
+            # إضافة كافة الأعمدة المحتمل نقصها لضمان استقرار "محجوب أونلاين"
+            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(150) UNIQUE;'))
+            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);'))
+            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(120) UNIQUE;'))
             db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT \'supplier\';'))
             db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active_account BOOLEAN DEFAULT TRUE;'))
             db.session.commit()
-        except Exception:
+            print("✅ تم فحص وترميم أعمدة قاعدة البيانات بنجاح.")
+        except Exception as e:
             db.session.rollback()
+            print(f"⚠️ تنبيه: قاعدة البيانات محدثة أو هناك خطأ بسيط في الربط: {e}")
+        # --------------------------------------------------
 
         from admin_panel import admin_bp
         app.register_blueprint(admin_bp, url_prefix='/admin')
