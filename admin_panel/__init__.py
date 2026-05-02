@@ -1,6 +1,6 @@
 from flask import Blueprint
 
-# تعريف الـ Blueprint الخاص بالإدارة مع تحديد مجلدات القوالب والملفات الثابتة
+# تعريف بوابة الإدارة المركزية
 admin_bp = Blueprint(
     'admin', 
     __name__, 
@@ -8,7 +8,6 @@ admin_bp = Blueprint(
     static_folder='static'
 )
 
-# استيراد ملفات المنطق لربطها بالـ Blueprint
-# تأكد من استدعاء auth لكي تعمل صفحة تسجيل الدخول (علي محجوب / 123)
+# استيراد المنطق من الملفات المستقلة
 from . import auth
 from . import routes
