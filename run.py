@@ -41,6 +41,11 @@ def reset_and_build_database():
             db.session.rollback()
             print(f"❌ تعثرت عملية التهيئة بسبب: {str(e)}")
 
+from admin_panel import admin_bp
+
+app.register_blueprint(admin_bp, url_prefix='/admin')
+
+
 # تشغيل عملية الإصلاح لمرة واحدة لتهيئة بيئة العمل
 # ملاحظة: يفضل تعطيل هذه الدالة بعد أول تشغيل ناجح في بيئة الإنتاج
 reset_and_build_database()
@@ -50,3 +55,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     # التشغيل بدون Debug لضمان استقرار "محجوب أونلاين"
     app.run(host='0.0.0.0', port=port, debug=False)
+
