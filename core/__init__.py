@@ -12,7 +12,6 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # بديل CORS: إضافة رؤوس الاستجابة يدويًا للسماح بالطلبات المتقاطعة
-    # هذا يغنيك عن مكتبة flask-cors ويحل مشكلة اتصال السيرفر
     @app.after_request
     def add_cors_headers(response):
         response.headers['Access-Control-Allow-Origin'] = '*'
@@ -25,7 +24,6 @@ def create_app(config_class=Config):
     login_manager.init_app(app)
     
     # إعدادات نظام تسجيل الدخول
-    # تم ضبطها لتتوافق مع "admin.login" في ملف routes.py
     login_manager.login_view = 'admin.login'
     login_manager.login_message = "يرجى تسجيل الدخول للوصول إلى النظام السيادي."
     login_manager.login_message_category = "info"
@@ -33,12 +31,34 @@ def create_app(config_class=Config):
     with app.app_context():
         # استيراد النماذج لضمان تعريفها في قاعدة البيانات
         from core.models.user import User
+        from core.models.vendor import Vendor # استيراد موديل الموردين لضبط التسلسل
         
         @login_manager.user_loader
         def load_user(user_id):
             return User.query.get(int(user_id))
 
+        # --- دالة توليد الرقم السيادي للموردين (MAH-9631) ---
+        @app.context_processor
+        def utility_processor():
+            def get_next_vendor_id():
+                # جلب آخر مورد مسجل بناءً على المعرف التلقائي
+                last_vendor = Vendor.query.order_by(Vendor.id.desc()).first()
+                
+                if last_vendor and last_vendor.e_wallet:
+                    try:
+                        # استخراج الجزء الرقمي من MAH-xxxx وزيادته
+                        current_num = int(last_vendor.e_wallet.split('-')[1])
+                        return f"MAH-{current_num + 1}"
+                    except (IndexError, ValueError):
+                        return "MAH-9631"
+                
+                # إذا كان هذا هو المورد الأول في النظام
+                return "MAH-9631"
+            
+            return dict(next_id=get_next_vendor_id())
+
         # تسجيل الـ Blueprints (لوحة التحكم الإدارية)
+        # تأكد أن مجلد admin_panel موجود في المسار الرئيسي لمشروعك
         from admin_panel.routes import admin_bp
         app.register_blueprint(admin_bp, url_prefix='/admin')
 
