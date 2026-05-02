@@ -33,8 +33,9 @@ def create_app(config_class=Config):
         from core.models.user import User
         from core.models.vendor import Vendor
         
-        # --- التحديث السيادي لقاعدة البيانات ---
-        # هذا السطر يضمن إنشاء عمود user_id وكافة الحقول الجغرافية والمالية الجديدة
+        # --- إجراء التحديث الجذري لقاعدة البيانات ---
+        # ملاحظة: سيتم مسح البيانات القديمة لضمان توافق الأعمدة (مثل user_id)
+        db.drop_all() 
         db.create_all() 
         
         @login_manager.user_loader
