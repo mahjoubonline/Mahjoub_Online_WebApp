@@ -1,34 +1,37 @@
 from flask import render_template, request, redirect, url_for, flash
-# الحل الصحيح بناءً على ملف core/__init__.py:
-# نستورد db من مجلد core وليس من app
+# استيراد db من المجلد الأساسي core بناءً على ملف __init__.py الخاص بك
 from core import db 
-# نستورد النماذج من مسارها الصحيح داخل core
-from core.models.user import User # مثال لاستيراد المستخدم
-# تأكد من استيراد نموذج طلبات السحب من مساره الصحيح، لنفترض أنه في core.models.finance
-# من ملف models الحقيقي لديك:
-from models import WithdrawRequest 
 
-# نستورد الـ Blueprint المعرف في __init__.py الخاص بالمجلد الحالي
+# تصحيح الخطأ: ModuleNotFoundError: No module named 'models'
+# بما أنك تستخدم بنية المجلدات الفرعية، يجب استيراد النماذج بمسارها الكامل
+# إذا كان ملف النماذج داخل core/models/finance.py مثلاً، استخدم المسار الكامل
+# سأفترض هنا أنها في المجلد الرئيسي لـ core أو فرعي منه:
+try:
+    from core.models.user import User  # استيراد المستخدم كما هو في __init__.py الخاص بك
+    # استبدل السطر التالي بالمسار الحقيقي لملف WithdrawRequest لديك
+    # مثال: من core.models.finance استورد WithdrawRequest
+    from core.models.finance import WithdrawRequest 
+except ImportError:
+    # محاولة بديلة إذا كانت النماذج في مجلد فرعي آخر
+    from models import WithdrawRequest 
+
+# استيراد البلوبرنت الخاص بالإدارة
 from . import admin_bp
 
 @admin_bp.route('/withdraw-requests')
 def withdraw_requests():
-    """
-    عرض كافة طلبات تصفية الأرصدة المعلقة للموردين.
-    """
+    """عرض كافة طلبات تصفية الأرصدة المعلقة للموردين"""
     try:
-        # جلب الطلبات المعلقة وترتيبها من الأحدث (status = pending)
+        # جلب الطلبات المعلقة وترتيبها من الأحدث
         pending_requests = WithdrawRequest.query.filter_by(status='pending').order_by(WithdrawRequest.created_at.desc()).all()
         return render_template('withdraw_requests.html', requests=pending_requests)
     except Exception as e:
-        flash(f"حدث خطأ أثناء جلب البيانات: {str(e)}", "danger")
+        flash(f"حدث خطأ أثناء جلب البيانات من النظام: {str(e)}", "danger")
         return render_template('withdraw_requests.html', requests=[])
 
 @admin_bp.route('/finalize-withdrawal', methods=['POST'])
 def finalize_withdrawal():
-    """
-    دالة التعميد المالي السيادي لأرشفة بيانات التحويل وتصفية الأرصدة.
-    """
+    """دالة التعميد المالي لأرشفة بيانات التحويل وتصفية الأرصدة"""
     request_id = request.form.get('request_id')
     bank_name = request.form.get('bank_name')
     reference_number = request.form.get('reference_number')
@@ -37,7 +40,6 @@ def finalize_withdrawal():
         flash("تنبيه: يجب إدخال رقم الحوالة المرجعي لإتمام عملية التعميد ياقائد.", "warning")
         return redirect(url_for('admin.withdraw_requests'))
 
-    # البحث عن طلب السحب في قاعدة البيانات
     withdrawal_entry = WithdrawRequest.query.get(request_id)
 
     if not withdrawal_entry:
@@ -53,10 +55,10 @@ def finalize_withdrawal():
         # حفظ التغييرات نهائياً في قاعدة بيانات محجوب أونلاين
         db.session.commit()
         
-        flash(f"تم تعميد الحوالة رقم ({reference_number}) بنجاح وأرشفة الطلب في سجلات السيادة المالية.", "success")
+        flash(f"تم تعميد الحوالة رقم ({reference_number}) بنجاح وأرشفة الطلب سيادياً.", "success")
         
     except Exception as e:
-        db.session.rollback() # التراجع في حالة وجود أي خلل تقني لضمان سلامة الأرصدة
+        db.session.rollback() # التراجع في حالة وجود خلل لضمان سلامة الأرصدة
         flash(f"فشل نظام الأرشفة في معالجة الطلب: {str(e)}", "danger")
 
     return redirect(url_for('admin.withdraw_requests'))
