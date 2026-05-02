@@ -22,10 +22,10 @@ def create_app(config_class=Config):
     # تحديد بوابة الدخول الرئيسية للإدارة
     login_manager.login_view = 'admin.admin_login'
 
-    # استيراد الموديلات المركزية (تأكد من وجود الملفات في مساراتها)
-    from core.models.user import User 
-    from core.models.product import Product
-    from core.models.supplier import Supplier
+    # --- التعديل الجوهري هنا ---
+    # استيراد الموديلات من المجلد المركزي لضمان ترتيب بناء الجداول
+    from core.models import User, Supplier, Order 
+    # ---------------------------
     
     @login_manager.user_loader
     def load_user(user_id):
@@ -35,9 +35,11 @@ def create_app(config_class=Config):
         try:
             print("🚨 جاري تصفير الترسانة الرقمية وإعادة الهيكلة...")
             
-            # تنفيذ مسح شامل للجداول المرتبطة بـ CASCADE لتجاوز تعليقات الجداول السابقة
-            db.session.execute(text('DROP TABLE IF EXISTS products CASCADE;'))
+            # تنفيذ مسح شامل للجداول (بالترتيب الصحيح لتجنب تعليق المفاتيح الخارجية)
+            # تم إضافة جدول orders لضمان تنظيف كامل
+            db.session.execute(text('DROP TABLE IF EXISTS orders CASCADE;'))
             db.session.execute(text('DROP TABLE IF EXISTS suppliers CASCADE;'))
+            db.session.execute(text('DROP TABLE IF EXISTS products CASCADE;'))
             db.session.execute(text('DROP TABLE IF EXISTS users CASCADE;'))
             db.session.commit()
             
@@ -46,6 +48,7 @@ def create_app(config_class=Config):
             print("✅ تم إعادة بناء الجداول بنظافة تامة.")
 
             # زرع حساب القائد (علي محجوب) في الهيكل الجديد
+            # ملاحظة: تأكد أن موديل User يحتوي على حقول role و is_active_account
             admin_user = User(
                 username="علي محجوب", 
                 role='admin', 
@@ -60,8 +63,8 @@ def create_app(config_class=Config):
             db.session.rollback()
             print(f"⚠️ خطأ حرج أثناء التصفير أو الزرع: {e}")
 
-        # تسجيل Blueprint الإدارة لربط مجلد admin_panel بالمنصة
-        from admin_panel import admin_bp
-        app.register_blueprint(admin_bp, url_prefix='/admin')
+    # تسجيل Blueprint الإدارة لربط مجلد admin_panel بالمنصة
+    from admin_panel.routes import admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/admin')
 
     return app
