@@ -29,40 +29,48 @@ def create_app(config_class=Config):
     login_manager.login_message_category = "info"
 
     with app.app_context():
-        # استيراد النماذج لضمان تعريفها قبل بناء الجداول
+        # --- حل مشكلة التبعية (Foreign Key Error) ---
+        # استيراد كافة النماذج هنا لضمان تسجيلها في MetaData الخاص بـ SQLAlchemy
         from core.models.user import User
         from core.models.vendor import Vendor
         
         # --- إجراء التحديث الجذري لقاعدة البيانات ---
-        # ملاحظة: سيتم مسح البيانات القديمة لضمان توافق الأعمدة (مثل user_id)
-        db.drop_all() 
-        db.create_all() 
+        # الآن drop_all ستعرف بوجود جدول 'users' ولن تظهر رسالة الخطأ
+        try:
+            db.drop_all() 
+            db.create_all()
+            print("🛡️ الترسانة الرقمية: تم إعادة بناء الجداول السيادية بنجاح.")
+        except Exception as e:
+            print(f"⚠️ فشل في تحديث الجداول: {e}")
         
+        # إعداد محمل المستخدم لنظام Flask-Login
         @login_manager.user_loader
         def load_user(user_id):
             return User.query.get(int(user_id))
 
-        # --- دالة توليد الرقم السيادي للموردين (تلقائياً تبدأ بـ MAH-9631) ---
+        # --- دالة توليد الرقم السيادي للموردين ---
         @app.context_processor
         def utility_processor():
             def get_next_vendor_id():
                 try:
-                    # جلب آخر مورد مسجل بناءً على المعرف التلقائي
+                    # جلب آخر مورد مسجل لزيادة الرقم التسلسلي
                     last_vendor = Vendor.query.order_by(Vendor.id.desc()).first()
                     
-                    if last_vendor and last_vendor.e_wallet:
-                        # استخراج الجزء الرقمي من MAH-xxxx وزيادته
-                        current_num = int(last_vendor.e_wallet.split('-')[1])
-                        return f"MAH-{current_num + 1}"
+                    if last_vendor and last_vendor.e_wallet and '-' in last_vendor.e_wallet:
+                        # استخراج الجزء الرقمي من MAH-9631 وزيادته
+                        parts = last_vendor.e_wallet.split('-')
+                        if len(parts) > 1:
+                            current_num = int(parts[1])
+                            return f"MAH-{current_num + 1}"
+                    
+                    return "MAH-9631" # القيمة الافتراضية لأول مورد
                 except Exception:
-                    # في حالة وجود أي خطأ أو إذا كان الجدول فارغاً
                     return "MAH-9631"
-                
-                return "MAH-9631"
             
             return dict(next_id=get_next_vendor_id())
 
         # تسجيل الـ Blueprints (لوحة التحكم الإدارية)
+        # ملاحظة: يتم الاستيراد هنا لتجنب Circular Import
         from admin_panel.routes import admin_bp
         app.register_blueprint(admin_bp, url_prefix='/admin')
 
