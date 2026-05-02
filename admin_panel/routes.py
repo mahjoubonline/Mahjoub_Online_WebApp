@@ -20,42 +20,59 @@ except ImportError:
 from . import admin_bp
 from .auth import handle_admin_login
 
-# --- 1. نظام الإصلاح التلقائي ---
+# --- 1. مسار الطوارئ السيادي (إصلاح بدون تسجيل دخول) ---
+@admin_bp.route('/force-repair-now')
+def force_repair():
+    """هذا المسار يعمل حتى لو كان النظام منهاراً لإصلاح قاعدة البيانات"""
+    db.session.rollback()
+    try:
+        # تنفيذ الأمر مباشرة على المحرك لتجاوز أي مشاكل في الموديلات
+        db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS user_id INTEGER;"))
+        db.session.commit()
+        session['repair_done'] = True
+        return """
+        <div style="text-align:center; margin-top:50px; font-family:sans-serif;">
+            <h1 style="color: #27ae60;">✅ تم تفعيل الترميم السيادي بنجاح!</h1>
+            <p>قاعدة البيانات الآن متوافقة مع الهيكل الجديد.</p>
+            <a href="/admin/dashboard" style="padding:10px 20px; background:#632C8F; color:white; text-decoration:none; border-radius:5px;">العودة للداشبورد</a>
+        </div>
+        """
+    except Exception as e:
+        db.session.rollback()
+        return f"<h1 style='color:red;'>❌ فشل الإصلاح: {str(e)}</h1>"
+
+# --- 2. نظام الإصلاح التلقائي (المحمي) ---
 @admin_bp.route('/system-repair-sovereign')
 @login_required
 def auto_repair():
     db.session.rollback()
     try:
-        # تنفيذ الأمر مباشرة على محرك القاعدة لتجنب مشاكل الـ ORM
-        db.engine.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS user_id INTEGER;"))
+        db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS user_id INTEGER;"))
         db.session.commit()
-        session['repair_done'] = True # حفظ حالة الإصلاح في الجلسة
+        session['repair_done'] = True 
         flash("تم تفعيل الترميم السيادي بنجاح.", "success")
     except Exception as e:
         db.session.rollback()
         flash(f"فشل الإصلاح: {str(e)}", "danger")
     return redirect(url_for('admin.admin_dashboard'))
 
-# --- 2. بوابة الولوج السيادي ---
+# --- 3. بوابة الولوج السيادي ---
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
     db.session.rollback()
     if current_user.is_authenticated:
-        # استخدام getattr لتجنب الأخطاء إذا كان الكائن ناقصاً
         role = getattr(current_user, 'role', None)
         if role == 'admin':
             return redirect(url_for('admin.admin_dashboard'))
     return handle_admin_login()
 
-# --- 3. لوحة التحكم المركزية (الداشبورد) ---
+# --- 4. لوحة التحكم المركزية (الداشبورد) ---
 @admin_bp.route('/')
 @admin_bp.route('/dashboard')
 @login_required
 def admin_dashboard():
-    # 🛡️ تنظيف فوري للجلسة
     db.session.rollback()
     
-    # تحضير الإحصائيات (قيم صفرية افتراضية)
     stats = {
         'suppliers_count': 0,
         'pending_withdrawals': 0,
@@ -66,18 +83,15 @@ def admin_dashboard():
     show_repair = not session.get('repair_done', False)
 
     try:
-        # محاولة جلب الأرقام فقط إذا كان الموديل متاحاً والقاعدة مستقرة
         if Vendor:
             stats['suppliers_count'] = db.session.query(Vendor).count()
         if WithdrawRequest:
             stats['pending_withdrawals'] = db.session.query(WithdrawRequest).filter_by(status='pending').count()
     except Exception as e:
-        # إذا حدث خطأ هنا، فهذا يؤكد وجود مشكلة في هيكل الجدول
         db.session.rollback()
         show_repair = True 
         print(f"⚠️ Dashboard SQL Error: {str(e)}")
 
-    # إرجاع القالب مهما حدث
     return render_template('dashboard.html', 
                            suppliers_count=stats['suppliers_count'],
                            pending_withdrawals=stats['pending_withdrawals'],
@@ -85,7 +99,7 @@ def admin_dashboard():
                            total_balance=stats['total_balance'],
                            show_repair=show_repair)
 
-# --- 4. تسجيل الخروج ---
+# --- 5. تسجيل الخروج ---
 @admin_bp.route('/logout')
 @login_required
 def logout():
