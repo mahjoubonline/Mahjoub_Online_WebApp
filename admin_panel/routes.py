@@ -5,16 +5,15 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
 from core import db 
 
-# --- استيراد النماذج (Models) مع التأكد من وجودها لمنع خطأ NoneType ---
+# --- استيراد النماذج (Models) ---
 from core.models.vendor import Vendor
 from core.models.user import User 
-# ملاحظة: إذا لم يكن WithdrawRequest موجوداً بعد، يفضل إنشاؤه أو حذفه مؤقتاً
+
 try:
     from core.models.vendor import WithdrawRequest 
 except ImportError:
     WithdrawRequest = None
 
-# --- استيراد مدير الأرشفة السيادي (GitHub Archive) ---
 try:
     from .archive_manager import ArchiveManager
     archiver = ArchiveManager()
@@ -27,6 +26,8 @@ from .auth import handle_admin_login
 # --- 1. بوابة الدخول والخروج ---
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    # صمام أمان: إذا حدث خطأ سابق في القاعدة، يتم تنظيفه هنا قبل محاولة الدخول
+    db.session.rollback()
     return handle_admin_login()
 
 @admin_bp.route('/logout')
@@ -37,23 +38,24 @@ def logout():
     flash("تم تأمين الخروج من النظام السيادي.", "info")
     return redirect(url_for('admin.login'))
 
-# --- 2. لوحة التحكم الرئيسية ---
-@admin_bp.route('/') # مسار إضافي لضمان الوصول
+# --- 2. لوحة التحكم الرئيسية (الداشبورد) ---
+@admin_bp.route('/') 
 @admin_bp.route('/dashboard')
 @login_required
 def admin_dashboard():
-    # 🛡️ تأمين الحوكمة: تنظيف أي عمليات فاشلة معلقة لضمان عرض البيانات
+    # 🛡️ معالجة الخطأ الظاهر في الصورة: تنظيف الجلسة فوراً
     db.session.rollback()
     
     try:
         suppliers_count = Vendor.query.count()
         pending_withdrawals = WithdrawRequest.query.filter_by(status='pending').count() if WithdrawRequest else 0
+        
         return render_template('dashboard.html', 
                                suppliers_count=suppliers_count, 
                                pending_withdrawals=pending_withdrawals)
     except Exception as e:
-        # في حال وجود خطأ في الأعمدة (مثل user_id)، يفتح الداشبورد بصفر بدل الانهيار
-        print(f"⚠️ Dashboard Security Alert: {str(e)}")
+        # تسجيل الخطأ في Railway Logs مع منع انهيار الصفحة
+        print(f"CRITICAL SQL ERROR: {str(e)}")
         db.session.rollback()
         return render_template('dashboard.html', suppliers_count=0, pending_withdrawals=0)
 
@@ -61,43 +63,32 @@ def admin_dashboard():
 @admin_bp.route('/add-supplier', methods=['GET', 'POST'])
 @login_required
 def add_supplier():
-    # أ- توليد المعرف السيادي التالي (تلقائي للعرض)
     next_id = "MAH-9631"
+    db.session.rollback() # تنظيف قبل البدء
+    
     try:
-        db.session.rollback()
         last_vendor = Vendor.query.order_by(Vendor.id.desc()).first()
         if last_vendor and last_vendor.e_wallet and '-' in last_vendor.e_wallet:
             current_num = int(last_vendor.e_wallet.split('-')[1])
             next_id = f"MAH-{current_num + 1}"
-    except Exception:
+    except:
         next_id = "MAH-9631"
 
     if request.method == 'POST':
-        db.session.rollback() # تنظيف قبل البدء
+        db.session.rollback()
         try:
-            # 1. استلام البيانات
             username = request.form.get('username')
-            password = request.form.get('password', '123456')
+            password = request.form.get('password', '123')
             e_wallet = request.form.get('e_wallet') or next_id
             
             activity = request.form.get('manual_activity') if request.form.get('activity_type') == 'manual' else request.form.get('activity_type')
             
-            # 2. الأرشفة السيادية (GitHub)
+            # الأرشفة السيادية
             github_path = "Local_Archive_Only"
             id_file = request.files.get('id_image')
-            
             if archiver and id_file and id_file.filename:
-                ext = os.path.splitext(id_file.filename)[1]
-                file_data = id_file.read()
-                github_path = archiver.upload_document(
-                    s_id=e_wallet, 
-                    u_id=username, 
-                    doc_t="Identity_Doc", 
-                    file_d=file_data, 
-                    ext=ext
-                )
+                github_path = archiver.upload_document(e_wallet, username, "Identity_Doc", id_file.read(), os.path.splitext(id_file.filename)[1])
 
-            # 3. إنشاء حساب المستخدم (User)
             new_user = User(
                 username=username,
                 password_hash=generate_password_hash(password),
@@ -107,7 +98,6 @@ def add_supplier():
             db.session.add(new_user)
             db.session.flush() 
 
-            # 4. إنشاء سجل المورد (Vendor)
             new_vendor = Vendor(
                 user_id=new_user.id,
                 owner_name=request.form.get('owner_name'),
@@ -126,20 +116,17 @@ def add_supplier():
                 bank_acc=request.form.get('bank_acc'),
                 is_verified=True
             )
-            
             db.session.add(new_vendor)
             db.session.commit()
-
-            return jsonify({"status": "success", "message": "تم التعميد والأرشفة بنجاح"}), 200
+            return jsonify({"status": "success", "message": "تم التعميد بنجاح"}), 200
 
         except Exception as e:
             db.session.rollback()
-            print(f"CRITICAL ERROR: {str(e)}")
             return jsonify({"status": "error", "message": f"تعثر في الترسانة: {str(e)}"}), 500
 
     return render_template('add_supplier.html', next_id=next_id)
 
-# --- 4. طلبات السحب والمحافظ ---
+# --- 4. المحافظ وطلبات السحب ---
 @admin_bp.route('/withdraw-requests')
 @login_required
 def withdraw_requests():
