@@ -13,9 +13,9 @@
     
     <style>
         :root {
-            --royal-purple: #1a0b2e; /* الأرجواني الداكن لسيادة الواجهة */
+            --royal-purple: #1a0b2e;
             --deep-black: #08020d;
-            --mahjoub-gold: #D4AF37; /* الذهبي الملكي */
+            --mahjoub-gold: #D4AF37;
             --sidebar-width: 280px;
             --sidebar-mini: 85px;
             --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -28,7 +28,6 @@
             overflow-x: hidden;
         }
 
-        /* --- السايدبار الإداري (The Command Fortress) --- */
         .sidebar {
             width: var(--sidebar-width);
             background: linear-gradient(180deg, var(--royal-purple) 0%, var(--deep-black) 100%);
@@ -69,7 +68,6 @@
             box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
         }
 
-        /* المنسدلات الإدارية */
         .dropdown-content {
             display: none; list-style: none; padding: 0; margin-right: 2.5rem;
             border-right: 2px solid rgba(212, 175, 55, 0.3);
@@ -142,18 +140,20 @@
 
             <!-- حوكمة الموردين -->
             <div class="nav-item">
-                <div class="nav-link {% if request.endpoint in ['admin.add_vendor', 'admin.manage_suppliers'] %}active{% endif %}" onclick="toggleDropdown(this)">
+                <div class="nav-link {% if request.endpoint == 'admin.add_supplier' %}active{% endif %}" onclick="toggleDropdown(this)">
                     <i class="fas fa-handshake-angle"></i>
                     <span>حوكمة الموردين</span>
                     <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.4s;"></i>
                 </div>
-                <ul class="dropdown-content" style="{% if request.endpoint in ['admin.add_vendor', 'admin.manage_suppliers'] %}display: block;{% endif %}">
+                <ul class="dropdown-content" style="{% if request.endpoint == 'admin.add_supplier' %}display: block;{% endif %}">
                     <li>
-                        <a href="{{ url_for('admin.add_vendor') }}" style="color: var(--mahjoub-gold); font-weight: 800;">
+                        <!-- تم التصحيح هنا إلى add_supplier -->
+                        <a href="{{ url_for('admin.add_supplier') }}" style="color: var(--mahjoub-gold); font-weight: 800;">
                             <i class="fas fa-user-plus"></i> تعميد مورد جديد
                         </a>
                     </li>
-                    <li><a href="{{ url_for('admin.manage_suppliers') }}"><i class="fas fa-list-check"></i> إدارة الموردين المعتمدين</a></li>
+                    <!-- وضعنا # للروابط غير المبرمجة بعد لمنع خطأ 500 -->
+                    <li><a href="#"><i class="fas fa-list-check"></i> إدارة الموردين المعتمدين</a></li>
                     <li><a href="#"><i class="fas fa-user-clock"></i> طلبات اعتماد معلقة</a></li>
                 </ul>
             </div>
@@ -167,7 +167,7 @@
                 </div>
                 <ul class="dropdown-content" style="{% if request.endpoint == 'admin.withdraw_requests' %}display: block;{% endif %}">
                     <li><a href="{{ url_for('admin.withdraw_requests') }}"><i class="fas fa-money-bill-transfer"></i> طلبات السحب</a></li>
-                    <li><a href="{{ url_for('admin.financial_reports') }}"><i class="fas fa-chart-pie"></i> تقارير الأرباح</a></li>
+                    <li><a href="#"><i class="fas fa-chart-pie"></i> تقارير الأرباح</a></li>
                 </ul>
             </div>
 
@@ -179,12 +179,11 @@
                     <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.4s;"></i>
                 </div>
                 <ul class="dropdown-content">
-                    <li><a href="{{ url_for('admin.system_settings') }}"><i class="fas fa-users-crown"></i> إدارة المدراء</a></li>
+                    <li><a href="#"><i class="fas fa-users-crown"></i> إدارة المدراء</a></li>
                     <li><a href="#"><i class="fas fa-database"></i> النسخ الاحتياطي</a></li>
                 </ul>
             </div>
 
-            <!-- تسجيل الخروج -->
             <a href="{{ url_for('admin.logout') }}" class="nav-link mt-auto" style="color: #ff7675; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
                 <i class="fas fa-power-off"></i>
                 <span>إنهاء الجلسة الآمنة</span>
@@ -213,7 +212,6 @@
         </header>
 
         <div class="content-area">
-            <!-- نظام التنبيهات (Flash Messages) -->
             {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
                 {% for category, message in messages %}
@@ -231,14 +229,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // دالة التحكم في القوائم المنسدلة للسايدبار
         function toggleDropdown(element) {
             const content = element.nextElementSibling;
             const chevron = element.querySelector('.chevron');
             
             const isOpen = content.style.display === "block";
             
-            // إغلاق أي قائمة مفتوحة أخرى للحفاظ على التنظيم
             document.querySelectorAll('.dropdown-content').forEach(el => {
                 if (el !== content) el.style.display = 'none';
             });
