@@ -1,21 +1,26 @@
-# core/models/__init__.py
 from core import db
 
-# استيراد الموديل لضمان تسجيله في SQL Alchemy
+# 1. استيراد النماذج من ملفاتها الفرعية
 from core.models.user import User
-
-# بمجرد أن تجهز ملفات الموردين والطلبات، قم بإلغاء التعليق:
-# from core.models.supplier import Supplier
-# from core.models.order import Order
-
-# تعريف الحزم المصدرة
-__all__ = ['User']
-
-# استيراد النماذج من الملفات المنفصلة لجعلها مرئية لـ Django
 from .vendor import Vendor
 
-# إذا كان لديك نماذج أخرى مستقبلاً، يتم إضافتها هنا بنفس الطريقة
-# from .customer import Customer
-# from .product import Product
+# ملاحظة هامة: إذا كان كلاس WithdrawRequest موجوداً داخل ملف vendor.py، 
+# يجب استيراده هنا أيضاً ليصبح مرئياً للنظام بالكامل.
+try:
+    from .vendor import WithdrawRequest
+except ImportError:
+    # في حال لم يتم تعريفه بعد في ملف vendor
+    WithdrawRequest = None
 
-__all__ = ['Vendor']
+# 2. تعريف الحزم المصدرة (قائمة واحدة شاملة)
+# وضع كافة النماذج في قائمة __all__ واحدة يضمن أن النظام يراها جميعاً
+__all__ = [
+    'User', 
+    'Vendor', 
+    'WithdrawRequest'
+]
+
+# 3. قسم التوسعات المستقبلية (إلغاء التعليق عند الجاهزية)
+# from .supplier import Supplier
+# from .order import Order
+# from .product import Product
