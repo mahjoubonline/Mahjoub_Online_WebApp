@@ -1,26 +1,25 @@
-from flask import render_template
-from flask_login import login_required, current_user
+from flask import render_template, redirect, url_for, flash, request
+from flask_login import login_user, logout_user, login_required, current_user
 from . import admin_bp
-# تأكد من استيراد الموديلات عند تفعيلها في قاعدة البيانات
-# from core.models.business import Supplier, Order 
+from core.models import User, Supplier, Order  # استيراد الموديلات من الحزمة المركزية
 
 @admin_bp.route('/dashboard')
 @login_required  # حماية السيادة: الوصول للقائد فقط
 def admin_dashboard():
     """
-    لوحة التحكم المركزية لإدارة الخط التجاري في اليمن (محجوب أونلاين)
+    لوحة التحكم المركزية (نظام الرقابة العليا) لمنصة محجوب أونلاين
     """
     
-    # تجهيز البيانات لتتوافق مع تصميم dashboard.html
-    # ملاحظة: يمكنك لاحقاً استبدال القيم النصية بطلبات Query من قاعدة البيانات
+    # تجهيز البيانات لتتوافق تماماً مع متغيرات ملف dashboard.html الخاص بك
+    # ملاحظة: القيم هنا ثابتة حالياً، ويمكنك لاحقاً ربطها بـ Query من قاعدة البيانات
     context = {
         'orders_count': "1,250",       # إجمالي المبيعات (تظهر في البطاقة الأولى)
         's_count': "48",              # شركاء الترسانة - الموردين
-        'total_balance': "15,500",     # السيولة المركزية بالدولار
+        'total_balance': "15.5K",      # السيولة المركزية (بالدولار)
         'p_count': "12",               # طلبات قيد التدقيق
-        'admin_name': current_user.username, # عرض اسمك (علي) في الترحيب
+        'admin_name': current_user.username, # تحية القائد (علي محجوب)
         
-        # بيانات العمليات السيادية للجدول
+        # بيانات سجل العمليات السيادية للجدول (Transactions)
         'transactions': [
             {
                 'supplier_name': 'مورد عدن المركزي',
@@ -35,9 +34,26 @@ def admin_dashboard():
                 'amount': -450,
                 'date': '2026-05-01',
                 'status': 'قيد التدقيق'
+            },
+            {
+                'supplier_name': 'موزع الخوخة الرقمي',
+                'type': 'تسوية عمولة',
+                'amount': 120,
+                'date': '2026-04-30',
+                'status': 'مكتمل'
             }
         ]
     }
     
-    # تمرير البيانات كمتغيرات مستقلة باستخدام **context
+    # تمرير القاموس بالكامل إلى القالب ليفككه Jinja2 تلقائياً
     return render_template('dashboard.html', **context)
+
+@admin_bp.route('/logout')
+@login_required
+def logout():
+    """
+    الخروج الآمن من نظام الرقابة
+    """
+    logout_user()
+    flash('تم تسجيل الخروج من الترسانة بنجاح.', 'info')
+    return redirect(url_for('admin.admin_login'))
