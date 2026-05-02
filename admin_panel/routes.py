@@ -15,7 +15,7 @@ def admin_login():
 @login_required
 def admin_dashboard():
     """مركز المراقبة والتحكم المركزي"""
-    # هذه البيانات سيتم جلبها من قاعدة البيانات لاحقاً
+    # هذه البيانات يتم تمريرها للقالب dashboard.html
     stats = {
         'orders_count': "1,250", 
         'suppliers_count': "48",
@@ -23,6 +23,7 @@ def admin_dashboard():
         'pending_requests': "12",
         'active_users': "320"
     }
+    # تم التعديل لاستدعاء dashboard.html الموجود في مجلد templates الخاص بـ admin_panel
     return render_template('dashboard.html', **stats)
 
 # --- قسم حوكمة الموردين ---
@@ -32,8 +33,8 @@ def admin_dashboard():
 def add_vendor():
     """تعميد مورد جديد في النظام الملكي"""
     if request.method == 'POST':
-        # هنا سيتم لاحقاً إضافة منطق حفظ البيانات وتوليد الرقم السيادي
-        # مبدأنا: النجاح يبنى بالثقة وليس على الأوراق
+        # منطق حفظ البيانات وتوليد الرقم السيادي سيضاف هنا
+        # "النجاح يبنى بالثقة وليس على الأوراق"
         flash('تم تعميد المورد بنجاح وفتح محافظه المالية الثلاث.', 'success')
         return redirect(url_for('admin.manage_suppliers'))
     
@@ -43,7 +44,6 @@ def add_vendor():
 @login_required
 def manage_suppliers():
     """حوكمة الموردين المعتمدين"""
-    # سيتم ربطها بجدول الموردين في قاعدة البيانات
     return render_template('manage_suppliers.html')
 
 # --- قسم الهندسة المالية ---
@@ -52,7 +52,6 @@ def manage_suppliers():
 @login_required
 def withdraw_requests():
     """إدارة طلبات سحب الأرصدة والتسويات"""
-    # سيتم جلب الطلبات المعلقة من قاعدة البيانات هنا
     return render_template('withdraw_requests.html')
 
 @admin_bp.route('/financial-engineering')
