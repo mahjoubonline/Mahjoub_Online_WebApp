@@ -1,25 +1,27 @@
-from flask import render_template, redirect, url_for, flash, request
-from flask_login import login_user, logout_user, login_required, current_user
+from flask import render_template
+from flask_login import login_required, current_user
 from . import admin_bp
-from core.models import User, Supplier, Order  # استيراد الموديلات من الحزمة المركزية
+# استيراد الموديلات من الحزمة المركزية لضمان عمل الربط مع قاعدة البيانات
+from core.models import User, Supplier, Order 
 
 @admin_bp.route('/dashboard')
 @login_required  # حماية السيادة: الوصول للقائد فقط
 def admin_dashboard():
     """
     لوحة التحكم المركزية (نظام الرقابة العليا) لمنصة محجوب أونلاين
+    إدارة العمليات التجارية في الخوخة، عدن، المخا، وحيس
     """
     
-    # تجهيز البيانات لتتوافق تماماً مع متغيرات ملف dashboard.html الخاص بك
-    # ملاحظة: القيم هنا ثابتة حالياً، ويمكنك لاحقاً ربطها بـ Query من قاعدة البيانات
+    # تجهيز البيانات لتتوافق تماماً مع تصميم dashboard.html المهيب
+    # تم تحديث القيم لتطابق المتغيرات التي صممتها في الواجهة
     context = {
-        'orders_count': "1,250",       # إجمالي المبيعات (تظهر في البطاقة الأولى)
+        'orders_count': "1,250",       # إجمالي المبيعات (تظهر في بطاقة الصاروخ)
         's_count': "48",              # شركاء الترسانة - الموردين
         'total_balance': "15.5K",      # السيولة المركزية (بالدولار)
-        'p_count': "12",               # طلبات قيد التدقيق
+        'p_count': "12",               # طلبات قيد التدقيق (تظهر في بطاقة الميكروتشيب)
         'admin_name': current_user.username, # تحية القائد (علي محجوب)
         
-        # بيانات سجل العمليات السيادية للجدول (Transactions)
+        # بيانات سجل العمليات السيادية التي تملأ الجدول في أسفل الصفحة
         'transactions': [
             {
                 'supplier_name': 'مورد عدن المركزي',
@@ -45,15 +47,5 @@ def admin_dashboard():
         ]
     }
     
-    # تمرير القاموس بالكامل إلى القالب ليفككه Jinja2 تلقائياً
+    # تمرير البيانات كمتغيرات مستقلة ليفهمها قالب Jinja2
     return render_template('dashboard.html', **context)
-
-@admin_bp.route('/logout')
-@login_required
-def logout():
-    """
-    الخروج الآمن من نظام الرقابة
-    """
-    logout_user()
-    flash('تم تسجيل الخروج من الترسانة بنجاح.', 'info')
-    return redirect(url_for('admin.admin_login'))
