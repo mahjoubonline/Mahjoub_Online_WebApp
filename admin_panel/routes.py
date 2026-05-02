@@ -9,7 +9,7 @@ from core import db
 from core.models.vendor import Vendor
 from core.models.user import User 
 
-# ملاحظة: التحقق من وجود نموذج طلبات السحب
+# التحقق من وجود نموذج طلبات السحب لمنع أخطاء الاستيراد
 try:
     from core.models.vendor import WithdrawRequest 
 except ImportError:
@@ -38,23 +38,31 @@ def logout():
     flash("تم تأمين الخروج من النظام السيادي.", "info")
     return redirect(url_for('admin.login'))
 
-# --- 2. لوحة التحكم الرئيسية ---
+# --- 2. لوحة التحكم الرئيسية (الداشبورد) ---
+@admin_bp.route('/') # مسار الجذر للبلوبيرنت
 @admin_bp.route('/dashboard')
 @login_required
 def admin_dashboard():
-    suppliers_count = Vendor.query.count()
-    pending_withdrawals = WithdrawRequest.query.filter_by(status='pending').count() if WithdrawRequest else 0
-    return render_template('dashboard.html', 
-                           suppliers_count=suppliers_count, 
-                           pending_withdrawals=pending_withdrawals)
+    # تنظيف الجلسة لضمان دقة البيانات المعروضة
+    db.session.rollback()
+    try:
+        suppliers_count = Vendor.query.count()
+        pending_withdrawals = WithdrawRequest.query.filter_by(status='pending').count() if WithdrawRequest else 0
+        return render_template('dashboard.html', 
+                               suppliers_count=suppliers_count, 
+                               pending_withdrawals=pending_withdrawals)
+    except Exception as e:
+        print(f"Dashboard Error: {str(e)}")
+        return render_template('dashboard.html', suppliers_count=0, pending_withdrawals=0)
 
 # --- 3. إدارة الموردين (التعميد والأرشفة) ---
 @admin_bp.route('/add-supplier', methods=['GET', 'POST'])
 @login_required
 def add_supplier():
-    # أ- حساب المعرف السيادي التالي بناءً على آخر سجل في القاعدة
+    # أ- توليد المعرف السيادي التالي (يعتمد على آخر سجل في القاعدة)
     next_id = "MAH-9631"
     try:
+        db.session.rollback() # تنظيف قبل الاستعلام
         last_vendor = Vendor.query.order_by(Vendor.id.desc()).first()
         if last_vendor and last_vendor.e_wallet and '-' in last_vendor.e_wallet:
             current_num = int(last_vendor.e_wallet.split('-')[1])
@@ -63,23 +71,22 @@ def add_supplier():
         next_id = "MAH-9631"
 
     if request.method == 'POST':
-        # 🛡️ حماية الحوكمة: تنظيف أي عمليات فاشلة معلقة في الجلسة فوراً
+        # 🛡️ تنظيف الجلسة فوراً لحل مشكلة InFailedSqlTransaction
         db.session.rollback()
         
         try:
-            # 1. استلام البيانات الأساسية
+            # 1. استلام البيانات
             username = request.form.get('username')
-            password = request.form.get('password', '123456')
+            password = request.form.get('password', '123')
             e_wallet = request.form.get('e_wallet') or next_id
             
-            # التحقق من عدم تكرار اسم المستخدم
-            user_check = User.query.filter_by(username=username).first()
-            if user_check:
-                return jsonify({"status": "error", "message": f"اسم المستخدم '{username}' مسجل مسبقاً في النظام"}), 400
+            # التأكد من عدم تكرار المستخدم
+            if User.query.filter_by(username=username).first():
+                return jsonify({"status": "error", "message": "اسم المستخدم مسجل مسبقاً"}), 400
 
             activity = request.form.get('manual_activity') if request.form.get('activity_type') == 'manual' else request.form.get('activity_type')
             
-            # 2. الأرشفة السيادية للوثائق (GitHub)
+            # 2. الأرشفة السيادية (GitHub)
             github_path = "Local_Archive_Only"
             id_file = request.files.get('id_image')
             
@@ -94,7 +101,7 @@ def add_supplier():
                     ext=ext
                 )
 
-            # 3. إنشاء حساب الولوج (User) مع تشفير كلمة المرور
+            # 3. إنشاء حساب المستخدم (User)
             new_user = User(
                 username=username,
                 password_hash=generate_password_hash(password),
@@ -102,9 +109,9 @@ def add_supplier():
                 is_active_account=True
             )
             db.session.add(new_user)
-            db.session.flush() # الحصول على ID المستخدم لربطه بالمورد
+            db.session.flush() 
 
-            # 4. إنشاء سجل المورد السيادي (Vendor)
+            # 4. إنشاء سجل المورد (Vendor)
             new_vendor = Vendor(
                 user_id=new_user.id,
                 owner_name=request.form.get('owner_name'),
@@ -125,14 +132,14 @@ def add_supplier():
             )
             
             db.session.add(new_vendor)
-            db.session.commit() # الحفظ النهائي لجميع البيانات
+            db.session.commit()
 
-            return jsonify({"status": "success", "message": "تم التعميد والأرشفة السيادية بنجاح"}), 200
+            return jsonify({"status": "success", "message": "تم التعميد والأرشفة بنجاح"}), 200
 
         except Exception as e:
-            db.session.rollback() # التراجع عن أي تغييرات في حال حدوث خطأ
-            print(f"CRITICAL ERROR IN SOVEREIGN SYSTEM: {str(e)}")
-            return jsonify({"status": "error", "message": f"تعثر في الترسانة الرقمية: {str(e)}"}), 500
+            db.session.rollback()
+            print(f"CRITICAL ERROR: {str(e)}")
+            return jsonify({"status": "error", "message": f"تعثر في الترسانة: {str(e)}"}), 500
 
     return render_template('add_supplier.html', next_id=next_id)
 
@@ -140,11 +147,13 @@ def add_supplier():
 @admin_bp.route('/withdraw-requests')
 @login_required
 def withdraw_requests():
+    db.session.rollback()
     requests_list = WithdrawRequest.query.filter_by(status='pending').all() if WithdrawRequest else []
     return render_template('withdraw_requests.html', requests=requests_list)
 
 @admin_bp.route('/wallets')
 @login_required
 def wallets():
+    db.session.rollback()
     all_vendors = Vendor.query.all()
     return render_template('wallets.html', vendors=all_vendors)
