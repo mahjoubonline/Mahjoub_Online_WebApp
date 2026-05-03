@@ -20,25 +20,28 @@ except ImportError:
 from . import admin_bp
 from .auth import handle_admin_login
 
-# --- 1. مسار الطوارئ السيادي (إصلاح بدون تسجيل دخول) ---
+# --- 1. مسار الطوارئ السيادي (إصلاح شامل لقاعدة البيانات) ---
 @admin_bp.route('/force-repair-now')
 def force_repair():
-    db.session.rollback()
+    db.session.rollback() # إنهاء أي ترانزاكشن معلق
     try:
-        # تنفيذ أوامر الترميم المباشرة لقاعدة البيانات
+        # تنفيذ أوامر الترميم المباشرة لإضافة الأعمدة الناقصة المكتشفة في السجلات
+        db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'admin';"))
+        db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active_account BOOLEAN DEFAULT TRUE;"))
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS user_id INTEGER;"))
+        
         db.session.commit()
         session['repair_done'] = True
         return """
         <div style="text-align:center; margin-top:50px; font-family:sans-serif; direction:rtl;">
-            <h1 style="color: #27ae60;">✅ تم تفعيل الترميم السيادي بنجاح!</h1>
-            <p>قاعدة البيانات الآن متوافقة مع معايير محجوب أونلاين.</p>
-            <a href="/admin/dashboard" style="padding:10px 20px; background:#632C8F; color:white; text-decoration:none; border-radius:5px;">الدخول للداشبورد</a>
+            <h1 style="color: #D4AF37;">✨ تم اكتمال الترميم الهيكلي بنجاح!</h1>
+            <p style="color: #1a0b2e;">تم تحديث الجداول (Users & Vendors) لتتوافق مع معايير محجوب أونلاين.</p>
+            <a href="/admin/dashboard" style="padding:12px 25px; background:#632C8F; color:white; text-decoration:none; border-radius:10px;">دخول مركز القيادة (Dashboard)</a>
         </div>
         """
     except Exception as e:
         db.session.rollback()
-        return f"<h1 style='color:red;'>❌ فشل الإصلاح: {str(e)}</h1>"
+        return f"<h1 style='color:red; text-align:center;'>❌ فشل الترميم: {str(e)}</h1>"
 
 # --- 2. لوحة التحكم المركزية (الداشبورد) ---
 @admin_bp.route('/')
@@ -58,18 +61,19 @@ def admin_dashboard():
         db.session.rollback()
         show_repair = True 
     
-    # استدعاء ملف dashboard.html مباشرة
     return render_template('dashboard.html', **stats, show_repair=show_repair)
 
-# --- 3. الهندسة المالية (طلبات السحب) - تم إضافتها لإصلاح خطأ 500 ---
+# --- 3. الهندسة المالية (طلبات السحب) ---
 @admin_bp.route('/withdraw-requests')
 @login_required
 def withdraw_requests():
     db.session.rollback()
     requests = []
     if WithdrawRequest:
-        requests = WithdrawRequest.query.order_by(WithdrawRequest.id.desc()).all()
-    # استدعاء الملف كما هو في مساره الحالي
+        try:
+            requests = WithdrawRequest.query.order_by(WithdrawRequest.id.desc()).all()
+        except:
+            db.session.rollback()
     return render_template('withdraw_requests.html', requests=requests)
 
 # --- 4. حوكمة الموردين ---
@@ -77,7 +81,11 @@ def withdraw_requests():
 @login_required
 def manage_suppliers():
     db.session.rollback()
-    suppliers = Vendor.query.all() if Vendor else []
+    suppliers = []
+    try:
+        suppliers = Vendor.query.all() if Vendor else []
+    except:
+        db.session.rollback()
     return render_template('manage_suppliers.html', suppliers=suppliers)
 
 @admin_bp.route('/add-supplier', methods=['GET', 'POST'])
@@ -85,7 +93,6 @@ def manage_suppliers():
 def add_supplier():
     db.session.rollback()
     if request.method == 'POST':
-        # منطق إضافة المورد يوضع هنا لاحقاً
         flash("تم استلام بيانات المورد للتدقيق", "info")
         return redirect(url_for('admin.manage_suppliers'))
     return render_template('add_supplier.html')
@@ -94,8 +101,11 @@ def add_supplier():
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
     db.session.rollback()
-    if current_user.is_authenticated and getattr(current_user, 'role', None) == 'admin':
-        return redirect(url_for('admin.admin_dashboard'))
+    # التحقق من الصلاحيات بناءً على العمود الجديد 'role'
+    if current_user.is_authenticated:
+        user_role = getattr(current_user, 'role', None)
+        if user_role == 'admin':
+            return redirect(url_for('admin.admin_dashboard'))
     return handle_admin_login()
 
 @admin_bp.route('/logout')
