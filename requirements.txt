@@ -1,9 +1,22 @@
+# الأساسيات وإطار العمل
 Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
 SQLAlchemy==2.0.30
+
+# نظام تسجيل الدخول والهجرة
 Flask-Login==0.6.3
 Flask-Migrate==4.0.7
-Flask-CORS==5.0.0
-gunicorn==22.0.0
+
+# الاتصال وقاعدة البيانات (PostgreSQL)
 psycopg2-binary==2.9.9
+gunicorn==22.0.0
+
+# الأمان ومعالجة البيانات
+Flask-CORS==5.0.0
 python-dotenv==1.0.1
+
+# معالجة الصور (مهمة جداً لأرشفة صور الهوية ضوئياً)
+Pillow==10.3.0
+
+# أدوات مساعدة للتحقق من صحة البيانات
+email-validator==2.1.1
