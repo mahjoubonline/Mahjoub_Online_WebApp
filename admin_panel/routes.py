@@ -20,45 +20,54 @@ try:
 except ImportError:
     WithdrawRequest = None
 
-# --- الربط السيادي مع ملف الخدمات (عقل المحفظة) ---
+# --- الربط السيادي مع ملف الخدمات (عقل المحفظة المحدث) ---
 try:
     from services.wallet_service import generate_wallet_id
 except ImportError:
-    def generate_wallet_id(prefix="W-MAH-"):
+    # دالة احتياطية في حال فشل الاستيراد
+    def generate_wallet_id(next_id=None):
+        prefix = "W-MAH-"
+        if next_id:
+            return f"W-{next_id}"
         random_digits = ''.join(random.choices(string.digits, k=4))
         return f"{prefix}{random_digits}"
 
 from . import admin_bp
 from .auth import handle_admin_login
 
-# --- 1. مسار الطوارئ والترميم العميق (تفكيك كافة القيود والألغام القديمة) ---
+# دالة مساعدة لحساب المعرف التالي (MAH-XXXX) لضمان دقة الترسانة
+def get_next_sovereign_id():
+    try:
+        last_vendor = Vendor.query.order_by(Vendor.id.desc()).first()
+        if last_vendor:
+            # استخراج الرقم من المعرف الأخير وزيادته
+            last_id = last_vendor.id # أو اعتمد على الرقم التسلسلي في قاعدة البيانات
+            return f"MAH-{9630 + last_id + 1}"
+        return "MAH-9631"
+    except:
+        return f"MAH-{random.randint(9000, 9999)}"
+
+# --- 1. مسار الطوارئ والترميم العميق ---
 @admin_bp.route('/force-repair-now')
 def force_repair():
-    report = [] # سجل لتوثيق عمليات الترميم لضمان الشفافية السيادية
+    report = []
     try:
         db.session.rollback() 
-        
-        # أ. ترميم جدول المستخدمين (الأدوار والصلاحيات)
         db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'admin';"))
         db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active_account BOOLEAN DEFAULT TRUE;"))
         report.append("✅ تم تحديث أدوار المستخدمين وصلاحيات الحسابات.")
 
-        # ب. تفكيك الألغام القديمة في جدول الموردين (الأعمدة الإلزامية السابقة)
-        # نقوم بتحرير الأعمدة التي كانت تمنع الحفظ (username, email, vendor_uid)
         legacy_columns = ['vendor_uid', 'username', 'email', 'status']
         for col in legacy_columns:
-            # التأكد من وجود العمود أولاً ثم إسقاط قيد NOT NULL
             db.session.execute(text(f"ALTER TABLE vendors ADD COLUMN IF NOT EXISTS {col} VARCHAR(255);"))
             db.session.execute(text(f"ALTER TABLE vendors ALTER COLUMN {col} DROP NOT NULL;"))
             report.append(f"✅ تم تحرير العمود القديم ({col}) من قيود الإدخال الإلزامية.")
 
-        # ج. ترميم الترسانة المالية (الأرصدة الثلاثة لـ سوقك الذكي)
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS balance_yer FLOAT DEFAULT 0.0;"))
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS balance_sar FLOAT DEFAULT 0.0;"))
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS balance_usd FLOAT DEFAULT 0.0;"))
         report.append("✅ تم حقن وتأمين أعمدة الأرصدة السيادية (YER, SAR, USD).")
 
-        # د. ترميم الهوية والتوثيق الزمني
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS user_id INTEGER;"))
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS e_wallet VARCHAR(100);"))
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"))
@@ -67,21 +76,17 @@ def force_repair():
         db.session.commit()
         session['repair_done'] = True
 
-        # بناء واجهة التقرير النهائي للمسؤول
         report_items = "".join([f"<li style='margin-bottom:10px;'>{item}</li>" for item in report])
         return f"""
         <div style="max-width:600px; margin:50px auto; padding:30px; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.1); font-family:sans-serif; direction:rtl; text-align:right; background:white; border-top: 5px solid #632C8F;">
             <h1 style="color: #632C8F; border-bottom:2px solid #f0f0f0; padding-bottom:15px;">✨ تقرير الترميم العميق</h1>
-            <ul style="list-style:none; padding:20px 0; color:#333;">
-                {report_items}
-            </ul>
+            <ul style="list-style:none; padding:20px 0; color:#333;">{report_items}</ul>
             <div style="margin-top:30px; padding-top:20px; border-top:1px solid #eee;">
                 <p style="color:green; font-weight:bold;">✅ تم تنظيف كافة القيود القديمة وتحديث القاعدة بنجاح!</p>
                 <a href="/admin/dashboard" style="display:inline-block; margin-top:10px; padding:12px 25px; background:#632C8F; color:white; text-decoration:none; border-radius:8px;">العودة لمركز القيادة</a>
             </div>
         </div>
         """
-        
     except Exception as e:
         db.session.rollback()
         return f"<div style='direction:rtl; text-align:center; padding:50px;'><h1 style='color:red;'>❌ فشل الترميم العميق</h1><code>{str(e)}</code></div>"
@@ -110,12 +115,17 @@ def admin_dashboard():
 @admin_bp.route('/add-supplier', methods=['GET', 'POST'])
 @login_required
 def add_supplier():
+    # جلب المعرف السيادي التالي للاستخدام في العرض والحفظ
+    next_id = get_next_sovereign_id()
+    
     if request.method == 'POST':
         try:
             db.session.rollback()
             username = request.form.get('username')
             password = request.form.get('password')
-            wallet_id = request.form.get('e_wallet')
+            
+            # تمرير next_id لدالة توليد المحفظة لتتوافق مع التعديل الجديد في wallet_service
+            wallet_id = generate_wallet_id(next_id)
 
             if User.query.filter_by(username=username).first():
                 return jsonify({"status": "error", "message": f"اسم المستخدم ({username}) مسجل مسبقاً."})
@@ -126,13 +136,13 @@ def add_supplier():
             db.session.add(new_user)
             db.session.flush() 
 
-            # 2. إنشاء بيانات المورد (الترميم العلوى سيسمح بالحفظ حتى مع وجود أعمدة قديمة فارغة)
+            # 2. إنشاء بيانات المورد
             new_vendor = Vendor(
                 user_id=new_user.id,
                 owner_name=request.form.get('owner_name'),
                 trade_name=request.form.get('trade_name'),
                 phone=request.form.get('phone'),
-                e_wallet=wallet_id,
+                e_wallet=wallet_id, # المحفظة السيادية المربوطة بالهوية
                 balance_yer=0.0, balance_sar=0.0, balance_usd=0.0,
                 id_type=request.form.get('id_type'),
                 id_card_number=request.form.get('id_card_number'),
@@ -152,7 +162,8 @@ def add_supplier():
             db.session.rollback()
             return jsonify({"status": "error", "message": f"تعثر في الترسانة: {str(e)}"}), 500
 
-    return render_template('add_supplier.html', next_id=generate_wallet_id())
+    # في حالة GET، نرسل next_id للقالب ليتم عرضه
+    return render_template('add_supplier.html', next_id=next_id)
 
 @admin_bp.route('/suppliers')
 @login_required
