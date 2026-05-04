@@ -36,6 +36,34 @@
         border-bottom: 4px solid var(--gov-gold);
     }
 
+    /* زر الرجوع الاحترافي */
+    .back-nav {
+        padding: 15px 30px 0 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-back-gov {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--gov-purple);
+        text-decoration: none;
+        font-weight: 800;
+        font-size: 0.95rem;
+        padding: 8px 15px;
+        border-radius: 10px;
+        background: #f1f5f9;
+        transition: 0.3s;
+        border: 1px solid transparent;
+    }
+
+    .btn-back-gov:hover {
+        background: #e2e8f0;
+        border-color: var(--gov-gold);
+        transform: translateX(-5px);
+    }
+
     .section-banner {
         background: #f1f5f9;
         color: var(--gov-purple);
@@ -75,16 +103,6 @@
         box-shadow: 0 0 0 4px rgba(99, 44, 143, 0.15);
     }
 
-    .form-control-readonly {
-        background-color: #f1f5f9;
-        cursor: not-allowed;
-        border-color: var(--gov-gold);
-        font-weight: 900;
-        color: var(--gov-purple);
-        text-align: center;
-        letter-spacing: 1px;
-    }
-
     .btn-gov {
         background: var(--gov-purple);
         color: white;
@@ -102,7 +120,6 @@
     .btn-gov:hover {
         background: #4a1d6d;
         transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(99, 44, 143, 0.4);
     }
 
     .fin-card {
@@ -123,15 +140,13 @@
         border-color: var(--gov-purple);
         background: #f5f3ff;
         color: var(--gov-purple);
-        box-shadow: 0 4px 12px rgba(99, 44, 143, 0.1);
     }
-
-    .fin-card i { font-size: 1.5rem; color: var(--gov-gold); }
 
     .manual-input { margin-top: 10px; border-color: var(--gov-gold); display: none; }
 </style>
 
 <div class="form-container">
+    <!-- رأس الصفحة -->
     <div class="form-header">
         <div>
             <h2 style="margin:0; font-weight: 900;">🛡️ نظام التعميد السيادي</h2>
@@ -141,6 +156,13 @@
             <small>المعرف السيادي المولد</small><br>
             <strong id="sovereign_id_display" style="font-size:1.6rem; color:var(--gov-gold);">{{ next_id }}</strong>
         </div>
+    </div>
+
+    <!-- زر الرجوع -->
+    <div class="back-nav">
+        <a href="{{ url_for('admin.manage_wallets') }}" class="btn-back-gov">
+            <i class="fas fa-arrow-right"></i> العودة للمحافظ السيادية
+        </a>
     </div>
 
     <form id="sovereignForm" action="{{ url_for('admin.add_supplier') }}" method="POST" enctype="multipart/form-data">
@@ -169,7 +191,7 @@
             </div>
         </div>
 
-        <div class="section-banner"><i class="fas fa-id-card"></i> بيانات المالك والتوثيق الضوئي</div>
+        <div class="section-banner"><i class="fas fa-id-card"></i> بيانات المالك والتوثيق</div>
         <div class="grid-layout">
             <div class="input-box" style="grid-column: span 2;">
                 <label>اسم المالك الكامل (حسب الهوية)</label>
@@ -195,8 +217,8 @@
                 <input type="text" name="trade_name" id="form_store_name" class="form-control-gov" placeholder="اسم المحل أو الشركة أو العلامة التجارية" required>
             </div>
             <div class="input-box">
-                <label>أرشفة الهوية (صورة ضوئية)</label>
-                <input type="file" name="id_image" class="form-control-gov" accept="image/*" required>
+                <label>أرشفة الهوية (اختياري)</label>
+                <input type="file" name="id_image" class="form-control-gov" accept="image/*">
             </div>
              <div class="input-box">
                 <label>رقم الهاتف المعتمد</label>
@@ -227,9 +249,9 @@
         <div class="section-banner"><i class="fas fa-university"></i> الربط المالي (المحفظة والتحويلات)</div>
         <div class="grid-layout">
             <div class="input-box">
-                <label>رمز المحفظة السيادي (للأرصدة)</label>
-                <input type="text" value="W-{{ next_id }}" class="form-control-gov form-control-readonly" readonly>
-                <input type="hidden" name="e_wallet" value="W-{{ next_id }}">
+                <label>رمز المحفظة السيادي</label>
+                <input type="text" value="{{ next_wallet }}" class="form-control-gov form-control-readonly" readonly style="background:#f1f5f9; font-weight:900;">
+                <input type="hidden" name="e_wallet" value="{{ next_wallet }}">
             </div>
             <div class="input-box" style="grid-column: span 2;">
                 <label>جهة الاستلام المالي المعتمدة</label>
@@ -265,21 +287,34 @@
 </div>
 
 <script>
-    // البيانات الجغرافية المحدثة
+    // قائمة شاملة لجميع محافظات اليمن ومديرياتها الرئيسية
     const geoData = {
-        "أمانة العاصمة": ["السبعين", "التحرير", "الثورة", "صنعاء القديمة", "بني الحارث", "وحدة", "معين", "شعوب"],
-        "عدن": ["المنصورة", "كريتر", "الشيخ عثمان", "البريقة", "المعلا", "التواهي", "خور مكسر"],
-        "تعز": ["المخاء", "القاهرة", "المظفر", "صالة", "ذباب", "صبر الموادم", "التربة"],
-        "الحديدة": ["الخوخة", "حيس", "الحوك", "الميناء", "باجل", "زبيد", "بيت الفقيه"],
-        "حضرموت": ["المكلا", "سيئون", "الشحر", "تريم", "القطن", "شبام"],
-        "مأرب": ["مأرب المدينة", "مأرب الوادي", "حريب"],
-        "شبوة": ["عتق", "بيحان", "عزان"],
-        "لحج": ["الحوطة", "يافع", "المقاطرة"]
+        "أمانة العاصمة": ["السبعين", "التحرير", "الثورة", "صنعاء القديمة", "بني الحارث", "وحدة", "معين", "شعوب", "الصافية", "أزال"],
+        "عدن": ["المنصورة", "كريتر", "الشيخ عثمان", "البريقة", "المعلا", "التواهي", "خور مكسر", "دار سعد"],
+        "تعز": ["المخاء", "القاهرة", "المظفر", "صالة", "ذباب", "صبر الموادم", "التربة", "المواسط", "جبل حبشي", "الوازعية"],
+        "الحديدة": ["الخوخة", "حيس", "الحوك", "الميناء", "باجل", "زبيد", "بيت الفقيه", "المنصورية", "الضحى", "الزيدية"],
+        "حضرموت": ["المكلا", "سيئون", "الشحر", "تريم", "القطن", "شبام", "تريم", "غيل باوزير", "حجر الصيعر"],
+        "مأرب": ["مأرب المدينة", "مأرب الوادي", "حريب", "الجوبة", "العبدية"],
+        "إب": ["إب المدينة", "الظهار", "المشنة", "جبلة", "السياني", "ذي السفال", "يريم"],
+        "شبوة": ["عتق", "بيحان", "عزان", "حبان", "رضوم", "نصاب"],
+        "لحج": ["الحوطة", "يافع", "المقاطرة", "تبن", "الملاح", "المضاربة"],
+        "أبين": ["زنجبار", "خنفار", "لودر", "مودية", "أحور"],
+        "صنعاء": ["بني مطر", "سنحان", "همدان", "خولان", "بلاد الروس"],
+        "ذمار": ["ذمار المدينة", "عنس", "معبر", "جبل الشرق"],
+        "عمران": ["عمران المدينة", "خمر", "ريدة"],
+        "الضالع": ["الضالع المدينة", "قعطبة", "دمت", "الحصين"],
+        "البيضاء": ["البيضاء المدينة", "رداع", "مكيراس"],
+        "حجة": ["حجة المدينة", "عبس", "حرض", "ميدي"],
+        "صعدة": ["صعدة المدينة", "سحار", "مجز"],
+        "الجوف": ["الحزم", "المصلوب", "المتون"],
+        "المهرة": ["الغيضة", "قشن", "سيحوت"],
+        "ريمة": ["الجبين", "بلاد الطعام"],
+        "سقطرى": ["حديبو", "قلنسية"]
     };
 
     const finData = {
-        "banks": ["بنك الكريمي الإسلامي", "بنك القطيبي الإسلامي", "بنك التضامن", "بنك اليمن والبحرين", "بنك الشمول"],
-        "exchange": ["شركة المريسي للصرافة", "شركة سويد", "شركة النجم", "شركة العامري"]
+        "banks": ["بنك الكريمي الإسلامي", "بنك القطيبي الإسلامي", "بنك التضامن", "بنك اليمن والبحرين", "بنك الشمول", "بنك البسيري", "بنك عدن"],
+        "exchange": ["شركة المريسي للصرافة", "شركة سويد", "شركة النجم", "شركة العامري", "شركة المحسن", "شركة الخالدي"]
     };
 
     function toggleManualInput(selectObj, inputId) {
@@ -292,7 +327,7 @@
         const dSelect = document.getElementById('dist_select');
         dSelect.innerHTML = '<option value="">اختر المديرية...</option>';
         if(geoData[prov]) {
-            geoData[prov].forEach(d => dSelect.add(new Option(d, d)));
+            geoData[prov].sort().forEach(d => dSelect.add(new Option(d, d)));
         }
     }
 
@@ -303,17 +338,8 @@
         
         const bSelect = document.getElementById('bank_select');
         bSelect.innerHTML = '<option value="">اختر من القائمة...</option>';
-        finData[type].forEach(item => bSelect.add(new Option(item, item)));
+        finData[type].sort().forEach(item => bSelect.add(new Option(item, item)));
         bSelect.add(new Option("أخرى (إدخال يدوي)...", "other"));
-    }
-
-    // وظيفة النسخ الذكي
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text);
-        const Toast = Swal.mixin({
-            toast: true, position: 'top-end', showConfirmButton: false, timer: 1500
-        });
-        Toast.fire({ icon: 'success', title: 'تم النسخ' });
     }
 
     document.getElementById('sovereignForm').onsubmit = async function(e) {
@@ -331,18 +357,9 @@
             if (result.status === 'success') {
                 Swal.fire({
                     title: '✅ تم الاعتماد والأرشفة',
-                    html: `
-                        <div style="text-align: right; direction: rtl; background: #fdfdfd; padding: 15px; border-radius: 12px; border: 2px solid var(--gov-gold);">
-                            <p><strong>الاسم التجاري:</strong> ${document.getElementById('form_store_name').value}</p>
-                            <p><strong>المعرف السيادي:</strong> <code style="color:red;">{{ next_id }}</code></p>
-                            <p><strong>المحفظة المالية:</strong> <code>W-{{ next_id }}</code></p>
-                            <p><strong>اسم المستخدم:</strong> <code>${document.getElementById('form_username').value}</code></p>
-                            <hr>
-                            <p style="font-size: 0.8rem; color: #666;">تم تسجيل المورد بنجاح في سوقك الذكي.</p>
-                        </div>
-                    `,
+                    html: `<div style="text-align: right; direction: rtl;">تم تسجيل المورد <b>${document.getElementById('form_store_name').value}</b> بنجاح.</div>`,
                     icon: 'success',
-                    confirmButtonText: 'الذهاب للمحافظ السيادية',
+                    confirmButtonText: 'حسناً',
                     confirmButtonColor: '#632C8F'
                 }).then(() => {
                     window.location.href = "{{ url_for('admin.manage_wallets') }}";
