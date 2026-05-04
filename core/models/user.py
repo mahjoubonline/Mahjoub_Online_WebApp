@@ -10,12 +10,17 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     
-    # الحقل المعتمد للتشفير (يتوافق الآن مع التعديل في routes.py)
+    # الحقل المعتمد للتشفير
     password_hash = db.Column(db.String(256), nullable=False)
     
     # الأعمدة الهيكلية لضمان صلاحيات الإدارة والموردين
     role = db.Column(db.String(50), default='admin') 
     is_active_account = db.Column(db.Boolean, default=True)
+
+    # --- الربط السيادي مع نموذج المورد (Supplier) ---
+    # تم ضبط uselist=False لأن كل مستخدم مورد يمتلك بروفايل مورد واحد فقط
+    # العلاقة 'Supplier' تضمن تكامل البيانات عند الإضافة أو الحذف
+    supplier = db.relationship('Supplier', backref='user', uselist=False, cascade="all, delete-orphan")
 
     def set_password(self, password):
         """تشفير كلمة المرور السيادية قبل الحفظ في الترسانة"""
@@ -31,10 +36,9 @@ class User(db.Model, UserMixin):
     def is_active(self):
         """صمام أمان: التحقق من نشاط الحساب مع حماية الجلسة من الانهيار"""
         try:
-            # محاولة الوصول للعمود الحقيقي في قاعدة البيانات
             return self.is_active_account
         except (InternalError, ProgrammingError, Exception):
-            # تطهير الجلسة فوراً في حال وجود خطأ في الهيكل (Transaction Aborted)
+            # تطهير الجلسة فوراً في حال وجود خطأ في الهيكل
             db.session.rollback()
             return True 
 
