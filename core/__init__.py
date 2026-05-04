@@ -1,3 +1,4 @@
+import re
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -31,10 +32,8 @@ def create_app(config_class=Config):
         from core.models.vendor import Vendor
         
         # 🛡️ تصحيح الترسانة: حل مشكلة العمود المفقود (user_id)
-        # نقوم بعمل rollback لتنظيف أي معاملات فاشلة عالقة في PostgreSQL
         db.session.rollback()
         try:
-            # سيحاول إنشاء الأعمدة الناقصة دون حذف البيانات الموجودة
             db.create_all() 
             print("✅ تم فحص وتحديث هيكل الترسانة الرقمية بنجاح.")
         except Exception as e:
@@ -47,19 +46,36 @@ def create_app(config_class=Config):
         @app.context_processor
         def utility_processor():
             def get_next_vendor_id():
+                """
+                منطق جلب المعرف السيادي التالي بناءً على التسلسل:
+                MAH-963 + (1, 2, 3...) -> MAH-9631
+                """
+                base_prefix = "MAH-963"
                 try:
-                    # منطق جلب المعرف السيادي التالي (MAH-9631)
-                    # نستخدم rollback لضمان قراءة أحدث بيانات من القاعدة
                     db.session.rollback()
+                    # جلب آخر مورد تمت إضافته للترسانة
                     last_vendor = Vendor.query.order_by(Vendor.id.desc()).first()
-                    if last_vendor and last_vendor.e_wallet and '-' in last_vendor.e_wallet:
-                        parts = last_vendor.e_wallet.split('-')
-                        if len(parts) > 1:
-                            return f"MAH-{int(parts[1]) + 1}"
-                    return "MAH-9631"
-                except:
-                    return "MAH-9631"
-            return dict(next_id=get_next_vendor_id())
+                    
+                    if last_vendor and last_vendor.supplier_id:
+                        # استخدام Regex لاستخراج الأرقام التي تأتي بعد MAH-963
+                        # يبحث عن الرقم التسلسلي في المعرف الحالي
+                        match = re.search(rf"{base_prefix}(\d+)", last_vendor.supplier_id)
+                        if match:
+                            next_num = int(match.group(1)) + 1
+                            return f"{base_prefix}{next_num}"
+                    
+                    # إذا لم يوجد موردين سابقين، نبدأ بأول معرف سيادي
+                    return f"{base_prefix}1" # النتيجة: MAH-9631
+                except Exception as e:
+                    print(f"⚠️ خطأ في توليد المعرف: {e}")
+                    return f"{base_prefix}1"
+
+            # جعل next_id و next_wallet متاحين في جميع القوالب (Templates)
+            current_id = get_next_vendor_id()
+            return dict(
+                next_id=current_id,
+                next_wallet=f"W-{current_id}"
+            )
 
         # تسجيل البلوبيرنت الخاص بلوحة الإدارة
         from admin_panel.routes import admin_bp
