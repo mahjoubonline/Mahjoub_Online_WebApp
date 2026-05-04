@@ -36,16 +36,28 @@ def create_app(config_class=Config):
         from core.models.vendor import Vendor
         
         # 🛡️ تصحيح الترسانة: ضمان وجود الجداول وتحديث الهيكل
-        db.session.rollback()
         try:
             db.create_all() 
             print("✅ تم فحص وتحديث هيكل الترسانة الرقمية بنجاح.")
         except Exception as e:
+            db.session.rollback()
             print(f"⚠️ تنبيه حوكمة البيانات: تعذر تحديث الهيكل تلقائياً: {e}")
         
         @login_manager.user_loader
         def load_user(user_id):
-            return User.query.get(int(user_id))
+            """
+            تحميل المستخدم مع معالجة الأخطاء لمنع انهيار النظام (Crash) 
+            في حالة وجود تضارب في الجلسات أو قواعد البيانات.
+            """
+            try:
+                # محاولة جلب المستخدم من قاعدة البيانات
+                return User.query.get(int(user_id))
+            except Exception as e:
+                # في حالة حدوث خطأ (مثل نقص أعمدة في الجدول)، نقوم بعمل Rollback
+                # لمنع تعليق الاتصال بقاعدة البيانات في Railway
+                db.session.rollback()
+                print(f"❌ User Loader Error: {e}")
+                return None
 
         @app.context_processor
         def utility_processor():
@@ -56,28 +68,26 @@ def create_app(config_class=Config):
                 """
                 base_prefix = "MAH-963"
                 try:
-                    db.session.rollback()
-                    # جلب عدد الموردين الحاليين لضمان التسلسل التصاعدي
-                    count = db.session.query(Vendor).count()
+                    # نستخدم استعلاماً سريعاً للحصول على العدد لضمان عدم استهلاك الموارد
+                    count = db.session.query(Vendor.id).count() if Vendor else 0
                     next_num = count + 1
                     
-                    # الرقم التسلسلي النهائي (مثلاً 9631)
                     final_serial = f"{base_prefix}{next_num}"
                     
                     return {
                         "id": final_serial,
                         "wallet": f"W-{final_serial}"
                     }
-                    
                 except Exception as e:
+                    db.session.rollback()
                     print(f"⚠️ خطأ في توليد البيانات السيادية: {e}")
-                    # حالة احتياطية في حال تعطل قاعدة البيانات
-                    return {"id": f"{base_prefix}1", "wallet": f"W-{base_prefix}1"}
+                    # حالة احتياطية تعتمد على رقم عشوائي مؤقت لمنع توقف الصفحة
+                    rand_id = random.randint(100, 999)
+                    return {"id": f"{base_prefix}{rand_id}", "wallet": f"W-{base_prefix}{rand_id}"}
 
-            # استدعاء الدالة للحصول على القيم الموحدة
             sov_data = get_sovereign_data()
             
-            # جعل next_id و next_wallet متاحين في جميع القوالب بنفس الرقم
+            # جعل المعرفات متاحة في جميع القوالب (Templates)
             return dict(
                 next_id=sov_data['id'],
                 next_wallet=sov_data['wallet']
