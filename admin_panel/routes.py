@@ -70,7 +70,7 @@ def force_repair():
         db.session.rollback()
         return f"Error: {str(e)}"
 
-# --- 2. لوحة التحكم ---
+# --- 2. لوحة التحكم (الداشبورد) ---
 @admin_bp.route('/')
 @admin_bp.route('/dashboard')
 @login_required
@@ -135,24 +135,36 @@ def manage_suppliers():
     suppliers_list = Vendor.query.all() if Vendor else []
     return render_template('manage_suppliers.html', suppliers=suppliers_list)
 
-# --- 4. المسارات المفقودة المطلوبة من القوالب (تم التصحيح هنا) ---
+# --- 4. إدارة المحافظ وطلبات السحب (تمت المعالجة لمنع خطأ 500) ---
 
 @admin_bp.route('/manage-wallets')
 @login_required
 def manage_wallets():
-    """هذا هو المسار الذي يطلبه القالب ويسبب خطأ 500 حالياً"""
-    suppliers_list = Vendor.query.all() if Vendor else []
-    # استدعاء ملف القالب الصحيح wallets.html
-    return render_template('wallets.html', suppliers=suppliers_list)
+    """
+    هذا المسار يربط الطلب من القالب 'base.html' بملف 'wallets.html'.
+    يتم جلب جميع الموردين لعرض محافظهم وأرصدتهم.
+    """
+    try:
+        suppliers_list = Vendor.query.all() if Vendor else []
+        return render_template('wallets.html', suppliers=suppliers_list)
+    except Exception as e:
+        flash(f"حدث خطأ أثناء تحميل المحافظ: {str(e)}", "danger")
+        return redirect(url_for('admin.admin_dashboard'))
 
 @admin_bp.route('/withdraw-requests')
 @login_required
 def withdraw_requests():
-    """مسار طلبات السحب لمنع الخطأ في القائمة الجانبية"""
-    requests = WithdrawRequest.query.all() if WithdrawRequest else []
-    return render_template('manage_suppliers.html', suppliers=[]) # استبدله بقالب السحب لاحقاً
+    """عرض طلبات السحب المعلقة للموردين"""
+    try:
+        requests = WithdrawRequest.query.all() if WithdrawRequest else []
+        # إذا لم يتوفر قالب مخصص بعد، نمرر البيانات لقالب الموردين كإجراء مؤقت
+        return render_template('manage_suppliers.html', suppliers=[], withdraw_requests=requests)
+    except Exception as e:
+        flash(f"خطأ في تحميل طلبات السحب: {str(e)}", "danger")
+        return redirect(url_for('admin.admin_dashboard'))
 
-# --- 5. الهوية والـ API ---
+# --- 5. الهوية والـ API والتحكم في الدخول ---
+
 @admin_bp.route('/api/get-districts/<int:province_id>')
 @login_required
 def get_districts(province_id):
@@ -161,6 +173,7 @@ def get_districts(province_id):
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    # منع الدخول المتكرر إذا كان المستخدم مسؤولاً بالفعل
     if current_user.is_authenticated and getattr(current_user, 'role', 'admin') == 'admin':
         return redirect(url_for('admin.admin_dashboard'))
     return handle_admin_login()
@@ -170,5 +183,5 @@ def login():
 def logout():
     logout_user()
     session.clear()
-    flash('تم الخروج الآمن.', 'info')
+    flash('تم تسجيل الخروج بنجاح من نظام الإدارة.', 'info')
     return redirect(url_for('admin.login'))
