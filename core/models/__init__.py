@@ -2,25 +2,18 @@
 
 from core import db
 
-# 1. استيراد نماذج الهوية
-from core.models.user import User
+# 1. استيراد النماذج الأساسية (الهوية والسيادة)
+from .user import User
+from .vendor import Vendor, WithdrawRequest
 
-# 2. استيراد نموذج الموردين (التعميد السيادي)
-from .business import Supplier
-
-# 3. محاولة استيراد النماذج الأخرى مع معالجة الأخطاء لضمان تشغيل التطبيق
-try:
-    from .vendor import Vendor
-except ImportError:
-    Vendor = None
-
+# 2. استيراد النماذج المرتبطة بالأعمال والمنتجات
 try:
     from .product import Product
 except ImportError:
     Product = None
 
-# حل مشكلة Order التي تظهر في سجلات Railway (image_651b4a.png)
-# سنقوم بتعريفه كـ None مؤقتاً إذا لم يكن موجوداً لمنع الانهيار
+# 3. معالجة نموذج الطلبات (Order)
+# تم نقل الاعتماد هنا إلى vendor أو business حسب هيكلية ملفاتك
 try:
     from .business import Order
 except ImportError:
@@ -29,18 +22,12 @@ except ImportError:
     except ImportError:
         Order = None
 
-try:
-    from .vendor import WithdrawRequest
-except ImportError:
-    WithdrawRequest = None
-
-# 4. قائمة التصدير الشاملة
+# 4. قائمة التصدير الشاملة (تنظيف من أي مسمى Supplier قديم)
 __all__ = [
     'db',
     'User',
-    'Supplier',
-    'Order',
     'Vendor',
+    'Order',
     'Product',
     'WithdrawRequest'
 ]
