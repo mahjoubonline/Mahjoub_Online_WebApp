@@ -19,6 +19,7 @@
         position: relative;
         overflow: hidden;
         box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        height: 100%;
     }
 
     .stat-card:hover {
@@ -29,6 +30,7 @@
     .card-purple { background: linear-gradient(135deg, #632C8F, #8b44cc); }
     .card-gold { background: linear-gradient(135deg, #D4AF37, #f1c40f); }
     .card-dark { background: linear-gradient(135deg, #1a0b2e, #3a1a5e); }
+    .card-suppliers { background: linear-gradient(135deg, #2c3e50, #4b236d); }
 
     .status-indicator {
         height: 12px;
@@ -56,8 +58,9 @@
         </div>
     </div>
 
-    <!-- بطاقات الإحصائيات -->
+    <!-- بطاقات الإحصائيات الحقيقية -->
     <div class="row g-4">
+        <!-- بطاقة المستخدمين -->
         <div class="col-md-4">
             <div class="stat-card card-purple shadow">
                 <div class="d-flex justify-content-between align-items-start">
@@ -71,6 +74,21 @@
             </div>
         </div>
 
+        <!-- بطاقة الموردين المعتمدين -->
+        <div class="col-md-4">
+            <div class="stat-card card-suppliers shadow">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-uppercase opacity-75">الموردون المعتمدون</h6>
+                        <h2 class="display-5 fw-bold">{{ suppliers_count|default(0) }}</h2>
+                        <p class="mb-0 mt-2"><i class="fas fa-truck-loading"></i> كيان تجاري نشط</p>
+                    </div>
+                    <i class="fas fa-handshake fa-3x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة إجمالي الطلبات -->
         <div class="col-md-4">
             <div class="stat-card card-gold shadow">
                 <div class="d-flex justify-content-between align-items-start">
@@ -83,16 +101,15 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-4">
-            <div class="stat-card card-dark shadow">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="text-uppercase opacity-75">حالة النظام</h6>
-                        <h2 class="display-6 fw-bold">مستقر</h2>
-                        <p class="mb-0 mt-2"><i class="fas fa-server"></i> Railway: Online</p>
-                    </div>
-                    <i class="fas fa-database fa-3x opacity-25"></i>
+    <!-- حالة الخادم السحابي -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="stat-card card-dark shadow" style="padding: 15px 25px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <p class="mb-0"><i class="fas fa-server me-2"></i> حالة اتصال المنظومة بـ Railway: <span class="text-success fw-bold">Online</span></p>
+                    <small class="opacity-50">توقيت النظام: {{ now }}</small>
                 </div>
             </div>
         </div>
@@ -103,11 +120,13 @@
         <div class="col-12">
             <div class="card shadow-sm border-0" style="border-radius: 20px;">
                 <div class="card-body p-4">
-                    <h5 class="fw-bold mb-4" style="color: var(--royal-purple);">العمليات المتاحة</h5>
+                    <h5 class="fw-bold mb-4" style="color: var(--royal-purple);">العمليات السيادية المتاحة</h5>
                     <div class="d-flex gap-3 flex-wrap">
-                        <!-- نستخدم try/except في jinja أو نتأكد من الروابط -->
-                        <a href="{{ url_for('admin.add_supplier') if 'admin.add_supplier' else '#' }}" class="btn btn-outline-primary px-4 py-2 fw-bold" style="border-radius: 10px;">
-                            <i class="fas fa-plus-circle me-2"></i> إضافة مورد 
+                        <a href="{{ url_for('admin.add_supplier') }}" class="btn btn-outline-primary px-4 py-2 fw-bold" style="border-radius: 10px;">
+                            <i class="fas fa-plus-circle me-2"></i> تعميد مورد جديد
+                        </a>
+                        <a href="{{ url_for('admin.manage_suppliers') }}" class="btn btn-outline-secondary px-4 py-2 fw-bold" style="border-radius: 10px;">
+                            <i class="fas fa-list me-2"></i> إدارة الموردين
                         </a>
                         <a href="{{ url_for('admin.logout') }}" class="btn btn-outline-danger px-4 py-2" style="border-radius: 10px;">
                             <i class="fas fa-sign-out-alt me-2"></i> تسجيل الخروج الآمن
