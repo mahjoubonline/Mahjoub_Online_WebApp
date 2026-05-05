@@ -1,4 +1,11 @@
-from extensions import db
+# core/models/supplier.py
+
+# جرب هذا المسار إذا كانت extensions داخل مجلد core
+from core.extensions import db 
+
+# أو جرب هذا المسار إذا كانت extensions في المجلد الرئيسي مباشرة
+# from extensions import db 
+
 from datetime import datetime
 
 class Supplier(db.Model):
@@ -13,8 +20,8 @@ class Supplier(db.Model):
     id_type = db.Column(db.String(50))
     id_card_number = db.Column(db.String(50))
     phone = db.Column(db.String(20), nullable=False)
-    province = db.Column(db.String(100)) # الحديدة، عدن، إلخ
-    district = db.Column(db.String(100)) # الخوخة، حيس، إلخ
+    province = db.Column(db.String(100))
+    district = db.Column(db.String(100))
     address_detail = db.Column(db.Text)
     e_wallet = db.Column(db.String(100), unique=True)
     bank_name = db.Column(db.String(100))
