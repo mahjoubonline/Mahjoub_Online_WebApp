@@ -8,10 +8,8 @@ from . import admin_bp
 from .auth import handle_admin_login
 
 # --- 1. استيراد النماذج (تم تنظيف الاستدعاءات المحذوفة) ---
-# تم حذف Vendor و WithdrawRequest لأنهما غير موجودين حالياً
 from core.models.user import User
 
-# محاولة استيراد النماذج الثانوية لتجنب الانهيار
 try:
     from core.models.product import Product
 except ImportError:
@@ -27,14 +25,14 @@ def generate_vendor_wallet():
     return f"W-MAH-{random.randint(100000, 999999)}"
 
 def get_next_sovereign_id():
-    # معرف وهمي لأن موديل Vendor محذوف
     return f"MAH-963-{random.randint(100, 999)}"
 
 # --- 3. تأمين الوصول والمصادقة ---
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        if getattr(current_user, 'role', '') == 'admin':
+        # تأكد من أن الدور هو admin للدخول
+        if getattr(current_user, 'role', '').lower() == 'admin':
             return redirect(url_for('admin.admin_dashboard'))
     return handle_admin_login()
 
@@ -50,41 +48,45 @@ def logout():
 @admin_bp.route('/dashboard')
 @login_required
 def admin_dashboard():
-    if getattr(current_user, 'role', '') != 'admin':
-        flash("عذراً، لا تمتلك صلاحيات الوصول للترسانة الإدارية", "danger")
+    # تصحيح: جعل التحقق مرناً (يدعم Admin أو admin)
+    user_role = getattr(current_user, 'role', '').lower()
+    
+    if user_role != 'admin':
+        flash(f"عذراً، دورك الحالي ({user_role}) لا يمتلك صلاحيات الترسانة الإدارية", "danger")
         return redirect(url_for('main.index'))
     
-    # إحصائيات ثابتة لتجنب الانهيار بسبب الموديلات المحذوفة
+    # جلب إحصائيات حقيقية من الملفات التي أصلحناها
     stats = {
-        'suppliers_count': 0, # لا يوجد موديل Vendor حالياً
-        'pending_withdrawals': 0, # لا يوجد موديل WithdrawRequest حالياً
-        'orders_count': db.session.query(Order).count() if Order else 0
+        'suppliers_count': 0, 
+        'pending_withdrawals': 0,
+        'orders_count': db.session.query(Order).count() if Order else 0,
+        'users_count': db.session.query(User).count()
     }
-    return render_template('dashboard.html', **stats, show_repair=not session.get('repair_done'))
+    return render_template('dashboard.html', **stats)
 
-# --- 5. حوكمة الموردين (تم تعطيلها مؤقتاً لحين بناء الموديلات الجديدة) ---
-@admin_bp.route('/add-supplier', methods=['GET', 'POST'])
+# --- 5. مسار الطوارئ لتعيين صلاحية الآدمن (Admin Fixer) ---
+@admin_bp.route('/make-me-admin')
 @login_required
-def add_supplier():
-    if getattr(current_user, 'role', '') != 'admin':
-        return "Unauthorized", 403
-    
-    # هذه الصفحة ستعرض رسالة تنبيه فقط لأن الموديل محذوف
-    flash("نظام الموردين قيد التحديث الهيكلي حالياً", "warning")
-    return render_template('add_supplier.html', 
-                           next_id=get_next_sovereign_id(), 
-                           next_wallet=generate_vendor_wallet())
+def make_me_admin():
+    """مسار سري لترقية حسابك الحالي إلى آدمن سيادي"""
+    try:
+        current_user.role = 'admin'
+        db.session.commit()
+        flash("تم ترقية حسابك إلى 'آدمن سيادي' بنجاح! يمكنك الآن دخول الداشبورد.", "success")
+        return redirect(url_for('admin.admin_dashboard'))
+    except Exception as e:
+        db.session.rollback()
+        return f"Error: {str(e)}"
 
 # --- 6. مسار الترميم الهيكلي (الطوارئ) ---
 @admin_bp.route('/force-repair-now')
 @login_required
 def force_repair():
-    if getattr(current_user, 'role', '') != 'admin':
+    if getattr(current_user, 'role', '').lower() != 'admin':
         return "Unauthorized", 403
     try:
-        # تعطيل التعديلات على الجداول المحذوفة
         session['repair_done'] = True
-        flash("تم تشغيل بروتوكول الإصلاح الصامت", "success")
+        flash("تم تشغيل بروتوكول الإصلاح الصامت بنجاح", "success")
         return redirect(url_for('admin.admin_dashboard'))
     except Exception as e:
         return f"Repair Error: {str(e)}"
