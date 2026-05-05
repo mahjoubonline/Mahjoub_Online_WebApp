@@ -8,10 +8,15 @@ from . import admin_bp
 from .auth import handle_admin_login
 
 # --- 1. استيراد النماذج (الهوية السيادية الموحدة) ---
-from core.models.user import User
-from core.models.vendor import Vendor, WithdrawRequest
+# 🛡️ تم التعديل هنا: استيراد الكل من ملف user الموحد
+from core.models.user import User, Vendor, WithdrawRequest
 
-# محاولة استيراد النماذج الثانوية لتجنب الانهيار في Railway
+# محاولة استيراد النماذج الثانوية لتجنب الانهيار
+try:
+    from core.models.product import Product
+except ImportError:
+    Product = None
+
 try:
     from core.models.business import Order
 except ImportError:
@@ -38,7 +43,6 @@ def login():
     if current_user.is_authenticated:
         if getattr(current_user, 'role', '') == 'admin':
             return redirect(url_for('admin.admin_dashboard'))
-    # استدعاء المنطق من auth.py
     return handle_admin_login()
 
 @admin_bp.route('/logout')
@@ -118,7 +122,7 @@ def force_repair():
     if getattr(current_user, 'role', '') != 'admin':
         return "Unauthorized", 403
     try:
-        # تنفيذ أوامر SQL مباشرة لضمان مطابقة الهيكل لمتطلبات المرحلة الثانية
+        # تنفيذ أوامر SQL مباشرة لضمان مطابقة الهيكل لمتطلبات محجوب أونلاين
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS balance_yer FLOAT DEFAULT 0.0;"))
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS balance_sar FLOAT DEFAULT 0.0;"))
         db.session.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS balance_usd FLOAT DEFAULT 0.0;"))
