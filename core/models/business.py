@@ -1,45 +1,35 @@
 from core import db
 from datetime import datetime
 
-class Supplier(db.Model):
-    __tablename__ = 'suppliers'
+# --- كلاس الطلبات (حوكمة العمليات التجارية) ---
+class Order(db.Model):
+    __tablename__ = 'orders'
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    # ربط المورد بالمستخدم (إذا كان مطلوباً)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=True)
     
-    # المعرفات السيادية
-    sovereign_id = db.Column(db.String(20), unique=True, nullable=False)
-    e_wallet = db.Column(db.String(50), unique=True, nullable=False)
+    # ربط الطلب بالمستخدم (العميل الذي قام بالشراء)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
-    # بيانات النشاط
-    trade_name = db.Column(db.String(255), nullable=False)
-    owner_name = db.Column(db.String(255), nullable=False)
-    activity_type = db.Column(db.String(100), nullable=False)
+    # تفاصيل العملة والمبالغ (التوافق مع الأرصدة الثلاثة)
+    total_amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(10), default='YER') # YER, SAR, USD
     
-    # بيانات الهوية والاتصال
-    id_type = db.Column(db.String(50), nullable=False)
-    id_card_number = db.Column(db.String(100), nullable=False)
-    id_image = db.Column(db.String(255), nullable=True)
-    phone = db.Column(db.String(20), nullable=False)
+    # حالة الطلب السيادية
+    status = db.Column(db.String(50), default='pending') # pending, processing, shipped, delivered, cancelled
     
-    # الموقع الجغرافي
-    province = db.Column(db.String(100), nullable=False)
-    district = db.Column(db.String(100), nullable=False)
-    address_detail = db.Column(db.Text, nullable=False)
+    # بيانات الشحن المباشرة
+    shipping_address = db.Column(db.Text, nullable=True)
+    contact_phone = db.Column(db.String(20), nullable=True)
     
-    # الربط المالي
-    fin_type = db.Column(db.String(20), default='banks')
-    bank_name = db.Column(db.String(150), nullable=False)
-    bank_acc = db.Column(db.String(100), nullable=False)
-    
-    # التوقيت والحالة
-    is_active = db.Column(db.Boolean, default=True)
+    # التوقيت الرقمي
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def __repr__(self):
-        return f"<Supplier {self.trade_name}>"
+    # علاقة للوصول لبيانات صاحب الطلب
+    customer = db.relationship('User', backref=db.backref('orders', lazy=True))
 
-# ملاحظة: إذا كان هناك ملفات أخرى تحاول استيراد 'Province' ككلاس منفصل، 
-# يجب تعديلها لتستخدم 'Supplier.province' أو إزالة الاستيراد الخاطئ.
+    def __repr__(self):
+        return f"<Order ID: {self.id} - Status: {self.status}>"
+
+# --- يمكنك إضافة كلاسات أخرى هنا مستقبلاً مثل Transaction أو Payment ---
