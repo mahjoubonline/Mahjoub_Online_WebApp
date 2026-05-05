@@ -57,14 +57,14 @@
 
 <div class="container-fluid py-4" dir="rtl">
     
-    <!-- ⚠️ نظام الترميم التلقائي -->
+    <!-- 🛡️ نظام الترميم التلقائي للأرصدة السيادية -->
     {% if show_repair %}
     <div class="repair-banner shadow-sm">
         <div>
             <h5 class="mb-1 text-dark" style="font-weight: bold;">🔧 تكتيك استقرار القاعدة</h5>
-            <p class="mb-0 text-muted">تم رصد تحديثات في الترسانة تتطلب مواءمة قاعدة البيانات.</p>
+            <p class="mb-0 text-muted">تم رصد تحديثات في الترسانة تتطلب مواءمة الأرصدة الثلاثة (YER, SAR, USD).</p>
         </div>
-        <a href="{{ url_for('admin.force_repair') }}" class="btn btn-warning fw-bold px-4">تفعيل الترميم الآن</a>
+        <a href="{{ url_for('admin.force_repair') }}" class="btn btn-warning fw-bold px-4 shadow-sm">تفعيل الترميم الآن</a>
     </div>
     {% endif %}
 
@@ -81,8 +81,9 @@
 
     <!-- بطاقات الإحصائيات السيادية -->
     <div class="row g-4">
+        <!-- الموردين -->
         <div class="col-md-4">
-            <div class="stat-card card-purple">
+            <div class="stat-card card-purple shadow">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="text-uppercase opacity-75">قاعدة الموردين</h6>
@@ -91,12 +92,12 @@
                     </div>
                     <i class="fas fa-store fa-3x opacity-25"></i>
                 </div>
-                <a href="{{ url_for('admin.manage_suppliers') }}" class="stretched-link"></a>
             </div>
         </div>
 
+        <!-- طلبات السحب -->
         <div class="col-md-4">
-            <div class="stat-card card-gold">
+            <div class="stat-card card-gold shadow">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="text-uppercase opacity-75">طلبات السحب</h6>
@@ -105,19 +106,17 @@
                     </div>
                     <i class="fas fa-hand-holding-usd fa-3x opacity-25"></i>
                 </div>
-                <!-- تعديل: تم توجيه الرابط لصفحة إدارة الموردين مؤقتاً لتجنب الخطأ 500 -->
-                <a href="{{ url_for('admin.manage_suppliers') }}" class="stretched-link"></a>
             </div>
         </div>
 
+        <!-- الطلبات الجارية -->
         <div class="col-md-4">
-            <div class="stat-card card-dark">
+            <div class="stat-card card-dark shadow">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="text-uppercase opacity-75">إجمالي الطلبات</h6>
-                        <!-- إضافة default(0) لمنع الخطأ في حال عدم إرسال المتغير -->
                         <h2 class="display-5 fw-bold">{{ orders_count|default(0) }}</h2>
-                        <p class="mb-0 mt-2"><i class="fas fa-shopping-cart"></i> عمليات جارية</p>
+                        <p class="mb-0 mt-2"><i class="fas fa-chart-line"></i> عمليات جارية</p>
                     </div>
                     <i class="fas fa-chart-line fa-3x opacity-25"></i>
                 </div>
@@ -125,19 +124,21 @@
         </div>
     </div>
 
-    <!-- قسم الإجراءات السريعة -->
+    <!-- قسم الإجراءات السريعة (حوكمة النظام) -->
     <div class="row mt-5">
         <div class="col-12">
             <div class="card shadow-sm border-0" style="border-radius: 20px;">
                 <div class="card-body p-4">
                     <h5 class="fw-bold mb-4" style="color: var(--royal-purple);">العمليات السيادية السريعة</h5>
                     <div class="d-flex gap-3 flex-wrap">
-                        <a href="{{ url_for('admin.add_supplier') }}" class="btn btn-outline-primary px-4 py-2" style="border-radius: 10px; border-color: var(--royal-purple); color: var(--royal-purple);">
+                        <!-- رابط إضافة مورد -->
+                        <a href="{{ url_for('admin.add_supplier') }}" class="btn btn-outline-primary px-4 py-2 fw-bold" style="border-radius: 10px; border-color: var(--royal-purple); color: var(--royal-purple);">
                             <i class="fas fa-plus-circle me-2"></i> تعميد مورد جديد
                         </a>
-                        <a href="{{ url_for('admin.manage_wallets') }}" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 10px;">
-                            <i class="fas fa-wallet me-2"></i> هندسة المحافظ
-                        </a>
+                        <!-- روابط مؤقتة لتجنب الخطأ 500 حتى يتم إنشاء المسارات -->
+                        <button class="btn btn-outline-secondary px-4 py-2" style="border-radius: 10px;" disabled>
+                            <i class="fas fa-wallet me-2"></i> هندسة المحافظ (قريباً)
+                        </button>
                     </div>
                 </div>
             </div>
