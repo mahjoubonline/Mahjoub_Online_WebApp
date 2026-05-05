@@ -3,11 +3,13 @@ import random
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_migrate import Migrate
 from config import Config
 
 # إنشاء كائنات النظام الأساسية (العمود الفقري للترسانة الرقمية)
 db = SQLAlchemy()
 login_manager = LoginManager()
+migrate = Migrate()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -22,9 +24,10 @@ def create_app(config_class=Config):
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         return response
 
-    # --- 2. تهيئة الإضافات الأساسية ---
+    # --- 2. تهيئة المحركات الأساسية ---
     db.init_app(app)
     login_manager.init_app(app)
+    migrate.init_app(app, db)
     
     # حوكمة الدخول وتوجيه غير المصرح لهم إلى لوحة الإدارة
     login_manager.login_view = 'admin.login'
@@ -36,33 +39,22 @@ def create_app(config_class=Config):
         from core.models.user import User
         from core.models.vendor import Vendor
         
-        # 🛡️ تصحيح الترسانة: إنشاء الجداول المفقودة وتحديث الهيكل
+        # 🛡️ تصحيح الترسانة: إنشاء الجداول المفقودة وتحديث الهيكل تلقائياً
         try:
             db.create_all() 
-            print("✅ تم فحص وتحديث هيكل الترسانة الرقمية بنجاح.")
+            print("✅ تم فحص وتحديث هيكل الترسانة الرقمية لـ محجوب أونلاين بنجاح.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ تنبيه حوكمة البيانات: تعذر تحديث الهيكل تلقائياً: {e}")
-        
-        # --- 4. إدارة جلسات المستخدمين (User Loader) ---
-        @login_manager.user_loader
-        def load_user(user_id):
-            """تحميل المستخدم مع منع تعليق الاتصال بقاعدة البيانات"""
-            try:
-                return User.query.get(int(user_id))
-            except Exception as e:
-                db.session.rollback()
-                print(f"❌ خطأ في محمل المستخدم: {e}")
-                return None
 
-        # --- 5. المعالجات السياقية (بيانات الهوية السيادية) ---
+        # --- 4. المعالجات السياقية (بيانات الهوية السيادية) ---
         @app.context_processor
         def utility_processor():
             def get_sovereign_data():
-                """توليد المعرف MAH-963 والمحفظة برقم تسلسلي موحد"""
+                """توليد المعرف MAH-963 والمحفظة برقم تسلسلي موحد لجميع القوالب"""
                 base_prefix = "MAH-963"
                 try:
-                    # استعلام خفيف لضمان دقة التسلسل
+                    # استعلام خفيف لضمان دقة التسلسل بناءً على عدد الموردين الحاليين
                     count = db.session.query(Vendor.id).count() if Vendor else 0
                     next_num = count + 1
                     final_serial = f"{base_prefix}{next_num}"
@@ -71,9 +63,9 @@ def create_app(config_class=Config):
                         "id": final_serial,
                         "wallet": f"W-{final_serial}"
                     }
-                except Exception as e:
+                except Exception:
                     db.session.rollback()
-                    # حل احتياطي ذكي لمنع توقف واجهات الإدخال
+                    # حل احتياطي ذكي لمنع توقف واجهات الإدخال في حال تعثر الاتصال
                     rand_id = random.randint(1000, 9999)
                     return {
                         "id": f"{base_prefix}{rand_id}", 
@@ -86,9 +78,20 @@ def create_app(config_class=Config):
                 next_wallet=sov_data['wallet']
             )
 
-        # --- 6. تسجيل مركز القيادة (Blueprints) ---
-        # ملاحظة: الاستيراد هنا يمنع مشاكل الاستيراد الدائري نهائياً
+        # --- 5. تسجيل مركز القيادة (Blueprints) ---
+        # تم وضعه هنا لضمان وجود سياق التطبيق ومنع ImportError
         from admin_panel import admin_bp
         app.register_blueprint(admin_bp, url_prefix='/admin')
 
     return app
+
+# --- 6. إدارة جلسات المستخدمين (خارج دالة create_app) ---
+@login_manager.user_loader
+def load_user(user_id):
+    """تحميل المستخدم السيادي مع حماية الجلسة من الانهيار"""
+    from core.models.user import User
+    try:
+        return User.query.get(int(user_id))
+    except Exception as e:
+        db.session.rollback()
+        return None
