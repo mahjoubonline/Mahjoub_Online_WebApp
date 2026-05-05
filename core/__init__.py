@@ -36,10 +36,10 @@ def create_app(config_class=Config):
 
     with app.app_context():
         # --- 3. استيراد النماذج (Models) لضمان سلامة القاعدة ---
-        from core.models.user import User
-        from core.models.vendor import Vendor
+        # 🛡️ تصحيح سيادي: تم تعديل الاستيراد ليتم من ملف user الموحد بدلاً من vendor المحذوف
+        from core.models.user import User, Vendor
         
-        # 🛡️ تصحيح الترسانة: إنشاء الجداول المفقودة وتحديث الهيكل تلقائياً
+        # إنشاء الجداول المفقودة وتحديث الهيكل تلقائياً
         try:
             db.create_all() 
             print("✅ تم فحص وتحديث هيكل الترسانة الرقمية لـ محجوب أونلاين بنجاح.")
@@ -54,7 +54,7 @@ def create_app(config_class=Config):
                 """توليد المعرف MAH-963 والمحفظة برقم تسلسلي موحد لجميع القوالب"""
                 base_prefix = "MAH-963"
                 try:
-                    # استعلام خفيف لضمان دقة التسلسل بناءً على عدد الموردين الحاليين
+                    # استعلام لضمان دقة التسلسل بناءً على عدد الموردين الحاليين
                     count = db.session.query(Vendor.id).count() if Vendor else 0
                     next_num = count + 1
                     final_serial = f"{base_prefix}{next_num}"
@@ -65,7 +65,7 @@ def create_app(config_class=Config):
                     }
                 except Exception:
                     db.session.rollback()
-                    # حل احتياطي ذكي لمنع توقف واجهات الإدخال في حال تعثر الاتصال
+                    # حل احتياطي لمنع توقف الواجهات في حال تعثر الاتصال
                     rand_id = random.randint(1000, 9999)
                     return {
                         "id": f"{base_prefix}{rand_id}", 
@@ -79,7 +79,6 @@ def create_app(config_class=Config):
             )
 
         # --- 5. تسجيل مركز القيادة (Blueprints) ---
-        # تم وضعه هنا لضمان وجود سياق التطبيق ومنع ImportError
         from admin_panel import admin_bp
         app.register_blueprint(admin_bp, url_prefix='/admin')
 
