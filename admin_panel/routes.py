@@ -54,10 +54,10 @@ def admin_dashboard():
     except Exception as e:
         return render_template('dashboard.html', suppliers_count=0, orders_count=0, users_count=0, now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-# --- 4. إدارة الموردين (الربط مع النافذة المستقلة) ---
+# --- 4. إدارة الموردين (تم تعديل اسم الدالة لحل BuildError) ---
 @admin_bp.route('/manage-suppliers')
 @login_required
-def manage_suppliers_base():
+def manage_suppliers(): # تم الحفاظ على الاسم الأصلي ليتوافق مع url_for('admin.manage_suppliers')
     if not is_admin_sovereign(): 
         return redirect(url_for('admin.login'))
     
@@ -108,7 +108,7 @@ def add_supplier():
                 return jsonify({'status': 'success', 'message': f'تم تعميد المورد "{new_supplier.trade_name}" بنجاح.'})
             
             flash(f"✅ تم تفعيل المورد {new_supplier.trade_name} بنجاح", "success")
-            return redirect(url_for('admin.manage_suppliers_base'))
+            return redirect(url_for('admin.manage_suppliers'))
             
         except Exception as e:
             db.session.rollback()
@@ -136,5 +136,4 @@ def logout():
     return redirect(url_for('admin.login'))
 
 # --- 7. استيراد العمليات الميدانية ---
-# تم وضع الاستيراد هنا لضمان أن جميع مسارات الـ API مسجلة رسمياً تحت admin_bp
 from . import manage_suppliers
