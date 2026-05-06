@@ -1,7 +1,7 @@
 import os
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import logout_user, login_required, current_user
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from datetime import datetime
 
 # الاستيراد من الهيكلية المعتمدة لترسانة محجوب أونلاين
@@ -61,7 +61,7 @@ def manage_suppliers():
         return redirect(url_for('admin.login'))
     return render_template('manage_suppliers.html')
 
-# --- 5. بروتوكول البحث الميداني (API لاستدعاء الموردين) ---
+# --- 5. بروتوكول البحث الميداني المحدث (حل مشكلة Casting) ---
 @admin_bp.route('/api/search-supplier', methods=['GET'])
 @login_required
 def api_search_supplier():
@@ -76,40 +76,42 @@ def api_search_supplier():
     if query == '*':
         suppliers_query = Supplier.query
     else:
-        # البحث بالاسم التجاري، الهاتف، أو المعرف (بإزالة 963 للبحث في الـ ID الأصلي)
+        # إصلاح جذري لخطأ image_848c92.png: تحويل المعرف الرقمي إلى نص للمقارنة السليمة
         clean_query = query.replace('963', '').replace('SUP-MAH-', '')
         suppliers_query = Supplier.query.filter(
             or_(
-                Supplier.trade_name.contains(query),
-                Supplier.phone.contains(query),
-                Supplier.id.like(f"%{clean_query}%")
+                Supplier.trade_name.ilike(f"%{query}%"),
+                Supplier.phone.ilike(f"%{query}%"),
+                cast(Supplier.id, String).ilike(f"%{clean_query}%")
             )
         )
 
-    # تطبيق فلاتر الموقع الجغرافي (نطاق العمليات)
+    # تطبيق فلاتر الموقع الجغرافي
     if province:
         suppliers_query = suppliers_query.filter(Supplier.province == province)
     if district:
         suppliers_query = suppliers_query.filter(Supplier.district == district)
 
-    suppliers = suppliers_query.all()
-
-    if suppliers:
-        results = []
-        for s in suppliers:
-            results.append({
-                "id": s.id,
-                "trade_name": s.trade_name,
-                "phone": s.phone,
-                "province": s.province,
-                "district": s.district,
-                "activity_type": s.activity_type,
-                "tier": getattr(s, 'tier', 'مبتدئ'),
-                "status": getattr(s, 'status', 'active')
-            })
-        return jsonify({"status": "success", "suppliers": results})
-    
-    return jsonify({"status": "error", "message": "No results found"}), 404
+    try:
+        suppliers = suppliers_query.all()
+        if suppliers:
+            results = []
+            for s in suppliers:
+                results.append({
+                    "id": s.id,
+                    "trade_name": s.trade_name,
+                    "phone": s.phone,
+                    "province": s.province,
+                    "district": s.district,
+                    "activity_type": s.activity_type,
+                    "tier": getattr(s, 'tier', 'مبتدئ'),
+                    "status": getattr(s, 'status', 'active')
+                })
+            return jsonify({"status": "success", "suppliers": results})
+        
+        return jsonify({"status": "error", "message": "لم يتم العثور على نتائج"}), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"خطأ في قاعدة البيانات: {str(e)}"}), 500
 
 # --- 6. بروتوكول تحديث بيانات المورد (Update API) ---
 @admin_bp.route('/api/update-supplier/<int:sup_id>', methods=['POST'])
@@ -130,7 +132,7 @@ def api_update_supplier(sup_id):
         supplier.status = data.get('status', supplier.status)
 
         db.session.commit()
-        return jsonify({"status": "success", "message": "تم التحديث بنجاح"})
+        return jsonify({"status": "success", "message": "تم تحديث بيانات المورد بنجاح"})
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -145,7 +147,6 @@ def add_supplier():
     if request.method == 'POST':
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         try:
-            # (نفس منطق الإضافة السابق الخاص بك)
             new_supplier = Supplier(
                 username=request.form.get('username'),
                 password=request.form.get('password'),
@@ -159,7 +160,7 @@ def add_supplier():
             )
             db.session.add(new_supplier)
             db.session.commit()
-            if is_ajax: return jsonify({'status': 'success', 'message': 'تم التعميد'})
+            if is_ajax: return jsonify({'status': 'success', 'message': 'تم تعميد المورد بنجاح'})
             return redirect(url_for('admin.manage_suppliers'))
         except Exception as e:
             db.session.rollback()
