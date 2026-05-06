@@ -4,7 +4,7 @@ from flask_login import logout_user, login_required, current_user
 from sqlalchemy import text
 from datetime import datetime
 
-# الاستيراد من الهيكلية المعتمدة للترسانة
+# الاستيراد من الهيكلية المعتمدة لترسانة محجوب أونلاين
 from core.extensions import db 
 from core.models.supplier import Supplier
 from core.models.user import User
@@ -53,19 +53,15 @@ def admin_dashboard():
     except Exception as e:
         return render_template('dashboard.html', suppliers_count=0, orders_count=0, users_count=0, now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-# --- 4. إدارة الموردين ---
+# --- 4. إدارة الموردين (الربط مع النافذة المستقلة) ---
 @admin_bp.route('/manage-suppliers')
 @login_required
 def manage_suppliers():
     if not is_admin_sovereign(): 
         return redirect(url_for('admin.login'))
     
-    try:
-        suppliers = Supplier.query.order_by(Supplier.created_at.desc()).all()
-        return render_template('manage_suppliers.html', suppliers=suppliers)
-    except Exception as e:
-        flash(f"خلل في الوصول لسجلات الموردين: {str(e)}", "danger")
-        return redirect(url_for('admin.admin_dashboard'))
+    # استدعاء نافذة الإدارة الأفقية
+    return render_template('manage_suppliers.html')
 
 # --- 5. بروتوكول تعميد مورد جديد ---
 @admin_bp.route('/add-supplier', methods=['GET', 'POST'])
@@ -87,7 +83,7 @@ def add_supplier():
 
             new_supplier = Supplier(
                 username=request.form.get('username'),
-                password=request.form.get('password'),
+                password=request.form.get('password'), # تأكد من تشفيرها في الموديل
                 owner_name=request.form.get('owner_name'),
                 trade_name=request.form.get('trade_name'),
                 activity_type=activity,
@@ -122,7 +118,6 @@ def add_supplier():
     last_s = Supplier.query.order_by(Supplier.id.desc()).first()
     current_sequence = (last_s.id + 1) if last_s else 1
     
-    # دمج الرقم الثابت 963 مع الرقم التسلسلي
     combined_num = f"963{current_sequence}"
     
     next_id = f"SUP-MAH-{combined_num}"
@@ -137,3 +132,8 @@ def logout():
     logout_user()
     flash("تم الخروج الآمن من نظام الإدارة", "info")
     return redirect(url_for('admin.login'))
+
+# --- 7. استيراد دوال العمليات من الملف المنفصل ---
+# يتم استيرادها في النهاية لتجنب التعارض (Circular Import) 
+# ولضمان تسجيل المسارات (api/supplier/fetch و update)
+from . import manage_suppliers
