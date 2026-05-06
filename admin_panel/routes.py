@@ -1,3 +1,4 @@
+# admin_panel/routes.py
 import os
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import logout_user, login_required, current_user
@@ -83,7 +84,7 @@ def add_supplier():
 
             new_supplier = Supplier(
                 username=request.form.get('username'),
-                password=request.form.get('password'), # يتم التعامل مع التشفير داخل الموديل
+                password=request.form.get('password'),
                 owner_name=request.form.get('owner_name'),
                 trade_name=request.form.get('trade_name'),
                 activity_type=activity,
@@ -96,7 +97,8 @@ def add_supplier():
                 e_wallet=request.form.get('e_wallet'),
                 bank_name=request.form.get('bank_name') if request.form.get('bank_name') != 'manual' else request.form.get('manual_bank'),
                 bank_acc=request.form.get('bank_acc'),
-                status='active'
+                status='active',
+                tier='مبتدئ' # تعيين الرتبة الافتراضية عند التعميد الأول
             )
             
             db.session.add(new_supplier)
@@ -134,6 +136,5 @@ def logout():
     return redirect(url_for('admin.login'))
 
 # --- 7. استيراد العمليات الميدانية ---
-# يتم استيراد الملف الذي أنشأناه للنافذة (admin_panel/manage_suppliers.py)
-# لضمان تسجيل مسارات API الخاصة بالسحب (Fetch) والتحديث (Update)
+# تم وضع الاستيراد هنا لضمان أن جميع مسارات الـ API مسجلة رسمياً تحت admin_bp
 from . import manage_suppliers
