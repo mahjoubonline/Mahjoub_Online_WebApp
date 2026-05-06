@@ -56,11 +56,11 @@ def admin_dashboard():
 # --- 4. إدارة الموردين (الربط مع النافذة المستقلة) ---
 @admin_bp.route('/manage-suppliers')
 @login_required
-def manage_suppliers():
+def manage_suppliers_base():
     if not is_admin_sovereign(): 
         return redirect(url_for('admin.login'))
     
-    # استدعاء نافذة الإدارة الأفقية
+    # استدعاء ملف الواجهة (الجسد) الذي يحتوي على التوزيع الأفقي
     return render_template('manage_suppliers.html')
 
 # --- 5. بروتوكول تعميد مورد جديد ---
@@ -83,7 +83,7 @@ def add_supplier():
 
             new_supplier = Supplier(
                 username=request.form.get('username'),
-                password=request.form.get('password'), # تأكد من تشفيرها في الموديل
+                password=request.form.get('password'), # يتم التعامل مع التشفير داخل الموديل
                 owner_name=request.form.get('owner_name'),
                 trade_name=request.form.get('trade_name'),
                 activity_type=activity,
@@ -106,7 +106,7 @@ def add_supplier():
                 return jsonify({'status': 'success', 'message': f'تم تعميد المورد "{new_supplier.trade_name}" بنجاح.'})
             
             flash(f"✅ تم تفعيل المورد {new_supplier.trade_name} بنجاح", "success")
-            return redirect(url_for('admin.manage_suppliers'))
+            return redirect(url_for('admin.manage_suppliers_base'))
             
         except Exception as e:
             db.session.rollback()
@@ -133,7 +133,7 @@ def logout():
     flash("تم الخروج الآمن من نظام الإدارة", "info")
     return redirect(url_for('admin.login'))
 
-# --- 7. استيراد دوال العمليات من الملف المنفصل ---
-# يتم استيرادها في النهاية لتجنب التعارض (Circular Import) 
-# ولضمان تسجيل المسارات (api/supplier/fetch و update)
+# --- 7. استيراد العمليات الميدانية ---
+# يتم استيراد الملف الذي أنشأناه للنافذة (admin_panel/manage_suppliers.py)
+# لضمان تسجيل مسارات API الخاصة بالسحب (Fetch) والتحديث (Update)
 from . import manage_suppliers
