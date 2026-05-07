@@ -17,6 +17,16 @@ def is_admin_sovereign():
     """ يضمن أن المؤسس علي محجوب فقط يمكنه الوصول. """
     return current_user.is_authenticated and getattr(current_user, 'role', '').lower() == 'admin'
 
+# دالة مساعدة لتأمين الـ APIs (تمنع إعادة التوجيه وتكتفي بالرد التقني)
+def admin_api_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not is_admin_sovereign():
+            return jsonify({"status": "error", "message": "Access Denied: Sovereign Auth Required"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- 2. بوابة الدخول (The Gateway) ---
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -51,20 +61,45 @@ def admin_dashboard():
         return render_template('dashboard.html', **stats)
         
     except Exception as e:
-        print(f"❌ Dashboard Stats Error: {str(e)}")
         return render_template('dashboard.html', suppliers_count=0, orders_count=0, users_count=0, now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-# --- 4. بروتوكول جلب تفاصيل المورد (للنافذة الجانبية) ---
-@admin_bp.route('/api/supplier-details/<int:sup_id>')
+# --- 4. إدارة الموردين (الصفحة الرئيسية) ---
+@admin_bp.route('/manage-suppliers')
 @login_required
-def api_supplier_details(sup_id):
+def manage_suppliers():
     if not is_admin_sovereign():
-        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+        return redirect(url_for('admin.login'))
     
+    # جلب قائمة الموردين لمركز القيادة
+    all_suppliers = Supplier.query.order_by(Supplier.id.desc()).all()
+    return render_template('manage_suppliers.html', suppliers=all_suppliers)
+
+# --- 5. بروتوكولات الـ API (تأمين سيادي كامل) ---
+
+@admin_bp.route('/api/supplier-details/<int:sup_id>')
+@admin_api_required # تأمين API
+def api_supplier_details(sup_id):
     supplier = Supplier.query.get_or_404(sup_id)
     return jsonify(supplier.to_dict())
 
-# --- 5. بروتوكول تعميد مورد جديد (The Creation Protocol) ---
+@admin_bp.route('/api/toggle-supplier-status/<int:sup_id>', methods=['POST'])
+@admin_api_required # تأمين API التحكم
+def toggle_supplier_status(sup_id):
+    supplier = Supplier.query.get_or_404(sup_id)
+    data = request.get_json()
+    new_status = data.get('status')
+    
+    if new_status in ['active', 'suspended']:
+        supplier.status = new_status
+        db.session.commit()
+        return jsonify({
+            "status": "success", 
+            "message": f"تم تحديث حالة المورد {supplier.trade_name} إلى {new_status}"
+        })
+    
+    return jsonify({"status": "error", "message": "حالة غير صالحة"}), 400
+
+# --- 6. بروتوكول تعميد مورد جديد ---
 @admin_bp.route('/add-supplier', methods=['GET', 'POST'])
 @login_required
 def add_supplier():
@@ -74,10 +109,9 @@ def add_supplier():
     if request.method == 'POST':
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         try:
-            # إنشاء كائن المورد الجديد بناءً على بيانات النموذج
             new_supplier = Supplier(
                 username=request.form.get('username'),
-                password=request.form.get('password', '123456'), # كلمة مرور افتراضية
+                password=request.form.get('password', '123456'),
                 owner_name=request.form.get('owner_name'),
                 trade_name=request.form.get('trade_name'),
                 activity_type=request.form.get('activity_type'),
@@ -94,34 +128,26 @@ def add_supplier():
             )
             
             db.session.add(new_supplier)
-            db.session.flush() # الحصول على الـ ID قبل الحفظ النهائي
-            
-            # نقش المعرف السيادي والمحفظة آلياً باستخدام دالة المودل
+            db.session.flush() 
             new_supplier.mint_sovereign_id()
-            
             db.session.commit()
             
             if is_ajax: 
-                return jsonify({
-                    'status': 'success', 
-                    'message': f'تم تعميد المورد بنجاح بالمحفظة: {new_supplier.e_wallet}'
-                })
+                return jsonify({'status': 'success', 'message': f'تم تعميد المورد بالمحفظة: {new_supplier.e_wallet}'})
             
             flash(f"تم إضافة المورد {new_supplier.trade_name} بنجاح", "success")
             return redirect(url_for('admin.manage_suppliers'))
             
         except Exception as e:
             db.session.rollback()
-            if is_ajax:
-                return jsonify({'status': 'error', 'message': f"فشل التعميد: {str(e)}"}), 400
-            flash(f"خطأ في العملية: {str(e)}", "danger")
+            if is_ajax: return jsonify({'status': 'error', 'message': str(e)}), 400
+            flash(f"خطأ: {str(e)}", "danger")
 
-    # حساب المعرف القادم للعرض فقط في الواجهة
     last_s = Supplier.query.order_by(Supplier.id.desc()).first()
     next_id_val = (last_s.id + 1) if last_s else 1
     return render_template('add_supplier.html', next_id=f"963{next_id_val}")
 
-# --- 6. تسجيل الخروج الآمن ---
+# --- 7. تسجيل الخروج ---
 @admin_bp.route('/logout')
 @login_required
 def logout():
