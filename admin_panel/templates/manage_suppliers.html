@@ -11,13 +11,13 @@
             <p class="text-muted small">نظام الحوكمة v3.0 - <span class="text-royal fw-bold">سوقك الذكي</span></p>
         </div>
         <a href="{{ url_for('admin.add_supplier') }}" class="btn btn-royal px-4">
-            <i class="fas fa-plus-circle me-2"></i> تعميد مورد جديد
+            <i class="fas fa-plus-circle ms-2"></i> تعميد مورد جديد
         </a>
     </div>
 
     {% include 'includes/_supplier_filters.html' %}
 
-    <div id="tableContainer" class="card border-0 shadow-lg animate__animated animate__fadeIn">
+    <div id="tableContainer" class="card border-0 shadow-lg animate__animated animate__fadeIn mt-3" style="border-radius: 15px; overflow: hidden;">
         {% include 'includes/_supplier_table.html' %}
     </div>
 
@@ -28,7 +28,72 @@
 <style>
     :root { --royal: #4a148c; --gold: #ffd700; --royal-dark: #1a237e; }
     .sovereign-title { color: var(--royal); border-right: 6px solid var(--gold); padding-right: 15px; }
-    .btn-royal { background: var(--royal); color: var(--gold); border: 2px solid var(--gold); font-weight: bold; }
-    .btn-royal:hover { background: var(--royal-dark); color: white; }
+    .btn-royal { background: var(--royal); color: var(--gold); border: 2px solid var(--gold); font-weight: bold; border-radius: 10px; transition: 0.3s; }
+    .btn-royal:hover { background: var(--royal-dark); color: white; transform: translateY(-2px); }
+    
+    /* تنسيق السهم ليظهر كزر تفاعلي */
+    .btn-action-arrow {
+        background: none;
+        border: 1px solid #e0e0e0;
+        color: var(--royal);
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.3s;
+        cursor: pointer;
+    }
+    .btn-action-arrow:hover {
+        background: var(--royal);
+        color: var(--gold);
+        border-color: var(--gold);
+    }
 </style>
+
+<script>
+    // 1. وظيفة فتح لوحة الفحص وجلب البيانات
+    function inspectSupplier(supId) {
+        console.log("🔍 بدء فحص المورد رقم:", supId);
+        
+        // جلب البيانات من الـ API السيادية
+        fetch(`/admin/api/supplier-details/${supId}`)
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === "error") {
+                    alert("عطل في جلب البيانات: " + data.message);
+                    return;
+                }
+                
+                // ملء بيانات اللوحة الجانبية (تأكد من وجود هذه الـ IDs في ملف _supplier_offcanvas.html)
+                document.getElementById('oc_trade_name').innerText = data.trade_name;
+                document.getElementById('oc_e_wallet').innerText = data.e_wallet;
+                document.getElementById('oc_balance_yer').innerText = parseFloat(data.balance_yer).toLocaleString() + ' ر.ي';
+                document.getElementById('oc_phone').innerText = data.phone;
+                document.getElementById('oc_location').innerText = `${data.province} - ${data.district}`;
+                
+                // إظهار اللوحة
+                const offcanvasElement = document.getElementById('supplierOffcanvas');
+                const bsOffcanvas = new bootstrap.Offcanvas(offcanvasElement);
+                bsOffcanvas.show();
+            })
+            .catch(error => {
+                console.error("❌ خطأ في الاتصال:", error);
+            });
+    }
+
+    // 2. تحديث الجدول عند استخدام الفلاتر (AJAX Search)
+    function refreshSupplierTable() {
+        const q = document.getElementById('searchInput').value;
+        const province = document.getElementById('provinceFilter').value;
+        
+        fetch(`/admin/api/search-suppliers?q=${q}&province=${province}`)
+            .then(response => response.json())
+            .then(data => {
+                // هنا يتم استبدال محتوى الجدول بالبيانات الجديدة
+                // سنحتاج لتطوير هذه الجزئية لاحقاً لجعل البحث "لحظي"
+            });
+    }
+</script>
 {% endblock %}
