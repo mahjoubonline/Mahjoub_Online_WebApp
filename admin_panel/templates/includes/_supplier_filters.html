@@ -1,117 +1,86 @@
 <div class="card border-0 shadow-sm p-4 mb-4 bg-white animate__animated animate__fadeInDown" 
-     style="border-radius: 15px; border-right: 6px solid #4a148c !important;">
+     style="border-radius: 20px; border-right: 6px solid var(--gov-purple) !important;">
     
-    <form method="GET" class="row g-3" id="filterForm">
+    <form method="GET" class="row g-3 align-items-end" id="filterForm">
         
-        <div class="col-lg-4">
-            <label class="small fw-bold mb-2 text-royal d-block">
-                <i class="fas fa-search me-1"></i> البحث السيادي الشامل
+        <div class="col-lg-3">
+            <label class="small fw-bold mb-2" style="color: var(--gov-purple);">
+                <i class="fas fa-search me-1"></i> البحث الشامل
             </label>
-            <div class="input-group">
-                <input type="text" name="q" class="form-control border-2 shadow-none" 
-                       placeholder="اسم المتجر، رقم الهاتف، أو المعرف..." 
-                       value="{{ request.args.get('q', '') }}" 
-                       style="border-radius: 10px;">
-            </div>
+            <input type="text" name="q" class="form-control border-2 shadow-none" 
+                   placeholder="اسم، هاتف، أو ID..." 
+                   value="{{ request.args.get('q', '') }}" 
+                   style="border-radius: 10px; padding: 10px; background: #f8fafc;">
         </div>
         
         <div class="col-lg-3">
-            <label class="small fw-bold mb-2 text-royal d-block">
+            <label class="small fw-bold mb-2" style="color: var(--gov-purple);">
                 <i class="fas fa-map-marker-alt me-1"></i> المحافظة
             </label>
-            <select name="province" id="provinceSelect" class="form-select border-2 shadow-none" style="border-radius: 10px;">
+            <select name="province" id="provinceSelect" class="form-select border-2 shadow-none" style="border-radius: 10px; padding: 10px;">
                 <option value="">كل المحافظات</option>
-                {% for prov in provinces_list %}
-                    <option value="{{ prov }}" {% if request.args.get('province') == prov %}selected{% endif %}>
-                        {{ prov }}
-                    </option>
-                {% endfor %}
+                </select>
+        </div>
+
+        <div class="col-lg-3">
+            <label class="small fw-bold mb-2" style="color: var(--gov-purple);">
+                <i class="fas fa-location-arrow me-1"></i> المديرية
+            </label>
+            <select name="district" id="districtSelect" class="form-select border-2 shadow-none" style="border-radius: 10px; padding: 10px;">
+                <option value="">كل المديريات</option>
             </select>
         </div>
 
         <div class="col-lg-3">
-            <label class="small fw-bold mb-2 text-royal d-block">
-                <i class="fas fa-location-arrow me-1"></i> المديرية
-            </label>
-            <select name="district" id="districtSelect" class="form-select border-2 shadow-none" style="border-radius: 10px;">
-                <option value="">كل المديريات</option>
-                {% if selected_districts %}
-                    {% for dist in selected_districts %}
-                        <option value="{{ dist }}" {% if request.args.get('district') == dist %}selected{% endif %}>
-                            {{ dist }}
-                        </option>
-                    {% endfor %}
-                {% endif %}
-            </select>
-        </div>
-
-        <div class="col-lg-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-royal w-100 fw-bold shadow-sm" 
-                    style="border-radius: 10px; height: 45px; transition: all 0.3s ease;">
-                استدعاء النتائج
+            <button type="submit" class="btn btn-gov-action w-100 fw-bold shadow-sm" 
+                    style="border-radius: 12px; height: 48px; background: var(--gov-purple); color: white; border: 2px solid var(--gov-gold);">
+                <i class="fas fa-filter me-2"></i> تصفية النتائج
             </button>
         </div>
 
     </form>
 </div>
 
-<style>
-    /* التنسيقات السيادية للفلترة */
-    .text-royal { color: #4a148c; }
-    
-    .btn-royal { 
-        background-color: #4a148c; 
-        color: #ffd700; 
-        border: 1px solid #ffd700; 
-    }
-    
-    .btn-royal:hover { 
-        background-color: #2e0d5a; 
-        color: #ffffff; 
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(74, 20, 140, 0.2);
-    }
-
-    .form-control:focus, .form-select:focus {
-        border-color: #4a148c !important;
-        box-shadow: 0 0 0 0.2rem rgba(74, 20, 140, 0.1) !important;
-    }
-
-    /* تحسين مظهر القوائم المنسدلة */
-    .form-select {
-        cursor: pointer;
-        background-position: left 0.75rem center; /* ليتناسب مع الاتجاه العربي */
-    }
-</style>
-
 <script>
-    /* تنبيه سيادي: 
-       هذا الجزء يضمن تحديث المديريات آلياً عند تغيير المحافظة 
-       عبر مراجعة "النموذج" في قاعدة البيانات دون الحاجة لإعادة تحميل الصفحة.
-    */
-    document.getElementById('provinceSelect').addEventListener('change', function() {
-        const province = this.value;
-        const districtSelect = document.getElementById('districtSelect');
-        
-        // إعادة ضبط قائمة المديريات
-        districtSelect.innerHTML = '<option value="">جاري جلب المديريات...</option>';
-        
-        if (!province) {
-            districtSelect.innerHTML = '<option value="">كل المديريات</option>';
-            return;
-        }
+    // استخدام نفس البيانات الجغرافية الموجودة في ملف add_supplier.html لضمان التطابق
+    const geoData = {
+        "الحديدة": ["الخوخة", "حيس", "الحوك", "الميناء", "زبيد", "بيت الفقيه"],
+        "أمانة العاصمة": ["السبعين", "التحرير", "الثورة", "صنعاء القديمة"],
+        "عدن": ["المنصورة", "كريتر", "الشيخ عثمان", "البريقة"],
+        "تعز": ["المخاء", "القاهرة", "المظفر"]
+    };
 
-        // جلب البيانات من السيرفر بناءً على النموذج
-        fetch(`/admin/api/districts?province=${province}`)
-            .then(response => response.json())
-            .then(data => {
-                districtSelect.innerHTML = '<option value="">كل المديريات</option>';
-                data.forEach(district => {
-                    const option = document.createElement('option');
-                    option.value = district;
-                    option.textContent = district;
-                    districtSelect.appendChild(option);
-                });
-            });
+    const pSelect = document.getElementById('provinceSelect');
+    const dSelect = document.getElementById('districtSelect');
+
+    // تعبئة المحافظات عند التحميل
+    Object.keys(geoData).sort().forEach(p => {
+        const option = new Option(p, p);
+        if (p === "{{ request.args.get('province', '') }}") option.selected = true;
+        pSelect.add(option);
     });
+
+    // تحديث المديريات آلياً
+    pSelect.addEventListener('change', function() {
+        const prov = this.value;
+        dSelect.innerHTML = '<option value="">كل المديريات</option>';
+        if(geoData[prov]) {
+            geoData[prov].sort().forEach(d => dSelect.add(new Option(d, d)));
+        }
+    });
+
+    // تشغيل التحديث فوراً إذا كانت هناك محافظة مختارة مسبقاً
+    if(pSelect.value) {
+        const currentDist = "{{ request.args.get('district', '') }}";
+        geoData[pSelect.value].sort().forEach(d => {
+            const option = new Option(d, d);
+            if (d === currentDist) option.selected = true;
+            dSelect.add(option);
+        });
+    }
 </script>
+
+<style>
+    :root { --gov-purple: #632C8F; --gov-gold: #C5A021; }
+    .btn-gov-action:hover { background: #4a1d6d !important; transform: translateY(-2px); }
+</style>
