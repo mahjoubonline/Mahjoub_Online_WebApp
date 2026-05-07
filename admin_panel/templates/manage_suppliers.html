@@ -3,238 +3,174 @@
 {% block content %}
 <div class="container-fluid py-4" style="direction: rtl; text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
     
-    <!-- رأس الصفحة: الهوية السيادية -->
     <div class="row mb-4 animate__animated animate__fadeIn">
         <div class="col-12 text-center">
             <div class="d-inline-block p-3 rounded-circle bg-white shadow-sm mb-3">
-                <i class="fas fa-shield-alt fa-3x" style="color: #6a1b9a;"></i>
+                <i class="fas fa-truck-loading fa-3x" style="color: #4a148c;"></i>
             </div>
-            <h2 class="fw-bold" style="color: #4a148c;">إدارة الموردين المعتمدين</h2>
-            <p class="text-muted">محجوب أونلاين - <span class="text-warning fw-bold">سوقك الذكي</span></p>
+            <h2 class="fw-bold" style="color: #4a148c;">إدارة أسطول الموردين</h2>
+            <p class="text-muted">محجوب أونلاين - <span class="text-warning fw-bold">نظام التتبع الجغرافي</span></p>
         </div>
     </div>
 
-    <!-- محرك البحث الذكي: بوابة الوصول -->
-    <div class="row justify-content-center mb-5">
-        <div class="col-lg-7 col-md-10">
-            <div class="search-box position-relative shadow-lg rounded-pill overflow-hidden bg-white border border-2 border-primary">
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-0 px-4">
-                        <i class="fas fa-id-badge text-primary"></i>
-                    </span>
-                    <input type="text" id="supplierSearch" class="form-control border-0 py-3 shadow-none" 
-                           placeholder="استدعاء مورد: بالاسم، المعرف السيادي (963x)، أو الهاتف...">
-                    <button class="btn btn-primary px-5 fw-bold" type="button" id="searchBtn" onclick="searchSupplier()">
-                        <i class="fas fa-fingerprint me-2"></i> استدعاء
+    <div class="card border-0 shadow-sm mb-4 rounded-4">
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">البحث الذكي (963 / الاسم / *)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="supplierSearch" class="form-control border-start-0" placeholder="أدخل بيانات المورد أو * للكل">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">المحافظة</label>
+                    <select id="filterProvince" class="form-select">
+                        <option value="">كل المحافظات</option>
+                        <option value="الحديدة">الحديدة</option>
+                        <option value="عدن">عدن</option>
+                        <option value="تعز">تعز</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">المديرية</label>
+                    <select id="filterDistrict" class="form-select">
+                        <option value="">كل المديريات</option>
+                        <option value="الخوخة">الخوخة</option>
+                        <option value="حيس">حيس</option>
+                        <option value="المخا">المخا</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100 py-2 fw-bold" onclick="searchSuppliers()">
+                        <i class="fas fa-filter me-1"></i> تصفية
                     </button>
                 </div>
             </div>
-            <div id="searchFeedback" class="text-center mt-3 fw-medium"></div>
         </div>
     </div>
 
-    <!-- لوحة التحكم المتكاملة (تظهر عند الاستدعاء) -->
-    <div id="controlCard" class="d-none animate__animated animate__zoomIn">
-        <div class="card border-0 shadow-lg overflow-hidden">
-            <!-- الهيدر الخاص بالبطاقة -->
-            <div class="card-header border-0 py-4 d-flex justify-content-between align-items-center" 
-                 style="background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 100%); color: gold;">
-                <div>
-                    <h4 class="mb-0 fw-bold" id="displayTradeName">...</h4>
-                    <small class="text-white-50" id="displaySupID">--</small>
-                </div>
-                <div class="text-start">
-                    <span class="badge rounded-pill bg-light text-dark px-3 py-2 shadow-sm" id="displayTier">...</span>
-                    <span class="badge rounded-pill px-3 py-2 ms-2 shadow-sm" id="displayStatusBadge">...</span>
-                </div>
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden animate__animated animate__fadeInUp">
+        <div class="card-header bg-white py-3 border-0">
+            <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-list-ul me-2 text-primary"></i> قائمة الموردين الميدانيين</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>المعرف</th>
+                        <th>الاسم التجاري</th>
+                        <th>الموقع الجغرافي</th>
+                        <th>الرتبة</th>
+                        <th>الحالة</th>
+                        <th>العمليات</th>
+                    </tr>
+                </thead>
+                <tbody id="suppliersTableBody">
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">استخدم الفلاتر أعلاه لبدء استدعاء البيانات...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold">تعديل بيانات المورد</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-
-            <div class="card-body p-0">
-                <div class="row g-0">
-                    <!-- القائمة الجانبية للتحكم -->
-                    <div class="col-md-3 bg-light border-end">
-                        <div class="nav flex-column nav-pills p-3" id="v-pills-tab" role="tablist">
-                            <button class="nav-link active mb-2 text-end" data-bs-toggle="pill" data-bs-target="#tab-main">
-                                <i class="fas fa-user-edit ms-2"></i> البيانات الحيوية
-                            </button>
-                            <button class="nav-link mb-2 text-end" data-bs-toggle="pill" data-bs-target="#tab-users">
-                                <i class="fas fa-users-cog ms-2"></i> المستخدمين الفرعيين
-                            </button>
-                            <button class="nav-link mb-2 text-end" data-bs-toggle="pill" data-bs-target="#tab-wallet">
-                                <i class="fas fa-wallet ms-2"></i> الهندسة المالية
-                            </button>
-                            <button class="nav-link text-end text-danger" data-bs-toggle="pill" data-bs-target="#tab-security">
-                                <i class="fas fa-user-shield ms-2"></i> الرقابة والأمن
-                            </button>
-                        </div>
+            <div class="modal-body p-4">
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">الرتبة الإدارية</label>
+                        <select id="editTier" class="form-select">
+                            <option value="مبتدئ">مبتدئ</option>
+                            <option value="معتمد">معتمد</option>
+                            <option value="ممتاز">ممتاز</option>
+                        </select>
                     </div>
-
-                    <!-- محتوى التبويبات -->
-                    <div class="col-md-9 p-4 bg-white">
-                        <div class="tab-content" id="v-pills-tabContent">
-                            
-                            <!-- 1. البيانات الحيوية -->
-                            <div class="tab-pane fade show active" id="tab-main">
-                                <h5 class="fw-bold mb-4 border-bottom pb-2">تحديث التردد الميداني</h5>
-                                <form id="editForm">
-                                    <input type="hidden" id="currentSupplierId">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label small text-muted">رقم الهاتف</label>
-                                            <input type="text" id="phone" class="form-control rounded-3">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label small text-muted">نوع النشاط</label>
-                                            <input type="text" id="activity" class="form-control rounded-3">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small text-muted">النطاق الجغرافي</label>
-                                            <select id="province" class="form-select rounded-3">
-                                                <option value="عدن">عدن</option>
-                                                <option value="الخوخة">الخوخة</option>
-                                                <option value="المخا">المخا</option>
-                                                <option value="حيس">حيس</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small text-muted">رتبة المورد</label>
-                                            <select id="tier" class="form-select border-warning rounded-3">
-                                                <option value="مبتدئ">مبتدئ</option>
-                                                <option value="معتمد">معتمد</option>
-                                                <option value="شريك استراتيجي">شريك استراتيجي</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label small text-muted">الحالة الإدارية</label>
-                                            <select id="status" class="form-select border-primary rounded-3">
-                                                <option value="active">نشط</option>
-                                                <option value="suspended">موقف</option>
-                                                <option value="blocked">محظور</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <hr class="my-4">
-                                    <button type="button" onclick="saveChanges()" class="btn btn-primary px-4 py-2">
-                                        <i class="fas fa-save me-2"></i> حفظ التعديلات
-                                    </button>
-                                </form>
-                            </div>
-
-                            <!-- 2. المستخدمين الفرعيين -->
-                            <div class="tab-pane fade" id="tab-users">
-                                <h5 class="fw-bold mb-4">إدارة الصلاحيات التابعة</h5>
-                                <div class="bg-light p-3 rounded-3 mb-4 text-center">
-                                    <p class="text-muted small">هذه الميزة ستكون متاحة في المرحلة الثانية من التحديث.</p>
-                                </div>
-                            </div>
-
-                            <!-- 3. المحفظة -->
-                            <div class="tab-pane fade" id="tab-wallet">
-                                <div class="p-4 rounded-3 text-center" style="background: #f3e5f5; border: 2px dashed #4a148c;">
-                                    <i class="fas fa-wallet fa-3x mb-3 text-primary"></i>
-                                    <h4 class="fw-bold" id="displayWalletID">--</h4>
-                                    <p class="text-muted">الربط المالي السيادي للمورد</p>
-                                </div>
-                            </div>
-
-                            <!-- 4. الرقابة والأمن -->
-                            <div class="tab-pane fade" id="tab-security">
-                                <div class="alert alert-danger border-0 shadow-sm p-4">
-                                    <h5 class="fw-bold"><i class="fas fa-exclamation-triangle me-2"></i> منطقة الرقابة العليا</h5>
-                                    <p class="small text-danger">هذه الإجراءات تؤثر مباشرة على دخول المورد للمنصة.</p>
-                                    <div class="d-flex flex-wrap gap-2 mt-3">
-                                        <button class="btn btn-warning fw-bold" onclick="resetPassword()">
-                                            <i class="fas fa-key me-1"></i> تصفير كلمة المرور
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">الحالة</label>
+                        <select id="editStatus" class="form-select">
+                            <option value="active">نشط</option>
+                            <option value="suspended">موقف</option>
+                        </select>
                     </div>
-                </div>
+                    <button type="button" onclick="confirmUpdate()" class="btn btn-primary w-100 py-2 fw-bold">حفظ التغييرات</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    .nav-pills .nav-link { color: #555; border-radius: 8px; font-weight: 500; transition: 0.3s; }
-    .nav-pills .nav-link.active { background-color: #4a148c !important; color: white !important; box-shadow: 0 4px 10px rgba(74, 20, 140, 0.3); }
-    .animate__animated { --animate-duration: 0.6s; }
-</style>
-
 <script>
-// وظيفة استدعاء بيانات المورد من قاعدة البيانات
-function searchSupplier() {
-    let query = document.getElementById('supplierSearch').value;
-    let feedback = document.getElementById('searchFeedback');
-    
-    if(!query) return;
+function searchSuppliers() {
+    const q = document.getElementById('supplierSearch').value;
+    const province = document.getElementById('filterProvince').value;
+    const district = document.getElementById('filterDistrict').value;
+    const tbody = document.getElementById('suppliersTableBody');
 
-    feedback.innerHTML = '<span class="text-primary animate__animated animate__flash animate__infinite">جاري البحث في القاعدة السيادية...</span>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>';
 
-    fetch(`/admin/api/search-supplier?q=${encodeURIComponent(query)}`)
-    .then(response => response.json())
+    fetch(`/admin/api/search-supplier?q=${encodeURIComponent(q)}&province=${province}&district=${district}`)
+    .then(res => res.json())
     .then(data => {
+        tbody.innerHTML = '';
         if (data.status === 'success') {
-            feedback.innerHTML = '<span class="text-success">✅ تم العثور على المورد</span>';
-            fillSupplierData(data.supplier);
-            document.getElementById('controlCard').classList.remove('d-none');
+            data.suppliers.forEach(s => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><span class="badge bg-light text-dark border">963${s.id}</span></td>
+                        <td class="fw-bold">${s.trade_name}</td>
+                        <td><small>${s.province} - ${s.district}</small></td>
+                        <td><span class="badge bg-soft-primary text-primary">${s.tier}</span></td>
+                        <td><span class="badge ${s.status === 'active' ? 'bg-success' : 'bg-danger'}">${s.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick='openEditModal(${JSON.stringify(s)})'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
         } else {
-            feedback.innerHTML = '<span class="text-danger">❌ المورد غير مسجل في النظام</span>';
-            document.getElementById('controlCard').classList.add('d-none');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">لا توجد نتائج تطابق البحث</td></tr>';
         }
-    })
-    .catch(err => {
-        feedback.innerHTML = '<span class="text-danger">⚠️ خطأ في الاتصال بالسيرفر</span>';
     });
 }
 
-function fillSupplierData(s) {
-    document.getElementById('currentSupplierId').value = s.id;
-    document.getElementById('displayTradeName').innerText = s.trade_name;
-    document.getElementById('displaySupID').innerText = `المعرف: SUP-MAH-963${s.id}`;
-    document.getElementById('displayTier').innerText = s.tier || 'مبتدئ';
-    document.getElementById('displayWalletID').innerText = `WAL_MAH-963${s.id}`;
-    
-    // تعبئة الفورم
-    document.getElementById('phone').value = s.phone;
-    document.getElementById('activity').value = s.activity_type;
-    document.getElementById('province').value = s.province;
-    document.getElementById('tier').value = s.tier || 'مبتدئ';
-    document.getElementById('status').value = s.status;
-
-    // حالة الشارة
-    let badge = document.getElementById('displayStatusBadge');
-    badge.innerText = s.status === 'active' ? 'نشط' : 'موقف';
-    badge.className = `badge rounded-pill px-3 py-2 ms-2 shadow-sm ${s.status === 'active' ? 'bg-success' : 'bg-danger'}`;
+function openEditModal(s) {
+    document.getElementById('editId').value = s.id;
+    document.getElementById('editTier').value = s.tier;
+    document.getElementById('editStatus').value = s.status;
+    new bootstrap.Modal(document.getElementById('editModal')).show();
 }
 
-function saveChanges() {
-    let id = document.getElementById('currentSupplierId').value;
-    let data = {
-        phone: document.getElementById('phone').value,
-        activity_type: document.getElementById('activity').value,
-        province: document.getElementById('province').value,
-        tier: document.getElementById('tier').value,
-        status: document.getElementById('status').value
+function confirmUpdate() {
+    const id = document.getElementById('editId').value;
+    const data = {
+        tier: document.getElementById('editTier').value,
+        status: document.getElementById('editStatus').value
     };
 
     fetch(`/admin/api/update-supplier/${id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
-    })
-    .then(res => res.json())
-    .then(resData => {
-        if(resData.status === 'success') {
-            alert('✅ تم تحديث بيانات المورد بنجاح');
-            searchSupplier(); // إعادة تحميل البيانات
-        } else {
-            alert('❌ فشل التحديث: ' + resData.message);
-        }
+    }).then(() => {
+        location.reload();
     });
 }
 </script>
+
+<style>
+    .bg-soft-primary { background-color: #e3f2fd; color: #0d6efd; }
+    .table th { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #6c757d; }
+    .form-select, .form-control { border-radius: 8px; border: 1px solid #dee2e6; }
+</style>
 {% endblock %}
