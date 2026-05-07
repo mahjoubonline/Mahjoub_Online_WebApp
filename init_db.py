@@ -1,4 +1,3 @@
-# init_db.py
 import os
 import sys
 from sqlalchemy import text
@@ -25,30 +24,26 @@ def initialize_database():
     with app.app_context():
         try:
             print("--------------------------------")
-            print("🚀 بدء بروتوكول التشغيل الكامل لمحجوب أونلاين...")
+            print("🚀 بدء بروتوكول التحديث الشامل لمحجوب أونلاين...")
             
-            # 1. تنظيف جدول الموردين لضمان تحديث الحقول
+            # 1. تنظيف جدول الموردين (لإعادة بناء الأعمدة الجغرافية والرتبة)
             with db.engine.connect() as connection:
                 try:
                     connection.execute(text("DROP TABLE IF EXISTS suppliers CASCADE;"))
                     connection.commit()
-                    print("✅ تم تصفير جدول الموردين للتحديث الهيكلي.")
+                    print("✅ تم تصفير جدول الموردين لاستيعاب الفلاتر الجغرافية الجديدة.")
                 except Exception:
                     pass
 
-            # 2. إنشاء كافة الجداول بناءً على الموديلات الحديثة
+            # 2. بناء كافة الجداول (سيتم إنشاء أعمدة province, district, tier تلقائياً)
             db.create_all() 
-            print("✅ تم بناء هيكل الجداول الجديد.")
+            print("✅ تم بناء هيكل الجداول الجديد (المحافظات + الرتب).")
             
-            # 3. ترميم الأعمدة المفقودة في الجداول الأخرى
+            # 3. ترميم الأعمدة المفقودة في الجداول الأخرى (أوامر سيادية)
             with db.engine.connect() as connection:
                 alter_queries = [
-                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);",
-                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS total_amount FLOAT DEFAULT 0.0;",
-                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'YER';",
-                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending';",
-                    "ALTER TABLE products ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id);",
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'admin';"
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'admin';",
+                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending';"
                 ]
                 for query in alter_queries:
                     try:
@@ -56,7 +51,23 @@ def initialize_database():
                         connection.commit()
                     except Exception: pass
 
-            # 4. إنشاء حساب "علي محجوب" (السيادة المطلقة)
+            # 4. زرع "مورد تجريبي" لاختبار الفلاتر فوراً
+            if not Supplier.query.filter_by(trade_name="مورد تجريبي").first():
+                test_supplier = Supplier(
+                    username="test_sup",
+                    password="123",
+                    trade_name="مورد تجريبي",
+                    owner_name="علي محجوب",
+                    phone="770000000",
+                    province="الحديدة",
+                    district="الخوخة",
+                    status="active",
+                    tier="ممتاز"
+                )
+                db.session.add(test_supplier)
+                print("🧪 تم إضافة مورد تجريبي في (الخوخة) لاختبار الفلاتر.")
+
+            # 5. حساب "علي محجوب" (السيادة المطلقة)
             admin_user = "علي محجوب"
             if not User.query.filter_by(username=admin_user).first():
                 new_admin = User(
@@ -66,10 +77,10 @@ def initialize_database():
                     role='admin'
                 )
                 db.session.add(new_admin)
-                db.session.commit()
-                print(f"👤 تم إنشاء حساب المدير: {admin_user} بكلمة سر: 123")
-            
-            print("🌟 الترسانة الرقمية جاهزة تماماً للانطلاق.")
+                print(f"👤 تم تأمين حساب المدير: {admin_user}")
+
+            db.session.commit()
+            print("🌟 الترسانة الرقمية جاهزة تماماً.")
             print("--------------------------------")
             
         except Exception as e:
