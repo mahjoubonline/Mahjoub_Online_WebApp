@@ -69,3 +69,60 @@ def update_supplier_field():
     except Exception as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'message': f'خطأ: {str(e)}'}), 400
+<script>
+// دالة مراقبة تغيير المحافظة لجلب المديريات من القاعدة
+document.getElementById('provinceSelect').addEventListener('change', function() {
+    const provinceName = this.value;
+    const districtSelect = document.getElementById('districtSelect');
+    
+    // تفريغ القائمة الحالية
+    districtSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+
+    if (!provinceName) {
+        districtSelect.innerHTML = '<option value="">اختر المحافظة أولاً</option>';
+        return;
+    }
+
+    // استدعاء المديريات من السيرفر (القاعدة)
+    fetch(`/admin/api/get-districts?province=${provinceName}`)
+        .then(res => res.json())
+        .then(data => {
+            districtSelect.innerHTML = '<option value="">كل المديريات</option>';
+            data.districts.forEach(dist => {
+                districtSelect.innerHTML += `<option value="${dist}">${dist}</option>`;
+            });
+        });
+});
+
+// دالة فتح لوحة الفحص الجانبية وجلب بيانات المورد التفصيلية
+function openSovereignInspector(supplierId) {
+    const bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('supplierInspector'));
+    bsOffcanvas.show();
+    
+    fetch(`/admin/api/supplier-details/${supplierId}`)
+        .then(res => res.json())
+        .then(s => {
+            document.getElementById('inspectorContent').innerHTML = `
+                <div class="text-center mb-4">
+                    <div class="avatar-lrg bg-soft-purple mb-2">
+                        <i class="fas fa-store fa-3x text-royal"></i>
+                    </div>
+                    <h4 class="fw-bold text-royal">${s.trade_name}</h4>
+                    <span class="badge bg-gold text-dark">ID: ${s.id}</span>
+                </div>
+                <ul class="list-group list-group-flush text-end p-0">
+                    <li class="list-group-item d-flex justify-content-between small">
+                        <span class="fw-bold">${s.phone}</span> :الهاتف
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between small">
+                        <span class="text-primary fw-bold text-ltr">${s.e_wallet || 'لا يوجد'}</span> :المحفظة
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between small">
+                        <span class="text-success fw-bold">${Number(s.balance_yer).toLocaleString()} ر.ي</span> :الرصيد
+                    </li>
+                </ul>
+            `;
+            document.getElementById('walletBtn').href = `/admin/wallets/${s.id}`;
+        });
+}
+</script>
