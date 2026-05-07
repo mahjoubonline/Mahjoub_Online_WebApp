@@ -5,14 +5,19 @@
 {% block content %}
 <div class="container-fluid py-4 sovereign-theme" style="direction: rtl; text-align: right;">
     
-    <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+    <div class="d-flex justify-content-between align-items-center mb-4 px-2 animate__animated animate__fadeIn">
         <div>
             <h2 class="fw-bold sovereign-title">🛡️ مركز قيادة الموردين</h2>
             <p class="text-muted small">نظام الحوكمة v3.0 - <span class="text-royal fw-bold">سوقك الذكي</span></p>
         </div>
-        <a href="{{ url_for('admin.add_supplier') }}" class="btn btn-royal px-4 shadow-sm animate__animated animate__pulse animate__infinite">
-            <i class="fas fa-plus-circle ms-2"></i> تعميد مورد جديد
-        </a>
+        <div class="d-flex gap-2">
+            <button onclick="exportSuppliers()" class="btn btn-outline-royal px-3 shadow-sm rounded-3">
+                <i class="fas fa-file-download ms-1"></i> تصدير الترسانة
+            </button>
+            <a href="{{ url_for('admin.add_supplier') }}" class="btn btn-royal px-4 shadow-sm animate__animated animate__pulse animate__infinite">
+                <i class="fas fa-plus-circle ms-2"></i> تعميد مورد جديد
+            </a>
+        </div>
     </div>
 
     <div class="mb-4">
@@ -24,15 +29,17 @@
             <div id="tableContainer" class="card border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
                 <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold text-royal"><i class="fas fa-list-ul me-2"></i> الكيانات المسجلة في الترسانة</h5>
-                    <span class="badge bg-soft-royal text-royal px-3" id="supplierCount">مورد نشط</span>
+                    <span class="badge bg-soft-royal text-royal px-3" id="supplierCount">جاري الحصر...</span>
                 </div>
-                {% include 'includes/_supplier_table.html' %}
+                <div class="table-responsive">
+                    {% include 'includes/_supplier_table.html' %}
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="supplierModal" tabindex="-1" aria-labelledby="supplierModalLabel" aria-hidden="true">
+<div class="modal fade" id="supplierModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="modal-header bg-royal text-gold border-0 p-4 position-relative">
@@ -41,36 +48,38 @@
                         <i class="fas fa-store fa-lg"></i>
                     </div>
                     <div>
-                        <h4 class="modal-title fw-bold mb-0" id="m_trade_name">---</h4>
+                        <h4 class="modal-title fw-bold mb-0" id="m_trade_name">جاري السحب...</h4>
                         <span id="m_id" class="badge bg-gold text-royal mt-1">ID: ---</span>
                     </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white position-absolute left-0 top-0 mt-3 ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="margin-right: auto; margin-left: 0;"></button>
             </div>
 
             <div class="modal-body p-4 bg-light">
                 <div class="row g-4">
                     <div class="col-md-7">
                         <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
-                            <h6 class="fw-bold text-royal mb-4 border-bottom pb-2"><i class="fas fa-edit ms-2"></i>تحديث البيانات السيادية</h6>
+                            <h6 class="fw-bold text-royal mb-4 border-bottom pb-2">
+                                <i class="fas fa-user-shield ms-2"></i>تحديث السجل السيادي
+                            </h6>
                             
                             <div class="row g-3">
                                 <div class="col-12">
-                                    <label class="small text-muted d-block mb-1">اسم المالك / المسؤول</label>
-                                    <input type="text" id="m_owner_name" class="form-control border-0 bg-light rounded-3 py-2" placeholder="جاري التحميل...">
+                                    <label class="small text-muted mb-1">اسم المالك الحقيقي</label>
+                                    <input type="text" id="m_owner_name" class="form-control sovereign-input">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="small text-muted d-block mb-1">رقم الهاتف</label>
-                                    <input type="text" id="m_phone" class="form-control border-0 bg-light rounded-3 py-2" readonly>
+                                    <label class="small text-muted mb-1">رقم الهاتف الرسمي</label>
+                                    <input type="text" id="m_phone" class="form-control sovereign-input">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="small text-muted d-block mb-1">كلمة المرور الجديدة</label>
-                                    <input type="password" id="m_password" class="form-control border-0 bg-light rounded-3 py-2" placeholder="اتركها فارغة لعدم التغيير">
+                                    <label class="small text-muted mb-1">تعديل كلمة المرور</label>
+                                    <input type="password" id="m_password" class="form-control sovereign-input" placeholder="نشفير جديد">
                                 </div>
-                                <div class="col-12 mt-4">
-                                    <div class="d-flex justify-content-between align-items-center p-3 bg-soft-royal rounded-3">
-                                        <span class="small fw-bold">حالة الكيان الحالية:</span>
-                                        <span id="m_status_badge" class="badge px-3 py-2">---</span>
+                                <div class="col-12">
+                                    <div class="p-3 bg-soft-royal rounded-3 d-flex justify-content-between align-items-center mt-2">
+                                        <span class="small fw-bold">الحالة الأمنية:</span>
+                                        <span id="m_status_badge" class="badge">---</span>
                                     </div>
                                 </div>
                             </div>
@@ -78,26 +87,28 @@
                     </div>
 
                     <div class="col-md-5">
-                        <div class="card bg-royal text-white border-0 shadow-sm rounded-4 p-4 text-center mb-3">
-                            <i class="fas fa-wallet fa-2x mb-2 text-gold opacity-50"></i>
-                            <small class="opacity-75">رصيد المورد (YER)</small>
+                        <div class="card bg-royal-dark text-white border-0 shadow-sm rounded-4 p-4 text-center mb-3">
+                            <div class="balance-icon-container mb-2">
+                                <i class="fas fa-coins fa-2x text-gold"></i>
+                            </div>
+                            <small class="opacity-75">إجمالي رصيد الخزينة (YER)</small>
                             <h2 class="fw-bold mt-2 text-gold" id="m_balance">0.00</h2>
                             <hr class="opacity-25">
-                            <a id="m_wallet_link" href="#" class="btn btn-gold btn-sm w-100 fw-bold py-2">
-                                <i class="fas fa-external-link-alt ms-1"></i> دخول الخزينة
+                            <a id="m_wallet_link" href="#" class="btn btn-gold btn-sm w-100 fw-bold rounded-3">
+                                <i class="fas fa-vault ms-1"></i> فتح كشف الحساب
                             </a>
                         </div>
                         
                         <div class="d-grid gap-2">
-                            <button onclick="saveChanges()" class="btn btn-success py-2 fw-bold shadow-sm">
-                                <i class="fas fa-save ms-1"></i> حفظ التعديلات
+                            <button onclick="saveSovereignChanges()" class="btn btn-success py-2 fw-bold shadow-sm rounded-3">
+                                <i class="fas fa-check-double ms-1"></i> حفظ وتعميد التعديلات
                             </button>
-                            <div class="btn-group">
-                                <button onclick="updateStatus('active')" class="btn btn-outline-success btn-sm">تفعيل</button>
-                                <button onclick="updateStatus('suspended')" class="btn btn-outline-danger btn-sm">تعليق</button>
+                            <div class="btn-group w-100">
+                                <button onclick="updateStatus('active')" class="btn btn-outline-success btn-sm py-2">تفعيل</button>
+                                <button onclick="updateStatus('suspended')" class="btn btn-outline-danger btn-sm py-2">تعليق</button>
                             </div>
-                            <button onclick="deleteSupplier()" class="btn btn-link text-danger btn-sm mt-2">
-                                <i class="fas fa-trash-alt ms-1"></i> شطب الكيان من الترسانة
+                            <button onclick="deleteSupplier()" class="btn btn-link text-danger btn-sm mt-2 text-decoration-none">
+                                <i class="fas fa-eraser ms-1"></i> شطب الكيان نهائياً
                             </button>
                         </div>
                     </div>
@@ -109,82 +120,14 @@
 
 <style>
     :root { --royal: #4a148c; --gold: #ffd700; --royal-dark: #1a237e; }
-    .sovereign-theme { font-family: 'Tajawal', sans-serif; }
+    .sovereign-theme { font-family: 'Tajawal', sans-serif; background: #fdfdfd; }
     .sovereign-title { color: var(--royal); border-right: 6px solid var(--gold); padding-right: 15px; }
     .btn-royal { background: var(--royal); color: var(--gold); border: 2px solid var(--gold); font-weight: bold; border-radius: 12px; transition: 0.3s; }
-    .btn-royal:hover { background: var(--royal-dark); color: white; transform: scale(1.05); }
-    .bg-soft-royal { background-color: rgba(74, 20, 140, 0.07); }
-    .avatar-circle-md { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-    .btn-gold { background: var(--gold); color: var(--royal); border: none; }
-    .btn-gold:hover { background: #e6c200; color: #000; }
-    
-    /* تنسيق لعدم الالتصاق في الموبايل */
-    .modal-lg { max-width: 850px; }
-</style>
-
-<script>
-    let currentSupId = null;
-    const sModal = new bootstrap.Modal(document.getElementById('supplierModal'));
-
-    function inspectSupplier(supId) {
-        currentSupId = supId;
-        
-        // جلب البيانات من الـ API الحقيقي
-        fetch(`/admin/api/supplier-details/${supId}`)
-            .then(res => res.json())
-            .then(data => {
-                // ملء بيانات المودال (النافذة المنبثقة)
-                document.getElementById('m_trade_name').innerText = data.trade_name;
-                document.getElementById('m_id').innerText = "المعرف: " + data.e_wallet;
-                document.getElementById('m_owner_name').value = data.owner_name || '';
-                document.getElementById('m_phone').value = data.phone || '';
-                document.getElementById('m_balance').innerText = parseFloat(data.balance_yer).toLocaleString();
-                document.getElementById('m_wallet_link').href = `/admin/supplier-wallet/${supId}`;
-                
-                // تحديث بادج الحالة
-                const statusBadge = document.getElementById('m_status_badge');
-                if (data.status === 'active') {
-                    statusBadge.innerText = "نشط";
-                    statusBadge.className = "badge bg-success px-3 py-2";
-                } else {
-                    statusBadge.innerText = "موقوف";
-                    statusBadge.className = "badge bg-danger px-3 py-2";
-                }
-
-                // إظهار النافذة
-                sModal.show();
-            });
-    }
-
-    function saveChanges() {
-        const owner = document.getElementById('m_owner_name').value;
-        const pass = document.getElementById('m_password').value;
-
-        fetch(`/admin/api/update-supplier/${currentSupId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ owner_name: owner, password: pass })
-        }).then(res => {
-            if(res.ok) {
-                alert("تم تحديث البيانات بنجاح");
-                location.reload();
-            }
-        });
-    }
-
-    function updateStatus(newStatus) {
-        if (!confirm("تأكيد تغيير حالة السيادة لهذا المورد؟")) return;
-        fetch(`/admin/api/toggle-supplier-status/${currentSupId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
-        }).then(() => location.reload());
-    }
-
-    function deleteSupplier() {
-        if (!confirm("⚠️ تحذير: شطب المورد سيحذف جميع بياناته! هل أنت متأكد؟")) return;
-        fetch(`/admin/api/delete-supplier/${currentSupId}`, { method: 'DELETE' })
-        .then(() => location.reload());
-    }
-</script>
-{% endblock %}
+    .btn-royal:hover { background: var(--royal-dark); color: white; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(74, 20, 140, 0.3); }
+    .sovereign-input { border: 1px solid #eee; background: #f8f9fa; border-radius: 10px; padding: 10px; font-weight: 500; }
+    .sovereign-input:focus { background: white; border-color: var(--royal); box-shadow: none; }
+    .bg-royal-dark { background: linear-gradient(135deg, #1a237e 0%, #4a148c 100%); }
+    .bg-soft-royal { background-color: rgba(74, 20, 140, 0.05); color: var(--royal); }
+    .avatar-circle-md { width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; }
+    .btn-gold { background: var(--gold); color: var(--royal); border: none; transition: 0.3s; }
+    .btn-gold:hover { background: #ffea00; transform: scale(1.02); }
