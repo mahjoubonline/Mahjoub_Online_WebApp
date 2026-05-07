@@ -1,5 +1,5 @@
 <div class="table-responsive" style="border-radius: 0 0 20px 20px; overflow: hidden;">
-    <table class="table table-hover align-middle mb-0 text-center bg-white border-0">
+    <table class="table table-hover align-middle mb-0 text-center bg-white border-0" id="suppliersTable">
         <thead style="background-color: var(--royal); color: var(--gold); border: none;">
             <tr>
                 <th class="py-4 px-4 border-0">المعرف السيادي</th>
@@ -14,6 +14,9 @@
             {% for s in suppliers %}
             <tr class="supplier-row border-bottom" 
                 id="row-{{ s.id }}"
+                data-status="{{ s.status }}"
+                data-province="{{ s.province }}"
+                data-district="{{ s.district }}"
                 onclick="inspectSupplier('{{ s.id }}')" 
                 style="cursor: pointer; transition: all 0.3s ease;">
                 
@@ -58,7 +61,7 @@
 
                 <td class="text-start px-4">
                     <div class="action-arrow-container">
-                        <i class="fas fa-chevron-left text-royal animate-arrow"></i>
+                        <i class="fas fa-cog text-royal animate-cog"></i>
                     </div>
                 </td>
             </tr>
@@ -68,7 +71,7 @@
                     <div class="py-4">
                         <i class="fas fa-database fa-3x mb-3 opacity-25"></i>
                         <p class="fw-bold">لا يوجد كيانات مسجلة حالياً في الترسانة</p>
-                        <a href="{{ url_for('admin.add_supplier') }}" class="btn btn-sm btn-royal mt-2">تعميد أول مورد</a>
+                        <a href="{{ url_for('admin.add_supplier') }}" class="btn btn-sm btn-royal mt-2 px-4">تعميد أول مورد</a>
                     </div>
                 </td>
             </tr>
@@ -78,10 +81,9 @@
 </div>
 
 <style>
-    /* تحسينات الجدول السيادية */
+    /* تنسيقات الجدول السيادية */
     .supplier-row { border-color: #f1f1f1 !important; }
     
-    /* تأثير عند اختيار الصف */
     .supplier-row.active-selection {
         background-color: rgba(74, 20, 140, 0.08) !important;
         border-right: 5px solid var(--royal) !important;
@@ -89,10 +91,9 @@
 
     .supplier-row:hover {
         background-color: rgba(74, 20, 140, 0.03) !important;
-        transform: scale(1.002);
+        transform: scale(1.001);
     }
 
-    /* أيقونة المتجر في الجدول */
     .avatar-sm-table {
         width: 32px; height: 32px;
         border-radius: 8px;
@@ -100,45 +101,44 @@
         font-size: 0.9rem;
     }
 
-    /* شارات الحالة الملونة */
     .status-badge-active { background-color: rgba(40, 167, 69, 0.1); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.2); }
     .status-badge-suspended { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.2); }
 
-    /* أنيميشن السهم */
-    .animate-arrow { transition: transform 0.3s ease; }
-    .supplier-row:hover .animate-arrow {
-        transform: translateX(-5px);
+    /* أنيميشن أيقونة التحكم */
+    .animate-cog { transition: all 0.4s ease; }
+    .supplier-row:hover .animate-cog {
+        transform: rotate(90deg);
         color: var(--gold) !important;
     }
 
     .action-arrow-container {
-        width: 30px; height: 30px;
+        width: 35px; height: 35px;
         background: #f8f9fa;
-        border-radius: 50%;
+        border-radius: 10px;
         display: flex; align-items: center; justify-content: center;
         transition: 0.3s;
     }
     
     .supplier-row:hover .action-arrow-container {
         background: var(--royal);
+        box-shadow: 0 4px 8px rgba(74, 20, 140, 0.2);
     }
 
     .shadow-xs { box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .text-royal { color: var(--royal) !important; }
 </style>
 
 <script>
-    // إضافة تأثير بصري للصف المختار
+    // وظيفة التحديد البصري للصف عند النقر
     function highlightRow(supId) {
-        // إزالة التحديد من جميع الصفوف
         document.querySelectorAll('.supplier-row').forEach(row => {
             row.classList.remove('active-selection');
         });
-        // إضافة التحديد للصف الحالي
         const selectedRow = document.getElementById('row-' + supId);
         if (selectedRow) selectedRow.classList.add('active-selection');
     }
 
-    // تعديل الدالة الأصلية لتشمل التحديد البصري
+    // ربط النقر بفتح المودال وتحديد الصف
     const originalInspectSupplier = window.inspectSupplier;
     window.inspectSupplier = function(supId) {
         highlightRow(supId);
