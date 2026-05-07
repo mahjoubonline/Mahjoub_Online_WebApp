@@ -1,21 +1,96 @@
-<div class="offcanvas offcanvas-start sovereign-offcanvas" tabindex="-1" id="supplierInspector" style="width: 400px;">
-    <div class="offcanvas-header bg-royal text-gold">
-        <h5 class="offcanvas-title fw-bold">🔎 فحص بيانات المورد</h5>
+<div class="offcanvas offcanvas-start sovereign-offcanvas" tabindex="-1" id="supplierOffcanvas" style="width: 420px; border-right: 4px solid var(--gold);">
+    <div class="offcanvas-header bg-royal text-gold shadow-sm">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-shield-alt fa-lg me-2"></i>
+            <h5 class="offcanvas-title fw-bold" id="offcanvasLabel">لوحة الفحص السيادي</h5>
+        </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
     </div>
-    <div class="offcanvas-body p-4 text-end">
-        <div id="inspectorContent">
-            <p class="text-center mt-5 text-muted">جاري استدعاء البيانات من الترسانة...</p>
+
+    <div class="offcanvas-body p-0">
+        <div class="header-profile p-4 text-center bg-light border-bottom">
+            <div class="avatar-circle mb-3 mx-auto shadow-sm">
+                <i class="fas fa-store fa-2x text-royal"></i>
+            </div>
+            <h4 id="oc_trade_name" class="fw-bold text-dark mb-1">---</h4>
+            <span id="oc_e_wallet" class="badge rounded-pill bg-royal text-gold px-3">---</span>
         </div>
-        
-        <hr>
-        <div class="d-grid gap-2">
-            <a id="walletBtn" href="#" class="btn btn-outline-primary py-3 rounded-4">
-                <i class="fas fa-wallet mb-2"></i><br>إدارة المحفظة المالية
-            </a>
-            <button class="btn btn-royal py-3 rounded-4" onclick="saveQuickStatus()">
-                تحديث الحالة السيادية
-            </button>
+
+        <div class="p-4 text-end">
+            <div class="info-card mb-4">
+                <label class="text-muted small d-block mb-2">الرصيد الحالي (المحفظة السيادية)</label>
+                <div class="d-flex justify-content-between align-items-center p-3 bg-soft-royal rounded-3 border">
+                    <span class="fw-bold text-success fs-4" id="oc_balance_yer">0.00</span>
+                    <i class="fas fa-money-bill-wave text-success opacity-50"></i>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <div class="p-3 border rounded-3 bg-white shadow-xs">
+                        <label class="text-muted small d-block">جهة الاتصال</label>
+                        <span id="oc_phone" class="fw-bold text-dark small">---</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-3 border rounded-3 bg-white shadow-xs">
+                        <label class="text-muted small d-block">النطاق</label>
+                        <span id="oc_location" class="fw-bold text-dark small">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 mt-5">
+                <a id="walletBtn" href="#" class="btn btn-outline-royal py-3 rounded-4 shadow-sm">
+                    <i class="fas fa-wallet me-2"></i> دخول الخزينة المالية
+                </a>
+                
+                <div class="btn-group w-100 mt-2">
+                    <button class="btn btn-success py-3" onclick="updateStatus('active')">تفعيل</button>
+                    <button class="btn btn-danger py-3" onclick="updateStatus('suspended')">إيقاف</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* تنسيقات خاصة باللوحة الجانبية */
+    .bg-royal { background-color: #4a148c !important; }
+    .text-gold { color: #ffd700 !important; }
+    .bg-soft-royal { background-color: rgba(74, 20, 140, 0.05); }
+    
+    .avatar-circle {
+        width: 70px;
+        height: 70px;
+        background: white;
+        border: 3px solid #4a148c;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .info-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    .sovereign-offcanvas {
+        border-left: none;
+        box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+    }
+
+    .shadow-xs { box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    
+    .btn-outline-royal {
+        color: #4a148c;
+        border: 2px solid #4a148c;
+        font-weight: 600;
+    }
+    
+    .btn-outline-royal:hover {
+        background: #4a148c;
+        color: #ffd700;
+    }
+</style>
