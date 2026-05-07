@@ -28,7 +28,6 @@
             overflow-x: hidden;
         }
 
-        /* أنيميشن النبض للشعار */
         @keyframes logo-pulse {
             0% { filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(212, 175, 55, 0.3)); transform: scale(1); }
             50% { filter: brightness(0) invert(1) drop-shadow(0 0 20px rgba(212, 175, 55, 0.6)); transform: scale(1.05); }
@@ -108,12 +107,6 @@
             border-bottom: 1px solid var(--polished-stone);
         }
 
-        .admin-badge {
-            background: #f8f9fa; padding: 10px 25px; border-radius: 15px;
-            border: 1px solid rgba(212, 175, 55, 0.4); display: flex; align-items: center; gap: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-        }
-
         .user-avatar { 
             width: 48px; height: 48px; background: var(--royal-purple); 
             border-radius: 12px; display: flex; align-items: center; 
@@ -175,18 +168,6 @@
                 </ul>
             </div>
 
-            <div class="nav-item">
-                <div class="nav-link" onclick="toggleDropdown(this)">
-                    <i class="fas fa-vault"></i>
-                    <span>الهندسة المالية</span>
-                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.75rem; transition: 0.4s;"></i>
-                </div>
-                <ul class="dropdown-content">
-                    <li><a href="#"><i class="fas fa-wallet"></i> المحافظ السيادية</a></li>
-                    <li><a href="#"><i class="fas fa-cash-register"></i> طلبات الصرف</a></li>
-                </ul>
-            </div>
-
             <a href="{{ url_for('admin.logout') }}" class="nav-link mt-auto" style="color: #ff7675; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.5rem;">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>إنهاء الجلسة الآمنة</span>
@@ -202,13 +183,18 @@
                 </div>
                 <div>
                     <div style="font-weight: 900; color: var(--royal-purple); font-size: 1.1rem;">
-                        {{ current_user.owner_name if current_user.is_authenticated and hasattr(current_user, 'owner_name') else 'علي محجوب' }}
+                        {# تم تعديل هذا السطر لضمان التوافق التام مع Jinja2 #}
+                        {% if current_user.is_authenticated and current_user.username %}
+                            {{ current_user.username }}
+                        {% else %}
+                            علي محجوب
+                        {% endif %}
                     </div>
                     <div style="color: #6c757d; font-size: 0.75rem; font-weight: 700;">المؤسس والمدير الأعلى</div>
                 </div>
             </div>
 
-            <div class="admin-badge d-none d-lg-flex">
+            <div class="admin-badge d-none d-lg-flex" style="background: #f8f9fa; padding: 10px 25px; border-radius: 15px; border: 1px solid rgba(212, 175, 55, 0.4); display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
                 <i class="fas fa-shield-halved" style="color: var(--mahjoub-gold);"></i>
                 <span style="font-weight: 800; color: var(--royal-purple); font-size: 0.85rem;">نظام الحوكمة المركزية v3.0</span>
             </div>
@@ -240,7 +226,6 @@
             const chevron = element.querySelector('.chevron');
             const isOpen = content.style.display === "block";
             
-            // إغلاق القوائم الأخرى
             document.querySelectorAll('.dropdown-content').forEach(el => {
                 if (el !== content) {
                     el.style.display = 'none';
@@ -250,7 +235,6 @@
                 }
             });
 
-            // فتح أو إغلاق الحالية
             content.style.display = isOpen ? "none" : "block";
             if(chevron) {
                 chevron.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
