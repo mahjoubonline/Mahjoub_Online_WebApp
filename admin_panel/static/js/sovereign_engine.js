@@ -1,190 +1,125 @@
-/**
- * محرك الحوكمة السيادي - محجوب أونلاين v3.5
- * إدارة الموردين، الموظفين، والخزينة الثلاثية
- */
-
-// --- 1. إعدادات المحرك الاستدعائي ---
-let currentSupplierId = null;
-
-document.addEventListener('DOMContentLoaded', function() {
-    // مراقبة حقل البحث للضغط على Enter
-    const searchInput = document.getElementById('mainSearch');
-    if (searchInput) {
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') triggerSearch();
-        });
-    }
-});
-
-// --- 2. منطق البحث والاستدعاء الذكي (#) ---
-function triggerSearch() {
-    const query = document.getElementById('mainSearch').value.trim();
+// دالة الاستدعاء الرئيسي (Search Engine)
+async function triggerSearch() {
+    const query = document.getElementById('mainSearch').value;
     const province = document.getElementById('filterProvince').value;
+    const district = document.getElementById('filterDistrict').value;
     const tier = document.getElementById('filterTier').value;
     const status = document.getElementById('filterStatus').value;
 
-    if (!query && !province && !tier && !status) {
-        alert("يرجى إدخال كلمة بحث أو استخدام الفلاتر أو رمز (#)");
+    // إظهار منطقة النتائج وإخفاء حالة الفراغ
+    const resultsArea = document.getElementById('resultsArea');
+    const emptyState = document.getElementById('emptyState');
+    const tableBody = document.getElementById('suppliersTableBody');
+
+    if (!query && !province && !district && !tier && !status) {
+        resultsArea.style.display = 'none';
+        emptyState.style.display = 'block';
         return;
     }
 
-    // إظهار منطقة النتائج وإخفاء رسالة الحالة الفارغة
-    document.getElementById('emptyState').style.display = 'none';
-    document.getElementById('resultsArea').style.display = 'block';
-    
-    const tbody = document.getElementById('suppliersTableBody');
-    tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-royal"><i class="fas fa-spinner fa-spin"></i> جاري استدعاء البيانات من الترسانة...</td></tr>`;
+    tableBody.innerHTML = '<tr><td colspan="7"><i class="fas fa-spinner fa-spin"></i> جاري استدعاء البيانات من القاعدة...</td></tr>';
+    resultsArea.style.display = 'block';
+    emptyState.style.display = 'none';
 
-    fetch(`/admin/api/search-suppliers?q=${encodeURIComponent(query)}&province=${province}&tier=${tier}&status=${status}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                renderSuppliers(data.suppliers);
-            }
+    try {
+        // إرسال الطلب إلى السيرفر (يجب أن يكون لديك Route في Flask بهذا الاسم)
+        const response = await fetch(`/admin/api/suppliers/search?q=${query}&province=${province}&district=${district}&tier=${tier}&status=${status}`);
+        const data = await response.json();
+
+        tableBody.innerHTML = '';
+
+        if (data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" class="py-4 text-muted">لا توجد نتائج مطابقة في سجلات الترسانة</td></tr>';
+            return;
+        }
+
+        data.forEach(sup => {
+            const row = `
+                <tr id="row_${sup.id}">
+                    <td class="fw-bold text-royal">#SUP_${sup.id}</td>
+                    <td>
+                        <div class="fw-bold">${sup.trade_name}</div>
+                        <small class="text-muted">${sup.owner_name}</small>
+                    </td>
+                    <td><small>${sup.province} - ${sup.district}</small></td>
+                    <td><span class="badge bg-soft-royal text-royal border border-royal">${sup.tier}</span></td>
+                    <td>
+                        <div class="small fw-bold text-success">${sup.balance_yer} YER</div>
+                        <div class="small text-primary">${sup.balance_sar} SAR</div>
+                        <div class="small text-warning">${sup.balance_usd} USD</div>
+                    </td>
+                    <td>
+                        <span class="badge ${sup.status === 'active' ? 'bg-success' : 'bg-danger'}">
+                            ${sup.status === 'active' ? 'نشط' : 'موقف'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-royal" onclick="viewSupplier(${sup.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="toggleStatus(${sup.id})">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tableBody.insertAdjacentHTML('beforeend', row);
         });
-}
 
-// --- 3. عرض الموردين في الجدول السيادي ---
-function renderSuppliers(suppliers) {
-    const tbody = document.getElementById('suppliersTableBody');
-    tbody.innerHTML = '';
-
-    if (suppliers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-muted">لا توجد نتائج تطابق هذا البحث</td></tr>`;
-        return;
+    } catch (error) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-danger">حدث خطأ في الاتصال بالخادم</td></tr>';
     }
-
-    suppliers.forEach(s => {
-        const row = `
-            <tr>
-                <td class="fw-bold text-royal small">${s.e_wallet || 'WAL-MAH-' + s.id}</td>
-                <td class="text-end">
-                    <div class="fw-bold">${s.trade_name}</div>
-                    <div class="small text-muted">${s.owner_name} | ${s.phone}</div>
-                </td>
-                <td class="small">${s.province} / ${s.district}</td>
-                <td><span class="badge bg-soft-royal text-royal border border-primary px-3">${s.tier}</span></td>
-                <td>
-                    <div class="small text-success fw-bold">${s.balances.YER} YER</div>
-                    <div class="small text-primary">${s.balances.SAR} SAR</div>
-                    <div class="small text-warning">${s.balances.USD} USD</div>
-                </td>
-                <td>
-                    <span class="badge ${s.status === 'active' ? 'bg-success' : 'bg-danger'} rounded-pill">
-                        ${s.status === 'active' ? 'نشط' : 'موقف'}
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-royal" onclick="openSovereignModal(${s.id})" title="إدارة الكيان">
-                        <i class="fas fa-tools"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-        tbody.insertAdjacentHTML('beforeend', row);
-    });
 }
 
-// --- 4. فتح النافذة السيادية وسحب البيانات الكاملة ---
-function openSovereignModal(id) {
-    currentSupplierId = id;
-    const modal = new bootstrap.Modal(document.getElementById('sovereignModal'));
-    
-    fetch(`/admin/api/get-supplier-full-details/${id}`)
-        .then(res => res.json())
-        .then(data => {
-            // تعبئة البيانات الأساسية
-            document.getElementById('m_title').innerText = `إدارة كيان: ${data.trade_name}`;
-            document.getElementById('m_owner_name').value = data.owner_name;
-            document.getElementById('m_username').value = data.username || '';
-            document.getElementById('m_province').value = data.province;
-            document.getElementById('m_district').value = data.district;
-            document.getElementById('m_tier').value = data.tier;
-            
-            // تعبئة الخزينة الثلاثية
-            document.getElementById('m_bal_yer').value = data.balances.YER;
-            document.getElementById('m_bal_sar').value = data.balances.SAR;
-            document.getElementById('m_bal_usd').value = data.balances.USD;
-            
-            // تصفير حقل كلمة المرور
-            document.getElementById('m_new_pass').value = '';
+// دالة جلب بيانات مورد محدد لفتح المودال
+async function viewSupplier(supplierId) {
+    try {
+        const response = await fetch(`/admin/api/suppliers/${supplierId}`);
+        const sup = await response.json();
 
-            // تعبئة الموظفين
-            renderStaff(data.staff);
-            
-            modal.show();
-        });
+        // تعبئة بيانات المودال
+        document.getElementById('m_title').innerText = `🛡️ تعديل كيان: ${sup.trade_name}`;
+        document.getElementById('m_owner_name').value = sup.owner_name;
+        document.getElementById('m_username').value = sup.username;
+        document.getElementById('m_province').value = sup.province;
+        document.getElementById('m_district').value = sup.district;
+        document.getElementById('m_bal_yer').value = sup.balance_yer;
+        document.getElementById('m_bal_sar').value = sup.balance_sar;
+        document.getElementById('m_bal_usd').value = sup.balance_usd;
+        document.getElementById('m_tier').value = sup.tier;
+
+        // تخزين معرف المورد في المودال لاستخدامه عند الحفظ
+        document.getElementById('sovereignModal').setAttribute('data-current-id', supplierId);
+
+        // جلب قائمة الموظفين التابعين له
+        loadStaffList(sup.staff);
+
+        var myModal = new bootstrap.Modal(document.getElementById('sovereignModal'));
+        myModal.show();
+    } catch (error) {
+        alert("فشل في جلب بيانات المورد");
+    }
 }
 
-// --- 5. إدارة طاقم العمل (الموظفين) ---
-function renderStaff(staff) {
+function loadStaffList(staffArray) {
     const list = document.getElementById('staffList');
     list.innerHTML = '';
-    
-    if (!staff || staff.length === 0) {
-        list.innerHTML = '<p class="text-center text-muted small py-3">لا يوجد موظفين مسجلين حالياً</p>';
+    if (!staffArray || staffArray.length === 0) {
+        list.innerHTML = '<p class="text-center text-muted small py-3">لا يوجد موظفون مرتبطون حالياً</p>';
         return;
     }
 
-    staff.forEach(user => {
-        const item = `
-            <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded-3 mb-2 border-end border-3 border-royal shadow-sm">
+    staffArray.forEach(s => {
+        list.innerHTML += `
+            <div class="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded border-end border-royal border-3">
                 <div>
-                    <div class="fw-bold small">${user.username}</div>
-                    <span class="badge bg-light text-muted" style="font-size: 10px;">موظف صلاحيات كاملة</span>
+                    <div class="small fw-bold">${s.name}</div>
+                    <small class="text-muted">${s.role}</small>
                 </div>
-                <button class="btn btn-sm btn-outline-danger border-0" onclick="resetStaffPass('${user.username}')">
-                    <i class="fas fa-key"></i>
-                </button>
+                <button class="btn btn-sm text-danger" onclick="removeStaff(${s.id})"><i class="fas fa-trash"></i></button>
             </div>
         `;
-        list.insertAdjacentHTML('beforeend', item);
     });
-}
-
-// --- 6. تعميد التعديلات وإرسالها للقاعدة ---
-function saveAllChanges() {
-    if (!currentSupplierId) return;
-
-    const payload = {
-        owner_name: document.getElementById('m_owner_name').value,
-        province: document.getElementById('m_province').value,
-        district: document.getElementById('m_district').value,
-        tier: document.getElementById('m_tier').value,
-        balance_yer: document.getElementById('m_bal_yer').value,
-        balance_sar: document.getElementById('m_bal_sar').value,
-        balance_usd: document.getElementById('m_bal_usd').value,
-        new_password: document.getElementById('m_new_pass').value
-    };
-
-    fetch(`/admin/api/update-sovereign-data/${currentSupplierId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert("✅ تم تعميد كافة التعديلات في قاعدة البيانات بنجاح");
-            bootstrap.Modal.getInstance(document.getElementById('sovereignModal')).hide();
-            triggerSearch(); // تحديث الجدول
-        } else {
-            alert("❌ خطأ: " + data.message);
-        }
-    });
-}
-
-// وظائف مساعدة
-function togglePass() {
-    const x = document.getElementById("m_new_pass");
-    x.type = x.type === "password" ? "text" : "password";
-}
-
-function resetFilters() {
-    document.getElementById('mainSearch').value = '';
-    document.getElementById('filterProvince').value = '';
-    document.getElementById('filterTier').value = '';
-    document.getElementById('filterStatus').value = '';
-    document.getElementById('resultsArea').style.display = 'none';
-    document.getElementById('emptyState').style.display = 'block';
 }
