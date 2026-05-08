@@ -132,7 +132,8 @@
     :root { --royal: #4a148c; --gold: #ffd700; }
     .sovereign-theme { font-family: 'Tajawal', sans-serif; background: #f8f9fa; }
     .sovereign-title { color: var(--royal); border-right: 6px solid var(--gold); padding-right: 15px; }
-    .btn-royal { background: var(--royal); color: var(--gold); border: 2px solid var(--gold); font-weight: bold; }
+    .btn-royal { background: var(--royal); color: var(--gold); border: 2px solid var(--gold); font-weight: bold; transition: 0.3s; }
+    .btn-royal:hover { background: #310e5d; color: #fff; transform: translateY(-2px); }
     .sovereign-input { border-radius: 8px; border: 1px solid #ddd; }
     .bg-soft-royal { background-color: rgba(74, 20, 140, 0.08); }
     .text-royal { color: var(--royal); }
@@ -163,12 +164,14 @@
                 const tbody = document.getElementById('suppliersTableBody');
                 tbody.innerHTML = '';
                 
-                // تحديث الإحصائيات ديناميكياً من نتائج البحث
                 updateStats(data);
 
                 data.forEach(sup => {
+                    // التعديل هنا: توجيه الرابط لمركز القيادة السيادي الجديد
+                    const profileUrl = `/admin/supplier/${sup.id}/profile`;
+                    
                     tbody.innerHTML += `
-                        <tr class="supplier-row" onclick="window.location.href='/admin/supplier/${sup.id}/manage'">
+                        <tr class="supplier-row" onclick="window.location.href='${profileUrl}'">
                             <td class="fw-bold text-royal">${sup.sovereign_id || 'SUP_'+sup.id+'#'}</td>
                             <td>
                                 <div class="fw-bold">${sup.trade_name}</div>
@@ -187,7 +190,7 @@
                                 </span>
                             </td>
                             <td>
-                                <a href="/admin/supplier/${sup.id}/manage" class="btn btn-sm btn-royal shadow-sm">
+                                <a href="${profileUrl}" class="btn btn-sm btn-royal shadow-sm">
                                     إدارة <i class="fas fa-arrow-left ms-1"></i>
                                 </a>
                             </td>
@@ -196,7 +199,10 @@
                 });
                 loader.style.display = 'none';
             })
-            .catch(err => { console.error(err); loader.style.display = 'none'; });
+            .catch(err => { 
+                console.error(err); 
+                loader.style.display = 'none'; 
+            });
     }
 
     function updateStats(data) {
@@ -204,7 +210,6 @@
         document.getElementById('stat_active').innerText = data.filter(s => s.status === 'active').length;
         document.getElementById('stat_sovereign').innerText = data.filter(s => s.tier === 'سيادي').length;
         
-        // حساب إجمالي الموظفين (إذا كانت البيانات توفر ذلك)
         let totalStaff = 0;
         data.forEach(s => { if(s.staff_count) totalStaff += s.staff_count; });
         document.getElementById('stat_staff').innerText = totalStaff;
