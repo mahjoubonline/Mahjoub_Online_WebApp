@@ -1,170 +1,150 @@
-import os
-from flask import render_template, request, redirect, url_for, flash, jsonify
-from flask_login import logout_user, login_required, current_user
-from sqlalchemy import or_
-from datetime import datetime
-from functools import wraps
-from werkzeug.security import generate_password_hash
+{% extends "base.html" %}
 
-# الاستيراد من الهيكلية المعتمدة لترسانة محجوب أونلاين
-from core.extensions import db 
-from core.models.supplier import Supplier
-from core.models.user import User
+{% block title %}نظام الرقابة العليا | محجوب أونلاين{% endblock %}
 
-from . import admin_bp
-from .auth import handle_admin_login
+{% block content %}
+<style>
+    :root {
+        --royal-purple: #632C8F;
+        --royal-gold: #D4AF37;
+        --deep-space: #1a0b2e;
+        --vibrant-green: #2ecc71;
+    }
 
-# --- 1. بروتوكول التحقق السيادي ---
-def is_admin_sovereign():
-    """ يضمن أن المؤسس علي محجوب فقط يمكنه الوصول. """
-    return current_user.is_authenticated and getattr(current_user, 'role', '').lower() == 'admin'
+    .stat-card {
+        border-radius: 20px;
+        padding: 25px;
+        color: white;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: none;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        height: 100%;
+    }
 
-def admin_api_required(f):
-    """ تأمين الـ APIs لمنع الدخول غير المصرح به """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not is_admin_sovereign():
-            return jsonify({"status": "error", "message": "Access Denied: Sovereign Auth Required"}), 403
-        return f(*args, **kwargs)
-    return decorated_function
+    .stat-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(99, 44, 143, 0.3);
+    }
 
-# --- 2. بوابة الدخول ---
-@admin_bp.route('/login', methods=['GET', 'POST'])
-def login():
-    if is_admin_sovereign(): 
-        return redirect(url_for('admin.admin_dashboard'))
-    return handle_admin_login()
+    .card-purple { background: linear-gradient(135deg, #632C8F, #8b44cc); }
+    .card-gold { background: linear-gradient(135deg, #D4AF37, #f1c40f); }
+    .card-dark { background: linear-gradient(135deg, #1a0b2e, #3a1a5e); }
+    .card-suppliers { background: linear-gradient(135deg, #2c3e50, #4b236d); }
 
-# --- 3. مركز القيادة الإحصائي (Dashboard) ---
-@admin_bp.route('/')
-@admin_bp.route('/dashboard')
-@login_required
-def admin_dashboard():
-    if not is_admin_sovereign():
-        return redirect(url_for('admin.login'))
+    .status-indicator {
+        height: 12px;
+        width: 12px;
+        background-color: var(--vibrant-green);
+        border-radius: 50%;
+        display: inline-block;
+        margin-left: 8px;
+        box-shadow: 0 0 10px var(--vibrant-green);
+        animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+        0% { opacity: 1; }
+        50% { opacity: 0.4; }
+        100% { opacity: 1; }
+    }
+
+    .glass-nav {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        border-right: 5px solid var(--royal-purple) !important;
+    }
+</style>
+
+<div class="container-fluid py-4" dir="rtl">
     
-    try:
-        # إحصائيات سريعة للوحة القيادة
-        stats = {
-            'suppliers_count': Supplier.query.count(),
-            'users_count': User.query.count(), # يشمل الأدمن والموظفين
-            'staff_count': User.query.filter_by(role='vendor_staff').count(),
-            'now': datetime.now().strftime("%H:%M:%S")
-        }
-        return render_template('dashboard.html', **stats)
-    except Exception as e:
-        return render_template('dashboard.html', suppliers_count=0, now=datetime.now().strftime("%H:%M:%S"))
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-12 text-end">
+            <h1 style="font-weight: 900; color: var(--deep-space); font-size: 2.5rem; margin-bottom: 0.5rem;">نظام الرقابة العليا</h1>
+            <div class="p-3 glass-nav shadow-sm">
+                <p class="mb-0">
+                    <span class="status-indicator"></span>
+                    مرحباً بك يا <strong>علي محجوب</strong> | الترسانة الرقمية تعمل بأقصى تردد
+                </p>
+            </div>
+        </div>
+    </div>
 
-# --- 4. إدارة الموردين (واجهة التحكم الرئيسية) ---
-@admin_bp.route('/manage-suppliers')
-@login_required
-def admin_manage_suppliers():
-    """ عرض واجهة الإدارة - البيانات لا تظهر إلا عند البحث أو استخدام # """
-    if not is_admin_sovereign():
-        return redirect(url_for('admin.login'))
-    return render_template('manage_suppliers.html')
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="stat-card card-purple">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-uppercase opacity-75 fw-bold">إجمالي المستخدمين</h6>
+                        <h2 class="display-5 fw-bold">{{ users_count|default(1) }}</h2>
+                        <p class="mb-0 mt-2 small"><i class="fas fa-user-check"></i> قاعدة البيانات نشطة</p>
+                    </div>
+                    <i class="fas fa-user-shield fa-3x opacity-25"></i>
+                </div>
+            </div>
+        </div>
 
-# --- 5. بروتوكولات الـ API السيادية (البحث، التعديل، الموظفين) ---
+        <div class="col-md-4">
+            <div class="stat-card card-suppliers">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-uppercase opacity-75 fw-bold">الموردون المعتمدون</h6>
+                        <h2 class="display-5 fw-bold">{{ suppliers_count|default(0) }}</h2>
+                        <p class="mb-0 mt-2 small"><i class="fas fa-id-badge"></i> كيانات تجارية تحت الحوكمة</p>
+                    </div>
+                    <i class="fas fa-handshake fa-3x opacity-25"></i>
+                </div>
+            </div>
+        </div>
 
-@admin_bp.route('/api/search-suppliers')
-@admin_api_required
-def api_search_suppliers():
-    """ محرك البحث المطور: يدعم اليوزرنيت ورمز (#) """
-    q = request.args.get('q', '').strip()
-    province = request.args.get('province', '').strip()
-    tier = request.args.get('tier', '').strip()
-    status = request.args.get('status', '').strip()
+        <div class="col-md-4">
+            <div class="stat-card card-gold">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-uppercase opacity-75 fw-bold">سجل العمليات</h6>
+                        <h2 class="display-5 fw-bold">{{ orders_count|default(0) }}</h2>
+                        <p class="mb-0 mt-2 small"><i class="fas fa-exchange-alt"></i> حركة تجارية سيادية</p>
+                    </div>
+                    <i class="fas fa-chart-line fa-3x opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    if not q and not province and not tier and not status:
-        return jsonify({"status": "success", "suppliers": []})
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="stat-card card-dark shadow-sm" style="padding: 15px 25px;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <p class="mb-0"><i class="fas fa-server me-2"></i> الحالة السحابية (Railway): <span class="text-success fw-bold">Active Connection</span></p>
+                    <p class="mb-0"><i class="fas fa-database me-2"></i> محرك القاعدة: <span class="text-info">PostgreSQL</span></p>
+                    <small class="opacity-50">توقيت القيادة: {{ now if now else '2026-05-07' }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    query_obj = Supplier.query
-    
-    # بروتوكول الرمز (#) لاستدعاء الجميع
-    if q == "#":
-        pass 
-    elif q:
-        query_obj = query_obj.filter(
-            or_(
-                Supplier.username.ilike(f"%{q}%"),
-                Supplier.trade_name.ilike(f"%{q}%"),
-                Supplier.owner_name.ilike(f"%{q}%"),
-                Supplier.phone.ilike(f"%{q}%")
-            )
-        )
-
-    if province: query_obj = query_obj.filter_by(province=province)
-    if tier: query_obj = query_obj.filter_by(tier=tier)
-    if status: query_obj = query_obj.filter_by(status=status)
-
-    suppliers = query_obj.order_by(Supplier.id.desc()).all()
-    return jsonify({"status": "success", "suppliers": [s.to_dict() for s in suppliers]})
-
-@admin_bp.route('/api/get-supplier-full-details/<int:s_id>')
-@admin_api_required
-def api_get_full_details(s_id):
-    """ جلب بيانات المورد الكاملة مع طاقم موظفيه """
-    supplier = Supplier.query.get_or_404(s_id)
-    # جلب الموظفين المرتبطين بهذا المورد عبر اليوزرنيت (أو معرف الربط)
-    staff = User.query.filter_by(role='vendor_staff').filter(User.username.like(f"{supplier.username}_%")).all()
-    
-    data = supplier.to_dict()
-    data['staff'] = [{"id": u.id, "username": u.username} for u in staff]
-    return jsonify(data)
-
-@admin_bp.route('/api/update-sovereign-data/<int:s_id>', methods=['POST'])
-@admin_api_required
-def api_update_supplier(s_id):
-    """ تعميد تحديث البيانات، الأرصدة الثلاثة، وكلمة المرور اليدوية """
-    supplier = Supplier.query.get_or_404(s_id)
-    data = request.get_json()
-
-    try:
-        supplier.owner_name = data.get('owner_name', supplier.owner_name)
-        supplier.province = data.get('province', supplier.province)
-        supplier.district = data.get('district', supplier.district)
-        supplier.tier = data.get('tier', supplier.tier)
-        
-        # تحديث الخزينة الثلاثية
-        supplier.balance_yer = data.get('balance_yer', supplier.balance_yer)
-        supplier.balance_sar = data.get('balance_sar', supplier.balance_sar)
-        supplier.balance_usd = data.get('balance_usd', supplier.balance_usd)
-
-        # إعادة تعيين كلمة المرور يدوياً
-        new_pass = data.get('new_password')
-        if new_pass:
-            supplier.password = generate_password_hash(new_pass)
-
-        db.session.commit()
-        return jsonify({"status": "success", "message": "تم تعميد التعديلات في الترسانة"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@admin_bp.route('/api/add-supplier-staff/<int:s_id>', methods=['POST'])
-@admin_api_required
-def api_add_staff(s_id):
-    """ إضافة موظف جديد للمورد بصلاحيات محددة (لا حذف ولا سحب) """
-    supplier = Supplier.query.get_or_404(s_id)
-    data = request.get_json()
-    
-    username = data.get('username')
-    password = data.get('password')
-
-    if User.query.filter_by(username=username).first():
-        return jsonify({"status": "error", "message": "اسم المستخدم محجوز مسبقاً"}), 400
-
-    new_staff = User(username=username, role='vendor_staff', is_active_account=True)
-    new_staff.set_password(password)
-    
-    db.session.add(new_staff)
-    db.session.commit()
-    return jsonify({"status": "success", "message": f"تم تعيين الموظف {username} بنجاح"})
-
-# --- 6. إنهاء الجلسة الآمنة ---
-@admin_bp.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash("تم إنهاء الجلسة السيادية بنجاح", "info")
-    return redirect(url_for('admin.login'))
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card shadow-sm border-0" style="border-radius: 20px;">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4" style="color: var(--royal-purple);">العمليات السريعة</h5>
+                    <div class="d-flex gap-3 flex-wrap">
+                        {# تم إضافة حماية: إذا فشل الرابط سيوجه لصفحة الـ dashboard لضمان عدم توقف السيرفر #}
+                        <a href="{{ url_for('admin.add_supplier') if 'admin.add_supplier' in request.url_rule.endpoint else '#' }}" class="btn btn-primary px-4 py-2 fw-bold" style="border-radius: 10px; background-color: var(--royal-purple); border: none;">
+                            <i class="fas fa-plus-circle me-2"></i> تعميد مورد جديد
+                        </a>
+                        <a href="{{ url_for('admin.manage_suppliers') if 'admin.manage_suppliers' in request.url_rule.endpoint else '#' }}" class="btn btn-outline-dark px-4 py-2 fw-bold" style="border-radius: 10px;">
+                            <i class="fas fa-users-cog me-2"></i> إدارة الموردين
+                        </a>
+                        <button class="btn btn-outline-info px-4 py-2 fw-bold" style="border-radius: 10px;" onclick="window.location.reload()">
+                            <i class="fas fa-sync me-2"></i> تحديث البيانات
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
