@@ -145,14 +145,13 @@
     }
 
     .manual-input { margin-top: 10px; border-color: var(--gov-gold); display: none; }
-    .processing { pointer-events: none; opacity: 0.8; }
 </style>
 
 <div class="form-container" id="mainContainer">
     <div class="form-header">
         <div>
             <h2 style="margin:0; font-weight: 900;">🛡️ نظام التعميد السيادي</h2>
-            <small style="opacity: 0.9;">تسجيل مورد جديد في ترسانة محجوب أونلاين</small>
+            <small style="opacity: 0.9;">أرشفة مورد جديد في ترسانة محجوب أونلاين</small>
         </div>
         <div style="text-align:left; background: rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3);">
             <small>المعرف السيادي القادم</small><br>
@@ -171,7 +170,7 @@
         <div class="grid-layout">
             <div class="input-box">
                 <label>اسم المستخدم (للدخول)</label>
-                <input type="text" name="username" class="form-control-gov" placeholder="مثال: ali_store" required>
+                <input type="text" name="username" class="form-control-gov" placeholder="مثال: mahjoub_store" required>
             </div>
             <div class="input-box">
                 <label>كلمة المرور المؤقتة</label>
@@ -193,12 +192,12 @@
         <div class="section-banner"><i class="fas fa-id-card"></i> بيانات المالك والتوثيق</div>
         <div class="grid-layout">
             <div class="input-box" style="grid-column: span 2;">
-                <label>اسم المالك الكامل</label>
-                <input type="text" name="owner_name" class="form-control-gov" placeholder="الاسم كما في الهوية" required>
+                <label>اسم المالك الكامل (كما في الهوية)</label>
+                <input type="text" name="owner_name" class="form-control-gov" placeholder="الاسم الرباعي الكامل" required>
             </div>
             <div class="input-box">
-                <label>الاسم التجاري</label>
-                <input type="text" name="trade_name" class="form-control-gov" placeholder="اسم المحل أو الشركة" required>
+                <label>الاسم التجاري للمنشأة</label>
+                <input type="text" name="trade_name" class="form-control-gov" placeholder="اسم المحل المعتمد" required>
             </div>
             <div class="input-box">
                 <label>رقم الهاتف (الواتساب)</label>
@@ -206,10 +205,10 @@
             </div>
         </div>
 
-        <div class="section-banner"><i class="fas fa-university"></i> المحفظة السيادية والربط المالي</div>
+        <div class="section-banner"><i class="fas fa-university"></i> المحفظة والربط المالي</div>
         <div class="grid-layout">
             <div class="input-box" style="grid-column: span 2;">
-                <label>بروتوكول الاستلام المالي</label>
+                <label>بروتوكول التحويل المالي</label>
                 <div style="display: flex; gap: 15px;">
                     <div class="fin-card active" id="btn_banks" onclick="setFinance('banks')" style="flex:1;">
                         <i class="fa-solid fa-building-columns fa-2x"></i>
@@ -222,20 +221,20 @@
                 </div>
             </div>
             <div class="input-box">
-                <label>اسم الجهة المالية</label>
+                <label>اسم البنك / شركة الصرافة</label>
                 <select name="bank_name_select" id="bank_select" class="form-control-gov" onchange="handleManualSelection(this, 'bank_name')" required>
                     <option value="">اختر من القائمة...</option>
                 </select>
                 <input type="hidden" name="bank_name" id="bank_name">
-                <input type="text" id="manual_bank" class="form-control-gov manual-input" placeholder="اسم البنك يدوياً">
+                <input type="text" id="manual_bank" class="form-control-gov manual-input" placeholder="اسم الجهة يدوياً">
             </div>
             <div class="input-box">
-                <label>رقم الحساب / الآيبان</label>
-                <input type="text" name="bank_acc" class="form-control-gov" placeholder="رقم حساب الاستلام" required>
+                <label>رقم الحساب المعتمد</label>
+                <input type="text" name="bank_acc" class="form-control-gov" placeholder="رقم الحساب أو الآيبان" required>
             </div>
         </div>
 
-        <div class="section-banner"><i class="fas fa-map-marker-alt"></i> النطاق الجغرافي</div>
+        <div class="section-banner"><i class="fas fa-map-marker-alt"></i> النطاق الجغرافي والعنوان</div>
         <div class="grid-layout">
             <div class="input-box">
                 <label>المحافظة</label>
@@ -249,6 +248,10 @@
                     <option value="">حدد المحافظة أولاً</option>
                 </select>
             </div>
+            <div class="input-box" style="grid-column: span 2;">
+                <label>العنوان التفصيلي (الشارع، الحي، أقرب معلم)</label>
+                <input type="text" name="address_detail" class="form-control-gov" placeholder="مثال: شارع جمال - خلف بنك اليمن والبحرين" required>
+            </div>
         </div>
 
         <div style="padding: 40px 30px;">
@@ -259,15 +262,15 @@
 
 <script>
     const geoData = {
-        "الحديدة": ["الخوخة", "حيس", "زبيد", "باجل", "الميناء"],
-        "صنعاء": ["السبعين", "التحرير", "بني الحارث"],
-        "عدن": ["المنصورة", "الشيخ عثمان", "كريتر"],
-        "تعز": ["المخاء", "القاهرة"]
+        "الحديدة": ["الخوخة", "حيس", "زبيد", "باجل", "الميناء", "الحوك"],
+        "صنعاء": ["السبعين", "التحرير", "بني الحارث", "الوحدة"],
+        "عدن": ["المنصورة", "الشيخ عثمان", "كريتر", "المعلا"],
+        "تعز": ["المخاء", "القاهرة", "المظفر"]
     };
 
     const finData = {
-        "banks": ["بنك الكريمي الإسلامي", "بنك التضامن", "بنك القطيبي", "بنك اليمن والبحرين"],
-        "exchange": ["شركة المريسي", "شركة سويد", "شركة النجم"]
+        "banks": ["بنك الكريمي الإسلامي", "بنك التضامن", "بنك القطيبي", "بنك اليمن والبحرين", "بنك اليمن الدولي"],
+        "exchange": ["شركة المريسي", "شركة سويد", "شركة النجم", "شركة الصيفي"]
     };
 
     function handleManualSelection(selectObj, hiddenId) {
@@ -289,7 +292,7 @@
         const dSelect = document.getElementById('dist_select');
         dSelect.innerHTML = '<option value="">اختر المديرية...</option>';
         if(geoData[prov]) {
-            geoData[prov].forEach(d => dSelect.add(new Option(d, d)));
+            geoData[prov].sort().forEach(d => dSelect.add(new Option(d, d)));
         }
     }
 
@@ -299,11 +302,10 @@
         
         const bSelect = document.getElementById('bank_select');
         bSelect.innerHTML = '<option value="">اختر من القائمة...</option>';
-        finData[type].forEach(item => bSelect.add(new Option(item, item)));
+        finData[type].sort().forEach(item => bSelect.add(new Option(item, item)));
         bSelect.add(new Option("أخرى (إدخال يدوي)...", "manual"));
     }
 
-    // إدارة الإرسال بنظام AJAX لضمان تجربة مستخدم سيادية
     document.getElementById('sovereignForm').onsubmit = async function(e) {
         e.preventDefault();
         
@@ -315,7 +317,7 @@
         }
 
         const submitBtn = document.getElementById('submitBtn');
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الأرشفة...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الأرشفة في الترسانة...';
         submitBtn.disabled = true;
 
         try {
@@ -329,16 +331,16 @@
             const result = await response.json();
             if (response.ok && result.status === 'success') {
                 Swal.fire({
-                    title: '✅ تم التعميد',
+                    title: '✅ تم التعميد بنجاح',
                     text: result.message,
                     icon: 'success',
                     confirmButtonColor: '#632C8F'
                 }).then(() => window.location.href = "{{ url_for('admin.manage_suppliers') }}");
             } else {
-                throw new Error(result.message || 'فشل في الاتصال بالترسانة');
+                throw new Error(result.message || 'فشل الاتصال بنظام محجوب');
             }
         } catch (err) {
-            Swal.fire('❌ خطأ', err.message, 'error');
+            Swal.fire('❌ عطل في البروتوكول', err.message, 'error');
             submitBtn.disabled = false;
             submitBtn.innerHTML = '🛡️ إتمام التعميد والأرشفة';
         }
