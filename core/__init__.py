@@ -1,4 +1,3 @@
-# core/__init__.py
 from flask import Flask
 from flask_login import LoginManager
 from .extensions import db  # استدعاء db من الهيكلية المعتمدة للنظام
@@ -26,28 +25,30 @@ def create_app():
 
     with app.app_context():
         # 4. استدعاء الموديلات (Models) لضمان تسجيل الجداول في النواة
-        # استيراد Supplier هنا يضمن تفعيل نظام الأرصدة الثلاثية في القاعدة
         from .models.user import User
         from .models.supplier import Supplier
         
         # 5. تعميد الجداول (Database Synchronization)
-        # سيقوم بإنشاء الجداول المفقودة تلقائياً دون المساس بالبيانات الموجودة
+        # سيقوم بإنشاء الجداول المفقودة تلقائياً
         db.create_all()
         
         # 6. تسجيل لوحة تحكم "محجوب أونلاين" (Blueprint Registration)
         try:
             from admin_panel import admin_bp
-            # ربط بوابة الإدارة بالمسار المعتمد /admin لضمان عزل الصلاحيات
+            # تسجيل البلوبرينت مع التأكد من عزل المسارات
             app.register_blueprint(admin_bp) 
-            # ملاحظة: الـ url_prefix مضاف مسبقاً في تعريف الـ Blueprint في ملفه الخاص
         except ImportError as e:
-            # في حال عدم وجود المجلد أو خطأ في الاستيراد، يتم تسجيل التحذير
             print(f"⚠️ Warning: Admin Panel could not be registered. Error: {e}")
 
-        # 7. بروتوكول استعادة المستخدم (User Loader)
-        # المحرك الذي يتعرف على "علي محجوب" عند دخوله للمنظومة
+        # 7. بروتوكول استعادة المستخدم الذكي (Multi-Entity User Loader)
+        # هذا المحرك يتعرف على الهوية سواء كان داخلاً كـ "مدير" أو "مورد"
         @login_manager.user_loader
         def load_user(user_id):
-            return User.query.get(int(user_id))
+            # أولاً: البحث في جدول الإدارة والمستخدمين
+            user = User.query.get(int(user_id))
+            if user:
+                return user
+            # ثانياً: إذا لم يوجد، البحث في جدول الموردين (للسماح لهم بدخول لوحاتهم مستقبلاً)
+            return Supplier.query.get(int(user_id))
 
     return app
