@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # --- بروتوكول تثبيت المسارات (Railway Patch) ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -17,13 +18,13 @@ except (ImportError, ModuleNotFoundError):
 class Supplier(db.Model):
     """
     نموذج الموردين المطور - منظومة محجوب أونلاين
-    يدعم المحفظة الموحدة متعددة العملات والمعرفات المتطابقة
+    يدعم المحفظة الموحدة متعددة العملات والمعرفات المتطابقة والتشفير السيادي
     """
     __tablename__ = 'suppliers'
     
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False) 
+    password_hash = db.Column(db.String(255), nullable=False) # تغيير الاسم ليتناسب مع نظام التشفير
     
     owner_name = db.Column(db.String(150), nullable=True)
     trade_name = db.Column(db.String(150), nullable=True)
@@ -39,7 +40,8 @@ class Supplier(db.Model):
     phone = db.Column(db.String(20), nullable=True) 
     
     # --- النظام المالي الموحد (Multi-Currency Vault) ---
-    e_wallet = db.Column(db.String(100), unique=True, nullable=True) # المعرف الموحد WAL_MAH_963...
+    e_wallet = db.Column(db.String(100), unique=True, nullable=True) # المعرف الموحد WAL_MAH_...
+    sovereign_id = db.Column(db.String(100), unique=True, nullable=True) # المعرف الرقمي للمورد
     
     # أرصدة العملات الثلاث
     balance_yer = db.Column(db.Numeric(20, 2), default=0.00) # ريال يمني
@@ -52,12 +54,23 @@ class Supplier(db.Model):
     status = db.Column(db.String(20), default='active') 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # --- بروتوكولات الحماية والتعميد ---
+
+    def set_password(self, password):
+        """تشفير كلمة المرور بنظام الترسانة الرقمية"""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """التحقق من مطابقة مفتاح الدخول"""
+        return check_password_hash(self.password_hash, password)
+
     def mint_sovereign_id(self):
-        """نقش المعرف السيادي الموحد للمورد ومحفظته"""
+        """نقش المعرف السيادي الموحد للمورد ومحفظته يدوياً"""
         if self.id:
-            sovereign_tag = f"963{self.id}"
+            sovereign_tag = f"963{self.id:03d}"
             self.e_wallet = f"WAL_MAH_{sovereign_tag}"
-            return f"SUP_MAH_{sovereign_tag}"
+            self.sovereign_id = f"SUP_MAH_{sovereign_tag}"
+            return self.sovereign_id
         return None
 
     def to_dict(self):
@@ -71,6 +84,7 @@ class Supplier(db.Model):
             "tier": self.tier,
             "status": self.status,
             "e_wallet": self.e_wallet,
+            "sovereign_id": self.sovereign_id,
             "balances": {
                 "YER": float(self.balance_yer),
                 "SAR": float(self.balance_sar),
@@ -79,4 +93,4 @@ class Supplier(db.Model):
         }
 
     def __repr__(self):
-        return f'<Supplier {self.trade_name} | Wallet: {self.e_wallet}>'
+        return f'<Supplier {self.trade_name} | ID: {self.sovereign_id}>'
