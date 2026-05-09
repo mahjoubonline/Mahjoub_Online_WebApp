@@ -44,8 +44,8 @@ class Supplier(db.Model):
     email = db.Column(db.String(120), nullable=True) # مضاف للاتصال الرسمي
     
     # --- النظام المالي الموحد (Multi-Currency Vault) ---
-    e_wallet = db.Column(db.String(100), unique=True, nullable=True) # WAL_MAH_...
-    sovereign_id = db.Column(db.String(100), unique=True, nullable=True) # SUP_MAH_...
+    e_wallet = db.Column(db.String(100), unique=True, nullable=True) # WAL_MAH_963...
+    sovereign_id = db.Column(db.String(100), unique=True, nullable=True) # SUP_MAH_963...
     
     # الأرصدة السيادية
     balance_yer = db.Column(db.Numeric(20, 2), default=0.00) 
@@ -62,7 +62,6 @@ class Supplier(db.Model):
     last_login = db.Column(db.DateTime, nullable=True)
 
     # --- العلاقات (Relationships) ---
-    # علاقة مع الموظفين التابعين لهذا المورد
     staff = db.relationship('SupplierStaff', backref='employer', lazy=True, cascade="all, delete-orphan")
 
     # --- بروتوكولات الحماية والتعميد ---
@@ -76,10 +75,13 @@ class Supplier(db.Model):
         return check_password_hash(self.password_hash, password)
 
     def mint_sovereign_id(self):
-        """توليد المعرف السيادي الموحد بناءً على الرقم التسلسلي"""
+        """
+        توليد المعرف السيادي الموحد بناءً على النمط التسلسلي الجديد 963
+        مثال: المورد 1 يصبح 9631، المورد 2 يصبح 9632
+        """
         if self.id:
-            # استخدام نمط 963 ككود دولي خاص بالمنصة
-            tag = f"963{self.id:04d}" 
+            # التعديل المطلوب: دمج الـ 963 مع الـ ID مباشرة بدون أصفار حشو اختيارية ليكون (9631, 9632...)
+            tag = f"963{self.id}" 
             self.e_wallet = f"WAL_MAH_{tag}"
             self.sovereign_id = f"SUP_MAH_{tag}"
             return self.sovereign_id
@@ -113,7 +115,6 @@ class Supplier(db.Model):
     def __repr__(self):
         return f'<Supplier {self.trade_name} | Sovereign_ID: {self.sovereign_id}>'
 
-# نموذج فرعي اختياري للموظفين (Staff) لإظهاره في المودال
 class SupplierStaff(db.Model):
     __tablename__ = 'supplier_staff'
     id = db.Column(db.Integer, primary_key=True)
