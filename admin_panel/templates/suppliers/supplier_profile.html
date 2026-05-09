@@ -4,17 +4,26 @@
 
 {% block content %}
 
-<!-- 1. الماكرو: يجب أن يكون في البداية ليتمكن Jinja2 من التعرف عليه قبل استخدامه بالأسفل -->
+<!-- 1. الماكرو المطور: يتعرف على حقول الرصيد ويحميها من التعديل -->
 {% macro edit_field(label, field_name, value, col_class, extra_class="") %}
 <div class="{{ col_class }} field-group position-relative">
     <label class="small text-muted">{{ label }}</label>
-    <div class="d-flex align-items-center justify-content-between editable-wrapper p-2" onclick="enableEdit('{{ field_name }}')">
-        <div id="display-{{ field_name }}" class="field-value {{ extra_class }}">{{ value if value != None else '---' }}</div>
-        <input type="text" id="input-{{ field_name }}" class="form-control edit-input d-none" 
-               value="{{ value }}" onblur="saveData('{{ field_name }}')" 
-               onkeyup="if(event.key==='Enter') this.blur()">
-        <i class="fas fa-pen-nib edit-icon ms-2" id="icon-{{ field_name }}"></i>
-        <span class="save-spinner d-none" id="spinner-{{ field_name }}"><i class="fas fa-sync fa-spin text-success"></i></span>
+    {# تعطيل النقر وإخفاء القلم إذا كان الحقل للرصيد (يحتوي على كلاس balance) #}
+    <div class="d-flex align-items-center justify-content-between editable-wrapper p-2" 
+         {% if 'balance' not in extra_class %} onclick="enableEdit('{{ field_name }}')" {% else %} style="cursor: default;" {% endif %}>
+        
+        <div id="display-{{ field_name }}" class="field-value {{ extra_class }}">
+            {# تنسيق الأرقام بفاصلة الآلاف إذا كان رصيداً #}
+            {{ "{:,.2f}".format(value) if 'balance' in extra_class and value != None else (value if value != None else '---') }}
+        </div>
+
+        {% if 'balance' not in extra_class %}
+            <input type="text" id="input-{{ field_name }}" class="form-control edit-input d-none" 
+                   value="{{ value }}" onblur="saveData('{{ field_name }}')" 
+                   onkeyup="if(event.key==='Enter') this.blur()">
+            <i class="fas fa-pen-nib edit-icon ms-2" id="icon-{{ field_name }}"></i>
+            <span class="save-spinner d-none" id="spinner-{{ field_name }}"><i class="fas fa-sync fa-spin text-success"></i></span>
+        {% endif %}
     </div>
 </div>
 {% endmacro %}
@@ -92,8 +101,9 @@
 <style>
     /* التنسيقات الملكية - Mahjoub Online */
     .field-group { transition: 0.3s; border-radius: 10px; }
-    .editable-wrapper { cursor: pointer; border-bottom: 1px solid transparent; min-height: 45px; }
-    .editable-wrapper:hover { border-bottom-color: #632C8F; background: #f4f0f9; border-radius: 8px; }
+    .editable-wrapper { border-bottom: 1px solid transparent; min-height: 45px; }
+    /* إخفاء تأثير التحويم فقط في الحقول القابلة للتعديل */
+    .editable-wrapper[onclick]:hover { cursor: pointer; border-bottom-color: #632C8F; background: #f4f0f9; border-radius: 8px; }
     .edit-icon { font-size: 0.7rem; color: #cbd5e1; transition: 0.3s; }
     .editable-wrapper:hover .edit-icon { color: #632C8F; }
     .edit-input { border: 1px solid #632C8F !important; font-size: 1rem; padding: 2px 8px; height: auto; }
@@ -105,18 +115,23 @@
     .icon-gold { background: #fef9c3; color: #854d0e; }
     .icon-blue { background: #e0f2fe; color: #0369a1; }
     .currency-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin: 0; padding: 5px; }
-    .balance { font-size: 1.2rem; font-weight: 900; color: #1e293b; }
+    .balance { font-size: 1.2rem; font-weight: 900; color: #632C8F; }
     .section-header { border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
     .sovereign-tag { background: #632C8F; color: gold; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
 </style>
 
 <script>
     function enableEdit(fieldName) {
-        document.getElementById('display-' + fieldName).classList.add('d-none');
-        document.getElementById('icon-' + fieldName).classList.add('d-none');
+        const display = document.getElementById('display-' + fieldName);
+        const icon = document.getElementById('icon-' + fieldName);
         const input = document.getElementById('input-' + fieldName);
-        input.classList.remove('d-none');
-        input.focus();
+        
+        if (input) { // التأكد من وجود حقل إدخال (غير موجود في الرصيد)
+            display.classList.add('d-none');
+            icon.classList.add('d-none');
+            input.classList.remove('d-none');
+            input.focus();
+        }
     }
 
     async function saveData(fieldName) {
@@ -125,8 +140,9 @@
         const icon = document.getElementById('icon-' + fieldName);
         const spinner = document.getElementById('spinner-' + fieldName);
         
+        if (!input) return;
+
         const newValue = input.value;
-        
         input.classList.add('d-none');
         spinner.classList.remove('d-none');
 
@@ -141,7 +157,7 @@
 
             if (result.status === 'success') {
                 display.innerText = newValue || '---';
-                display.style.color = '#10b981'; // ومضة نجاح خضراء
+                display.style.color = '#10b981';
                 setTimeout(() => { display.style.color = ''; }, 2000);
             } else {
                 throw new Error(result.message);
