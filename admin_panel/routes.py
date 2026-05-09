@@ -11,11 +11,15 @@ from core.extensions import db
 from core.models.supplier import Supplier, SupplierStaff
 from core.models.user import User
 
-# إضافة أداة الأرشفة السيادية
-from core.utils.archive_manager import archive_sys
-
 from . import admin_bp
 from .auth import handle_admin_login
+
+# محاولة استيراد نظام الأرشفة بأمان (لتجنب انهيار النظام إذا غاب الملف)
+try:
+    from core.utils.archive_manager import archive_sys
+    HAS_ARCHIVE_SYSTEM = True
+except ImportError:
+    HAS_ARCHIVE_SYSTEM = False
 
 # إعدادات رفع الملفات السيادية
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
@@ -77,7 +81,7 @@ def manage_suppliers():
         return redirect(url_for('admin.login'))
     return render_template('manage_suppliers.html')
 
-# --- 5. إضافة وتعمد مورد جديد (مع دمج الأرشفة السيادية الصامتة) ---
+# --- 5. إضافة وتعمد مورد جديد (مع ميزة الأرشفة الذكية) ---
 @admin_bp.route('/add-supplier', methods=['GET', 'POST'])
 @login_required
 def add_supplier():
@@ -87,11 +91,19 @@ def add_supplier():
     if request.method == 'POST':
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         try:
-            # التحقق من تكرار اسم المستخدم
             if Supplier.query.filter_by(username=request.form.get('username')).first():
-                return jsonify({'status': 'error', 'message': 'عذراً.. اسم المستخدم هذا مسجل مسبقاً في الترسانة'}), 400
+                return jsonify({'status': 'error', 'message': 'عذراً.. اسم المستخدم هذا مسجل مسبقاً'}), 400
 
-            # إنشاء الكيان الجديد وفقاً لمعايير v3.6 (نبدأ به هنا للحصول على الـ ID)
+            identity_path = None
+            if 'identity_image' in request.files:
+                file = request.files['identity_image']
+                if file and file.filename != '' and allowed_file(file.filename):
+                    upload_folder = os.path.join('static', 'uploads', 'suppliers', 'ids')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    filename = secure_filename(f"ID_{request.form.get('username')}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{file.filename.rsplit('.', 1)[1].lower()}")
+                    file.save(os.path.join(upload_folder, filename))
+                    identity_path = f"uploads/suppliers/ids/{filename}"
+
             new_supplier = Supplier(
                 username=request.form.get('username'),
                 email=request.form.get('email'),
@@ -100,6 +112,7 @@ def add_supplier():
                 activity_type=request.form.get('activity_type'),
                 phone=request.form.get('phone'),
                 identity_type=request.form.get('identity_type'),
+                identity_image_url=identity_path,
                 province=request.form.get('province'),
                 district=request.form.get('district'),
                 address_detail=request.form.get('address_detail'),
@@ -112,42 +125,23 @@ def add_supplier():
             new_supplier.set_password(request.form.get('password', '123456'))
             db.session.add(new_supplier)
             db.session.flush() 
-            new_supplier.mint_sovereign_id() # تعميد الهوية (963...)
-
-            # --- بروتوكول الأرشفة المزدوج (محلي + سحابي) ---
-            identity_path = None
-            if 'identity_image' in request.files:
-                file = request.files['identity_image']
-                if file and file.filename != '' and allowed_file(file.filename):
-                    # 1. الحفظ المحلي (كما في كودك الأصلي)
-                    upload_folder = os.path.join('static', 'uploads', 'suppliers', 'ids')
-                    os.makedirs(upload_folder, exist_ok=True)
-                    filename = secure_filename(f"ID_{new_supplier.sovereign_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{file.filename.rsplit('.', 1)[1].lower()}")
-                    file.save(os.path.join(upload_folder, filename))
-                    identity_path = f"uploads/suppliers/ids/{filename}"
-                    
-                    # 2. الأرشفة السيادية الصامتة (إلى GitHub)
-                    # نعيد قراءة الملف للأرشفة لأن save() استهلكته
-                    file.seek(0)
-                    github_url = archive_sys.archive_file(
-                        file_data=file,
-                        filename=f"ARCHIVE_{filename}",
+            new_supplier.mint_sovereign_id()
+            
+            # محاولة الأرشفة إلى السحابة فقط إذا كان النظام متاحاً
+            if HAS_ARCHIVE_SYSTEM:
+                try:
+                    archive_sys.archive_data_as_json(
+                        data_dict=new_supplier.to_dict(),
+                        filename=f"REGISTRY_{new_supplier.sovereign_id}",
                         entity_id=new_supplier.sovereign_id
                     )
-                    # نعتمد الرابط المحلي للقاعدة، ونحتفظ برابط السحابة كنسخة احتياطية في الأرشفة
-                    new_supplier.identity_image_url = identity_path
+                except:
+                    pass # فشل الأرشفة لا يعطل التسجيل الأساسي
 
-            # أرشفة بيانات التسجيل كاملة كملف JSON في المستودع
-            archive_sys.archive_data_as_json(
-                data_dict=new_supplier.to_dict(),
-                filename=f"REGISTRY_{new_supplier.sovereign_id}",
-                entity_id=new_supplier.sovereign_id
-            )
-            
             db.session.commit()
             
             if is_ajax: 
-                return jsonify({'status': 'success', 'message': f'تم تعميد المورد {new_supplier.trade_name} بنجاح تحت المعرف {new_supplier.sovereign_id} وتمت الأرشفة السيادية بنجاح'})
+                return jsonify({'status': 'success', 'message': f'تم تعميد المورد {new_supplier.trade_name} بنجاح برقم {new_supplier.sovereign_id}'})
             return redirect(url_for('admin.manage_suppliers'))
             
         except Exception as e:
@@ -159,14 +153,13 @@ def add_supplier():
     next_id = (last_s.id + 1) if last_s else 1
     return render_template('add_supplier.html', next_id=next_id)
 
-# --- 6. محرك التحديث التلقائي (Auto-Save مع الأرشفة التلقائية للتعديلات) ---
+# --- 6. محرك التحديث التلقائي ---
 @admin_bp.route('/supplier/<int:supplier_id>/update_field', methods=['POST'])
 @admin_api_required
 def update_supplier_field(supplier_id):
     data = request.get_json()
     field_name = data.get('field')
     new_value = data.get('value')
-    
     supplier = Supplier.query.get_or_404(supplier_id)
     
     allowed_fields = [
@@ -185,23 +178,26 @@ def update_supplier_field(supplier_id):
                 try:
                     new_value = float(new_value) if new_value else 0.0
                 except ValueError:
-                    return jsonify({"status": "error", "message": "يجب إدخال قيمة رقمية صحيحة"}), 400
+                    return jsonify({"status": "error", "message": "يجب إدخال قيمة رقمية"}), 400
             
             setattr(supplier, field_name, new_value)
             db.session.commit()
-
-            # أرشفة التغيير سيادياً (تحديث سجل البيانات في GitHub)
-            archive_sys.archive_data_as_json(
-                data_dict=supplier.to_dict(),
-                filename=f"UPDATE_{field_name}_{datetime.now().strftime('%H%M%S')}",
-                entity_id=supplier.sovereign_id,
-                folder_name="Updates"
-            )
             
-            response_data = {"status": "success", "message": f"تم تحديث {field_name} وأرشفة التغيير"}
+            # أرشفة التعديل اختيارياً
+            if HAS_ARCHIVE_SYSTEM:
+                try:
+                    archive_sys.archive_data_as_json(
+                        data_dict={"field": field_name, "value": new_value, "time": str(datetime.now())},
+                        filename=f"UPDATE_{supplier.sovereign_id}_{field_name}",
+                        entity_id=supplier.sovereign_id,
+                        folder_name="Updates"
+                    )
+                except:
+                    pass
+
+            response_data = {"status": "success", "message": f"تم تحديث {field_name} بنجاح"}
             if field_name == 'status':
                 response_data['new_color'] = supplier.get_status_color()
-                
             return jsonify(response_data)
         return jsonify({"status": "error", "message": "الحقل غير موجود"}), 404
             
