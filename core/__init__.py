@@ -25,17 +25,18 @@ def create_app():
 
     with app.app_context():
         # 4. استدعاء الموديلات (Models) لضمان تسجيل الجداول في النواة
+        # تم الاستيراد هنا لضمان أن db.create_all() يرى جميع المخططات
         from .models.user import User
         from .models.supplier import Supplier
         
         # 5. تعميد الجداول (Database Synchronization)
-        # سيقوم بإنشاء الجداول المفقودة تلقائياً
+        # سيقوم بإنشاء الجداول المفقودة وتحديث البنية
         db.create_all()
         
         # 6. تسجيل لوحة تحكم "محجوب أونلاين" (Blueprint Registration)
         try:
             from admin_panel import admin_bp
-            # تسجيل البلوبرينت مع التأكد من عزل المسارات
+            # تسجيل البلوبرينت مع بادئة مسار واضحة إذا لزم الأمر أو تركها افتراضية
             app.register_blueprint(admin_bp) 
         except ImportError as e:
             print(f"⚠️ Warning: Admin Panel could not be registered. Error: {e}")
@@ -44,11 +45,24 @@ def create_app():
         # هذا المحرك يتعرف على الهوية سواء كان داخلاً كـ "مدير" أو "مورد"
         @login_manager.user_loader
         def load_user(user_id):
-            # أولاً: البحث في جدول الإدارة والمستخدمين
+            """
+            نظام استعادة الهوية: يبحث أولاً في المسؤولين ثم الموردين
+            """
+            # التحقق من صحة المعرف لتجنب أخطاء التحويل
+            if user_id is None or user_id == 'None':
+                return None
+                
+            # أولاً: البحث في جدول الإدارة والمستخدمين العامين
             user = User.query.get(int(user_id))
             if user:
                 return user
-            # ثانياً: إذا لم يوجد، البحث في جدول الموردين (للسماح لهم بدخول لوحاتهم مستقبلاً)
-            return Supplier.query.get(int(user_id))
+                
+            # ثانياً: البحث في جدول الموردين (للسماح لهم بالوصول للأنظمة الخاصة بهم)
+            # ملاحظة: سيتم استخدامه عند تفعيل لوحة تحكم الموردين المستقلة
+            supplier = Supplier.query.get(int(user_id))
+            if supplier:
+                return supplier
+                
+            return None
 
     return app
