@@ -103,6 +103,19 @@
         box-shadow: 0 0 0 4px rgba(99, 44, 143, 0.15);
     }
 
+    /* تحسين شكل رفع الملفات */
+    .file-upload-wrapper {
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        background: #fdfdff;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    .file-upload-wrapper:hover { border-color: var(--gov-purple); background: #f5f3ff; }
+    .file-upload-wrapper i { color: var(--gov-purple); margin-bottom: 10px; }
+
     .btn-gov {
         background: var(--gov-purple);
         color: white;
@@ -145,6 +158,7 @@
     }
 
     .manual-input { margin-top: 10px; border-color: var(--gov-gold); display: none; }
+    .optional-tag { font-size: 0.75rem; color: #94a3b8; font-weight: normal; margin-right: 5px; }
 </style>
 
 <div class="form-container" id="mainContainer">
@@ -165,7 +179,9 @@
         </a>
     </div>
 
-    <form id="sovereignForm" action="{{ url_for('admin.add_supplier') }}" method="POST">
+    <!-- إضافة enctype لإرسال الصور -->
+    <form id="sovereignForm" action="{{ url_for('admin.add_supplier') }}" method="POST" enctype="multipart/form-data">
+        
         <div class="section-banner"><i class="fas fa-user-shield"></i> بيانات الهوية الرقمية والنشاط</div>
         <div class="grid-layout">
             <div class="input-box">
@@ -177,6 +193,10 @@
                 <input type="text" name="password" value="123456" class="form-control-gov" required>
             </div>
             <div class="input-box">
+                <label>البريد الإلكتروني <span class="optional-tag">(اختياري)</span></label>
+                <input type="email" name="email" class="form-control-gov" placeholder="example@mahjoub.com">
+            </div>
+            <div class="input-box">
                 <label>تصنيف النشاط التجاري</label>
                 <select id="activity_select" class="form-control-gov" onchange="handleManualSelection(this, 'activity_type')" required>
                     <option value="مواد غذائية">مواد غذائية واستهلاكية</option>
@@ -184,17 +204,33 @@
                     <option value="ملابس">ملابس ومنسوجات</option>
                     <option value="manual">أخرى (إدخال يدوي)...</option>
                 </select>
-                <!-- الحقل المخفي الذي سيتم إرساله فعلياً للقاعدة -->
                 <input type="hidden" name="activity_type" id="activity_type" value="مواد غذائية">
                 <input type="text" id="manual_activity" class="form-control-gov manual-input" placeholder="اكتب نوع النشاط هنا">
             </div>
         </div>
 
-        <div class="section-banner"><i class="fas fa-id-card"></i> بيانات المالك والتوثيق</div>
+        <div class="section-banner"><i class="fas fa-id-card"></i> بيانات المالك والتوثيق الرسمي</div>
         <div class="grid-layout">
             <div class="input-box" style="grid-column: span 2;">
                 <label>اسم المالك الكامل (كما في الهوية)</label>
                 <input type="text" name="owner_name" class="form-control-gov" placeholder="الاسم الرباعي الكامل" required>
+            </div>
+            <div class="input-box">
+                <label>نوع الهوية المرفقة</label>
+                <select name="identity_type" class="form-control-gov" required>
+                    <option value="بطاقة شخصية">بطاقة شخصية</option>
+                    <option value="جواز سفر">جواز سفر</option>
+                    <option value="بطاقة الكترونية">بطاقة الكترونية</option>
+                    <option value="سجل تجاري">سجل تجاري</option>
+                </select>
+            </div>
+            <div class="input-box">
+                <label>صورة الهوية / الوثيقة</label>
+                <input type="file" name="identity_image" id="identity_image" accept="image/*" style="display:none;" onchange="updateFileName(this)">
+                <div class="file-upload-wrapper" onclick="document.getElementById('identity_image').click()">
+                    <i class="fas fa-camera fa-2x"></i><br>
+                    <span id="file-name-display">اضغط لرفع صورة الوثيقة</span>
+                </div>
             </div>
             <div class="input-box">
                 <label>الاسم التجاري للمنشأة</label>
@@ -226,7 +262,6 @@
                 <select id="bank_select" class="form-control-gov" onchange="handleManualSelection(this, 'bank_name')" required>
                     <option value="">اختر من القائمة...</option>
                 </select>
-                <!-- الحقل المخفي للبنك -->
                 <input type="hidden" name="bank_name" id="bank_name">
                 <input type="text" id="manual_bank" class="form-control-gov manual-input" placeholder="اسم الجهة يدوياً">
             </div>
@@ -275,6 +310,14 @@
         "exchange": ["شركة المريسي", "شركة سويد", "شركة النجم", "شركة الصيفي"]
     };
 
+    function updateFileName(input) {
+        const display = document.getElementById('file-name-display');
+        if (input.files && input.files[0]) {
+            display.innerText = "تم اختيار: " + input.files[0].name;
+            display.style.color = "var(--accent-green)";
+        }
+    }
+
     function handleManualSelection(selectObj, hiddenId) {
         const isActivity = hiddenId === 'activity_type';
         const manualInput = document.getElementById(isActivity ? 'manual_activity' : 'manual_bank');
@@ -312,20 +355,12 @@
     document.getElementById('sovereignForm').onsubmit = async function(e) {
         e.preventDefault();
         
-        // مزامنة القيم اليدوية قبل الإرسال لضمان الحفظ
+        // مزامنة القيم اليدوية
         const actSelect = document.getElementById('activity_select');
-        if (actSelect.value === 'manual') {
-            document.getElementById('activity_type').value = document.getElementById('manual_activity').value;
-        } else {
-            document.getElementById('activity_type').value = actSelect.value;
-        }
+        document.getElementById('activity_type').value = (actSelect.value === 'manual') ? document.getElementById('manual_activity').value : actSelect.value;
 
         const bnkSelect = document.getElementById('bank_select');
-        if (bnkSelect.value === 'manual') {
-            document.getElementById('bank_name').value = document.getElementById('manual_bank').value;
-        } else {
-            document.getElementById('bank_name').value = bnkSelect.value;
-        }
+        document.getElementById('bank_name').value = (bnkSelect.value === 'manual') ? document.getElementById('manual_bank').value : bnkSelect.value;
 
         const submitBtn = document.getElementById('submitBtn');
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق والأرشفة...';
@@ -349,11 +384,6 @@
                     confirmButtonColor: '#632C8F'
                 }).then(() => window.location.href = "{{ url_for('admin.manage_suppliers') }}");
             } else {
-                // معالجة حالة "المستخدم مسجل مسبقاً" أو أي خطأ منطقي آخر
-                let errorTitle = '❌ عطل في البروتوكول';
-                if (result.message && result.message.includes('مسجل')) {
-                    errorTitle = '⚠️ تنبيه سيادي';
-                }
                 throw new Error(result.message || 'فشل الاتصال بنظام محجوب');
             }
         } catch (err) {
