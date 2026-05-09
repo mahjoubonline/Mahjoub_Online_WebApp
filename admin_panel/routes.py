@@ -133,54 +133,59 @@ def add_supplier():
 
     return render_template('add_supplier.html')
 
-# --- 7. مركز إدارة الكيان (الواجهة الجديدة بالبطائق) ---
+# --- 7. مركز إدارة الكيان (البروفايل السيادي) ---
 @admin_bp.route('/supplier/<int:supplier_id>/profile')
 @login_required
 def supplier_profile(supplier_id):
-    """ المسار الجديد الذي يفتح واجهة البطائق الثلاث (الهوية، المحفظة، الجغرافيا) """
     if not is_admin_sovereign():
         return redirect(url_for('admin.login'))
     
-    # جلب بيانات المورد أو إظهار 404 إذا لم يوجد
     supplier = Supplier.query.get_or_404(supplier_id)
-    
-    # استدعاء الملف من المجلد الفرعي suppliers الذي أنشأناه
     return render_template('suppliers/supplier_profile.html', supplier=supplier)
 
-# --- 8. التحكم المالي (API التحديث) ---
-@admin_bp.route('/api/supplier/<int:sup_id>/update-sovereign', methods=['POST'])
+# --- 8. محرك التحديث التلقائي (Auto-Save API) ---
+@admin_bp.route('/supplier/<int:supplier_id>/update_field', methods=['POST'])
 @admin_api_required
-def update_supplier_sovereign(sup_id):
-    """ معالج التحديث المالي والسيادي من واجهة البطائق """
-    supplier = Supplier.query.get_or_404(sup_id)
-    data = request.get_json()
-    
-    try:
-        supplier.balance_yer = data.get('balance_yer', supplier.balance_yer)
-        supplier.balance_sar = data.get('balance_sar', supplier.balance_sar)
-        supplier.balance_usd = data.get('balance_usd', supplier.balance_usd)
-        supplier.tier = data.get('tier', supplier.tier)
-        supplier.status = data.get('status', supplier.status)
-        
-        db.session.commit()
-        return jsonify({"status": "success", "message": "تم تعميد التحديثات في قاعدة البيانات"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 400
-@admin.route('/supplier/<int:supplier_id>/update_field', methods=['POST'])
 def update_supplier_field(supplier_id):
+    """ 
+    المعالج الذكي لتحديث أي حقل في قاعدة البيانات فوراً.
+    يستقبل اسم الحقل والقيمة الجديدة من الواجهة.
+    """
     data = request.get_json()
-    field = data.get('field')
-    value = data.get('value')
+    field_name = data.get('field')
+    new_value = data.get('value')
     
     supplier = Supplier.query.get_or_404(supplier_id)
     
-    if hasattr(supplier, field):
-        setattr(supplier, field, value)
-        db.session.commit()
-        return jsonify({'status': 'success', 'message': 'تم التحديث بنجاح'})
+    # قائمة الحقول المسموح بتعديلها لحماية أمن النظام
+    allowed_fields = [
+        'username', 'owner_name', 'trade_name', 'activity_type',
+        'phone', 'province', 'district', 'address_detail',
+        'bank_name', 'bank_acc', 'balance_yer', 'balance_sar', 'balance_usd',
+        'tier', 'status'
+    ]
     
-    return jsonify({'status': 'error', 'message': 'حقل غير صالح'}), 400
+    if field_name not in allowed_fields:
+        return jsonify({"status": "error", "message": "محاولة تعديل حقل محظور"}), 403
+
+    try:
+        if hasattr(supplier, field_name):
+            # تحويل القيم المالية لأرقام إذا لزم الأمر
+            if 'balance' in field_name:
+                try:
+                    new_value = float(new_value) if new_value else 0.0
+                except ValueError:
+                    return jsonify({"status": "error", "message": "يجب إدخال قيمة رقمية صحيحة"}), 400
+            
+            setattr(supplier, field_name, new_value)
+            db.session.commit()
+            return jsonify({"status": "success", "message": f"تم تحديث {field_name} بنجاح"})
+        else:
+            return jsonify({"status": "error", "message": "الحقل غير موجود في قاعدة البيانات"}), 404
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # --- 9. إنهاء الجلسة السيادية ---
 @admin_bp.route('/logout')
