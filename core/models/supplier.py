@@ -17,8 +17,8 @@ except (ImportError, ModuleNotFoundError):
 
 class Supplier(db.Model):
     """
-    نموذج الموردين المطور - منظومة محجوب أونلاين v3.5
-    نظام الحوكمة السيادي وإدارة الأرصدة المتعددة
+    نموذج الموردين المطور - منظومة محجوب أونلاين v3.6
+    نظام الحوكمة السيادية: إدارة الرتب اليدوية وحالات النشاط اللوني
     """
     __tablename__ = 'suppliers'
     
@@ -26,26 +26,31 @@ class Supplier(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     
-    # البيانات التعريفية
+    # --- البيانات التعريفية والتوثيق ---
     owner_name = db.Column(db.String(150), nullable=True)
     trade_name = db.Column(db.String(150), nullable=True)
     activity_type = db.Column(db.String(100), nullable=True) 
+    phone = db.Column(db.String(20), nullable=True) 
+    email = db.Column(db.String(120), nullable=True)
+    id_type = db.Column(db.String(50), nullable=True)  # نوع الهوية
+    id_card_number = db.Column(db.String(50), nullable=True) # رقم الهوية
+
+    # --- منظومة الرتب (التدرج اليدوي السيادي) ---
+    # [مورد مبتدئ: الدرجة الأساسية، مورد فضي: موثوق، مورد ذهبي: الصفوة]
+    tier = db.Column(db.String(50), default='مورد مبتدئ') 
     
-    # الجغرافيا والتصنيف
-    tier = db.Column(db.String(50), default='مبتدئ') # [مبتدئ، محترف، سيادي]
+    # --- تنظيم حالات النشاط (الإدارة اليدوية) ---
+    # [pending: قيد المراجعة (رمادي), active: معتمد (أخضر), audit: تحت الرقابة (أصفر), banned: محظور (أحمر)]
+    status = db.Column(db.String(20), default='pending') 
+
+    # --- الجغرافيا ---
     province = db.Column(db.String(100), nullable=True) 
     district = db.Column(db.String(100), nullable=True) 
     address_detail = db.Column(db.Text, nullable=True) 
     
-    # بيانات الاتصال والتوثيق
-    id_type = db.Column(db.String(50), nullable=True) 
-    id_card_number = db.Column(db.String(50), nullable=True) 
-    phone = db.Column(db.String(20), nullable=True) 
-    email = db.Column(db.String(120), nullable=True) # مضاف للاتصال الرسمي
-    
     # --- النظام المالي الموحد (Multi-Currency Vault) ---
-    e_wallet = db.Column(db.String(100), unique=True, nullable=True) # WAL_MAH_963...
-    sovereign_id = db.Column(db.String(100), unique=True, nullable=True) # SUP_MAH_963...
+    e_wallet = db.Column(db.String(100), unique=True, nullable=True) 
+    sovereign_id = db.Column(db.String(100), unique=True, nullable=True) 
     
     # الأرصدة السيادية
     balance_yer = db.Column(db.Numeric(20, 2), default=0.00) 
@@ -56,8 +61,6 @@ class Supplier(db.Model):
     bank_name = db.Column(db.String(100), nullable=True) 
     bank_acc = db.Column(db.String(100), nullable=True) 
     
-    # الحالة والتحكم
-    status = db.Column(db.String(20), default='active') # [active, suspended, audit, banned]
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
 
@@ -75,20 +78,26 @@ class Supplier(db.Model):
         return check_password_hash(self.password_hash, password)
 
     def mint_sovereign_id(self):
-        """
-        توليد المعرف السيادي الموحد بناءً على النمط التسلسلي الجديد 963
-        مثال: المورد 1 يصبح 9631، المورد 2 يصبح 9632
-        """
+        """توليد المعرف السيادي (النمط 9631، 9632...)"""
         if self.id:
-            # التعديل المطلوب: دمج الـ 963 مع الـ ID مباشرة بدون أصفار حشو اختيارية ليكون (9631, 9632...)
             tag = f"963{self.id}" 
             self.e_wallet = f"WAL_MAH_{tag}"
             self.sovereign_id = f"SUP_MAH_{tag}"
             return self.sovereign_id
         return None
 
+    def get_status_color(self):
+        """بروتوكول الألوان للإدارة اليدوية في لوحة التحكم"""
+        colors = {
+            'pending': 'gray',   # قيد المراجعة
+            'active': 'green',   # معتمد
+            'audit': 'yellow',   # تحت الرقابة
+            'banned': 'red'      # محظور
+        }
+        return colors.get(self.status, 'black')
+
     def to_dict(self, include_staff=False):
-        """تحويل الكيان إلى قاموس متوافق مع JSON للواجهات الذكية"""
+        """تحويل الكيان إلى قاموس متوافق مع JSON"""
         data = {
             "id": self.id,
             "sovereign_id": self.sovereign_id or f"SUP_{self.id}#",
@@ -97,23 +106,21 @@ class Supplier(db.Model):
             "owner_name": self.owner_name or "غير محدد",
             "phone": self.phone or "N/A",
             "province": self.province or "-",
-            "district": self.district or "-",
             "tier": self.tier,
             "status": self.status,
+            "status_color": self.get_status_color(),
             "balance_yer": float(self.balance_yer),
             "balance_sar": float(self.balance_sar),
             "balance_usd": float(self.balance_usd),
             "e_wallet": self.e_wallet,
             "created_at": self.created_at.strftime('%Y-%m-%d')
         }
-        
         if include_staff:
             data['staff'] = [s.to_dict() for s in self.staff]
-            
         return data
 
     def __repr__(self):
-        return f'<Supplier {self.trade_name} | Sovereign_ID: {self.sovereign_id}>'
+        return f'<Supplier {self.trade_name} | Tier: {self.tier} | Status: {self.status}>'
 
 class SupplierStaff(db.Model):
     __tablename__ = 'supplier_staff'
