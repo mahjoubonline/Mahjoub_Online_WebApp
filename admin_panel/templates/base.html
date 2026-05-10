@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
+    
     <title>{% block title %}القيادة المركزية | محجوب أونلاين{% endblock %}</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -143,12 +145,12 @@
             </a>
 
             <div class="nav-item">
-                <div class="nav-link {% if request.endpoint in ['admin.add_supplier', 'admin.manage_suppliers'] %}active{% endif %}" style="cursor:pointer" onclick="toggleDropdown(this)">
+                <div class="nav-link {% if 'supplier' in request.endpoint %}active{% endif %}" style="cursor:pointer" onclick="toggleDropdown(this)">
                     <i class="fas fa-handshake-angle"></i>
                     <span>حوكمة الموردين</span>
-                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.4s; {% if request.endpoint in ['admin.add_supplier', 'admin.manage_suppliers'] %}transform: rotate(180deg);{% endif %}"></i>
+                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.4s; {% if 'supplier' in request.endpoint %}transform: rotate(180deg);{% endif %}"></i>
                 </div>
-                <ul class="dropdown-content" style="{% if request.endpoint in ['admin.add_supplier', 'admin.manage_suppliers'] %}display: block;{% endif %}">
+                <ul class="dropdown-content" style="{% if 'supplier' in request.endpoint %}display: block;{% endif %}">
                     <li><a href="{{ url_for('admin.add_supplier') }}">تعميد كيان جديد</a></li>
                     <li><a href="{{ url_for('admin.manage_suppliers') }}">الموردون المعتمدون</a></li>
                 </ul>
