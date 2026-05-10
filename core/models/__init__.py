@@ -1,46 +1,25 @@
 # core/models/__init__.py
 
-# 1. استيراد قاعدة البيانات (db) لضمان وحدة الاتصال عبر كافة الموديلات
+# 1. استيراد قاعدة البيانات لضمان وحدة الاتصال
 from core.extensions import db 
 
-# 2. استيراد الهوية الأساسية (النواة الرقمية للنظام)
-# موديل User يمثل الأدمن، الموردين، والموظفين حسب الصلاحيات (Roles)
+# 2. استيراد الكيانات الأساسية (النواة الرقمية)
 from .user import User
+from .supplier import Supplier, SupplierStaff
+from .product import Product
+from .business import Order, OrderItem
 
-# 3. استيراد الموردين (الموديل السيادي المطور لـ محجوب أونلاين)
-# تسجيل هذا الموديل هنا يضمن تفعيل المحفظة متعددة العملات (Multi-Currency Vault)
-# والرتب السيادية (مبتدئ، محترف، سيادي)
-try:
-    from .supplier import Supplier
-except ImportError:
-    # في حال لم يتم العثور على الملف، يتم تعريفه كـ None لتجنب انهيار السيرفر
-    Supplier = None
-    print("⚠️ Warning: Supplier model not found in core/models")
-
-# 4. استيراد المكونات التجارية (المنتجات والعمليات)
-# يتم تحميل هذه الموديلات لضمان جاهزية العرض في لوحة التحكم
-try:
-    from .product import Product
-except ImportError:
-    Product = None
-
-try:
-    # الربط مع سجل العمليات التجارية (الطلبات)
-    from .business import Order
-except ImportError:
-    Order = None
-
-# 5. بروتوكول التصدير الموحد (__all__)
-# هذا البروتوكول يسمح باستدعاء الموديلات بسهولة واحترافية عبر: 
-# from core.models import User, Supplier, Order
+# 3. بروتوكول التصدير الموحد (__all__)
+# هذا يسمح لك باستدعاء أي موديل في أي مكان عبر: from core.models import Supplier
 __all__ = [
     'db', 
     'User', 
     'Supplier', 
+    'SupplierStaff',
     'Product', 
-    'Order'
+    'Order',
+    'OrderItem'
 ]
 
-# رسالة تأكيد في سجلات السيرفر عند اكتمال بناء الترسانة البرمجية
-# يمكن تفعيلها عند الحاجة لتتبع عمليات التشغيل (Debugging)
-# print("✅ Sovereign Models Registry: Initialized Successfully.")
+# رسالة تأكيد صامتة تظهر عند تهيئة الموديلات (للمطور فقط)
+# print("✅ Tarsana Models: Registry Initialized Successfully.")
