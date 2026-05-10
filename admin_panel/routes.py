@@ -1,12 +1,12 @@
 # admin_panel/routes.py
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash
 from flask_login import login_required, logout_user
 from core import db
 from core.models.user import User
 from core.models.supplier import Supplier
 from datetime import datetime
 
-# استيراد البلوبرنت والمحركات
+# استيراد البلوبرنت
 from . import admin_bp
 from .auth import login_view 
 
@@ -16,7 +16,6 @@ from .auth import login_view
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """تفعيل بوابة الدخول السيادية - نقطة الصفر للنظام"""
-    # استدعاء المنطق من ملف auth.py لضمان الأمان
     return login_view()
 
 # ==========================================
@@ -27,10 +26,11 @@ def login():
 def dashboard():
     """عرض الرادار العام وإحصائيات الترسانة الرقمية"""
     try:
+        # إحصائيات سريعة من المحرك المالي والقاعدة
         data = {
             'users_count': User.query.count(),
             'suppliers_count': Supplier.query.count(),
-            'orders_count': 0, # سيتم ربطه مستقبلاً بجدول الطلبات
+            'orders_count': 0, 
             'total_yer': db.session.query(db.func.sum(Supplier.balance_yer)).scalar() or 0.0,
             'total_sar': db.session.query(db.func.sum(Supplier.balance_sar)).scalar() or 0.0,
             'total_usd': db.session.query(db.func.sum(Supplier.balance_usd)).scalar() or 0.0,
@@ -39,10 +39,20 @@ def dashboard():
         return render_template('admin/dashboard.html', **data)
     except Exception as e:
         print(f"⚠️ خطأ في رادار القيادة: {e}")
-        return "حدث خطأ في جلب البيانات المالية، تأكد من سلامة قاعدة البيانات."
+        return "حدث خطأ في جلب البيانات المالية، تأكد من استقرار قاعدة البيانات."
 
 # ==========================================
-# 3. بروتوكول الخروج الآمن (Logout)
+# 3. إدارة العرض (Management Views)
+# ==========================================
+@admin_bp.route('/suppliers')
+@login_required
+def manage_suppliers():
+    """عرض قائمة الموردين المؤرشفين"""
+    suppliers = Supplier.query.order_by(Supplier.created_at.desc()).all()
+    return render_template('admin/manage_suppliers.html', suppliers=suppliers)
+
+# ==========================================
+# 4. بروتوكول الخروج الآمن (Logout)
 # ==========================================
 @admin_bp.route('/logout')
 @login_required
@@ -53,9 +63,9 @@ def logout():
     return redirect(url_for('admin.login'))
 
 # ==========================================
-# 4. تأمين المسارات (Security Middleware)
+# 5. تأمين المسارات (Security Middleware)
 # ==========================================
 @admin_bp.before_request
 def check_maintenance():
-    """يمكنك هنا إضافة وضع الصيانة أو قيود الوصول الإضافية"""
+    """بروتوكول فحص الصيانة قبل كل طلب"""
     pass
