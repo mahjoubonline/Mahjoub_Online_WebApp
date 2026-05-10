@@ -1,57 +1,56 @@
-# core/models/user.py
-from core import db 
+# core/models/supplier.py
+from datetime import datetime
 from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
+from core import db
 
-class User(db.Model, UserMixin):
+class Supplier(db.Model, UserMixin):
+    """ 
+    موديل المورد السيادي: المرجع الأساسي لهيكلة البيانات والولوج.
+    يدعم الهوية الرقمية المستقلة والخزينة الثلاثية (YER, SAR, USD).
     """
-    نواة الهوية الرقمية - v4.1 (النسخة السيادية المستقرة)
-    تتحكم في صلاحيات الوصول لمركز قيادة محجوب أونلاين.
-    """
-    __tablename__ = 'users'
-    __table_args__ = {'extend_existing': True} 
-
+    __tablename__ = 'suppliers'
+    
+    # --- المعرفات والهوية الرقمية ---
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=True) 
-    password_hash = db.Column(db.String(256), nullable=False)
+    sovereign_id = db.Column(db.String(50), unique=True) # المعرف التلقائي مثل SUP_1#
+    username = db.Column(db.String(100), unique=True, nullable=False) # اسم المستخدم للدخول
+    password_hash = db.Column(db.String(255), nullable=False) # كلمة المرور المشفرة (5 أرقام)
     
-    # الأدوار السيادية: [admin, staff, supplier, customer]
-    role = db.Column(db.String(50), default='customer') 
-    is_active_account = db.Column(db.Boolean, default=True)
-
-    # --- بروتوكول الربط السيادي (الجسر بين المستخدم والمورد) ---
+    # --- البيانات الأساسية (واجهة التعميد الملكية) ---
+    trade_name = db.Column(db.String(150), nullable=False) # الاسم التجاري للمحل/الشركة
+    owner_name = db.Column(db.String(150)) # اسم المالك الرسمي
+    activity_type = db.Column(db.String(100)) # نوع النشاط (إلكترونيات، ملابس، إلخ)
+    identity_type = db.Column(db.String(50)) # نوع الهوية (شخصية، عائلية، جواز)
     
-    # 1. المفتاح الأجنبي: يربط المستخدم بجدول الموردين (suppliers)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
-
-    # 2. العلاقة البرمجية: تمكننا من استدعاء بيانات المورد عبر user.supplier_profile
-    # تم استخدام backref ببيان فريد 'user_account' لضمان عدم التداخل
-    supplier_profile = db.relationship('Supplier', backref='user_account', uselist=False)
-
-    def set_password(self, password):
-        """تشفير البصمة الرقمية ببروتوكول عالي الطاقة"""
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        """التحقق من الهوية عند بوابات العبور"""
-        if not self.password_hash: return False
-        return check_password_hash(self.password_hash, password)
-
-    @property
-    def is_active(self):
-        """تأكيد حالة الحساب لمحرك Flask-Login"""
-        return self.is_active_account
-
-    def to_dict(self):
-        """تحويل الكيان إلى بيانات رقمية قابلة للقراءة بواسطة JavaScript/JSON"""
-        return {
-            "id": self.id,
-            "username": self.username,
-            "role": self.role,
-            "is_active": self.is_active_account,
-            "supplier_id": self.supplier_id
-        }
+    # --- النطاق الجغرافي والاتصال ---
+    province = db.Column(db.String(100)) # المحافظة
+    district = db.Column(db.String(100)) # المديرية
+    address_detail = db.Column(db.Text) # العنوان الدقيق
+    phone = db.Column(db.String(20)) # رقم الهاتف للتواصل
+    
+    # --- الربط المالي (الخزينة السيادية الثلاثية) ---
+    bank_name = db.Column(db.String(150)) # اسم البنك أو الكريمي
+    bank_acc = db.Column(db.String(100)) # رقم الحساب البنكي
+    balance_yer = db.Column(db.Float, default=0.0) # الرصيد بالريال اليمني
+    balance_sar = db.Column(db.Float, default=0.0) # الرصيد بالريال السعودي
+    balance_usd = db.Column(db.Float, default=0.0) # الرصيد بالدولار الأمريكي
+    
+    # --- الحالة والتوثيق الزمني ---
+    status = db.Column(db.String(20), default='active') # نشط، موقف، محظور
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
-        return f"<User {self.username} | Role: {self.role}>"
+        return f"<Supplier {self.trade_name} | {self.sovereign_id}>"
+
+class SupplierStaff(db.Model):
+    """ طاقم العمل التابع للمورد - لإدارة الموظفين والصلاحيات الفرعية """
+    __tablename__ = 'supplier_staff'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'))
+    name = db.Column(db.String(150), nullable=False)
+    role = db.Column(db.String(100)) # مدير، مندوب، محاسب
+    status = db.Column(db.String(20), default='active')
+    
+    # ربط العلاقة السيادية مع المورد الأساسي
+    supplier = db.relationship('Supplier', backref=db.backref('staff_members', lazy=True))
