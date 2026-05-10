@@ -5,6 +5,7 @@ from core import db
 from core.models.user import User
 from core.models.supplier import Supplier
 from datetime import datetime
+import traceback
 
 # 1. استيراد البلوبرنت
 from . import admin_bp
@@ -23,57 +24,33 @@ def login():
 @admin_bp.route('/dashboard')
 @login_required
 def dashboard():
-    """عرض إحصائيات النظام الأساسية فقط"""
+    """عرض إحصائيات النظام الأساسية مع حماية ضد الانهيار"""
     try:
+        # حساب الإحصائيات مع التأكد من وجود قيم افتراضية (0) في حال كانت القاعدة فارغة
+        users_count = User.query.count() or 0
+        suppliers_count = Supplier.query.count() or 0
+        
+        # رصد السيولة باستخدام استعلامات آمنة
+        total_yer = db.session.query(db.func.sum(Supplier.balance_yer)).scalar() or 0.0
+        total_sar = db.session.query(db.func.sum(Supplier.balance_sar)).scalar() or 0.0
+        total_usd = db.session.query(db.func.sum(Supplier.balance_usd)).scalar() or 0.0
+        
         data = {
-            'users_count': User.query.count(),
-            'suppliers_count': Supplier.query.count(),
-            'orders_count': 0, 
-            
-            # رصد السيولة في قاعدة البيانات المحلية
-            'total_yer': db.session.query(db.func.sum(Supplier.balance_yer)).scalar() or 0.0,
-            'total_sar': db.session.query(db.func.sum(Supplier.balance_sar)).scalar() or 0.0,
-            'total_usd': db.session.query(db.func.sum(Supplier.balance_usd)).scalar() or 0.0,
-            
+            'users_count': users_count,
+            'suppliers_count': suppliers_count,
+            'orders_count': 0, # سيتم الربط مع API قمرة مستقبلاً
+            'total_yer': total_yer,
+            'total_sar': total_sar,
+            'total_usd': total_usd,
             'now': datetime.now()
         }
+        
         return render_template('admin/dashboard.html', **data)
-    except Exception as e:
-        # إذا حدث خطأ هنا، سيظهر كرسالة نصية بدلاً من انهيار السيرفر بالكامل
-        return f"⚠️ خطأ في الرادار: {e}"
-
-# ==========================================
-# 3. إدارة الموردين (Suppliers)
-# ==========================================
-@admin_bp.route('/suppliers')
-@login_required
-def manage_suppliers():
-    """عرض الموردين المسجلين في النظام المحلي"""
-    try:
-        # جلب آخر 20 مورد مباشرة
-        suppliers = Supplier.query.order_by(Supplier.id.desc()).limit(20).all()
         
-        # --- تعديل طوارئ هنا لمنع انهيار السيرفر ---
-        # بما أن السجلات أظهرت أن "tier" غير موجود في قاعدة البيانات حالياً
-        # سنقوم بتعطيل الفلترة به حتى تقوم بتحديث الـ Model
-        stats = {
-            'total': Supplier.query.count(),
-            'active': Supplier.query.filter_by(status='active').count(),
-            'sovereign': 0  # اجعلها 0 مؤقتاً لتجاوز خطأ
-        }
-        
-        return render_template('admin/manage_suppliers.html', 
-                               suppliers=suppliers, 
-                               stats=stats)
     except Exception as e:
-        return f"⚠️ خطأ في إدارة الموردين: {e}"
-
-# ==========================================
-# 4. بروتوكول الخروج الآمن (Logout)
-# ==========================================
-@admin_bp.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash("تم تسجيل الخروج. النظام في وضع الحماية.", "info")
-    return redirect(url_for('admin.login'))
+        # في حال حدوث خطأ، سيتم إظهار تفاصيل الخطأ بدلاً من صفحة بيضاء
+        # هذا يساعدك في معرفة إذا كان هناك نقص في أعمدة قاعدة البيانات
+        error_info = traceback.format_exc()
+        return f"""
+        <div dir="rtl" style="font-family: 'Cairo', sans-serif; padding: 20px; border: 2px solid red;">
+            <h2 style="color
