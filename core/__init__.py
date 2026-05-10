@@ -1,68 +1,53 @@
+# core/__init__.py
 from flask import Flask
-from flask_login import LoginManager
-from .extensions import db  # استدعاء db من الهيكلية المعتمدة للنظام
-
-# إعداد مدير تسجيل الدخول لضمان أمان مركز القيادة السيادي
-login_manager = LoginManager()
+from .extensions import db, login_manager # استدعاء الموحدين من الإضافات
 
 def create_app():
-    # 1. تهيئة التطبيق مع تحديد مسارات القوالب والملفات الثابتة العامة
+    # 1. تهيئة التطبيق وتحديد مسارات الواجهة
     app = Flask(__name__, 
                 static_folder='../static', 
                 template_folder='../templates')
     
-    # 2. تحميل الإعدادات من ملف Config السيادي (قاعدة البيانات، المفاتيح السرية)
+    # 2. تحميل الإعدادات السيادية
     app.config.from_object('config.Config')
     
-    # 3. ربط الإضافات (Extensions) بالتطبيق
+    # 3. ربط الإضافات (التفعيل الرسمي للترسانة)
     db.init_app(app)
     login_manager.init_app(app)
     
-    # تحديد صفحة تسجيل الدخول الافتراضية للتحويل التلقائي
+    # إعدادات الحماية (تم نقلها هنا لضمان عملها داخل التطبيق)
     login_manager.login_view = 'admin.login'
     login_manager.login_message = "يرجى تسجيل الدخول للوصول إلى الترسانة السيادية"
     login_manager.login_message_category = "info"
 
     with app.app_context():
-        # 4. استدعاء الموديلات (Models) لضمان تسجيل الجداول في النواة
-        # تم الاستيراد هنا لضمان أن db.create_all() يرى جميع المخططات
+        # 4. تسجيل المخططات (Models) لضمان ظهورها في القاعدة
         from .models.user import User
         from .models.supplier import Supplier
         
-        # 5. تعميد الجداول (Database Synchronization)
-        # سيقوم بإنشاء الجداول المفقودة وتحديث البنية
+        # 5. تعميد الجداول (الإنشاء التلقائي)
         db.create_all()
         
-        # 6. تسجيل لوحة تحكم "محجوب أونلاين" (Blueprint Registration)
+        # 6. تسجيل لوحة تحكم الإدارة (Blueprint)
         try:
             from admin_panel import admin_bp
-            # تسجيل البلوبرينت مع بادئة مسار واضحة إذا لزم الأمر أو تركها افتراضية
             app.register_blueprint(admin_bp) 
+            print("✅ تم تسجيل لوحة التحكم بنجاح.")
         except ImportError as e:
-            print(f"⚠️ Warning: Admin Panel could not be registered. Error: {e}")
+            print(f"⚠️ خطأ في تسجيل لوحة التحكم: {e}")
 
-        # 7. بروتوكول استعادة المستخدم الذكي (Multi-Entity User Loader)
-        # هذا المحرك يتعرف على الهوية سواء كان داخلاً كـ "مدير" أو "مورد"
+        # 7. محرك استعادة الهوية (Multi-Entity Loader)
         @login_manager.user_loader
         def load_user(user_id):
-            """
-            نظام استعادة الهوية: يبحث أولاً في المسؤولين ثم الموردين
-            """
-            # التحقق من صحة المعرف لتجنب أخطاء التحويل
             if user_id is None or user_id == 'None':
                 return None
-                
-            # أولاً: البحث في جدول الإدارة والمستخدمين العامين
+            
+            # البحث أولاً في المسؤولين (الأولوية للقيادة)
             user = User.query.get(int(user_id))
             if user:
                 return user
                 
-            # ثانياً: البحث في جدول الموردين (للسماح لهم بالوصول للأنظمة الخاصة بهم)
-            # ملاحظة: سيتم استخدامه عند تفعيل لوحة تحكم الموردين المستقلة
-            supplier = Supplier.query.get(int(user_id))
-            if supplier:
-                return supplier
-                
-            return None
+            # ثم البحث في الموردين
+            return Supplier.query.get(int(user_id))
 
     return app
