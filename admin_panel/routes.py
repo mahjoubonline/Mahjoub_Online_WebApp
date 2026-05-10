@@ -1,6 +1,6 @@
 # admin_panel/routes.py
-from flask import render_template, redirect, url_for, flash
-from flask_login import login_required, logout_user
+from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask_login import login_required, logout_user, current_user
 from core import db
 from core.models.user import User
 from core.models.supplier import Supplier
@@ -37,7 +37,8 @@ def dashboard():
         return render_template('admin/dashboard.html', **data)
     except Exception as e:
         error_details = traceback.format_exc()
-        return f"⚠️ خطأ في الرادار: {error_details}"
+        # عرض الخطأ بتنسيق احترافي في الرادار
+        return render_template('admin/dashboard.html', error=f"⚠️ خطأ في الرادار: {error_details}")
 
 # ==========================================
 # 3. إدارة الموردين (Manage Suppliers)
@@ -58,13 +59,51 @@ def manage_suppliers():
         return f"⚠️ خطأ في استعراض الموردين: {e}"
 
 # ==========================================
-# 4. إضافة مورد جديد (Add Supplier)
+# 4. إضافة مورد جديد (Add Supplier) - دالة الإصلاح
 # ==========================================
 @admin_bp.route('/suppliers/add', methods=['GET', 'POST'])
 @login_required
 def add_supplier():
-    """فتح واجهة إضافة مورد جديد"""
-    # هنا يمكنك إضافة منطق الـ POST لاحقاً لحفظ البيانات
+    """فتح واجهة إضافة مورد جديد ومعالجة بروتوكول الحفظ"""
+    if request.method == 'POST':
+        try:
+            # استلام البيانات القادمة من المتصفح بتنسيق JSON
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({"status": "error", "message": "لم يتم استلام أي بيانات."}), 400
+
+            # إنشاء كائن المورد الجديد (تأكد من مطابقة الأسماء للموديل)
+            new_supplier = Supplier(
+                name=data.get('name'),
+                phone=data.get('phone'),
+                location=data.get('location'),
+                detailed_address=data.get('detailed_address'),
+                wallet_number=data.get('wallet_number'),
+                balance_yer=0.0,
+                balance_sar=0.0,
+                balance_usd=0.0,
+                status='active'
+            )
+            
+            db.session.add(new_supplier)
+            db.session.commit()
+            
+            # إرسال رد نجاح بتنسيق JSON (لإغلاق النافذة المنبثقة بنجاح)
+            return jsonify({
+                "status": "success", 
+                "message": f"تم تعميد المورد {new_supplier.name} بنجاح في النظام."
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            # في حالة الفشل، نرسل الخطأ كـ JSON لمنع انهيار الواجهة
+            return jsonify({
+                "status": "error", 
+                "message": f"فشل بروتوكول التعميد: {str(e)}"
+            }), 500
+
+    # في حالة الـ GET، نفتح صفحة الإضافة العادية
     return render_template('admin/add_supplier.html')
 
 # ==========================================
