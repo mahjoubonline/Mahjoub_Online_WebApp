@@ -18,6 +18,7 @@ admin_bp = Blueprint(
 from . import auth                 # محرك الحماية والولوج
 from . import routes               # محرك الرادار والإحصائيات
 from . import add_supplier_routes   # محرك التعميد السيادي الجديد
+from . import manage_suppliers  # إضافة وحدة الإدارة الجديدة
 
 """
 --- توثيق الهيكل السيادي للمؤسس علي محجوب (نسخة الاستقرار v3.5.1) ---
