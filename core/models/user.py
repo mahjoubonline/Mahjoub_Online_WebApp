@@ -1,11 +1,11 @@
 # core/models/user.py
-from core import db # تم تعديل الاستيراد ليتوافق مع هيكل مشروعك
+from core import db 
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(db.Model, UserMixin):
     """
-    نواة الهوية الرقمية - v4.1 (تم الإصلاح لضمان الاستقرار)
+    نواة الهوية الرقمية - v4.1 (النسخة السيادية المستقرة)
     تتحكم في صلاحيات الوصول لمركز قيادة محجوب أونلاين.
     """
     __tablename__ = 'users'
@@ -20,31 +20,31 @@ class User(db.Model, UserMixin):
     role = db.Column(db.String(50), default='customer') 
     is_active_account = db.Column(db.Boolean, default=True)
 
-    # --- الإصلاح الجوهري (الجسر بين المستخدم والمورد) ---
+    # --- بروتوكول الربط السيادي (الجسر بين المستخدم والمورد) ---
     
-    # 1. إضافة المفتاح الأجنبي لربط المستخدم بملف المورد إذا كان دوره 'supplier'
+    # 1. المفتاح الأجنبي: يربط المستخدم بجدول الموردين (suppliers)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
 
-    # 2. العلاقة العكسية للوصول لبيانات المورد من كائن المستخدم
-    # uselist=False تعني أن كل مستخدم له ملف مورد واحد فقط
+    # 2. العلاقة البرمجية: تمكننا من استدعاء بيانات المورد عبر user.supplier_profile
+    # تم استخدام backref ببيان فريد 'user_account' لضمان عدم التداخل
     supplier_profile = db.relationship('Supplier', backref='user_account', uselist=False)
 
     def set_password(self, password):
-        """تشفير سيادي عالي الطاقة ببروتوكول PBKDF2"""
+        """تشفير البصمة الرقمية ببروتوكول عالي الطاقة"""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """التحقق من مطابقة البصمة الرقمية لكلمة المرور"""
+        """التحقق من الهوية عند بوابات العبور"""
         if not self.password_hash: return False
         return check_password_hash(self.password_hash, password)
 
     @property
     def is_active(self):
-        """تفعيل الحصانة البرمجية لـ Flask-Login"""
+        """تأكيد حالة الحساب لمحرك Flask-Login"""
         return self.is_active_account
 
     def to_dict(self):
-        """تجهيز البيانات لعمليات الـ API والجافا سكريبت"""
+        """تحويل الكيان إلى بيانات رقمية قابلة للقراءة بواسطة JavaScript/JSON"""
         return {
             "id": self.id,
             "username": self.username,
