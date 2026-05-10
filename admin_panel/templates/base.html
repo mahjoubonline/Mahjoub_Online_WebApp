@@ -20,7 +20,6 @@
             --sidebar-width: 280px;
             --sidebar-mini: 85px;
             --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            --polished-stone: #e0e0e0; 
         }
 
         body { 
@@ -139,20 +138,20 @@
         </div>
 
         <nav class="nav-menu">
-            <a href="{{ url_for('admin.admin_dashboard') }}" class="nav-link {% if request.endpoint == 'admin.admin_dashboard' %}active{% endif %}">
+            <a href="{{ url_for('admin.dashboard') }}" class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
                 <i class="fas fa-tower-observation"></i>
                 <span>مركز المراقبة</span>
             </a>
 
             <div class="nav-item">
-                <div class="nav-link {% if 'supplier' in request.endpoint %}active{% endif %}" style="cursor:pointer" onclick="toggleDropdown(this)">
+                <div class="nav-link {% if 'supplier' in (request.endpoint or '') %}active{% endif %}" style="cursor:pointer" onclick="toggleDropdown(this)">
                     <i class="fas fa-handshake-angle"></i>
                     <span>حوكمة الموردين</span>
-                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.4s; {% if 'supplier' in request.endpoint %}transform: rotate(180deg);{% endif %}"></i>
+                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.4s; {% if 'supplier' in (request.endpoint or '') %}transform: rotate(180deg);{% endif %}"></i>
                 </div>
-                <ul class="dropdown-content" style="{% if 'supplier' in request.endpoint %}display: block;{% endif %}">
-                    <li><a href="{{ url_for('admin.add_supplier') }}">تعميد كيان جديد</a></li>
-                    <li><a href="{{ url_for('admin.manage_suppliers') }}">الموردون المعتمدون</a></li>
+                <ul class="dropdown-content" style="{% if 'supplier' in (request.endpoint or '') %}display: block;{% endif %}">
+                    <li><a href="#">تعميد كيان جديد</a></li>
+                    <li><a href="#">الموردون المعتمدون</a></li>
                 </ul>
             </div>
 
