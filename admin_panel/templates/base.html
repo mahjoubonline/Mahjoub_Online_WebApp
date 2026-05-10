@@ -29,7 +29,6 @@
             overflow-x: hidden;
         }
 
-        /* أنيميشن التردد والنبض للشعار السيادي */
         @keyframes logo-pulse {
             0% { filter: brightness(0) invert(1) drop-shadow(0 0 5px rgba(212, 175, 55, 0.2)); transform: scale(1); }
             50% { filter: brightness(0) invert(1) drop-shadow(0 0 20px rgba(212, 175, 55, 0.5)); transform: scale(1.05); }
@@ -144,17 +143,14 @@
             </a>
 
             <div class="nav-item">
-                <div class="nav-link {% if 'supplier' in (request.endpoint or '') %}active{% endif %}" style="cursor:pointer" onclick="toggleDropdown(this)">
+                <div class="nav-link {% if 'supplier' in request.endpoint %}active{% endif %}" style="cursor:pointer" onclick="toggleDropdown(this)">
                     <i class="fas fa-handshake-angle"></i>
                     <span>حوكمة الموردين</span>
-                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.4s; {% if 'supplier' in (request.endpoint or '') %}transform: rotate(180deg);{% endif %}"></i>
+                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.4s; {% if 'supplier' in request.endpoint %}transform: rotate(180deg);{% endif %}"></i>
                 </div>
-                <ul class="dropdown-content" style="{% if 'supplier' in (request.endpoint or '') %}display: block;{% endif %}">
-                    <li><a href="<ul class="dropdown-content" style="{% if 'supplier' in (request.endpoint or '') %}display: block;{% endif %}">
-    <li><a href="{{ url_for('admin.add_supplier') }}">تعميد كيان جديد</a></li>
-    <li><a href="{{ url_for('admin.manage_suppliers') }}">الموردون المعتمدون</a></li>
-</ul>">تعميد كيان جديد</a></li>
-                    <li><a href="#">الموردون المعتمدون</a></li>
+                <ul class="dropdown-content" style="{% if 'supplier' in request.endpoint %}display: block;{% endif %}">
+                    <li><a href="{{ url_for('admin.add_supplier') }}"><i class="fas fa-plus-circle me-1"></i> تعميد كيان جديد</a></li>
+                    <li><a href="{{ url_for('admin.manage_suppliers') }}"><i class="fas fa-list-check me-1"></i> الموردون المعتمدون</a></li>
                 </ul>
             </div>
 
@@ -187,7 +183,7 @@
             {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
                 {% for category, message in messages %}
-                  <div class="alert alert-mahjoub alert-dismissible fade show p-3 mb-4" role="alert">
+                  <div class="alert alert-mahjoub alert-dismissible fade show p-3 mb-4 border-{{ category }}" role="alert">
                       <i class="fas fa-bell me-2" style="color: var(--mahjoub-gold);"></i> {{ message }}
                       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                   </div>
