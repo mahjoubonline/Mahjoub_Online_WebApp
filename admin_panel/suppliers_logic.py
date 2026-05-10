@@ -1,52 +1,45 @@
 # admin_panel/suppliers_logic.py
 from core import db
-from core.models.supplier import Supplier, archive_sys
+from core.models.supplier import Supplier, archive_sys # استيراد الموديل والمحرك
 
 class SupplierLogic:
     @staticmethod
-    def get_next_id():
-        """توليد المعرف السيادي القادم تلقائياً"""
-        last = Supplier.query.order_by(Supplier.id.desc()).first()
-        # نبدأ من 100 إذا كانت قاعدة البيانات فارغة
-        next_num = (last.id + 1) if last else 100
-        return f"SUP_{next_num}#"
-
-    @staticmethod
-    def commit_new_supplier(form_data):
-        """تنفيذ عملية التعميد المركزية وتصحيح الحقول"""
+    def register_supplier(form_data):
+        """
+        محرك تعميد الموردين: يستقبل البيانات من الواجهة الملكية ويحفظها في الترسانة
+        """
         try:
-            # نقوم ببناء الكيان باستخدام الحقول الأساسية فقط المعرفة في الموديل
-            new_sup = Supplier(
-                sovereign_id=SupplierLogic.get_next_id(),
+            # 1. تجهيز المعرف السيادي SUP_
+            last_id = db.session.query(db.func.max(Supplier.id)).scalar() or 0
+            new_sovereign_id = f"SUP_{last_id + 1}#"
+
+            # 2. إنشاء كيان المورد الجديد
+            new_supplier = Supplier(
+                sovereign_id=new_sovereign_id,
                 trade_name=form_data.get('trade_name'),
                 owner_name=form_data.get('owner_name'),
+                activity_type=form_data.get('activity_type'),
+                identity_type=form_data.get('identity_type'),
                 province=form_data.get('province'),
                 district=form_data.get('district'),
+                address_detail=form_data.get('address_detail'),
                 phone=form_data.get('phone'),
-                tier=form_data.get('tier', 'مبتدئ'), # التأكد من وجود قيمة افتراضية
-                # تصفير المحفظة الثلاثية تلقائياً كما اتفقنا
-                balance_yer=0.0,
-                balance_sar=0.0,
-                balance_usd=0.0,
+                bank_name=form_data.get('bank_name'),
+                bank_acc=form_data.get('bank_acc'),
+                tier='مبتدئ',
                 status='active'
             )
-            
-            # ملاحظة: تأكدنا من عدم وجود 'identity_type' هنا لأنه سبب الخطأ
-            
-            db.session.add(new_sup)
+
+            # 3. الحفظ في قاعدة بيانات Postgres
+            db.session.add(new_supplier)
             db.session.commit()
-            
-            # الأرشفة السيادية في GitHub بعد نجاح الحفظ في Postgres
-            try:
-                archive_sys.archive_entity(new_sup)
-            except Exception as archive_err:
-                # إذا فشلت الأرشفة لا نعطل العملية بل نسجل تحذير
-                print(f"Warning: Archive failed: {str(archive_err)}")
-            
-            return True, "تم تعميد الكيان بنجاح وأرشفته سيادياً."
-            
+
+            # 4. الأرشفة السيادية إلى GitHub (بصمت)
+            archive_sys.archive_entity(new_supplier)
+
+            return True, f"تم تعميد المورد {new_supplier.trade_name} بنجاح بالرقم {new_sovereign_id}"
+
         except Exception as e:
             db.session.rollback()
-            # هذا ما يظهر لك في السجلات الآن
-            print(f"ERROR:Supplier_Engine: فشل التعميد: {str(e)}")
-            return False, f"فشلت عملية التعميد: {str(e)}"
+            print(f"❌ فشل التعميد: {str(e)}")
+            return False, f"حدث خطأ أثناء التعميد: {str(e)}"
