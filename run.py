@@ -4,9 +4,8 @@ import logging
 from sqlalchemy import text
 from core import create_app, db
 from core.models.user import User
-from core.models.supplier import Supplier # الترسانة الجديدة
+from core.models.supplier import Supplier
 
-# إعداد السجلات السيادية
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Mahjoub_System")
 
@@ -15,10 +14,13 @@ app = create_app()
 def patch_database():
     """تحديث هيكل الجداول ليتوافق مع التعديلات السيادية الجديدة"""
     with app.app_context():
-        # قائمة التعديلات لضمان توافق الداتا القديمة مع الموديل الجديد
         sql_commands = [
-            # تحديث جدول الموردين (الحقول الجديدة والمعدلة)
-            "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS identity_type VARCHAR(50);", # بدلاً من id_type
+            # --- تحديث جدول المستخدمين (Users) ---
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(150) UNIQUE;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES suppliers(id);",
+            
+            # --- تحديث جدول الموردين (Suppliers) ---
+            "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS identity_type VARCHAR(50);",
             "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS identity_image_url VARCHAR(255);",
             "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS sovereign_id VARCHAR(100);",
             "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS tier VARCHAR(50) DEFAULT 'مورد مبتدئ';",
@@ -32,27 +34,27 @@ def patch_database():
             try:
                 db.session.execute(text(cmd))
                 db.session.commit()
-            except Exception:
+            except Exception as e:
                 db.session.rollback()
-                continue
+                logger.debug(f"ℹ️ حقل موجود مسبقاً أو خطأ بسيط: {str(e)}")
         logger.info("✅ تم تحديث هيكل الجداول بنجاح.")
 
 def initialize_system():
     """تهيئة النظام السيادي عند الإقلاع"""
     with app.app_context():
         try:
-            # 1. إنشاء الجداول التي لم تكن موجودة
+            # 1. إنشاء الجداول الأساسية
             db.create_all()
             
-            # 2. إصلاح الأعمدة المفقودة
+            # 2. إصلاح الأعمدة المفقودة (الجسر البرمجي)
             patch_database()
             
-            # 3. تأمين حساب القائد علي محجوب (Admin)
+            # 3. تأمين حساب القائد علي محجوب
             admin_username = "علي محجوب"
             admin = User.query.filter_by(username=admin_username).first()
             if not admin:
-                new_admin = User(username=admin_username, role='admin')
-                new_admin.set_password('123') # سيتم تغييره لاحقاً
+                new_admin = User(username=admin_username, role='admin', is_active_account=True)
+                new_admin.set_password('123') 
                 db.session.add(new_admin)
                 db.session.commit()
                 logger.info(f"👤 تم إنشاء حساب القائد: {admin_username}") 
@@ -60,13 +62,11 @@ def initialize_system():
                 logger.info(f"✅ القائد {admin_username} في مركز القيادة.")
                 
         except Exception as e:
-            logger.warning(f"⚠️ تنبيه النظام: {str(e)}")
+            logger.error(f"⚠️ خطأ فادح أثناء التهيئة: {str(e)}")
 
-from admin_panel.routes import admin_bp
-app.register_blueprint(admin_bp, url_prefix='/admin')
+# ملاحظة: تسجيل البلوبرنت يتم عادة داخل create_app() لمنع التكرار، 
+# ولكن بما أنك وضعته هنا، تأكد أنه غير مسجل مرتين.
 
-
-# بروتوكول التشغيل (يمنع التكرار في وضع الـ Debug)
 if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not app.debug:
     initialize_system()
 
