@@ -83,7 +83,6 @@
             opacity: 0.9;
         }
 
-        /* تحسين صندوق الرسائل التنبيهية */
         .flash-msg {
             padding: 15px;
             border-radius: 12px;
@@ -123,9 +122,7 @@
             margin-right: 5px;
         }
 
-        .input-wrapper {
-            position: relative;
-        }
+        .input-wrapper { position: relative; }
 
         .input-wrapper i {
             position: absolute;
@@ -182,6 +179,12 @@
             filter: brightness(1.2);
         }
 
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .footer-text {
             margin-top: 35px;
             font-size: 0.75rem;
@@ -212,7 +215,6 @@
             <p>نظام الولوج السيادي</p>
         </div>
 
-        <!-- قسم عرض رسائل الخطأ والتحقق -->
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
@@ -224,8 +226,9 @@
           {% endif %}
         {% endwith %}
 
-        <!-- تم تعديل المسار هنا ليتوافق مع admin.login -->
-        <form action="{{ url_for('admin.login') }}" method="POST">
+        <form action="{{ url_for('admin.login') }}" method="POST" id="loginForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <div class="form-group">
                 <label>معرف القائد</label>
                 <div class="input-wrapper">
@@ -242,9 +245,9 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn-login">
-                <span>فتح الترسانة الرقمية</span>
-                <i class="fas fa-unlock-alt"></i>
+            <button type="submit" class="btn-login" id="submitBtn">
+                <span id="btnText">فتح الترسانة الرقمية</span>
+                <i class="fas fa-unlock-alt" id="btnIcon"></i>
             </button>
         </form>
 
@@ -253,5 +256,20 @@
         </div>
     </div>
 
+    <script>
+        // بروتوكول تأمين ضغط الزر ومنع التكرار
+        document.getElementById('loginForm').onsubmit = function() {
+            const btn = document.getElementById('submitBtn');
+            const icon = document.getElementById('btnIcon');
+            const text = document.getElementById('btnText');
+            
+            btn.disabled = true;
+            text.innerText = "جاري التحقق من الهوية...";
+            icon.className = "fas fa-spinner fa-spin";
+            
+            // إضافة لمسة جمالية للتأخير البصري
+            btn.style.filter = "grayscale(0.5)";
+        };
+    </script>
 </body>
 </html>
