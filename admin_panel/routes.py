@@ -1,23 +1,33 @@
-from flask import Blueprint, redirect, url_for
+from flask import Blueprint, redirect, url_for, render_template
 from flask_login import login_required
 
-# استيراد محرك الدخول فقط
-# تأكد أن ملف auth.py يحتوي على دالة login_view كما في الكود السابق
+# استيراد محرك الدخول من ملف auth.py المجاور
 from .auth import login_view 
 
 # تعريف البلوبرنت الخاص بلوحة التحكم
 admin_bp = Blueprint('admin', __name__, template_folder='templates')
 
 # ==========================================
-# بوابة الدخول السيادية (The Entry Point)
+# 1. بوابة الدخول (The Security Gate)
 # ==========================================
+
+@admin_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    """توجيه طلب الدخول إلى المحرك المختص في auth.py"""
+    return login_view()
+
+# ==========================================
+# 2. غرفة القيادة (The Dashboard)
+# ==========================================
+
 @admin_bp.route('/dashboard')
-@login_required
+@login_required # لا يمكن الدخول هنا إلا بعد تجاوز بوابة الدخول
 def dashboard():
+    """عرض لوحة التحكم الرئيسية"""
     return render_template('admin/dashboard.html')
 
 # ==========================================
-# بروتوكول الخروج الآمن (Logout)
+# 3. بروتوكول الخروج الآمن (Logout)
 # ==========================================
 
 @admin_bp.route('/logout')
