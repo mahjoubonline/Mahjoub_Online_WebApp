@@ -1,11 +1,11 @@
+# core/models/user.py
 from core.extensions import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy.exc import InternalError, ProgrammingError
 
 class User(db.Model, UserMixin):
     """
-    نواة الهوية الرقمية - v4.0
+    نواة الهوية الرقمية - v4.1 (تم الإصلاح لضمان الاستقرار)
     تتحكم في صلاحيات الوصول لمركز قيادة محجوب أونلاين
     """
     __tablename__ = 'users'
@@ -13,17 +13,21 @@ class User(db.Model, UserMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=True) # مضاف للتواصل الرسمي
+    email = db.Column(db.String(150), unique=True, nullable=True) 
     password_hash = db.Column(db.String(256), nullable=False)
     
     # الأدوار السيادية: [admin, staff, supplier, customer]
     role = db.Column(db.String(50), default='customer') 
     is_active_account = db.Column(db.Boolean, default=True)
 
-    # --- الربط البرمجي (علاقات الترسانة) ---
-    # ربط المستخدم ببروفايل المورد (في حال كان حسابه مورد)
-    # ملاحظة: تم استخدام backref هادئ لتجنب التعارض
-    supplier_profile = db.relationship('Supplier', backref='account', uselist=False, lazy=True)
+    # --- الإصلاح الجوهري هنا (الربط البرمجي) ---
+    
+    # 1. إضافة المفتاح الأجنبي (الجسر المفقود)
+    # ملاحظة: تأكد أن اسم الجدول في ملف supplier.py هو 'suppliers'
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
+
+    # 2. تعديل العلاقة لتشير إلى المفتاح الأجنبي المذكور أعلاه
+    supplier_profile = db.relationship('Supplier', backref='account', uselist=False)
 
     def set_password(self, password):
         """تشفير سيادي عالي الطاقة"""
@@ -37,11 +41,7 @@ class User(db.Model, UserMixin):
     @property
     def is_active(self):
         """ضمان الحصانة البرمجية عند استعلام الحالة"""
-        try:
-            return self.is_active_account
-        except Exception:
-            db.session.rollback()
-            return True 
+        return self.is_active_account
 
     def to_dict(self):
         """تحويل البيانات لـ JSON لمحرك الجافا سكريبت"""
