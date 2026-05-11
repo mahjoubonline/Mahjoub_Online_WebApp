@@ -31,7 +31,7 @@ def create_app():
         try:
             db.create_all()
             
-            # قائمة التحديثات لضمان توافق قاعدة البيانات مع الكود الجديد
+            # قائمة التحديثات لضمان توافق قاعدة البيانات مع الكود الجديد في Railway
             db_updates = [
                 ("suppliers", "email", "VARCHAR(150)"),
                 ("suppliers", "identity_image", "VARCHAR(255)"),
@@ -48,48 +48,19 @@ def create_app():
             
             for table, col_name, col_type in db_updates:
                 try:
+                    # إضافة الأعمدة فقط إذا لم تكن موجودة
                     db.session.execute(db.text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
                 except Exception:
                     pass 
 
             db.session.commit()
-            
-            # --- 3. بروتوكول الترقية السيادية للقائد (حل مشكلة رفض الدخول) ---
-            try:
-                # البحث عن حسابك بالاسم المحدد وتحديث بياناته
-                commander = User.query.filter_by(username='علي محجوب').first()
-                
-                if commander:
-                    commander.role = 'admin'  # منح رتبة القيادة
-                    commander.set_password('123')  # تثبيت كلمة المرور
-                    db.session.commit()
-                    print(f"👑 تم تعميد القائد {commander.username} بالصلاحيات الكاملة.")
-                else:
-                    # في حال لم يكن الحساب موجوداً، نقوم بإنشائه فوراً
-                    new_boss = User(username='علي محجوب', role='admin', full_name='علي محجوب')
-                    new_boss.set_password('123')
-                    db.session.add(new_boss)
-                    db.session.commit()
-                    print("✨ تم إنشاء حساب القائد علي محجوب لأول مرة بالصلاحيات السيادية.")
-                
-                # تعميد الهوية السيادية في جدول الموردين
-                boss_supplier = Supplier.query.filter_by(trade_name="علي محجوب").first()
-                if boss_supplier and not boss_supplier.sovereign_id:
-                    boss_supplier.generate_sovereign_codes() 
-                    db.session.commit()
-                    print("✅ تم تعميد الهوية السيادية للمورد بنجاح.")
-                    
-            except Exception as e:
-                db.session.rollback()
-                print(f"⚠️ تنبيه أثناء الترقية السيادية: {e}")
-
-            print("✅ تم استكمال الترسانة وتطهير الهيكل بنجاح.")
+            print("✅ تم استكمال تحديث الهيكل السيادي بنجاح.")
             
         except Exception as e:
-            print(f"⚠️ عطل في التهيئة: {e}")
+            print(f"⚠️ عطل تقني في تهيئة الجداول: {e}")
             db.session.rollback()
 
-        # 4. تسجيل البلوبرنتات والروابط
+        # 3. تسجيل البلوبرنتات والروابط (Blueprint Registry)
         from admin_panel import admin_bp
         from admin_panel import supplier_service_routes 
         from admin_panel import staff_routes
