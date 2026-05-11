@@ -12,12 +12,6 @@ try:
     from core import create_app, db
     from core.models.user import User
     from core.models.supplier import Supplier, SupplierStaff
-    try:
-        from core.models.business import Order
-        from core.models.product import Product
-    except ImportError:
-        Order = None
-        Product = None
 except ImportError as e:
     print(f"❌ تعذر العثور على النواة (Core Models): {e}")
     sys.exit(1)
@@ -26,64 +20,64 @@ app = create_app()
 
 def initialize_database():
     """
-    بروتوكول تهيئة الترسانة الرقمية المستقرة - منصة محجوب أونلاين v3.7
-    تم إضافة حقول full_name و phone لإصلاح أخطاء Postgres في Railway.
+    بروتوكول الاقتحام النهائي - منصة محجوب أونلاين v4.0
+    تحديث شامل لضمان الدخول بهوية 'admin' وتجاوز مشاكل الترميز العربي.
     """
     with app.app_context():
         try:
             print("\n" + "="*60)
-            print("🚀 بدء بروتوكول التحديث والتعميد - محجوب أونلاين")
+            print("🚀 بدء بروتوكول الاقتحام والتعميد - محجوب أونلاين")
             print("="*60)
             
             # 1. بناء الهياكل الجديدة
             db.create_all() 
             print("✅ تم فحص وبناء الهياكل الجديدة (Tables Verified).")
             
-            # 2. ترميم الأعمدة المفقودة (إصلاح خطأ column users.full_name does not exist)
+            # 2. ترميم الأعمدة المفقودة
             with db.engine.connect() as connection:
                 alter_queries = [
-                    # حقول جدول المستخدمين (المطلوبة في السجلات)
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150);",
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);",
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'admin';",
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES suppliers(id);",
-                    
-                    # حقول جدول الموردين السيادية
-                    "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS tier VARCHAR(50) DEFAULT 'مبتدئ';",
-                    "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS mint_sovereign_id VARCHAR(100) UNIQUE;",
-                    "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS balance_sar FLOAT DEFAULT 0.0;",
-                    "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS balance_usd FLOAT DEFAULT 0.0;"
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"
                 ]
                 for query in alter_queries:
                     try:
                         connection.execute(text(query))
                         connection.commit()
                     except Exception: 
-                        pass # يتخطى إذا كان العمود موجوداً بالفعل
-            print("✅ تم ترميم الأعمدة المفقودة وتحديث الخزينة (Fix Applied).")
+                        pass
+            print("✅ تم ترميم أعمدة الهوية (Fix Applied).")
 
-            # 3. تأمين حساب المؤسس "علي محجوب"
-            admin_user = User.query.filter_by(username="علي محجوب").first()
-            if not admin_user:
-                new_admin = User(
-                    username="علي محجوب",
-                    full_name="المهندس علي محجوب", # إضافة الاسم الكامل هنا
-                    email='admin@mahjoub.online',
-                    role='admin'
-                )
-                new_admin.set_password('123')
-                db.session.add(new_admin)
-                print("👤 تم إنشاء حساب المؤسس السيادي (علي محجوب) بنجاح.")
-            else:
-                # تحديث البيانات إذا كان الحساب موجوداً
-                admin_user.role = 'admin'
-                if not admin_user.full_name:
-                    admin_user.full_name = "المهندس علي محجوب"
-                print("ℹ️ حساب المؤسس موجود مسبقاً وتَم تحديث بياناته.")
+            # 3. بروتوكول "تطهير الحسابات" لضمان الدخول
+            # سنقوم بإنشاء/تحديث حسابين لضمان نجاحك في الدخول بأي منهما
+            identities = [
+                {"username": "admin", "full_name": "مدير النظام الأساسي"},
+                {"username": "علي محجوب", "full_name": "المهندس علي محجوب"}
+            ]
+
+            for identity in identities:
+                user = User.query.filter_by(username=identity['username']).first()
+                if not user:
+                    user = User(
+                        username=identity['username'],
+                        full_name=identity['full_name'],
+                        email=f"{identity['username']}@mahjoub.online",
+                        role='admin',
+                        is_active=True
+                    )
+                    user.set_password('123')
+                    db.session.add(user)
+                    print(f"👤 تم إنشاء حساب جديد: {identity['username']}")
+                else:
+                    # تحديث الحساب الموجود لضمان الصلاحيات وكلمة المرور
+                    user.role = 'admin'
+                    user.is_active = True
+                    user.set_password('123')
+                    print(f"ℹ️ تم تحديث صلاحيات وكلمة مرور: {identity['username']}")
 
             db.session.commit()
-            print("\n🌟 النظام مستقر الآن، وتم استئصال أخطاء Postgres.")
+            print("\n🌟 تم منح صلاحيات 'admin' لجميع الهويات بكلمة مرور: 123")
             print("="*60 + "\n")
             
         except Exception as e:
