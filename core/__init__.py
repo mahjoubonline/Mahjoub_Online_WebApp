@@ -56,12 +56,21 @@ def create_app():
             
             # --- 3. بروتوكول الترقية السيادية للقائد (حل مشكلة رفض الدخول) ---
             try:
-                # محاولة ترقية أول حساب موجود في النظام ليكون هو الأدمن
-                commander = User.query.first()
+                # البحث عن حسابك بالاسم المحدد وتحديث بياناته
+                commander = User.query.filter_by(username='علي محجوب').first()
+                
                 if commander:
-                    commander.role = 'admin'
+                    commander.role = 'admin'  # منح رتبة القيادة
+                    commander.set_password('123')  # تثبيت كلمة المرور
                     db.session.commit()
-                    print(f"👑 تم منح صلاحيات القيادة (Admin) للحساب: {commander.username}")
+                    print(f"👑 تم تعميد القائد {commander.username} بالصلاحيات الكاملة.")
+                else:
+                    # في حال لم يكن الحساب موجوداً، نقوم بإنشائه فوراً
+                    new_boss = User(username='علي محجوب', role='admin', full_name='علي محجوب')
+                    new_boss.set_password('123')
+                    db.session.add(new_boss)
+                    db.session.commit()
+                    print("✨ تم إنشاء حساب القائد علي محجوب لأول مرة بالصلاحيات السيادية.")
                 
                 # تعميد الهوية السيادية في جدول الموردين
                 boss_supplier = Supplier.query.filter_by(trade_name="علي محجوب").first()
@@ -69,6 +78,7 @@ def create_app():
                     boss_supplier.generate_sovereign_codes() 
                     db.session.commit()
                     print("✅ تم تعميد الهوية السيادية للمورد بنجاح.")
+                    
             except Exception as e:
                 db.session.rollback()
                 print(f"⚠️ تنبيه أثناء الترقية السيادية: {e}")
