@@ -19,14 +19,14 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     
-    # 🔓 تعطيل مؤقت لدرع CSRF لاختبار نجاح تسجيل الموردين وتجاوز خطأ JSON.parse
+    # 🔓 يبقى معطلاً مؤقتاً لتجنب خطأ JSON.parse وحرف < الناتج عن رفض الطلبات
     # csrf.init_app(app) 
     
     login_manager.login_view = 'admin.login'
     login_manager.login_message = "يرجى تسجيل الدخول للوصول إلى الترسانة السيادية"
 
     with app.app_context():
-        # 1. استيراد الموديلات لضمان وعي المحرك بها
+        # 1. استيراد الموديلات لضمان وعي المحرك بها قبل التحديث
         from .models import User, Supplier, SupplierStaff
         
         # 2. بروتوكول التحديث التلقائي للهيكل (Auto-Migration)
@@ -67,13 +67,9 @@ def create_app():
             print(f"⚠️ عطل تقني في تهيئة الجداول: {e}")
             db.session.rollback()
 
-        # 3. تسجيل البلوبرنتات والروابط (Blueprint Registry)
+        # 3. تسجيل البلوبرنتات (Blueprint Registry)
+        # تم إزالة الاستيراد اليدوي للروابط الفرعية هنا لمنع تكرار التسجيل وانهيار السيرفر
         from admin_panel import admin_bp
-        
-        # تم تصحيح طريقة الاستيراد هنا لتجنب الانهيار (Circular Import)
-        with app.app_context():
-            from admin_panel import add_supplier_routes, supplier_service_routes, staff_routes
-        
         app.register_blueprint(admin_bp) 
 
     return app
