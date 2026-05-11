@@ -1,71 +1,62 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
-from core.models.user import User
-from core.extensions import db
-import json
+# admin_panel/routes.py
+from flask import render_template, redirect, url_for, flash, request
+from flask_login import login_required, logout_user
+from . import admin_bp
 
-# تعريف البلوبرنت الخاص بالطاقم تحت المسار السيادي /admin/staff
-staff_bp = Blueprint('staff', __name__, url_prefix='/admin/staff')
+# 🛡️ استدعاء الخدمات (المنطق البرمجي معزول تماماً)
+from core.services.supplier_service import get_all_suppliers, get_next_supplier_id
+from core.services.stats_service import get_admin_dashboard_stats
+from .auth import login_view 
 
-@staff_bp.route('/manage')
+# ==========================================
+# 1. نظام الدخول والخروج (Access Control)
+# ==========================================
+
+@admin_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    """ استدعاء واجهة الدخول - تأكد من وجود مفتاح CSRF في القالب """
+    return login_view()
+
+@admin_bp.route('/logout')
 @login_required
-def manage_staff():
-    # التحقق من الصلاحية: القائد فقط (علي محجوب) أو الـ super_admin يمكنه رؤية الطاقم
-    if current_user.role not in ['admin', 'super_admin']:
-        flash('ليس لديك صلاحية الوصول إلى سجلات الطاقم السيادية.', 'danger')
+def logout():
+    """ إنهاء الجلسة والعودة لنقطة الصفر """
+    logout_user()
+    flash("تم إنهاء الجلسة السيادية بنجاح.", "info")
+    return redirect(url_for('admin.login'))
+
+# ==========================================
+# 2. لوحة القيادة والرادارات (Views)
+# ==========================================
+
+@admin_bp.route('/dashboard')
+@login_required
+def dashboard():
+    """ استدعاء رادار الإحصائيات الشامل """
+    stats = get_admin_dashboard_stats()
+    return render_template('admin/dashboard.html', **stats)
+
+@admin_bp.route('/suppliers')
+@login_required
+def manage_suppliers():
+    """ استدعاء سجل الموردين المعتمدين """
+    try:
+        data = get_all_suppliers()
+        return render_template('admin/manage_suppliers.html', **data)
+    except Exception as e:
+        flash(f"عطل في استدعاء بيانات الموردين: {str(e)}", "danger")
         return redirect(url_for('admin.dashboard'))
 
-    # جلب فريق الإدارة (الذين لا يتبعون مورد معين لضمان استقلالية الإدارة العليا)
-    admin_team = User.query.filter(User.supplier_id == None, User.role != 'super_admin').all()
-    
-    # التوجيه للمسار الجديد داخل مجلد staff
-    return render_template('staff/manage_staff.html', admin_team=admin_team)
-
-@staff_bp.route('/add', methods=['POST'])
+@admin_bp.route('/suppliers/add', methods=['GET'])
 @login_required
-def add_staff_member():
-    # حماية المسار: منع أي شخص غير القائد من إضافة موظفين
-    if current_user.role not in ['admin', 'super_admin']:
-        flash('صلاحية سيادية مطلوبة لتعميد أفراد جدد!', 'danger')
-        return redirect(url_for('staff.manage_staff'))
+def add_supplier():
+    """ استدعاء نموذج تعميد مورد جديد """
+    next_id = get_next_supplier_id()
+    return render_template('admin/add_supplier.html', next_id=next_id)
 
-    # استلام البيانات من النموذج المؤمن بـ CSRF
-    username = request.form.get('username')
-    password = request.form.get('password')
-    full_name = request.form.get('full_name')
-    role = request.form.get('role')
-    
-    # بروتوكول تجميع الصلاحيات الرقمية (Governance JSON)
-    perms = {
-        "can_manage_suppliers": 'manage_suppliers' in request.form,
-        "can_approve_products": 'approve_products' in request.form,
-        "can_view_finance": 'view_finance' in request.form
-    }
-
-    # التحقق من عدم تكرار الهوية الرقمية (Username)
-    if User.query.filter_by(username=username).first():
-        flash('هذا المستخدم مسجل مسبقاً في الترسانة!', 'warning')
-        return redirect(url_for('staff.manage_staff'))
-
-    try:
-        # إنشاء الموظف الجديد (لاحظ استخدام json.dumps لتخزين الصلاحيات كـ TEXT)
-        new_member = User(
-            username=username,
-            full_name=full_name,
-            role=role,
-            permissions=json.dumps(perms)
-        )
-        
-        # تشفير كلمة المرور فوراً (بروتوكول الأمان)
-        new_member.set_password(password)
-        
-        db.session.add(new_member)
-        db.session.commit()
-        
-        flash(f'تم تعميد الموظف {full_name} بنجاح ضمن طاقم القيادة.', 'success')
-    
-    except Exception as e:
-        db.session.rollback()
-        flash(f'حدث عطل تقني أثناء التعميد: {str(e)}', 'danger')
-
-    return redirect(url_for('staff.manage_staff'))
+# ==========================================
+# توثيق الربط البرمجي (للقائد علي محجوب):
+# 1. تم توجيه القوالب لمجلد 'admin/' لضمان عدم التداخل مع مجلد 'staff/'.
+# 2. هذا الملف يعمل كـ "بوابة" فقط، معالجة البيانات (Logic) تتم في ملفات الـ services.
+# 3. روابط الـ Staff يتم استدعاؤها عبر Blueprint منفصل (staff_bp) مسجل في app.py.
+# ==========================================
