@@ -45,7 +45,6 @@ def manage_suppliers():
     """ جلب قائمة الموردين المعتمدين وإحصائيات الرتب من الخدمة المختصة """
     try:
         data = get_all_suppliers()
-        # نمرر البيانات للقالب (suppliers و stats) المسترجعة من المحرك
         return render_template('admin/manage_suppliers.html', **data)
     except Exception as e:
         flash(f"⚠️ عطل في رادار الموردين: {str(e)}", "danger")
@@ -59,16 +58,11 @@ def manage_suppliers():
 def add_supplier():
     """ معالجة بروتوكول الإرسال والتعميد والأرشفة الرقمية """
     if request.method == 'POST':
-        # الحماية من خطأ 415: معالجة البيانات سواء كانت JSON أو Form
-        if request.is_json:
-            data = request.get_json()
-        else:
-            data = request.form.to_dict()
+        data = request.get_json() if request.is_json else request.form.to_dict()
         
         if not data:
             return jsonify({"status": "error", "message": "عذراً، لم يتم استلام بيانات صالحة للتعميد."}), 400
             
-        # استدعاء خدمة الإنشاء (التي تتولى التشفير وتوليد الأكواد SUP-MHA)
         success, result = create_supplier(data)
         
         if success:
@@ -77,15 +71,10 @@ def add_supplier():
                 "message": f"تم التعميد بنجاح للمورد: {result}"
             })
         
-        # بروتوكول الفشل: إرجاع رسالة الخطأ التقنية للمسؤول
         return jsonify({"status": "error", "message": result}), 500
 
-    # في حالة الـ GET: نجهز واجهة الإضافة ونعرض المعرف السيادي القادم
-    try:
-        next_id = get_next_supplier_id()
-    except:
-        next_id = "جاري الحساب..."
-        
+    # في حالة الـ GET: نجهز واجهة الإضافة
+    next_id = get_next_supplier_id()
     return render_template('admin/add_supplier.html', next_id=next_id)
 
 # ==========================================
@@ -99,18 +88,5 @@ def logout():
     flash("تم تسجيل الخروج. النظام في وضع الحماية الآن.", "info")
     return redirect(url_for('admin.login'))
 
-@admin_bp.route('/suppliers/profile/<int:supplier_id>')
-@login_required
-def supplier_profile(supplier_id):
-    from core.models.supplier import Supplier
-    try:
-        # جلب المورد
-        supplier = Supplier.query.get_or_404(supplier_id)
-        
-        # ملاحظة: تأكد أن الموديل يحتوي على sovereign_id وليس mint_sovereign_id
-        return render_template('suppliers/supplier_profile.html', supplier=supplier)
-        
-    except Exception as e:
-        # تسجيل الخطأ في حالة فشل قاعدة البيانات
-        print(f"Error accessing supplier {supplier_id}: {str(e)}")
-        return "حدث خطأ في الاتصال بقاعدة البيانات السيادية", 500
+# ملاحظة: دالة supplier_profile تم نقلها إلى supplier_service_routes.py
+# لضمان فصل منطق التعديل عن منطق العرض العام.
