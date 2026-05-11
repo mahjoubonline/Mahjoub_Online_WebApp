@@ -16,14 +16,14 @@
                     </label>
                     <input type="file" id="image-upload" hidden accept="image/*">
                 </div>
-                <h4 class="fw-bold mb-1">{{ supplier.trade_name }}</h4>
+                <h4 class="fw-bold mb-1" id="display-trade-name">{{ supplier.trade_name }}</h4>
                 <span class="badge bg-dark-subtle text-dark border mb-3">{{ supplier.sovereign_id }}</span>
                 
                 <div class="d-grid gap-2">
                     {% if supplier.status == 'active' %}
-                    <button class="btn btn-success-subtle text-success border-success w-100 fw-bold">الكيان نشط حالياً</button>
+                    <button class="btn btn-success-subtle text-success border-success w-100 fw-bold" disabled>الكيان نشط حالياً</button>
                     {% else %}
-                    <button class="btn btn-danger-subtle text-danger border-danger w-100 fw-bold">الكيان موقوف</button>
+                    <button class="btn btn-danger-subtle text-danger border-danger w-100 fw-bold" disabled>الكيان موقوف</button>
                     {% endif %}
                 </div>
             </div>
@@ -60,11 +60,11 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">الاسم التجاري</label>
-                                <input type="text" name="trade_name" class="form-control" value="{{ supplier.trade_name }}">
+                                <input type="text" name="trade_name" class="form-control" value="{{ supplier.trade_name }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">اسم المالك</label>
-                                <input type="text" name="owner_name" class="form-control" value="{{ supplier.owner_name }}">
+                                <input type="text" name="owner_name" class="form-control" value="{{ supplier.owner_name }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">البريد الإلكتروني</label>
@@ -72,7 +72,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">رقم الهاتف</label>
-                                <input type="text" name="phone" class="form-control" value="{{ supplier.phone }}">
+                                <input type="text" name="phone" class="form-control" value="{{ supplier.phone }}" required>
                             </div>
                             
                             <hr class="my-4">
@@ -87,7 +87,7 @@
                             </div>
 
                             <div class="col-12 mt-4">
-                                <button type="submit" class="btn btn-gold px-5 py-2 fw-bold">
+                                <button type="submit" class="btn btn-gold px-5 py-2 fw-bold" id="saveBtn">
                                     <i class="fas fa-save me-2"></i> حفظ التغييرات السيادية
                                 </button>
                                 <a href="{{ url_for('admin.manage_suppliers') }}" class="btn btn-outline-secondary px-4 py-2">إلغاء</a>
@@ -101,27 +101,55 @@
 </div>
 
 <script>
-// بروتوكول حفظ البيانات
+// بروتوكول حفظ البيانات السيادية عبر AJAX
 document.getElementById('editSupplierForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
+    const form = this;
+    const formData = new FormData(form);
+    const saveBtn = document.getElementById('saveBtn');
+
     Swal.fire({
         title: 'تأكيد الحفظ؟',
-        text: "سيتم تحديث بيانات المورد في القاعدة الرئيسية.",
+        text: "سيتم تحديث بيانات المورد في القاعدة الرئيسية وتعميدها.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#4a148c',
         confirmButtonText: 'نعم، تعميد التعديل',
-        cancelButtonText: 'إلغاء'
+        cancelButtonText: 'إلغاء',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            return fetch("{{ url_for('admin.supplier_profile', supplier_id=supplier.id) }}", {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.message || 'فشل الاتصال بالمحرك') });
+                }
+                return response.json();
+            })
+            .catch(error => {
+                Swal.showValidationMessage(`خطأ: ${error.message}`);
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
     }).then((result) => {
-        if (result.isConfirmed) {
-            // هنا يتم إرسال البيانات عبر AJAX (سنجهز الـ route لاحقاً)
-            Swal.fire('تم الحفظ!', 'تم تحديث بيانات الكيان بنجاح.', 'success');
+        if (result.isConfirmed && result.value.status === 'success') {
+            Swal.fire({
+                title: 'تم التعميد!',
+                text: result.value.message,
+                icon: 'success',
+                confirmButtonColor: '#4a148c'
+            }).then(() => {
+                // تحديث الاسم المعروض في البطاقة العلوية فوراً
+                document.getElementById('display-trade-name').innerText = formData.get('trade_name');
+            });
         }
     });
 });
 
-// معالجة معاينة الصورة
+// معالجة معاينة الصورة الشخصية
 document.getElementById('image-upload').addEventListener('change', function(e) {
     if (this.files && this.files[0]) {
         let reader = new FileReader();
@@ -135,10 +163,11 @@ document.getElementById('image-upload').addEventListener('change', function(e) {
 
 <style>
     .border-purple { border-color: var(--royal-purple) !important; }
-    .bg-purple-light { background-color: #f3e5f5; }
     .text-purple { color: var(--royal-purple); }
-    .btn-gold { background: var(--mahjoub-gold); color: white; border: none; }
-    .btn-gold:hover { background: #b8962d; color: white; }
+    .btn-gold { background: var(--mahjoub-gold, #c5a02a); color: white; border: none; transition: 0.3s; }
+    .btn-gold:hover { background: #b8962d; color: white; transform: translateY(-2px); }
     .form-control:focus { border-color: var(--royal-purple); box-shadow: 0 0 0 0.2rem rgba(74, 20, 140, 0.1); }
+    .btn-success-subtle { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+    .btn-danger-subtle { background-color: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
 </style>
 {% endblock %}
