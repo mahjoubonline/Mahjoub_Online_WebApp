@@ -4,13 +4,22 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold text-purple mb-0">
+            <i class="fas fa-id-card-alt me-2"></i>ملف تعميد الكيان
+        </h5>
+        <a href="{{ url_for('admin.manage_suppliers') }}" class="btn btn-sm btn-outline-purple shadow-sm px-3">
+            <i class="fas fa-chevron-right me-1"></i> العودة للرادار
+        </a>
+    </div>
+
     <div class="row">
         <div class="col-lg-4">
             <div class="card shadow-sm border-0 text-center p-4 mb-4 position-relative border-top border-4 border-purple">
                 <div class="position-relative d-inline-block mx-auto mb-3">
                     <img src="{{ supplier.identity_image or url_for('static', filename='img/default-supplier.png') }}" 
                          id="preview-img" class="rounded-circle border border-4 border-purple shadow" 
-                         style="width: 140px; height: 140px; object-fit: cover;">
+                         style="width: 130px; height: 130px; object-fit: cover;">
                     <label for="image-upload" class="btn btn-sm btn-gold position-absolute bottom-0 end-0 rounded-circle shadow-sm">
                         <i class="fas fa-camera"></i>
                     </label>
@@ -19,16 +28,16 @@
                 
                 <h4 class="fw-bold mb-1" id="display-trade-name">{{ supplier.trade_name }}</h4>
                 <div class="mb-3">
-                    <span class="badge bg-dark-subtle text-dark border px-3 py-2">{{ supplier.sovereign_id }}</span>
+                    <span class="badge bg-dark-subtle text-dark border px-3 py-2 small">{{ supplier.sovereign_id }}</span>
                 </div>
 
-                <div class="p-3 bg-light rounded-3 border">
-                    <h6 class="small fw-bold text-muted mb-3 text-start"><i class="fas fa-user-shield me-1"></i> وحدة الرقابة السيادية</h6>
+                <div class="p-3 bg-light rounded-3 border text-start">
+                    <h6 class="small fw-bold text-muted mb-3"><i class="fas fa-user-shield me-1"></i> الرقابة والحالة</h6>
                     <div class="row g-2">
                         <div class="col-12 mb-2">
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-white small">الرتبة</span>
-                                <select name="tier" class="form-select auto-save-select fw-bold text-primary" data-id="{{ supplier.id }}">
+                                <span class="input-group-text bg-white small border-end-0">الرتبة</span>
+                                <select name="tier" class="form-select auto-save-select fw-bold text-primary border-start-0" data-id="{{ supplier.id }}">
                                     <option value="مبتدئ" {% if supplier.tier == 'مبتدئ' %}selected{% endif %}>🥉 مبتدئ</option>
                                     <option value="احترافي" {% if supplier.tier == 'احترافي' %}selected{% endif %}>🥈 احترافي</option>
                                     <option value="سيادي" {% if supplier.tier == 'سيادي' %}selected{% endif %}>👑 سيادي</option>
@@ -38,8 +47,8 @@
                         </div>
                         <div class="col-12">
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-white small">الحالة</span>
-                                <select name="status" id="status-select" class="form-select auto-save-select fw-bold {% if supplier.status == 'active' %}text-success{% elif supplier.status == 'blocked' %}text-danger{% else %}text-warning{% endif %}" data-id="{{ supplier.id }}">
+                                <span class="input-group-text bg-white small border-end-0">الحالة</span>
+                                <select name="status" id="status-select" class="form-select auto-save-select fw-bold border-start-0 {% if supplier.status == 'active' %}text-success{% elif supplier.status == 'blocked' %}text-danger{% else %}text-warning{% endif %}" data-id="{{ supplier.id }}">
                                     <option value="active" {% if supplier.status == 'active' %}selected{% endif %}>🟢 نشط</option>
                                     <option value="pending" {% if supplier.status == 'pending' %}selected{% endif %}>🟡 معلق</option>
                                     <option value="blocked" {% if supplier.status == 'blocked' %}selected{% endif %}>🔴 محظور</option>
@@ -52,18 +61,18 @@
             </div>
 
             <div class="card shadow-sm border-0 p-4">
-                <h6 class="fw-bold mb-3 text-purple"><i class="fas fa-vault me-2"></i>الخزينة الرقمية</h6>
-                <div class="balance-item mb-2 p-2 bg-light rounded border-start border-4 border-primary shadow-sm">
-                    <small class="text-muted d-block" style="font-size: 10px;">ريال يمني (YER)</small>
-                    <span class="fw-bold">{{ "{:,.2f}".format(supplier.balance_yer or 0) }}</span>
+                <h6 class="fw-bold mb-3 text-purple small"><i class="fas fa-vault me-2"></i>الأرصدة السيادية</h6>
+                <div class="balance-item mb-2 p-2 bg-light rounded border-start border-4 border-primary shadow-sm d-flex justify-content-between">
+                    <small class="text-muted">YER</small>
+                    <span class="fw-bold small">{{ "{:,.2f}".format(supplier.balance_yer or 0) }}</span>
                 </div>
-                <div class="balance-item mb-2 p-2 bg-light rounded border-start border-4 border-success shadow-sm">
-                    <small class="text-muted d-block" style="font-size: 10px;">ريال سعودي (SAR)</small>
-                    <span class="fw-bold">{{ "{:,.2f}".format(supplier.balance_sar or 0) }}</span>
+                <div class="balance-item mb-2 p-2 bg-light rounded border-start border-4 border-success shadow-sm d-flex justify-content-between">
+                    <small class="text-muted">SAR</small>
+                    <span class="fw-bold small">{{ "{:,.2f}".format(supplier.balance_sar or 0) }}</span>
                 </div>
-                <div class="balance-item p-2 bg-light rounded border-start border-4 border-info shadow-sm">
-                    <small class="text-muted d-block" style="font-size: 10px;">دولار (USD)</small>
-                    <span class="fw-bold text-dark">{{ "{:,.2f}".format(supplier.balance_usd or 0) }}</span>
+                <div class="balance-item p-2 bg-light rounded border-start border-4 border-info shadow-sm d-flex justify-content-between">
+                    <small class="text-muted">USD</small>
+                    <span class="fw-bold small text-dark">{{ "{:,.2f}".format(supplier.balance_usd or 0) }}</span>
                 </div>
             </div>
         </div>
@@ -72,8 +81,8 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-white py-3 border-0">
                     <h5 class="fw-bold mb-0 text-purple">
-                        <i class="fas fa-fingerprint me-2"></i>حوكمة سجلات الكيان
-                        <small class="text-muted fw-normal d-block mt-1" style="font-size: 11px;">الرقابة مفعلة: أي تغيير يتم تعميده فوراً في الترسانة.</small>
+                        <i class="fas fa-fingerprint me-2"></i>حوكمة البيانات السحابية
+                        <small class="text-muted fw-normal d-block mt-1" style="font-size: 11px;">سيتم الحفظ التلقائي فور الخروج من الحقل.</small>
                     </h5>
                 </div>
                 <div class="card-body">
@@ -81,6 +90,7 @@
                         <div class="row g-4">
                             {% set fields = [
                                 ('trade_name', 'الاسم التجاري', supplier.trade_name, 'fas fa-store'),
+                                ('username', 'اسم المستخدم', supplier.username, 'fas fa-user-circle'),
                                 ('owner_name', 'اسم المالك', supplier.owner_name, 'fas fa-user-tie'),
                                 ('email', 'البريد الإلكتروني', supplier.email, 'fas fa-envelope'),
                                 ('phone', 'رقم الهاتف', supplier.phone, 'fas fa-phone'),
@@ -94,8 +104,8 @@
                                 <div class="input-group input-group-edit shadow-sm">
                                     <span class="input-group-text bg-white border-end-0"><i class="{{ icon }} text-purple-light"></i></span>
                                     <input type="text" name="{{ name }}" 
-                                           class="form-control border-start-0 auto-save-input fw-medium" 
-                                           value="{{ value }}" 
+                                           class="form-control border-start-0 border-end-0 auto-save-input fw-medium" 
+                                           value="{{ value or '' }}" 
                                            placeholder="أدخل {{ label }}">
                                     <span class="input-group-text bg-white border-start-0 edit-icon">
                                         <i class="fas fa-pen fa-xs text-muted"></i>
@@ -107,12 +117,8 @@
                     </form>
                     
                     <div class="mt-5 p-4 bg-light rounded text-center border-dashed">
-                        <p class="small text-muted mb-0">نظام الرقابة اللحظي يعمل الآن. جميع الحقول مرتبطة بمحرك الحفظ المركزي لـ "محجوب أونلاين".</p>
-                        <div class="mt-3">
-                            <a href="{{ url_for('admin.manage_suppliers') }}" class="btn btn-sm btn-purple px-4">
-                                <i class="fas fa-arrow-right me-1"></i> العودة للرادار
-                            </a>
-                        </div>
+                        <i class="fas fa-shield-alt text-purple mb-2 opacity-50 fa-2x"></i>
+                        <p class="small text-muted mb-0">نظام الرقابة اللحظي يحفظ كل حركة تقوم بها. تم تشفير سجلات الوصول لهذا الكيان.</p>
                     </div>
                 </div>
             </div>
@@ -123,9 +129,16 @@
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
     <div id="saveToast" class="toast align-items-center text-white bg-dark border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
-            <div class="toast-body">
-                <i class="fas fa-shield-check text-success me-2"></i> <span id="toast-msg">تم تعميد البيانات بنجاح.</span>
+            <div class="toast-body d-flex align-items-center">
+                <div id="toast-icon" class="me-2 text-success">
+                    <i class="fas fa-check-circle fa-lg"></i>
+                </div>
+                <div>
+                    <strong class="d-block text-gold small">محرك محجوب أونلاين</strong>
+                    <span id="toast-msg" class="small">تم تعميد البيانات في الترسانة.</span>
+                </div>
             </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
@@ -137,7 +150,6 @@
         const parent = inputElement.closest('.input-group');
         const icon = parent.querySelector('.edit-icon i');
         
-        // بروتوكول بصري: جاري الحفظ
         icon.className = 'fas fa-sync fa-spin text-warning';
 
         const formData = new FormData();
@@ -150,7 +162,6 @@
             });
 
             if (response.ok) {
-                // تحديث لون الحالة برمجياً إذا كان الحقل هو 'status'
                 if(fieldName === 'status') {
                     inputElement.classList.remove('text-success', 'text-danger', 'text-warning');
                     if(fieldValue === 'active') inputElement.classList.add('text-success');
@@ -158,11 +169,9 @@
                     else inputElement.classList.add('text-warning');
                 }
 
-                // تحديث واجهة العرض
                 if(fieldName === 'trade_name') document.getElementById('display-trade-name').innerText = fieldValue;
 
-                // إظهار التوثيق
-                document.getElementById('toast-msg').innerText = `تم تحديث ${fieldName} بنجاح.`;
+                document.getElementById('toast-msg').innerText = `تم تعميد "${fieldName}" بنجاح.`;
                 new bootstrap.Toast(document.getElementById('saveToast')).show();
                 icon.className = 'fas fa-check text-success';
             } else {
@@ -180,13 +189,15 @@
 </script>
 
 <style>
-    :root { --royal-purple: #4a148c; --gold: #c5a02a; }
-    .btn-purple { background: var(--royal-purple); color: white; border: none; }
-    .btn-purple:hover { background: #310d5e; color: white; }
+    :root { --royal-purple: #4a148c; --gold: #c5a02a; --purple-light: #7b1fa2; }
     .text-purple { color: var(--royal-purple); }
-    .input-group-edit:focus-within { border: 1px solid var(--royal-purple); border-radius: 8px; }
+    .text-gold { color: var(--gold); }
+    .btn-outline-purple { color: var(--royal-purple); border-color: var(--royal-purple); }
+    .btn-outline-purple:hover { background: var(--royal-purple); color: white; }
+    .input-group-edit input:focus { box-shadow: none; border-color: #eee; }
+    .input-group-edit:focus-within { transform: translateY(-2px); transition: 0.3s; }
     .border-dashed { border: 2px dashed #dee2e6; }
-    .edit-icon { border-left: 0 !important; cursor: pointer; }
-    .auto-save-select { cursor: pointer; }
+    .edit-icon { border-left: 0 !important; cursor: pointer; font-size: 0.7rem; }
+    .form-select:focus { box-shadow: none; border-color: #dee2e6; }
 </style>
 {% endblock %}
