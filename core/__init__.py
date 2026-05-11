@@ -17,15 +17,14 @@ def create_app():
     login_manager.login_message = "يرجى تسجيل الدخول للوصول إلى الترسانة السيادية"
 
     with app.app_context():
-        # 4. استيراد الموديلات المطهّرة من النقطة المركزية
-        # تم الاكتفاء بالموديلات الحقيقية فقط (User, Supplier, SupplierStaff)
+        # 1. استيراد الموديلات المطهّرة من النقطة المركزية
         from .models import User, Supplier, SupplierStaff
         
-        # 5. بروتوكول تحديث الجداول (PostgreSQL Migration)
+        # 2. بروتوكول تحديث الجداول (PostgreSQL Migration)
         try:
             db.create_all()
             
-            # تحديث حقول الموردين (الخزينة الثلاثية والهوية)
+            # تحديث حقول الموردين (الخزينة الثلاثية والهوية الرقمية)
             supplier_updates = [
                 ("email", "VARCHAR(150)"),
                 ("identity_image", "VARCHAR(255)"),
@@ -39,17 +38,33 @@ def create_app():
             for col_name, col_type in supplier_updates:
                 try:
                     db.session.execute(db.text(f"ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
-                except: pass
+                except Exception:
+                    pass
 
             db.session.commit()
+            
+            # 3. بروتوكول التحقق من "القائد" وتعميد الهوية السيادية
+            # حل مشكلة 'Supplier' object has no attribute 'mint_sovereign_id'
+            try:
+                boss = Supplier.query.filter_by(trade_name="علي محجوب").first()
+                if boss and not boss.sovereign_id:
+                    boss.generate_sovereign_codes() # الدالة المعتمدة في الموديل
+                    db.session.commit()
+                    print("✅ تم تعميد الهوية السيادية للقائد بنجاح.")
+            except Exception as e:
+                db.session.rollback()
+                print(f"⚠️ تنبيه أثناء تعميد الهوية: {e}")
+
             print("✅ تم استكمال الترسانة وتطهير الهيكل بنجاح.")
             
         except Exception as e:
-            print(f"⚠️ تنبيه سيادي: {e}")
+            print(f"⚠️ عطل سيادي في التهيئة: {e}")
             db.session.rollback()
 
-        # 6. تسجيل لوحة التحكم (Admin Blueprint)
+        # 4. تسجيل لوحة التحكم (Admin Blueprint)
+        # يتم الاستيراد هنا لتجنب الاستيراد الدائري (Circular Import)
         from admin_panel import admin_bp
+        from admin_panel import supplier_service_routes # ضمان تسجيل مسارات الخدمات
         app.register_blueprint(admin_bp) 
 
     return app
