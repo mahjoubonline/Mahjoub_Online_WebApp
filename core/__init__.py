@@ -33,8 +33,6 @@ def create_app():
         try:
             db.create_all()
             
-            # قائمة التحديثات لضمان توافق قاعدة البيانات مع الكود الجديد في Railway
-            # تم إضافة حقول إضافية قد يحتاجها نموذج المورد لتجنب الانهيار
             db_updates = [
                 ("suppliers", "email", "VARCHAR(150)"),
                 ("suppliers", "identity_image", "VARCHAR(255)"),
@@ -58,7 +56,6 @@ def create_app():
             
             for table, col_name, col_type in db_updates:
                 try:
-                    # تنفيذ إضافة الأعمدة بشكل مباشر لضمان عدم توقف السيرفر
                     db.session.execute(db.text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
                 except Exception:
                     pass 
@@ -72,10 +69,10 @@ def create_app():
 
         # 3. تسجيل البلوبرنتات والروابط (Blueprint Registry)
         from admin_panel import admin_bp
-        # الاستيرادات التالية لضمان تسجيل الروابط الفرعية داخل البلوبرنت
-        import admin_panel.add_supplier_routes 
-        import admin_panel.supplier_service_routes 
-        import admin_panel.staff_routes
+        
+        # تم تصحيح طريقة الاستيراد هنا لتجنب الانهيار (Circular Import)
+        with app.app_context():
+            from admin_panel import add_supplier_routes, supplier_service_routes, staff_routes
         
         app.register_blueprint(admin_bp) 
 
