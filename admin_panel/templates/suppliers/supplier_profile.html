@@ -37,9 +37,9 @@
                         <div class="col-12 mb-2">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-white small border-end-0">الرتبة</span>
-                                <select name="tier" class="form-select auto-save-select fw-bold text-primary border-start-0" data-id="{{ supplier.id }}">
-                                    <option value="مبتدئ" {% if supplier.tier == 'مبتدئ' %}selected{% endif %}>🥉 مبتدئ</option>
-                                    <option value="احترافي" {% if supplier.tier == 'احترافي' %}selected{% endif %}>🥈 احترافي</option>
+                                <select name="tier" class="form-select auto-save-select fw-bold text-primary border-start-0">
+                                    <option value="مورد مبتدئ" {% if supplier.tier == 'مورد مبتدئ' %}selected{% endif %}>🥉 مورد مبتدئ</option>
+                                    <option value="مورد احترافي" {% if supplier.tier == 'مورد احترافي' %}selected{% endif %}>🥈 مورد احترافي</option>
                                     <option value="سيادي" {% if supplier.tier == 'سيادي' %}selected{% endif %}>👑 سيادي</option>
                                 </select>
                             </div>
@@ -47,16 +47,10 @@
                         <div class="col-12">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-white small border-end-0">الحالة</span>
-                                <select name="status" id="status-select" class="form-select auto-save-select fw-bold border-start-0 
-                                    {% if supplier.status == 'active' %}text-success
-                                    {% elif supplier.status == 'pending' %}text-warning
-                                    {% elif supplier.status == 'blocked' %}text-danger
-                                    {% elif supplier.status == 'rejected' %}text-secondary{% endif %}" 
-                                    data-id="{{ supplier.id }}">
+                                <select name="status" class="form-select auto-save-select fw-bold border-start-0" id="status-select">
                                     <option value="active" {% if supplier.status == 'active' %}selected{% endif %}>🟢 نشط</option>
                                     <option value="pending" {% if supplier.status == 'pending' %}selected{% endif %}>🟡 معلق</option>
                                     <option value="blocked" {% if supplier.status == 'blocked' %}selected{% endif %}>🔴 محظور</option>
-                                    <option value="rejected" {% if supplier.status == 'rejected' %}selected{% endif %}>⚪ مرفوض</option>
                                 </select>
                             </div>
                         </div>
@@ -72,17 +66,19 @@
                     </button>
                 </div>
                 <div id="users-list">
-                    {% for user in supplier.users %}
+                    {% for staff in supplier.staff_members %}
                     <div class="user-item d-flex align-items-center p-2 border-bottom">
                         <div class="avatar-xs bg-purple text-white rounded-circle text-center me-2" style="width: 30px; height: 30px; line-height: 30px; font-size: 10px;">
-                            {{ user.username[:2]|upper }}
+                            {{ staff.username[:2]|upper }}
                         </div>
                         <div class="flex-grow-1">
-                            <div class="small fw-bold">{{ user.username }}</div>
-                            <div class="text-muted" style="font-size: 9px;">{{ user.role or 'موظف' }}</div>
+                            <div class="small fw-bold">{{ staff.name }}</div>
+                            <div class="text-muted" style="font-size: 9px;">{{ staff.username }}</div>
                         </div>
                         <i class="fas fa-circle text-success" style="font-size: 7px;"></i>
                     </div>
+                    {% else %}
+                    <p class="text-center text-muted small py-3">لا يوجد طاقم ملحق حالياً</p>
                     {% endfor %}
                 </div>
             </div>
@@ -142,14 +138,17 @@
                 <h6 class="modal-title fw-bold">إلحاق موظف جديد بالكيان</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="addUserForm">
-                <div class="modal-body">
+            <form method="POST"> <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">اسم المستخدم</label>
+                        <label class="form-label small fw-bold">اسم الموظف الكامل</label>
+                        <input type="text" name="full_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">اسم المستخدم (الدخول)</label>
                         <input type="text" name="new_username" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">كلمة المرور</label>
+                        <label class="form-label small fw-bold">كلمة المرور السيادية</label>
                         <input type="password" name="new_password" class="form-control" required>
                     </div>
                 </div>
@@ -163,11 +162,10 @@
 </div>
 
 <div class="toast-container position-fixed top-50 start-50 translate-middle" style="z-index: 2000">
-    <div id="saveToast" class="toast align-items-center text-white bg-dark border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
+    <div id="saveToast" class="toast align-items-center text-white bg-dark border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="2000">
         <div class="d-flex">
             <div class="toast-body d-flex align-items-center p-3 text-center w-100 justify-content-center">
-                <div id="toast-icon" class="me-3">
-                    </div>
+                <div id="toast-icon" class="me-3"></div>
                 <div>
                     <strong class="d-block text-gold mb-1">نظام محجوب أونلاين</strong>
                     <span id="toast-msg">جاري المعالجة...</span>
@@ -178,7 +176,7 @@
 </div>
 
 <script>
-    // دالة إظهار التنبيه المنطقي
+    // دالة إظهار التنبيه السيادي
     function showLogicToast(success, message) {
         const toastEl = document.getElementById('saveToast');
         const msgEl = document.getElementById('toast-msg');
@@ -186,53 +184,66 @@
         
         msgEl.innerText = message;
         if (success) {
-            iconEl.innerHTML = '<i class="fas fa-check-circle fa-2x text-success animate__animated animate__bounceIn"></i>';
-            toastEl.classList.replace('bg-danger', 'bg-dark');
+            iconEl.innerHTML = '<i class="fas fa-check-circle fa-2x text-success"></i>';
+            toastEl.classList.remove('bg-danger');
+            toastEl.classList.add('bg-dark');
         } else {
-            iconEl.innerHTML = '<i class="fas fa-times-circle fa-2x text-danger animate__animated animate__shakeX"></i>';
-            toastEl.classList.replace('bg-dark', 'bg-danger');
+            iconEl.innerHTML = '<i class="fas fa-times-circle fa-2x text-danger"></i>';
+            toastEl.classList.remove('bg-dark');
+            toastEl.classList.add('bg-danger');
         }
         
         const toast = new bootstrap.Toast(toastEl);
         toast.show();
     }
 
+    // وظيفة الحفظ التلقائي (التواصل مع المحرك عبر JSON)
     async function autoSave(inputElement) {
         const fieldName = inputElement.name;
         const fieldValue = inputElement.value;
-        const parent = inputElement.closest('.input-group');
-        const icon = parent.querySelector('.edit-icon i');
+        const parent = inputElement.closest('.input-group') || inputElement.parentElement;
+        const icon = parent.querySelector('.edit-icon i') || null;
         
-        icon.className = 'fas fa-sync fa-spin text-warning';
-
-        const formData = new FormData();
-        formData.append(fieldName, fieldValue);
+        if(icon) icon.className = 'fas fa-sync fa-spin text-warning';
 
         try {
             const response = await fetch(`{{ url_for('admin.supplier_profile', supplier_id=supplier.id) }}`, {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    field: fieldName,
+                    value: fieldValue
+                })
             });
 
-            if (response.ok) {
+            const result = await response.json();
+
+            if (response.ok && result.status === 'success') {
                 if(fieldName === 'trade_name') document.getElementById('display-trade-name').innerText = fieldValue;
-                
-                showLogicToast(true, `تم تحديث ${fieldName} بنجاح في قاعدة البيانات.`);
-                icon.className = 'fas fa-check text-success';
+                showLogicToast(true, result.message);
+                if(icon) icon.className = 'fas fa-check text-success';
             } else {
-                showLogicToast(false, "تعذر تعديل البيانات.. الكيان رفض المزامنة.");
-                icon.className = 'fas fa-times text-danger';
+                showLogicToast(false, result.message || "رفض الكيان تحديث البيانات.");
+                if(icon) icon.className = 'fas fa-times text-danger';
             }
         } catch (error) {
-            showLogicToast(false, "تعذر الوصول للسيرفر.. افحص اتصال الرادار.");
-            icon.className = 'fas fa-exclamation-triangle text-danger';
+            showLogicToast(false, "انقطع اتصال الرادار بالسيرفر.");
+            if(icon) icon.className = 'fas fa-exclamation-triangle text-danger';
         }
-        setTimeout(() => { icon.className = 'fas fa-pen fa-xs text-muted'; }, 2000);
+        
+        if(icon) setTimeout(() => { icon.className = 'fas fa-pen fa-xs text-muted'; }, 2000);
     }
 
-    // تفعيل الحفظ التلقائي
-    document.querySelectorAll('.auto-save-input').forEach(i => i.addEventListener('blur', function() { autoSave(this); }));
-    document.querySelectorAll('.auto-save-select').forEach(s => s.addEventListener('change', function() { autoSave(this); }));
+    // تفعيل المستشعرات اللحظية
+    document.querySelectorAll('.auto-save-input').forEach(i => {
+        i.addEventListener('blur', function() { autoSave(this); });
+    });
+    
+    document.querySelectorAll('.auto-save-select').forEach(s => {
+        s.addEventListener('change', function() { autoSave(this); });
+    });
 </script>
 
 <style>
@@ -240,20 +251,10 @@
     .text-purple { color: var(--royal-purple); }
     .bg-purple { background-color: var(--royal-purple); }
     .btn-purple { background: var(--royal-purple); color: white; border: none; }
-    .btn-purple:hover { background: var(--purple-light); color: white; }
-    .text-gold { color: var(--gold); }
     .btn-gold { background: var(--gold); color: white; border: none; }
-    .btn-outline-purple { color: var(--royal-purple); border-color: var(--royal-purple); }
-    .btn-outline-purple:hover { background: var(--royal-purple); color: white; }
     .input-group-edit:focus-within { transform: scale(1.02); transition: 0.3s; }
     .border-dashed { border: 2px dashed #dee2e6; }
-    .edit-icon { border-left: 0 !important; cursor: pointer; font-size: 0.7rem; }
-    
-    /* جعل التنبيه في المنتصف وبشكل ملكي */
-    .toast-container { pointer-events: none; }
-    .toast { pointer-events: auto; min-width: 300px; border-radius: 15px; }
-    
-    .user-item:hover { background: #f8f9fa; cursor: default; }
-    .btn-xs { padding: 0.2rem 0.4rem; font-size: 0.7rem; }
+    .toast { border-radius: 15px; border: 1px solid var(--gold) !important; }
+    .text-gold { color: var(--gold); }
 </style>
 {% endblock %}
