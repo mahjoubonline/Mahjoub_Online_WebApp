@@ -1,51 +1,109 @@
-# admin_panel/supplier_service_routes.py
-from flask import render_template, request, jsonify
-from flask_login import login_required
-from admin_panel import admin_bp
-from core.services.supplier_service import update_supplier_profile  # استدعاء المحرك السيادي
+# core/services/supplier_service.py
+from core import db
 from core.models.supplier import Supplier
+import logging
 
-@admin_bp.route('/suppliers/profile/<int:supplier_id>', methods=['GET', 'POST'])
-@login_required
-def supplier_profile(supplier_id):
-    """
-    مسار إدارة بروفايل المورد:
-    - GET: جلب البيانات من القاعدة وعرضها في نافذة البروفايل.
-    - POST: استقبال بيانات التعديل وتمريرها للمحرك للتعميد والحفظ.
-    """
-    
-    # 1. بروتوكول التحديث (POST)
-    if request.method == 'POST':
-        try:
-            # استخراج البيانات من الفورم القادم عبر AJAX
-            data = request.form.to_dict()
-            
-            # استدعاء المحرك لتنفيذ التعديل في قاعدة البيانات
-            # المحرك يحتوي على db.session.commit() لضمان الحفظ
-            success, message = update_supplier_profile(supplier_id, data)
-            
-            if success:
-                return jsonify({
-                    "status": "success", 
-                    "message": "تم تعميد التعديلات بنجاح في السجلات المركزية."
-                })
-            else:
-                return jsonify({
-                    "status": "error", 
-                    "message": f"فشل التعميد: {message}"
-                }), 400
-                
-        except Exception as e:
-            return jsonify({
-                "status": "error", 
-                "message": f"خطأ تقني في بوابة الخدمات: {str(e)}"
-            }), 500
+# إعداد السجلات (Logs) لمراقبة العمليات وتسهيل التنقيح في بيئة الإنتاج
+logger = logging.getLogger(__name__)
 
-    # 2. بروتوكول العرض (GET)
-    # البحث عن الكيان في القاعدة أو إظهار 404 في حال عدم وجوده
-    supplier = Supplier.query.get_or_404(supplier_id)
-    
-    return render_template(
-        'suppliers/supplier_profile.html', 
-        supplier=supplier
-    )
+def get_all_suppliers():
+    """
+    جلب كافة الموردين مع إحصائياتهم للوحة التحكم.
+    تستخدم لتغذية جداول الحوكمة بالبيانات اللحظية.
+    """
+    try:
+        suppliers = Supplier.query.order_by(Supplier.id.desc()).all()
+        
+        # حساب الإحصائيات السيادية للعرض في واجهة الرادار
+        stats = {
+            'total': len(suppliers),
+            'active': Supplier.query.filter_by(status='active').count(),
+            'sovereign': Supplier.query.filter_by(tier='سيادي').count(),
+            'total_yer': db.session.query(db.func.sum(Supplier.balance_yer)).scalar() or 0
+        }
+        return {'suppliers': suppliers, 'stats': stats}
+    except Exception as e:
+        logger.error(f"⚠️ خطأ سيادي في استرجاع قائمة الموردين: {str(e)}")
+        return {'suppliers': [], 'stats': {'total': 0, 'active': 0, 'sovereign': 0, 'total_yer': 0}}
+
+def create_supplier(data):
+    """
+    محرك تعميد الموردين الجدد: يقوم بالتحقق، التشفير، وتوليد الأكواد الرقمية.
+    """
+    try:
+        # 1. بناء كائن المورد وتسكين البيانات في الحقول المخصصة
+        new_supplier = Supplier(
+            username=data.get('username'),
+            trade_name=data.get('trade_name'),
+            owner_name=data.get('owner_name'),
+            activity_type=data.get('activity_type'),
+            identity_type=data.get('identity_type'),
+            phone=data.get('phone'),
+            email=data.get('email'),
+            province=data.get('province'),
+            district=data.get('district'),
+            address_detail=data.get('address_detail'),
+            bank_name=data.get('bank_name'),
+            bank_acc=data.get('bank_acc'),
+            status='active',
+            tier=data.get('tier', 'مبتدئ')
+        )
+        
+        # 2. تأمين الولوج بكلمة مرور افتراضية إذا لم تتوفر
+        password = data.get('password') or '123456'
+        new_supplier.set_password(password)
+        
+        # 3. توليد الهوية الرقمية السيادية (SUP-MHA-XXXX)
+        new_supplier.generate_sovereign_codes()
+        
+        # 4. تعميد البيانات في القاعدة
+        db.session.add(new_supplier)
+        db.session.commit()
+        
+        logger.info(f"✅ تم تعميد كيان جديد بنجاح: {new_supplier.trade_name}")
+        return True, new_supplier.trade_name
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ فشل بروتوكول إضافة المورد: {str(e)}")
+        return False, str(e)
+
+def update_supplier_profile(supplier_id, data):
+    """
+    بروتوكول تحديث بيانات الكيان اللوجستية والشخصية.
+    يضمن حماية الأرصدة والهوية السيادية من التعديل العشوائي.
+    """
+    try:
+        supplier = Supplier.query.get(supplier_id)
+        if not supplier:
+            return False, "عذراً، لم يتم العثور على الكيان في السجلات المركزية."
+
+        # تحديث الحقول المسموح بها (الحوكمة اللوجستية)
+        supplier.trade_name = data.get('trade_name', supplier.trade_name)
+        supplier.owner_name = data.get('owner_name', supplier.owner_name)
+        supplier.email = data.get('email', supplier.email)
+        supplier.phone = data.get('phone', supplier.phone)
+        
+        # إدارة تحديث الصورة التعريفية في حال وجودها
+        if 'identity_image' in data and data['identity_image']:
+            supplier.identity_image = data.get('identity_image')
+
+        # تعميد التعديلات نهائياً
+        db.session.commit()
+        logger.info(f"⚙️ تم تحديث بروفايل الكيان: {supplier.trade_name}")
+        return True, "تم تحديث بيانات الكيان بنجاح."
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"⚠️ فشل تحديث بيانات المورد {supplier_id}: {str(e)}")
+        return False, str(e)
+
+def get_next_supplier_id():
+    """
+    حساب الرقم التسلسلي القادم لعرضه في واجهة الإضافة.
+    """
+    try:
+        last_sup = Supplier.query.order_by(Supplier.id.desc()).first()
+        return (last_sup.id + 1) if last_sup else 1
+    except Exception:
+        return 1
