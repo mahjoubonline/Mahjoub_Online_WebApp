@@ -26,9 +26,9 @@ def create_app():
         # 4. استيراد الموديلات من النقطة المركزية لضمان بناء الجداول
         from .models import User, Supplier, SupplierStaff
         
-        # 5. بروتوكول تعميد وتحديث الجداول الشامل
+        # 5. بروتوكول تعميد وتحديث الجداول الشامل (بدون مسح بيانات)
         try:
-            # بناء الجداول الجديدة إذا لم تكن موجودة
+            # بناء الجداول الجديدة فقط إذا لم تكن موجودة
             db.create_all()
             
             # --- مصفوفة التحديث الجبري للأعمدة المفقودة في PostgreSQL ---
@@ -42,6 +42,7 @@ def create_app():
             
             for col_name, col_type in user_updates:
                 try:
+                    # إضافة العمود فقط إذا لم يكن موجوداً (للحفاظ على البيانات)
                     db.session.execute(db.text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
                 except Exception:
                     pass 
@@ -52,32 +53,33 @@ def create_app():
                 ("identity_image", "VARCHAR(255)"),
                 ("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
                 ("identity_type", "VARCHAR(50)"),
-                ("balance_yer", "NUMERIC(20, 2) DEFAULT 0.0"), # تأمين العملة المحلية
-                ("balance_sar", "NUMERIC(20, 2) DEFAULT 0.0"), # تأمين العملة السعودية
-                ("balance_usd", "NUMERIC(20, 2) DEFAULT 0.0"), # تأمين العملة العالمية
-                ("sovereign_id", "VARCHAR(100) UNIQUE"),       # المعرف SUP-MHA
+                ("balance_yer", "NUMERIC(20, 2) DEFAULT 0.0"), 
+                ("balance_sar", "NUMERIC(20, 2) DEFAULT 0.0"), 
+                ("balance_usd", "NUMERIC(20, 2) DEFAULT 0.0"), 
+                ("sovereign_id", "VARCHAR(100) UNIQUE"),       
                 ("tier", "VARCHAR(50) DEFAULT 'مبتدئ'")
             ]
             
             for col_name, col_type in supplier_updates:
                 try:
+                    # الحماية: لا يتم حذف البيانات، يتم إضافة الأعمدة الناقصة فقط
                     db.session.execute(db.text(f"ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
                 except Exception:
                     pass
 
             db.session.commit()
-            print("✅ تم استكمال الترسانة وإضافة الأعمدة المفقودة (العملات الثلاث & الأكواد السيادية)")
+            print("✅ تم استكمال الترسانة وإضافة الأعمدة المفقودة بنجاح.")
             
         except Exception as e:
             print(f"⚠️ تنبيه أثناء تحديث الهيكل: {e}")
             db.session.rollback()
 
         # 6. بروتوكول معالجة البيانات المفقودة (Data Migration Patch)
-        # هذا الجزء يضمن استدعاء الدالة الصحيحة لمنع خطأ 'mint_sovereign_id'
+        # يقوم بتوليد الأكواد للموردين القدامى دون المساس ببياناتهم الأخرى
         try:
             missing_codes = Supplier.query.filter(Supplier.sovereign_id == None).all()
             for s in missing_codes:
-                s.generate_sovereign_codes() # الدالة الصحيحة في الموديل
+                s.generate_sovereign_codes() 
             db.session.commit()
         except:
             db.session.rollback()
