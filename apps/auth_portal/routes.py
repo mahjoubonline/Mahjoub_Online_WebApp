@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from models.admin_db import AdminUser  # استيراد الموديل للتحقق من القاعدة
 
-# تعريف الـ Blueprint الخاص بنظام المصادقة
 auth_bp = Blueprint('auth', __name__, template_folder='templates')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -9,24 +9,29 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # التحقق من بيانات الدخول السيادية
-        # تم تعديل كلمة المرور لتصبح 123 بناءً على طلبك
-        if username == 'ali_mahjoub' and password == '123':
-            # وضع ختم الدخول في الجلسة
-            session['is_authenticated'] = True  
+        # 1. محاولة الدخول عبر قاعدة البيانات (للمسؤولين المسجلين)
+        user = AdminUser.query.filter_by(username=username).first()
+        
+        # إذا وجد المستخدم وكانت كلمة السر صحيحة (مشفرة)
+        if user and user.check_password(password):
+            session['is_authenticated'] = True
+            session['user_id'] = user.id
+            session['username'] = user.username
+            return redirect(url_for('admin.dashboard'))
+
+        # 2. دخول الطوارئ للمؤسس (علي محجوب) - لضمان الدخول حتى لو القاعدة فارغة
+        elif username == 'ali_mahjoub' and password == '123':
+            session['is_authenticated'] = True
             session['user_id'] = 'founder_ali'
             session['username'] = 'علي محجوب'
-            
-            # التوجه مباشرة إلى لوحة التحكم
             return redirect(url_for('admin.dashboard'))
+            
         else:
-            # رسالة تنبيه في حال الخطأ
-            flash('تنبيه: بيانات الدخول غير صحيحة. يرجى المحاولة مرة أخرى.', 'danger')
+            flash('بيانات الدخول غير صحيحة يا قائد، حاول مرة أخرى.', 'danger')
             
     return render_template('auth/login.html')
 
 @auth_bp.route('/logout')
 def logout():
-    # مسح الجلسة تماماً عند الخروج لضمان الأمان السيادي للمنصة
-    session.clear() 
+    session.clear()
     return redirect(url_for('auth.login'))
