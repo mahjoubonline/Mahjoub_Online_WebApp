@@ -4,16 +4,21 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-def build_sovereign_infrastructure():
-    print("🧹 بدء بروتوكول التطهير والبناء...")
+def start_over():
+    print("🧹 تنظيف قاعدة البيانات وبناء الهيكل الجديد...")
     
-    # 1. إنشاء المجلدات (لضمان وجود المسارات)
-    structure = ['core/models', 'apps/supplier_app/templates', 'static/css']
-    for path in structure:
-        os.makedirs(path, exist_ok=True)
-        with open(os.path.join(path, '__init__.py'), 'w') as f: pass
+    # بناء المجلدات يدوياً في السيرفر
+    dirs = ['core/models', 'apps/supplier_app/templates', 'static/css']
+    for d in dirs:
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, '__init__.py'), 'w') as f: pass
 
-    # 2. تهيئة التطبيق المؤقت للبناء
+    # إنشاء ملف extensions.py إذا لم يوجد لكسر أخطاء الاستيراد
+    ext_path = 'core/extensions.py'
+    if not os.path.exists(ext_path):
+        with open(ext_path, 'w') as f:
+            f.write("from flask_sqlalchemy import SQLAlchemy\nfrom flask_login import LoginManager\ndb = SQLAlchemy()\nlogin_manager = LoginManager()")
+
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -21,18 +26,15 @@ def build_sovereign_infrastructure():
 
     with app.app_context():
         try:
-            # استيراد الموديل الجديد (تأكد من رفعه في core/models/supplier_db.py)
+            # استيراد الموديل الجديد لتعميده
             from core.models.supplier_db import Supplier
-            
-            print("⚠️ حذف الجداول القديمة لمنع التصادم...")
-            db.drop_all() # هذا الأمر سيمسح كل الجداول القديمة
-            
-            print("💎 بناء الجداول الجديدة بالهيكل السيادي...")
-            db.create_all() # سيقوم ببناء الجداول بناءً على الموديل الجديد
-            
-            print("✅ اكتمل التطهير والتأسيس بنجاح.")
+            print("⚠️ جاري حذف الجداول القديمة...")
+            db.drop_all() 
+            print("💎 جاري بناء الجداول السيادية الجديدة...")
+            db.create_all()
+            print("✅ اكتمل التطهير.")
         except Exception as e:
-            print(f"❌ فشل في التطهير: {e}")
+            print(f"❌ خطأ: {e}")
 
 if __name__ == "__main__":
-    build_sovereign_infrastructure()
+    start_over()
