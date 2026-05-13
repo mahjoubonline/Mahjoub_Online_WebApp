@@ -1,33 +1,33 @@
 from flask import Flask
-import os
+from models.supplier_db import db  # استيراد قاعدة البيانات لربطها بالتطبيق
 
 def create_app():
-    # إنشاء التطبيق وتحديد مسار الملفات الثابتة العامة
+    # إنشاء التطبيق
     app = Flask(__name__)
     
-    # إعدادات الحماية والتشفير للمنصة
+    # إعدادات الحماية والتشفير السيادية
     app.config['SECRET_KEY'] = 'mahjoub_online_2026_key'
-    
-    # تسجيل المحركات (Blueprints)
-    
-    # 1. محرك بوابة التحقق
+    # إعداد قاعدة البيانات (تأكد من تعديل الرابط حسب إعدادات Railway لديك)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:password@localhost/mahjoub_db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # ربط قاعدة البيانات بالتطبيق
+    db.init_app(app)
+
+    # 🛡️ تسجيل المحركات (Blueprints) بالأسماء الصحيحة والمثبتة:
+
+    # 1. محرك بوابة التحقق (Authentication)
     from .auth_portal.routes import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
-    # 2. محرك إدارة الموردين
-    from .add_supplier.routes import admin_bp
-    app.register_blueprint(admin_bp, url_prefix='/suppliers')
+    # 2. محرك لوحة التحكم الإدارية (Admin Dashboard)
+    # ملاحظة: الاسم البرمجي داخل الملف هو 'admin_bp'
+    from .admin_dashboard.routes import admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/admin')
 
-    # 3. محرك لوحة التحكم الإدارية
-    from .admin_dashboard.routes import dashboard_bp
-    app.register_blueprint(dashboard_bp, url_prefix='/admin')
+    # 3. محرك إدارة الموردين (Add Supplier)
+    # ملاحظة: الاسم البرمجي داخل الملف هو 'admin_suppliers' كما ثبتناه سابقاً
+    from .add_supplier.routes import admin_suppliers
+    app.register_blueprint(admin_suppliers, url_prefix='/admin')
 
-    return app
-def create_app():
-    app = Flask(__name__)
-    
-    # استيراد الاسم الصحيح الذي ظهر في الخطأ بالصورة
-    from .add_supplier.routes import add_supplier_bp
-    app.register_blueprint(add_supplier_bp)
-    
     return app
