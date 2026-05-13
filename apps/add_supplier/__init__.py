@@ -1,5 +1,10 @@
-# استيراد الـ Blueprint من ملف الروابط المحلي
-from .routes import admin_suppliers
+from flask import Blueprint
 
-# تصدير الـ Blueprint ليكون متاحاً عند استدعائه في create_app
-__all__ = ['admin_suppliers']
+# تعريف البلوبرينت باسم مستقل
+add_supplier_bp = Blueprint(
+    'admin_suppliers', # الاسم البرمجي للاستدعاء
+    __name__,
+    template_folder='templates'
+)
+
+from . import routes
