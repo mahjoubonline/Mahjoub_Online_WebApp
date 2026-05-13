@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session
 from models.supplier_db import db, Supplier  
 from datetime import datetime
 from functools import wraps
 
-admin_suppliers = Blueprint('admin_suppliers', __name__, template_folder='templates')
+# تصحيح الاسم ليتوافق مع ملف run.py
+admin_bp = Blueprint('admin_dashboard', __name__, template_folder='templates')
 
 def login_required(f):
     @wraps(f)
@@ -13,22 +14,26 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@admin_suppliers.route('/add-supplier', methods=['GET', 'POST'])
+@admin_bp.route('/add-supplier', methods=['GET', 'POST'])
 def add_supplier():
     if request.method == 'POST':
-        # استقبال البيانات سواء كانت JSON (من الـ Fetch) أو Form عادية
+        # استقبال البيانات سواء كانت JSON أو Form
         data = request.get_json() if request.is_json else request.form
 
         try:
-            # استخراج البيانات بناءً على الأسماء الموجودة في نموذجك الجديد
+            # استخدام أسماء الحقول الدقيقة الموجودة في models/supplier_db.py
             new_supplier = Supplier(
-                name=data.get('username'), # اسم المستخدم للدخول
-                trade_name=data.get('trade_name'), # الاسم التجاري
-                owner=data.get('owner_name'), # اسم المالك
-                region=data.get('province') + " - " + data.get('district'), # النطاق الجغرافي
-                contact=data.get('phone'),
-                category=data.get('activity_type'),
-                bank_info=f"{data.get('bank_name')} : {data.get('bank_acc')}", # المحفظة السيادية
+                username=data.get('username'),
+                password=data.get('password', '123456'), # كلمة سر افتراضية
+                trade_name=data.get('trade_name'),
+                owner_name=data.get('owner_name'),
+                activity_type=data.get('activity_type'),
+                phone=data.get('phone'),
+                bank_name=data.get('bank_name'),
+                bank_acc=data.get('bank_acc'),
+                province=data.get('province'),
+                district=data.get('district'),
+                sovereign_id=f"SUP-{datetime.now().strftime('%Y%m%d%H%M')}",
                 created_at=datetime.utcnow()
             )
             
@@ -45,4 +50,4 @@ def add_supplier():
             return jsonify({"status": "error", "message": f"خطأ تقني: {str(e)}"}), 500
 
     # عرض الواجهة (GET)
-    return render_template('admin/add_supplier.html', next_id=963) # تأكد من تمرير next_id
+    return render_template('admin/add_supplier.html', next_id=963)
