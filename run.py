@@ -22,11 +22,13 @@ def create_app():
     # تسجيل البوابات الرقمية (Blueprints)
     from apps.auth_portal.routes import auth_bp
     from apps.admin_dashboard.routes import admin_bp
-    from apps.add_supplier.routes import add_supplier_bp
+    # التصحيح هنا: استيراد الاسم الجديد admin_suppliers بدلاً من add_supplier_bp
+    from apps.add_supplier.routes import admin_suppliers 
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(add_supplier_bp, url_prefix='/admin')
+    # التصحيح هنا: تسجيل الـ Blueprint بالاسم الجديد
+    app.register_blueprint(admin_suppliers, url_prefix='/admin')
 
     with app.app_context():
         try:
