@@ -3,15 +3,15 @@
 {% block title %}مركز المراقبة | محجوب أونلاين{% endblock %}
 
 {% block content %}
-<!-- بداية منطقة المحتوى التي يتم جلبها عبر AJAX -->
+<!-- بداية منطقة المحتوى السيادي لمركز المراقبة -->
 <div id="main-content">
     <div class="row g-4">
-        <!-- كرت إحصائي 1 -->
+        <!-- كرت إحصائي 1: المستخدمين -->
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm p-3" style="border-right: 5px solid var(--mahjoub-gold) !important;">
+            <div class="card border-0 shadow-sm p-3" style="border-right: 5px solid #D4AF37 !important;">
                 <div class="d-flex align-items-center">
                     <div class="icon-box bg-light p-3 rounded-3 me-3">
-                        <i class="fas fa-users fa-2x text-primary"></i>
+                        <i class="fas fa-users fa-2x" style="color: #4B0082;"></i>
                     </div>
                     <div>
                         <h6 class="text-muted mb-1">المستخدمين النشطين</h6>
@@ -21,9 +21,9 @@
             </div>
         </div>
 
-        <!-- كرت إحصائي 2 -->
+        <!-- كرت إحصائي 2: الطلبات -->
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm p-3" style="border-right: 5px solid var(--mahjoub-gold) !important;">
+            <div class="card border-0 shadow-sm p-3" style="border-right: 5px solid #D4AF37 !important;">
                 <div class="d-flex align-items-center">
                     <div class="icon-box bg-light p-3 rounded-3 me-3">
                         <i class="fas fa-shopping-cart fa-2x text-success"></i>
@@ -36,9 +36,9 @@
             </div>
         </div>
 
-        <!-- كرت إحصائي 3 -->
+        <!-- كرت إحصائي 3: حالة النظام -->
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm p-3" style="border-right: 5px solid var(--mahjoub-gold) !important;">
+            <div class="card border-0 shadow-sm p-3" style="border-right: 5px solid #D4AF37 !important;">
                 <div class="d-flex align-items-center">
                     <div class="icon-box bg-light p-3 rounded-3 me-3">
                         <i class="fas fa-chart-line fa-2x text-warning"></i>
@@ -52,11 +52,11 @@
         </div>
     </div>
 
-    <!-- قسم الرسالة الترحيبية -->
+    <!-- قسم الرسالة الترحيبية السيادية -->
     <div class="mt-5 p-5 bg-white rounded-4 shadow-sm text-center">
-        <h2 class="fw-bold" style="color: var(--royal-purple);">مرحباً بك في القيادة المركزية</h2>
-        <p class="text-muted">هنا يمكنك إدارة كافة عمليات "محجوب أونلاين" السيادية.</p>
-        <button class="btn btn-gold px-4 py-2" style="background: var(--mahjoub-gold); color: white; border-radius: 8px;">
+        <h2 class="fw-bold" style="color: #4B0082;">مرحباً بك في القيادة المركزية</h2>
+        <p class="text-muted">هنا يمكنك إدارة كافة عمليات "محجوب أونلاين" السيادية والمراقبة الفورية.</p>
+        <button class="btn px-4 py-2" style="background: #D4AF37; color: white; border-radius: 8px; border: none; font-weight: bold;">
             تحديث البيانات <i class="fas fa-sync-alt ms-2"></i>
         </button>
     </div>
