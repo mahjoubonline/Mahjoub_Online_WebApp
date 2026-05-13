@@ -6,10 +6,10 @@ from models.supplier_db import Supplier
 def create_app():
     app = Flask(__name__)
     
-    # إعدادات الحماية (SECRET_KEY)
+    # --- إعدادات الحماية (SECRET_KEY) ---
     app.secret_key = os.environ.get('SECRET_KEY') or 'MAHJOUB_CENTRAL_SECURE_2026'
 
-    # إعداد قاعدة البيانات
+    # --- إعداد قاعدة البيانات السيادية ---
     database_url = os.environ.get('DATABASE_URL')
     if database_url and database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -19,20 +19,27 @@ def create_app():
 
     db.init_app(app)
 
-    # تسجيل البوابات الرقمية (Blueprints)
-    from apps.auth_portal.routes import auth_bp
+    # --- تسجيل البوابات الرقمية (Blueprints) ---
     
-    # التصحيح الحاسم: تأكد أن اسم الملف والمجلد صحيح
-    try:
-        from apps.admin_dashboard.routes import admin_bp
-        app.register_blueprint(admin_bp, url_prefix='/admin')
-    except ImportError:
-        # حل احتياطي في حال كان الـ Blueprint داخل المجلد يسمى admin_suppliers
-        from apps.admin_dashboard.routes import admin_suppliers as admin_bp
-        app.register_blueprint(admin_bp, url_prefix='/admin')
-
+    # 1. بوابة التحقق
+    from apps.auth_portal.routes import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
+    # 2. لوحة التحكم المركزية (المسؤولة عن الهيكل والديشبورد)
+    try:
+        from apps.admin_dashboard.routes import admin_dashboard
+        app.register_blueprint(admin_dashboard, url_prefix='/admin')
+    except ImportError as e:
+        print(f"❌ فشل استيراد لوحة التحكم: {e}")
+
+    # 3. محرك إدارة الموردين (المسؤول عن إضافة المورد)
+    try:
+        from apps.add_supplier.routes import admin_suppliers
+        app.register_blueprint(admin_suppliers, url_prefix='/admin/suppliers')
+    except ImportError as e:
+        print(f"❌ فشل استيراد نظام الموردين: {e}")
+
+    # --- إعداد البيانات الأولية (زراعة المستخدمين) ---
     with app.app_context():
         try:
             db.create_all()
@@ -57,7 +64,7 @@ def create_app():
 
     @app.route('/')
     def root():
-        # تأكد أن اسم الـ Blueprint هو 'auth' وليس 'auth_bp' في ملف الـ routes الخاص به
+        # التوجيه الافتراضي لبوابة تسجيل الدخول
         try:
             return redirect(url_for('auth.login'))
         except:
@@ -65,6 +72,7 @@ def create_app():
 
     return app
 
+# تشغيل التطبيق ليكون جاهزاً لـ Gunicorn على Railway
 app = create_app()
 
 if __name__ == '__main__':
