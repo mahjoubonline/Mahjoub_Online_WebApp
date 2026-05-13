@@ -1,6 +1,7 @@
 from flask import Flask
 import os
-from models.admin_db import db  # تأكد من توحيد اسم الموديل المستخدم
+# تأكد أن المسار يبدأ بـ .models ليعرف بايثون أنه داخل حزمة apps
+from .models.admin_db import db  
 
 def create_app():
     app = Flask(__name__)
@@ -19,10 +20,9 @@ def create_app():
     # تهيئة قاعدة البيانات مع التطبيق
     db.init_app(app)
 
-    # استيراد وتسجيل المحركات (Blueprints)
-    # ملاحظة: نستورد البلوبرينت من المجلد مباشرة لضمان تشغيل __init__.py الخاص بكل تطبيق
+    # استيراد وتسجيل المحركات (Blueprints) باستخدام الاستيراد النسبي
     from .auth_portal.routes import auth_bp
-    from .admin_dashboard import admin_dashboard
+    from .admin_dashboard.routes import admin_dashboard # تأكد من وجود .routes إذا لزم الأمر
     from .add_supplier.routes import admin_suppliers
     
     # تسجيل البوابات الرقمية في هيكل النظام
@@ -30,7 +30,7 @@ def create_app():
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     app.register_blueprint(admin_suppliers, url_prefix='/admin/suppliers')
 
-    # إنشاء الجداول إذا لم تكن موجودة
+    # إنشاء الجداول إذا لم تكن موجودة (مفيد جداً في بيئة Production)
     with app.app_context():
         db.create_all()
 
