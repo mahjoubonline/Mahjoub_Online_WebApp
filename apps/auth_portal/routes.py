@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from models.admin_db import AdminUser  # استيراد النموذج السيادي
+from models.admin_db import AdminUser 
 
 auth_bp = Blueprint('auth', __name__, template_folder='templates')
 
@@ -22,13 +22,12 @@ def login():
                 flash(f'مرحباً بك يا {user.full_name}، تم توثيق الدخول بنجاح', 'success')
                 
                 # --- الإصلاح الجوهري هنا ---
-                # بناءً على الأسماء التي سجلناها في run.py، نستخدم المسار الصحيح:
+                # نقوم بالتوجيه إلى الـ dashboard بدلاً من add_supplier
                 try:
-                    # نحاول التوجيه لصفحة إضافة الموردين مباشرة
-                    return redirect(url_for('admin_dashboard.add_supplier'))
+                    return redirect(url_for('admin_dashboard.dashboard'))
                 except:
-                    # إذا فشل url_for بسبب اختلاف المسميات، نستخدم المسار المباشر
-                    return redirect('/admin/add-supplier')
+                    # مسار احتياطي في حال وجود مشكلة في تسمية الـ Blueprint
+                    return redirect('/admin/dashboard')
             else:
                 flash('خطأ: كلمة المرور غير مطابقة للسجلات المشفرة.', 'danger')
         else:
