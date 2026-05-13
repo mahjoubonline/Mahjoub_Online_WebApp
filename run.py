@@ -5,7 +5,7 @@ from models.supplier_db import Supplier
 
 app = Flask(__name__)
 
-# --- إعدادات الحماية والبيئة ---
+# --- إعدادات السيادة والحماية المركزية ---
 app.secret_key = os.environ.get('SECRET_KEY') or 'MAHJOUB_CENTRAL_SECURE_2026'
 
 database_url = os.environ.get('DATABASE_URL')
@@ -15,36 +15,37 @@ if database_url and database_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///mahjoub_admin.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# 1. تهيئة قاعدة البيانات
+# 1. ربط محرك قاعدة البيانات
 db.init_app(app)
 
-# 2. إنشاء الجداول (التعميد الرقمي)
+# 2. تعميد الجداول قبل تفعيل البوابات
 with app.app_context():
     try:
         db.create_all()
-        print("✅ تم تعميد جميع الجداول بنجاح.")
+        print("✅ تم تعميد الجداول بنجاح في منظومة محجوب.")
     except Exception as e:
-        print(f"⚠️ تنبيه: {e}")
+        print(f"⚠️ تنبيه: تعذر إنشاء الجداول: {e}")
 
-# 3. تسجيل البوابات (Blueprints) وحل اشتباك الأسماء
+# 3. تسجيل البوابات الرقمية (Blueprints)
 try:
     from apps.admin_dashboard.routes import admin_bp
     from apps.auth_portal.routes import auth_bp
     from apps.add_supplier.routes import add_supplier_bp
     
-    # تسجيل بوابة المصادقة
+    # بوابة المصادقة
     app.register_blueprint(auth_bp, url_prefix='/auth')
     
-    # تسجيل بوابة لوحة التحكم الأساسية (التي تملك اسم 'admin' داخلياً)
+    # بوابة لوحة التحكم المركزية
     app.register_blueprint(admin_bp, url_prefix='/admin')
     
-    # تسجيل بوابة إضافة الموردين
-    # ملاحظة: نستخدم url_prefix='/admin' لتبدو كجزء من لوحة التحكم
+    # بوابة إضافة الموردين 
+    # قمنا بتسجيلها باسمها الصريح ليتوافق مع url_for('add_supplier.save_supplier')
+    # الموجود في السطر 182 من ملف admin_base.html كما في الصورة image_4855ba.png
     app.register_blueprint(add_supplier_bp, url_prefix='/admin')
     
-    print("🚀 تم ربط الدوشبورد وجميع المسارات بنجاح.")
+    print("🚀 تم ربط الدوشبورد وتفعيل بوابات الموردين بنجاح.")
 except Exception as e:
-    print(f"❌ خطأ حرج في الربط: {e}")
+    print(f"❌ خطأ حرج في ربط المسارات: {e}")
 
 @app.route('/')
 def root():
@@ -52,4 +53,5 @@ def root():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    # نستخدم debug=True لتتبع الأخطاء لحظياً في سجلات Railway
+    app.run(host='0.0.0.0', port=port, debug=True)
