@@ -13,17 +13,22 @@ def login():
         user = AdminUser.query.filter_by(username=username_input).first()
 
         if user:
-            # 2. استخدام الدالة السيادية check_password للتحقق من التشفير
+            # 2. التحقق من التشفير
             if user.check_password(password_input):
                 session['user_id'] = user.id
                 session['username'] = user.username
-                session['role'] = user.role # حفظ الدور القيادي (مثل founder)
+                session['role'] = user.role 
                 
                 flash(f'مرحباً بك يا {user.full_name}، تم توثيق الدخول بنجاح', 'success')
                 
-                # التصحيح الجوهري: التوجيه إلى admin.dashboard بدلاً من admin.index
-                # ليتوافق مع نظام Flask كما ظهر في خطأ BuildError في الصورة image_3ac59f.png
-                return redirect(url_for('admin.dashboard'))
+                # --- الإصلاح الجوهري هنا ---
+                # بناءً على الأسماء التي سجلناها في run.py، نستخدم المسار الصحيح:
+                try:
+                    # نحاول التوجيه لصفحة إضافة الموردين مباشرة
+                    return redirect(url_for('admin_dashboard.add_supplier'))
+                except:
+                    # إذا فشل url_for بسبب اختلاف المسميات، نستخدم المسار المباشر
+                    return redirect('/admin/add-supplier')
             else:
                 flash('خطأ: كلمة المرور غير مطابقة للسجلات المشفرة.', 'danger')
         else:
