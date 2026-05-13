@@ -6,22 +6,25 @@ from werkzeug.security import generate_password_hash, check_password_hash
 db = SQLAlchemy()
 
 class AdminUser(db.Model):
-    """جدول بيانات المسؤولين (الإدارة العليا)"""
+    """
+    جدول بيانات المسؤولين (الإدارة العليا) في منظومة محجوب أونلاين.
+    يستخدم هذا الجدول لإدارة الدخول إلى لوحة التحكم السيادية.
+    """
     __tablename__ = 'admin_users'
     
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False) # اسم المستخدم (مثل ali_mahjoub)
     password_hash = db.Column(db.String(255), nullable=False)        # كلمة السر المشفرة لحماية السيادة
-    full_name = db.Column(db.String(100))                           # الاسم الكامل (علي محجوب)
-    role = db.Column(db.String(20), default='founder')              # الدور القيادي
-    last_login = db.Column(db.DateTime, default=datetime.utcnow)    # توثيق آخر دخول للمنظومة
+    full_name = db.Column(db.String(100))                           # الاسم الكامل (مثل علي محجوب)
+    role = db.Column(db.String(20), default='founder')              # الدور القيادي (مؤسس النظام)
+    last_login = db.Column(db.DateTime, default=datetime.utcnow)    # توثيق زمني لآخر دخول
 
     def set_password(self, password):
-        """تشفير كلمة السر (بما في ذلك كلمة السر الافتراضية '123')"""
+        """تشفير كلمة السر لضمان أمن البيانات"""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """التحقق من الهوية السيادية عند الدخول"""
+        """التحقق من مطابقة كلمة السر عند محاولة الولوج"""
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
