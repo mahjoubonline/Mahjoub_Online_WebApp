@@ -37,6 +37,8 @@
             height: 100vh; position: fixed; right: 0; top: 0; z-index: 1100;
             transition: var(--transition);
             box-shadow: -5px 0 25px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
         }
 
         @media (max-width: 991px) {
@@ -46,7 +48,7 @@
         }
 
         .sidebar-header { padding: 2rem 1rem; border-bottom: 1px solid rgba(212, 175, 55, 0.1); }
-        .nav-menu { padding: 1rem; flex-grow: 1; }
+        .nav-menu { padding: 1rem; flex-grow: 1; overflow-y: auto; }
         
         .nav-link, .dropdown-btn {
             display: flex; align-items: center; padding: 12px 15px;
@@ -94,13 +96,14 @@
         #loader {
             display: none; position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -50%); z-index: 2000;
+            background: rgba(255,255,255,0.8); padding: 20px; border-radius: 50%;
         }
     </style>
 </head>
 <body>
 
     <div id="loader">
-        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem; color: var(--mahjoub-gold) !important;"></div>
+        <div class="spinner-border" role="status" style="width: 3rem; height: 3rem; color: var(--mahjoub-gold);"></div>
     </div>
 
     <aside class="sidebar" id="sidebar">
@@ -111,7 +114,7 @@
         </div>
 
         <nav class="nav-menu">
-            <!-- رابط الدوشبورد الرئيسي - تم تعديل اسم البلوبرينت -->
+            <!-- رابط الدوشبورد الرئيسي -->
             <a href="{{ url_for('admin_dashboard.dashboard') }}" class="nav-link {% if request.endpoint == 'admin_dashboard.dashboard' %}active{% endif %}">
                 <i class="fas fa-tower-observation me-2"></i> <span>مركز المراقبة</span>
             </a>
@@ -123,12 +126,10 @@
                     <i class="fas fa-chevron-left" id="arrow"></i>
                 </button>
                 <div class="dropdown-container" id="supplierDropdown">
-                    <!-- الرابط الموجه لتطبيق إضافة المورد المستقل -->
-                    <a href="javascript:void(0);" onclick="loadPage('{{ url_for('admin_suppliers.add_supplier') }}')">
+                    <a href="{{ url_for('admin_suppliers.add_supplier') }}" onclick="event.preventDefault(); loadPage(this.href)">
                         <i class="fas fa-plus-circle me-2"></i> إضافة مورد جديد
                     </a>
-                    <!-- الرابط الموجه لتطبيق قائمة الموردين المستقل -->
-                    <a href="javascript:void(0);" onclick="loadPage('{{ url_for('admin_dashboard.list_suppliers') }}')">
+                    <a href="{{ url_for('admin_dashboard.list_suppliers') }}" onclick="event.preventDefault(); loadPage(this.href)">
                         <i class="fas fa-list-check me-2"></i> عرض سجل الموردين
                     </a>
                 </div>
@@ -148,7 +149,6 @@
             <div class="user-info">علي محجوب | <small class="text-muted">المؤسس</small></div>
         </header>
 
-        <!-- منطقة المحتوى الديناميكي -->
         <div class="p-4" id="main-content">
             {% block content %}{% endblock %}
         </div>
@@ -166,28 +166,32 @@
             document.getElementById("sidebar").classList.toggle("active");
         }
 
-        // وظيفة التحميل الديناميكي AJAX لضمان ظهور التطبيقات داخل الدوشبورد
         async function loadPage(url) {
             const contentArea = document.getElementById('main-content');
             const loader = document.getElementById('loader');
+            
             loader.style.display = 'block'; 
-            contentArea.style.opacity = '0.5';
+            contentArea.style.opacity = '0.3';
 
             try {
-                const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const response = await fetch(url);
                 const html = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 
-                // تحديث عنوان الصفحة
-                document.title = doc.querySelector('title') ? doc.querySelector('title').innerText : "القيادة المركزية";
+                // تحديث العنوان
+                const newTitle = doc.querySelector('title');
+                if (newTitle) document.title = newTitle.innerText;
+
+                // استخلاص المحتوى الفعلي فقط (Block Content) لتجنب تكرار الهيكل
+                const incomingContent = doc.querySelector('#main-content') || doc.body;
+                contentArea.innerHTML = incomingContent.innerHTML;
+
+                // تحديث الروابط النشطة
+                document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
                 
-                // البحث عن المحتوى الجديد سواء كان في حاوية النموذج أو المحتوى الرئيسي
-                const newContent = doc.querySelector('.form-container') || doc.querySelector('#main-content') || doc.body;
-                contentArea.innerHTML = newContent.innerHTML;
-                
-                // إعادة تشغيل السكريبتات الموجودة في الصفحة المحملة
-                const scripts = doc.querySelectorAll('script');
+                // إعادة تشغيل السكريبتات
+                const scripts = incomingContent.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
                     Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
@@ -198,7 +202,8 @@
                 window.history.pushState({path: url}, '', url);
                 if (window.innerWidth <= 991) document.getElementById("sidebar").classList.remove("active");
             } catch (err) {
-                contentArea.innerHTML = `<div class="alert alert-danger text-center">خطأ في الاتصال بالمركز الرئيسي.</div>`;
+                console.error(err);
+                contentArea.innerHTML = `<div class="alert alert-danger text-center">خطأ في جلب البيانات من المركز الإداري.</div>`;
             } finally {
                 loader.style.display = 'none';
                 contentArea.style.opacity = '1';
