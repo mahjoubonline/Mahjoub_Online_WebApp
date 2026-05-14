@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, current_app
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
-# تعريف الـ Blueprint ليعود إلى مجلد القوالب الرئيسي لتلافي أي تضارب
+# تعريف الـ Blueprint ليعود إلى مجلد القوالب الرئيسي
 admin_suppliers = Blueprint(
     'admin_suppliers', 
     __name__,
@@ -20,12 +20,11 @@ def allowed_file(filename):
 # --- 1. مسار عرض الواجهة واعتماد المورد ---
 @admin_suppliers.route('/admin/suppliers/add', methods=['GET', 'POST'])
 def add_supplier():
-    # استيراد محلي داخل الدالة لكسر حلقة الـ Circular Import تماماً ومنع فصل السيرفر
+    # استيراد محلي لتجنب التعارض الدائري
     from models.supplier_db import db, Supplier 
 
     if request.method == 'POST':
         try:
-            # استلام البيانات من النموذج (Form)
             unified_id = request.form.get('unified_id')
             username = request.form.get('username')
             password = request.form.get('password')
@@ -48,13 +47,13 @@ def add_supplier():
                 bank_name = request.form.get('manual_bank_name')
             bank_acc = request.form.get('bank_acc')
 
-            # حماية لمنع تكرار اسم المستخدم والاسم التجاري
+            # فحص التكرار بأمان داخل بيئة الـ POST
             if Supplier.query.filter_by(username=username).first():
                 return jsonify({'status': 'error', 'message': 'اسم المستخدم مسجل مسبقاً!'}), 400
             if Supplier.query.filter_by(trade_name=trade_name).first():
                 return jsonify({'status': 'error', 'message': 'الاسم التجاري مسجل مسبقاً!'}), 400
 
-            # بناء السجل وضخ البيانات
+            # بناء السجل
             new_supplier = Supplier(
                 sovereign_id=unified_id,
                 username=username,
@@ -91,20 +90,25 @@ def add_supplier():
                 'message': f'حدث خطأ في النظام: {str(e)}'
             }), 500
 
-    # في حالة طلب الـ GET (تحميل الصفحة)
+    # === حماية طلب الـ GET لمنع خطأ 500 نهائياً ===
+    next_id_num = 1
     try:
+        # محاولة جلب آخر معرف من قاعدة البيانات
         last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
-        next_id_num = (last_supplier.id + 1) if last_supplier else 1
-    except:
+        if last_supplier:
+            next_id_num = last_supplier.id + 1
+    except Exception as db_error:
+        # إذا فشل الاتصال أو حدث خطأ في سياق الـ db، لا تجعل السيرفر ينهار
+        print(f"Database context warning (Using default ID 1): {str(db_error)}")
         next_id_num = 1
         
-    return render_template('admin/add_supplier.html', next_id=next_id_num)
+    # نقوم بإرسال المتغير بكلا الاسمين (next_id و next_id_num) لضمان توافقه مع ملف الـ HTML الخاص بك أياً كان المسمى المدون فيه
+    return render_template('admin/add_supplier.html', next_id=next_id_num, next_id_num=next_id_num)
 
 
-# --- 2. مسار التحقق اللحظي عبر الـ AJAX منعاً للتكرار ---
+# --- 2. مسار التحقق اللحظي عبر الـ AJAX ---
 @admin_suppliers.route('/admin/suppliers/check-duplicate', methods=['GET'])
 def check_duplicate():
-    # استيراد محلي هنا أيضاً لضمان استقرار هذا المسار الفرعي
     from models.supplier_db import Supplier 
 
     check_type = request.args.get('type')
@@ -115,14 +119,16 @@ def check_duplicate():
         return jsonify({'exists': False})
 
     exists = False
-
-    if check_type == 'username':
-        exists = Supplier.query.filter_by(username=value).first() is not None
-    elif check_type == 'trade_name':
-        exists = Supplier.query.filter_by(trade_name=value).first() is not None
-    elif check_type == 'shop_phone':
-        exists = Supplier.query.filter_by(shop_phone=value).first() is not None
-    elif check_type == 'bank_acc':
-        exists = Supplier.query.filter_by(bank_account=value, bank_name=bank_name).first() is not None
+    try:
+        if check_type == 'username':
+            exists = Supplier.query.filter_by(username=value).first() is not None
+        elif check_type == 'trade_name':
+            exists = Supplier.query.filter_by(trade_name=value).first() is not None
+        elif check_type == 'shop_phone':
+            exists = Supplier.query.filter_by(shop_phone=value).first() is not None
+        elif check_type == 'bank_acc':
+            exists = Supplier.query.filter_by(bank_account=value, bank_name=bank_name).first() is not None
+    except Exception:
+        exists = False
 
     return jsonify({'exists': exists})
