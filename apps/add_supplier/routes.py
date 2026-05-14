@@ -22,18 +22,49 @@ def allowed_file(filename):
     """التحقق من امتداد الملف لضمان أمن النظام"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@admin_suppliers.route('/check-duplicate/', methods=['GET'])
+def check_duplicate():
+    """
+    نظام التحقق الفوري (AJAX) لمنع التكرار قبل الحفظ
+    يستدعيها الـ Frontend لإظهار علامات الصح والخطأ (التلقائية)
+    """
+    field_type = request.args.get('type')
+    value = request.args.get('value')
+    
+    if not field_type or not value:
+        return jsonify({'exists': False})
+
+    exists = False
+    
+    if field_type == 'username':
+        # الفحص في جداول الإدارة والموردين معاً لضمان فرادة اسم المستخدم
+        exists = AdminUser.query.filter_by(username=value).first() is not None or \
+                 Supplier.query.filter_by(username=value).first() is not None
+    
+    elif field_type == 'owner_phone':
+        exists = Supplier.query.filter_by(owner_phone=value).first() is not None
+        
+    elif field_type == 'trade_name':
+        exists = Supplier.query.filter_by(trade_name=value).first() is not None
+        
+    elif field_type == 'owner_name':
+        # اختياري: إذا أردت منع تكرار نفس اسم الشخص تماماً
+        exists = Supplier.query.filter_by(owner_name=value).first() is not None
+
+    return jsonify({'exists': exists})
+
 @admin_suppliers.route('/add', methods=['GET', 'POST'])
 def add_supplier():
     """
     محرك تعميد الموردين - منظومة محجوب أونلاين السيادية
-    معالجة البيانات ومنع التكرار (الهاتف، الاسم التجاري، الحساب) لضمان سلامة الأرشفة
+    معالجة البيانات ومنع التكرار لضمان سلامة الأرشفة
     """
     if request.method == 'POST':
         try:
             # 1. استقبال المعرف السيادي وبيانات الوصول
             unified_id = request.form.get('unified_id')
             username = request.form.get('username')
-            password = request.form.get('password') # نحفظ الأصل مؤقتاً لإرساله في الرد قبل التشفير
+            password = request.form.get('password') # نحفظ الأصل مؤقتاً لإرساله في الرد
             
             # 2. بيانات الهوية والنشاط التجاري
             id_type = request.form.get('id_type')
@@ -55,20 +86,13 @@ def add_supplier():
             bank_name = request.form.get('bank_name')
             bank_acc = request.form.get('bank_acc')
 
-            # --- 6. الفحص الأمني المكثف: منع تكرار البيانات الحساسة ---
-            
-            # أ. فحص اسم المستخدم (في جداول الإدمن والموردين)
+            # --- 6. الفحص الأمني (Server-side Validation) ---
             if AdminUser.query.filter_by(username=username).first() or \
                Supplier.query.filter_by(username=username).first():
-                return jsonify({'status': 'error', 'message': f'اسم المستخدم ({username}) مسجل مسبقاً. يرجى اختيار اسم آخر.'}), 400
+                return jsonify({'status': 'error', 'message': 'اسم المستخدم مسجل مسبقاً.'}), 400
             
-            # ب. فحص رقم الهاتف (لمنع تكرار تسجيل المالك)
             if Supplier.query.filter_by(owner_phone=owner_phone).first():
-                return jsonify({'status': 'error', 'message': f'رقم الهاتف ({owner_phone}) مرتبط بمورد آخر بالفعل.'}), 400
-            
-            # ج. فحص الاسم التجاري للمنشأة
-            if Supplier.query.filter_by(trade_name=trade_name).first():
-                return jsonify({'status': 'error', 'message': f'الاسم التجاري ({trade_name}) معمد مسبقاً في النظام.'}), 400
+                return jsonify({'status': 'error', 'message': 'رقم الهاتف مرتبط بمورد آخر.'}), 400
 
             # --- 7. معالجة وأرشفة صور الوثائق الرسمية ---
             identity_image_path = None
@@ -87,7 +111,7 @@ def add_supplier():
             new_supplier = Supplier(
                 sovereign_id=unified_id,
                 username=username,
-                password=generate_password_hash(password), # التشفير قبل الحفظ
+                password=generate_password_hash(password),
                 identity_type=id_type,
                 activity_type=category,
                 identity_image=identity_image_path,
@@ -113,7 +137,7 @@ def add_supplier():
                 'message': 'تم الاعتماد بنجاح',
                 'data': {
                     'username': username,
-                    'password': password, # إرجاع الكلمة الأصلية للنسخ فقط في هذه اللحظة
+                    'password': password,
                     'trade_name': trade_name,
                     'unified_id': unified_id
                 }
@@ -126,7 +150,7 @@ def add_supplier():
                 'message': f'فشل في معالجة البيانات: {str(e)}'
             }), 500
 
-    # طلب العرض (GET): حساب الرقم التسلسلي التالي
+    # طلب العرض (GET): حساب الرقم التسلسلي التالي للموردين
     try:
         total_suppliers = Supplier.query.count()
         next_id = total_suppliers + 1
