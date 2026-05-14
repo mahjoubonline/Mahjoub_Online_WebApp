@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, render_template, request, jsonify
 from datetime import datetime
 
-# حساب مسار القوالب برمجياً لمنع خطأ TemplateNotFound
+# حساب مسار القوالب برمجياً لمنع خطأ TemplateNotFound على سيرفر Railway
 base_dir = os.path.abspath(os.path.dirname(__file__))
 template_dir = os.path.join(base_dir, '..', '..', 'templates')
 
@@ -12,35 +12,9 @@ admin_suppliers = Blueprint(
     template_folder=template_dir
 )
 
-# دالة سيادية آمنة: تحافظ على البيانات وتضيف الأعمدة صامتاً إذا نقصت فقط
-def safe_alter_table():
-    from apps import db
-    from sqlalchemy import text
-    
-    # قائمة الأعمدة الجديدة التي نريد التأكد من وجودها
-    alter_queries = [
-        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS category VARCHAR(50);",
-        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS finance_type VARCHAR(50);",
-        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);",
-        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS bank_account VARCHAR(100);"
-    ]
-    
-    try:
-        # استخدام اتصال مباشر لضمان عدم تعليق الجلسة (Session)
-        with db.engine.begin() as connection:
-            for query in alter_queries:
-                connection.execute(text(query))
-        print("✅ [Database Safeguard] Table check completed successfully without touching old data.")
-    except Exception as e:
-        # إذا كانت قاعدة البيانات SQLite (في البيئة المحلية) لا تدعم IF NOT EXISTS للـ ADD COLUMN
-        # سيتم التجاوز صامتاً حتى لا يتوقف السيرفر
-        print(f"⚠️ [Database Safeguard Notice]: {e}")
-
 @admin_suppliers.route('/add', methods=['GET', 'POST'])
 def add_supplier():
-    # تشغيل الفحص الآمن (لن يحذف أي بيانات مسبقة إطلاقاً)
-    safe_alter_table()
-
+    # استيراد محلي آمن ومستقل كلياً
     from models.supplier_db import Supplier
     from apps import db 
 
@@ -68,6 +42,7 @@ def add_supplier():
                 bank_name = request.form.get('manual_bank_name')
             bank_acc = request.form.get('bank_acc')
 
+            # فحص تكرار البيانات في الجدول الجديد
             if Supplier.query.filter_by(username=username).first():
                 return jsonify({'status': 'error', 'message': 'اسم المستخدم مسجل مسبقاً!'}), 400
             if Supplier.query.filter_by(trade_name=trade_name).first():
@@ -106,6 +81,7 @@ def add_supplier():
             db.session.rollback()
             return jsonify({'status': 'error', 'message': f'حدث خطأ في الخادم: {str(e)}'}), 500
 
+    # حساب المعرف التالي للمورد الأول (سيبدأ من 1 تلقائياً)
     next_id_num = 1
     try:
         last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
