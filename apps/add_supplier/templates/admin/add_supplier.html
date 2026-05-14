@@ -41,15 +41,22 @@
                         <input type="password" name="password" class="form-control bg-light border-0" placeholder="********" required>
                     </div>
 
+                    <!-- تطوير فئة المورد مع إدخال يدوي -->
                     <div class="mb-3">
                         <label class="form-label text-muted small">فئة المورد</label>
-                        <select name="category" class="form-select bg-light border-0 custom-select" required>
+                        <select name="category" id="categorySelect" class="form-select bg-light border-0 custom-select" onchange="handleCategoryManualEntry(this)" required>
                             <option value="" selected disabled>اختر فئة المورد...</option>
                             <option value="مورد جملة">مورد جملة</option>
                             <option value="مورد تجزئة">مورد تجزئة</option>
                             <option value="منتج محلي / مصنع">منتج محلي / مصنع</option>
                             <option value="مستورد">مستورد</option>
+                            <option value="manual">أخرى (إدخال يدوي)...</option>
                         </select>
+                    </div>
+
+                    <div id="categoryManualDiv" class="mb-3" style="display: none;">
+                        <label class="form-label text-primary small fw-bold">اسم الفئة الجديدة</label>
+                        <input type="text" name="manual_category" id="categoryManualInput" class="form-control border-primary" placeholder="مثلاً: مورد خدمات برمجية">
                     </div>
 
                     <div class="mb-3">
@@ -142,7 +149,6 @@
                         </select>
                     </div>
 
-                    <!-- حقل الإدخال اليدوي المطور -->
                     <div id="manualEntryDiv" class="mb-3" style="display: none;">
                         <label class="form-label text-primary small fw-bold">اسم الجهة (إدخال يدوي)</label>
                         <input type="text" name="manual_bank_name" id="manualInput" class="form-control border-primary" placeholder="اكتب اسم البنك أو الشركة">
@@ -166,7 +172,7 @@
     </form>
 </div>
 
-<!-- Modal النجاح -->
+<!-- Modal النجاح والتقارير -->
 <div class="modal fade" id="successModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
@@ -230,6 +236,21 @@ const financialData = {
     'exchange': ['النجم للصرافة', 'باسياب للصرافة', 'الحرمين', 'المريسي', 'عدن للصرافة']
 };
 
+// وظيفة الإدخال اليدوي للفئة
+function handleCategoryManualEntry(select) {
+    const manualDiv = document.getElementById('categoryManualDiv');
+    const manualInput = document.getElementById('categoryManualInput');
+    if (select.value === "manual") {
+        manualDiv.style.display = 'block';
+        manualInput.required = true;
+        manualInput.focus();
+    } else {
+        manualDiv.style.display = 'none';
+        manualInput.required = false;
+        manualInput.value = "";
+    }
+}
+
 function updateDistrictOptions() {
     const province = document.getElementById('provinceSelect').value;
     const districtSelect = document.getElementById('districtSelect');
@@ -270,7 +291,7 @@ function handleManualEntry(select) {
     }
 }
 
-// فحص التكرار الفوري المطور
+// فحص التكرار الفوري
 document.querySelectorAll('.validation-field').forEach(input => {
     input.addEventListener('blur', async function() {
         const value = this.value.trim();
@@ -279,10 +300,8 @@ document.querySelectorAll('.validation-field').forEach(input => {
         const feedback = document.getElementById('bankAccFeedback');
         
         if (value.length < 3) return;
-
         icon.innerHTML = '<span class="spinner-border spinner-border-sm text-secondary"></span>';
         
-        // بناء الرابط ليشمل البنك الحالي في حالة فحص الحساب البنكي
         let url = `/admin/suppliers/check-duplicate/?type=${type}&value=${encodeURIComponent(value)}`;
         if(type === 'bank_acc') {
             const currentBank = document.getElementById('financeSelect').value;
@@ -292,11 +311,10 @@ document.querySelectorAll('.validation-field').forEach(input => {
         try {
             const res = await fetch(url);
             const data = await res.json();
-            
             if (data.exists) {
                 icon.innerHTML = '<i class="fas fa-times-circle text-danger"></i>';
                 this.classList.add('is-invalid');
-                if(type === 'bank_acc' && data.message) {
+                if(type === 'bank_acc' && feedback) {
                     feedback.style.display = 'block';
                     feedback.className = 'small mt-1 text-danger fw-bold';
                     feedback.innerText = data.message;
@@ -313,13 +331,7 @@ document.querySelectorAll('.validation-field').forEach(input => {
 document.getElementById('addSupplierForm').onsubmit = async function(e) {
     e.preventDefault();
     if (this.querySelectorAll('.is-invalid').length > 0) {
-        Swal.fire({
-            title: 'تنبيه أمني',
-            text: 'يرجى تصحيح البيانات المكررة أو رقم الحساب المسجل مسبقاً قبل الحفظ.',
-            icon: 'warning',
-            confirmButtonText: 'حسناً فهمت',
-            confirmButtonColor: '#4B338A'
-        });
+        Swal.fire({ title: 'تنبيه', text: 'يرجى تصحيح البيانات المكررة أولاً.', icon: 'warning', confirmButtonColor: '#4B338A' });
         return;
     }
 
@@ -341,30 +353,20 @@ document.getElementById('addSupplierForm').onsubmit = async function(e) {
             document.getElementById('res_password').innerText = res.data.password;
             new bootstrap.Modal(document.getElementById('successModal')).show();
         } else {
-            Swal.fire({ title: 'فشل الاعتماد', text: res.message, icon: 'error', confirmButtonColor: '#d33' });
+            Swal.fire({ title: 'فشل', text: res.message, icon: 'error', confirmButtonColor: '#d33' });
             btn.disabled = false;
-            btn.innerHTML = 'اعتماد المورد الآن <i class="fas fa-paper-plane ms-2"></i>';
+            btn.innerHTML = 'اعتماد المورد الآن';
         }
     } catch (e) {
-        Swal.fire({ title: 'فشل الاتصال', text: 'خطأ غير متوقع بالخادم', icon: 'error', confirmButtonColor: '#d33' });
+        Swal.fire({ title: 'خطأ', text: 'فشل الاتصال بالخادم', icon: 'error' });
         btn.disabled = false;
-        btn.innerHTML = 'اعتماد المورد الآن <i class="fas fa-paper-plane ms-2"></i>';
     }
 };
 
 function copyFullReport() {
-    const trade = document.getElementById('res_trade_name').innerText;
-    const owner = document.getElementById('res_owner_name').innerText;
-    const user = document.getElementById('res_username').innerText;
-    const pass = document.getElementById('res_password').innerText;
-    const id = document.getElementById('display-id').innerText;
-    
-    const report = `🛡️ تقرير تعميد مورد - محجوب أونلاين\n--------------------------\n🏛️ المنشأة: ${trade}\n👤 المالك: ${owner}\n🆔 المعرف: ${id}\n👤 المستخدم: ${user}\n🔑 كلمة السر: ${pass}\n--------------------------\n⚠️ يرجى تغيير كلمة السر فور الدخول الأول.`;
-
+    const report = `🛡️ تقرير تعميد مورد - محجوب أونلاين\n🏛️ المنشأة: ${document.getElementById('res_trade_name').innerText}\n👤 المالك: ${document.getElementById('res_owner_name').innerText}\n🆔 المعرف: ${document.getElementById('display-id').innerText}\n👤 المستخدم: ${document.getElementById('res_username').innerText}\n🔑 كلمة السر: ${document.getElementById('res_password').innerText}`;
     navigator.clipboard.writeText(report).then(() => {
-        const btn = document.getElementById('copyAllBtn');
-        btn.innerText = "تم نسخ التقرير!";
-        btn.className = "btn btn-success w-100 fw-bold py-2";
+        document.getElementById('copyAllBtn').innerText = "تم النسخ ✅";
     });
 }
 
@@ -380,7 +382,5 @@ window.onload = updateFinanceOptions;
         background-color: #4B338A !important; border-color: #4B338A !important; color: #fff !important;
     }
     .validation-icon { min-width: 40px; justify-content: center; }
-    .swal2-popup { font-family: inherit !important; border-radius: 15px !important; }
-    #bankAccFeedback { font-size: 0.75rem; padding: 0 5px; }
 </style>
 {% endblock %}
