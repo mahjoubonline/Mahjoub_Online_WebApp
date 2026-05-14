@@ -1,6 +1,5 @@
-# من المفترض أن تستورد db من ملف التأسيس الرئيسي للتطبيق وليس من نفس الملف
-from apps import db  # أو حسب مكان تعريف الـ db الأصلي في مشروعك
 from datetime import datetime
+from apps import db  # استيراد db من مجلد التطبيق الرئيسي المشترك
 
 class Supplier(db.Model):
     __tablename__ = 'suppliers'
