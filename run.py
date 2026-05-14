@@ -1,56 +1,36 @@
 # coding: utf-8
-# 🌟 استيراد المكتبات الأساسية لتشغيل الويب وإدارة النظام
+# 🌟 استيراد المكتبات الأساسية لتشغيل المحرك
 import os
-from flask import Flask, redirect, url_for
-from models.admin_db import db
+from flask import Flask
+from models.admin_db import db, AdminUser # 💡 تأكد أن الكلاس في admin_db.py اسمه AdminUser
 
 def create_app():
     """
-    دالة بناء التطبيق: تقوم بتجهيز المسارات، قواعد البيانات، والقوالب (Jinja2).
+    دالة بناء التطبيق: تقوم بتجهيز الإعدادات والروابط.
     """
-    # 📂 تحديد مجلد القوالب لضمان ظهور واجهات المنصة بشكل صحيح
-    app = Flask(__name__, template_folder='apps/templates')
+    app = Flask(__name__)
     
-    # 🔐 مفتاح أمان لتشفير بيانات المستخدمين والجلسات
-    app.secret_key = os.environ.get('SECRET_KEY') or 'MAHJOUB_SECURE_2026'
-
-    # 🗄️ إعدادات قاعدة البيانات (PostgreSQL لمنصة Railway)
-    database_url = os.environ.get('DATABASE_URL')
-    if database_url and database_url.startswith("postgres://"):
-        # تصحيح البروتوكول ليتوافق مع SQLAlchemy
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    # 🔑 إعداد مفتاح الأمان (ضروري لعمل Flask-WTF الذي أضفته في المتطلبات)
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'MAHJOUB_SECRET_2026')
     
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///mahjoub_admin.db'
+    # 🗄️ ربط قاعدة البيانات (PostgreSQL) بناءً على requirements.txt
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///local.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # 🔗 ربط قاعدة البيانات بالتطبيق
+    # تهيئة قاعدة البيانات مع التطبيق
     db.init_app(app)
 
-    # 🚀 تسجيل الأقسام البرمجية (Blueprints)
-    from apps.auth_portal.routes import auth_bp
-    from apps.admin_dashboard.routes import admin_dashboard  
-    from apps.add_supplier.routes import admin_suppliers
-
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(admin_dashboard, url_prefix='/admin')
-    app.register_blueprint(admin_suppliers, url_prefix='/admin/suppliers')
-
-    # 🛠️ إنشاء الجداول برمجياً عند بدء التشغيل
     with app.app_context():
+        # إنشاء الجداول إذا لم تكن موجودة
         db.create_all()
-
-    # 🏠 تحويل الزوار تلقائياً إلى صفحة تسجيل الدخول
-    @app.route('/')
-    def root():
-        return redirect(url_for('auth_portal.login')) 
 
     return app
 
-# 🔑 هام جداً: تعريف المتغير 'app' عالمياً لكي يراه ملف Procfile
-# هذا هو السطر الذي يمنع توقف النظام عند استخدام gunicorn
+# 🚀 هذا هو السطر الأهم ليعمل الـ Procfile:
+# gunicorn سيقوم بالبحث عن متغير اسمه 'app' داخل ملف 'run'
 app = create_app()
 
-if __name__ == '__main__':
-    # 🔌 تشغيل التطبيق على المنفذ المخصص من قبل الخادم
-    port = int(os.environ.get('PORT', 8080))
+if __name__ == "__main__":
+    # التشغيل المحلي للتطوير
+    port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
