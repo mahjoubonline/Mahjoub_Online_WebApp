@@ -1,5 +1,5 @@
 from datetime import datetime
-from apps import db  # استيراد db المركزي المشترك
+from apps import db  # استيراد كائن الـ db المشترك
 
 class Supplier(db.Model):
     __tablename__ = 'suppliers'
