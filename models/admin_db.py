@@ -1,14 +1,16 @@
 # coding: utf-8
+# - استيراد المكتبات المطلوبة للنموذج
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 
 # تهيئة كائن قاعدة البيانات
 db = SQLAlchemy()
 
-# 🛡️ تأكد أن الاسم هنا هو AdminUser تماماً كما يطلبه ملف run.py
+# 🛡️ تعريف كلاس المسؤول - تأكد من تطابق الاسم تماماً
 class AdminUser(db.Model, UserMixin):
     """
-    نموذج مستخدم المسؤول (AdminUser) لمنصة محجوب أونلاين.
+    نموذج مستخدم المسؤول (AdminUser):
+    يتم استيراده بواسطة run.py لتأمين لوحة التحكم.
     """
     __tablename__ = 'admin_users'
 
