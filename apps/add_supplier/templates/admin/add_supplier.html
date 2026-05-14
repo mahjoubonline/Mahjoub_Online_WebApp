@@ -88,10 +88,12 @@
                             <input type="tel" name="shop_phone" class="form-control bg-light border-0" placeholder="03xxxxxx">
                         </div>
                     </div>
+
+                    <!-- قسم المحافظة والمديرية المرتبط برمجياً -->
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label text-muted small">المحافظة</label>
-                            <select name="province" class="form-select bg-light border-0 custom-select" required>
+                            <select name="province" id="provinceSelect" class="form-select bg-light border-0 custom-select" onchange="updateDistrictOptions()" required>
                                 <option value="" selected disabled>اختر...</option>
                                 <option value="الحديدة">الحديدة</option>
                                 <option value="تعز">تعز</option>
@@ -100,9 +102,12 @@
                         </div>
                         <div class="col-6">
                             <label class="form-label text-muted small">المديرية</label>
-                            <input type="text" name="district" class="form-control bg-light border-0" placeholder="المديرية">
+                            <select name="district" id="districtSelect" class="form-select bg-light border-0 custom-select" required>
+                                <option value="" selected disabled>حدد المحافظة أولاً</option>
+                            </select>
                         </div>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label text-muted small">العنوان التفصيلي</label>
                         <input type="text" name="address_detail" class="form-control bg-light border-0" placeholder="الشارع / المعلم">
@@ -136,8 +141,7 @@
                         </select>
                     </div>
 
-                    <!-- حقل إدخال يدوي يظهر عند اختيار "أخرى" -->
-                    <div class="mb-3" id="manualEntryDiv" style="display: none;">
+                    <div id="manualEntryDiv" class="mb-3" style="display: none;">
                         <label class="form-label text-danger small fw-bold">يرجى كتابة اسم الجهة يدوياً</label>
                         <input type="text" id="manualInput" class="form-control bg-light" style="border: 1px solid #4B338A;" placeholder="مثلاً: صرافة مأرب">
                     </div>
@@ -164,17 +168,41 @@
 </div>
 
 <script>
+// بيانات المواقع الخاصة بمنصتك
+const locationData = {
+    'الحديدة': ['الخوخة', 'حيس', 'التحيتا', 'المراوعة', 'باجل'],
+    'تعز': ['المخا', 'المظفر', 'القاهرة', 'صالة'],
+    'عدن': ['المنصورة', 'كريتر', 'الشيخ عثمان', 'خور مكسر']
+};
+
 const financialData = {
     'banks': ['بنك التضامن', 'بنك القطيبي', 'بنك الكريمي الإسلامي', 'بنك اليمن الدولي', 'بنك اليمن والكويت'],
     'exchange': ['شركة النجم للصرافة', 'شركة باسياب للصرافة', 'شركة الحرمين', 'شركة المريسي', 'شركة عدن للصرافة']
 };
 
+// وظيفة تحديث المديريات بناءً على المحافظة
+function updateDistrictOptions() {
+    const province = document.getElementById('provinceSelect').value;
+    const districtSelect = document.getElementById('districtSelect');
+    
+    districtSelect.innerHTML = '<option value="" selected disabled>اختر المديرية...</option>';
+    
+    if (locationData[province]) {
+        locationData[province].forEach(district => {
+            let option = document.createElement('option');
+            option.value = district;
+            option.textContent = district;
+            districtSelect.appendChild(option);
+        });
+    }
+}
+
+// وظيفة تحديث البنوك
 function updateFinanceOptions() {
     const type = document.querySelector('input[name="fin_type"]:checked').value;
     const select = document.getElementById('financeSelect');
     
     select.innerHTML = '<option value="" selected disabled>اختر من القائمة...</option>';
-    
     financialData[type].forEach(item => {
         let option = document.createElement('option');
         option.value = item;
@@ -182,7 +210,6 @@ function updateFinanceOptions() {
         select.appendChild(option);
     });
 
-    // إضافة خيار الإدخال اليدوي
     let manualOption = document.createElement('option');
     manualOption.value = "manual";
     manualOption.textContent = "أخرى (إدخال يدوي)...";
@@ -190,9 +217,7 @@ function updateFinanceOptions() {
     manualOption.style.fontWeight = "bold";
     select.appendChild(manualOption);
 
-    // إخفاء حقل النص عند التغيير
     document.getElementById('manualEntryDiv').style.display = 'none';
-    document.getElementById('manualInput').value = '';
 }
 
 function handleManualEntry(selectElement) {
@@ -201,8 +226,8 @@ function handleManualEntry(selectElement) {
     
     if (selectElement.value === "manual") {
         manualDiv.style.display = 'block';
-        manualInput.setAttribute('name', 'bank_name'); 
-        selectElement.removeAttribute('name'); 
+        manualInput.setAttribute('name', 'bank_name');
+        selectElement.removeAttribute('name');
         manualInput.focus();
     } else {
         manualDiv.style.display = 'none';
@@ -211,7 +236,10 @@ function handleManualEntry(selectElement) {
     }
 }
 
-window.onload = updateFinanceOptions;
+// تشغيل الوظائف عند تحميل الصفحة
+window.onload = function() {
+    updateFinanceOptions();
+};
 </script>
 
 <style>
