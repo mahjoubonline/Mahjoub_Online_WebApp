@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, render_template, request, jsonify
 from datetime import datetime
 
-# حساب مسار القوالب برمجياً لمنع خطأ TemplateNotFound على سيرفر Railway
+# حساب مسار القوالب برمجياً لمنع خطأ TemplateNotFound
 base_dir = os.path.abspath(os.path.dirname(__file__))
 template_dir = os.path.join(base_dir, '..', '..', 'templates')
 
@@ -12,34 +12,34 @@ admin_suppliers = Blueprint(
     template_folder=template_dir
 )
 
-# دالة ذكية ومستقلة تفحص وتضيف الأعمدة الناقصة لجدول الموردين تلقائياً عند طلب الصفحة
-def auto_upgrade_supplier_table():
+# دالة سيادية آمنة: تحافظ على البيانات وتضيف الأعمدة صامتاً إذا نقصت فقط
+def safe_alter_table():
     from apps import db
-    from sqlalchemy import inspect, text
+    from sqlalchemy import text
+    
+    # قائمة الأعمدة الجديدة التي نريد التأكد من وجودها
+    alter_queries = [
+        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS category VARCHAR(50);",
+        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS finance_type VARCHAR(50);",
+        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);",
+        "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS bank_account VARCHAR(100);"
+    ]
+    
     try:
-        inspector = inspect(db.engine)
-        columns = [col['name'] for col in inspector.get_columns('suppliers')]
-        
-        expected_columns = {
-            'category': 'VARCHAR(50)',
-            'finance_type': 'VARCHAR(50)',
-            'bank_name': 'VARCHAR(100)',
-            'bank_account': 'VARCHAR(100)'
-        }
-        
-        for col_name, col_type in expected_columns.items():
-            if col_name not in columns:
-                db.session.execute(text(f"ALTER TABLE suppliers ADD COLUMN {col_name} {col_type};"))
-                db.session.commit()
-                print(f"🔧 [Independent Upgrade] Added column: {col_name}")
+        # استخدام اتصال مباشر لضمان عدم تعليق الجلسة (Session)
+        with db.engine.begin() as connection:
+            for query in alter_queries:
+                connection.execute(text(query))
+        print("✅ [Database Safeguard] Table check completed successfully without touching old data.")
     except Exception as e:
-        print(f"⚠️ [Independent Upgrade Warning]: {e}")
+        # إذا كانت قاعدة البيانات SQLite (في البيئة المحلية) لا تدعم IF NOT EXISTS للـ ADD COLUMN
+        # سيتم التجاوز صامتاً حتى لا يتوقف السيرفر
+        print(f"⚠️ [Database Safeguard Notice]: {e}")
 
-# تم تعديل الرابط هنا إلى '/' و '/add' ليتكامل بشكل مستقل وصحيح مع الإعدادات المركزية
 @admin_suppliers.route('/add', methods=['GET', 'POST'])
 def add_supplier():
-    # تشغيل الفحص والترقية الذاتية فوراً
-    auto_upgrade_supplier_table()
+    # تشغيل الفحص الآمن (لن يحذف أي بيانات مسبقة إطلاقاً)
+    safe_alter_table()
 
     from models.supplier_db import Supplier
     from apps import db 
@@ -117,7 +117,6 @@ def add_supplier():
     return render_template('admin/add_supplier.html', next_id=next_id_num, next_id_num=next_id_num)
 
 
-# تم تعديل الرابط هنا أيضاً ليكون نظيفاً ومستقلاً
 @admin_suppliers.route('/check-duplicate', methods=['GET'])
 def check_duplicate():
     from models.supplier_db import Supplier 
