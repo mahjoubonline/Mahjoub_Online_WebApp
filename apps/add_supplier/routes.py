@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, jsonify
 from datetime import datetime
 import random
 import string
-from .models import db, Supplier  # تأكد من مسار الاستيراد الصحيح للموديل الخاص بك
+from .models import db, Supplier  # استيراد الموديل وقاعدة البيانات
 
 admin_suppliers = Blueprint('admin_suppliers', __name__)
 
@@ -15,39 +15,36 @@ def generate_temp_password(length=8):
 def add_supplier():
     if request.method == 'POST':
         try:
-            # استخراج البيانات من النموذج المرسل
+            # 1. استلام البيانات من النموذج (Frontend)
             unified_id = request.form.get('unified_id')
             username = request.form.get('username')
             password = request.form.get('password')
-            category = request.form.get('category')
-            
-            # معالجة الفئة اليدوية إذا وجدت
-            if category == 'manual':
-                category = request.form.get('manual_category')
-
             owner_name = request.form.get('owner_name')
             trade_name = request.form.get('trade_name')
             shop_phone = request.form.get('shop_phone')
             province = request.form.get('province')
             district = request.form.get('district')
             
-            # تم استخدام address_detail بناءً على هيكلية قاعدة البيانات وتصحيح الخطأ السابق
+            # تصحيح: استخدام address_detail ليطابق الهيكل البرمجي المطلوب
             address_detail = request.form.get('address_detail')
             
+            # معالجة التصنيف (الفئة)
+            category = request.form.get('category')
+            if category == 'manual':
+                category = request.form.get('manual_category')
+
+            # معالجة الربط المالي
             fin_type = request.form.get('fin_type')
             bank_name = request.form.get('bank_name')
-            
-            # معالجة البنك اليدوي
             if bank_name == 'manual':
                 bank_name = request.form.get('manual_bank_name')
-                
             bank_acc = request.form.get('bank_acc')
 
-            # إنشاء كائن المورد الجديد
+            # 2. إنشاء سجل المورد الجديد في قاعدة البيانات
             new_supplier = Supplier(
-                sovereign_id=unified_id, # المعرف الموحد السيادي
+                sovereign_id=unified_id,
                 username=username,
-                password=password, # ملاحظة: يفضل تشفيرها في بيئة الإنتاج
+                password=password, 
                 category=category,
                 owner_name=owner_name,
                 trade_name=trade_name,
@@ -64,17 +61,17 @@ def add_supplier():
             db.session.add(new_supplier)
             db.session.commit()
 
-            # إرسال استجابة النجاح شاملة كافة البيانات المطلوبة للعرض والنسخ
+            # 3. إرسال استجابة النجاح مع كافة البيانات المطلوبة للنسخ
             return jsonify({
                 'status': 'success',
-                'message': 'تم تعميد المورد في النظام السيادي بنجاح',
+                'message': 'تم تعميد المورد بنجاح في نظام محجوب أونلاين',
                 'data': {
-                    'owner_name': owner_name,
                     'trade_name': trade_name,
+                    'owner_name': owner_name,
                     'sovereign_id': unified_id,
                     'username': username,
                     'password': password,
-                    'note': 'يرجى تغيير كلمة المرور المؤقتة فور الدخول الأول للحساب'
+                    'note': 'يرجى تغيير كلمة المرور المؤقتة فور تسجيل الدخول حفاظاً على أمان الحساب'
                 }
             })
 
@@ -82,10 +79,10 @@ def add_supplier():
             db.session.rollback()
             return jsonify({
                 'status': 'error',
-                'message': f'فشل في عملية التعميد: {str(e)}'
+                'message': f'حدث خطأ أثناء التعميد: {str(e)}'
             }), 400
 
-    # في حالة GET: حساب المعرف التالي للعرض في الصفحة
+    # في حالة GET: استخراج آخر ID لتوليد المعرف التسلسلي التالي
     last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
     next_id = (last_supplier.id + 1) if last_supplier else 1
     
