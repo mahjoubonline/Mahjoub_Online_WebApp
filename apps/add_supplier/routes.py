@@ -1,34 +1,34 @@
 import os
 from flask import Blueprint, render_template, request, jsonify
 from datetime import datetime
-from apps import db  # استيراد كائن قاعدة البيانات المركزي المشترك
-from models.supplier_db import Supplier # استيراد موديل الموردين
+from apps import db  
+from models.supplier_db import Supplier 
 
-# 🎯 تفعيل المسار الداخلي الصارم: جعل الـ Blueprint يقرأ مجلد templates الموجود بجانبه مباشرة
+# حساب مسار مجلد القوالب (templates) الرئيسي للمشروع ككل
+# لكي يستطيع محرك Flask رؤية ملف الواجهة 'add_supplier.html' وملف الأساس 'admin_base.html' معاً
 current_dir = os.path.dirname(os.path.abspath(__file__))
-local_template_dir = os.path.join(current_dir, 'templates')
+global_template_dir = os.path.abspath(os.path.join(current_dir, '..', '..', 'templates'))
 
 admin_suppliers = Blueprint(
     'admin_suppliers', 
     __name__,
-    template_folder=local_template_dir
+    template_folder=global_template_dir # الربط مع مجلد القوالب العام لضمان قراءة القوالب الموروثة
 )
 
-# 🔥 التوليد التلقائي المستقل: إنشاء الجدول فوراً عند قراءة الحزمة في السيرفر
+# إنشاء الجدول تلقائياً في قاعدة البيانات فور إقلاع السيرفر أونلاين
 with admin_suppliers.record_once(lambda state: None):
     try:
         from run import create_app
         app = create_app()
         with app.app_context():
             db.create_all()
-            print("🚀 [Independent DB] 'suppliers' table created successfully or already exists!")
+            print("🚀 [Independent DB] 'suppliers' table created successfully!")
     except Exception as e:
-        print(f"⚠️ Initial DB setup skipped, will retry inside route: {e}")
+        print(f"⚠️ Initial DB setup skipped: {e}")
 
 
 @admin_suppliers.route('/add', methods=['GET', 'POST'])
 def add_supplier():
-    # خطة دفاعية ثنائية: التأكد من وجود الجدول فور طلب الصفحة
     try:
         db.create_all()
     except Exception:
@@ -58,13 +58,11 @@ def add_supplier():
                 bank_name = request.form.get('manual_bank_name')
             bank_acc = request.form.get('bank_acc')
 
-            # فحص ومنع تكرار البيانات قبل الحفظ والتسبب في خطأ قاعدة البيانات
             if Supplier.query.filter_by(username=username).first():
                 return jsonify({'status': 'error', 'message': 'اسم المستخدم مسجل مسبقاً!'}), 400
             if Supplier.query.filter_by(trade_name=trade_name).first():
                 return jsonify({'status': 'error', 'message': 'الاسم التجاري مسجل مسبقاً!'}), 400
 
-            # إنشاء كائن المورد الجديد بالأعمدة المحدثة
             new_supplier = Supplier(
                 sovereign_id=unified_id,
                 username=username,
@@ -98,7 +96,6 @@ def add_supplier():
             db.session.rollback()
             return jsonify({'status': 'error', 'message': f'حدث خطأ في الخادم: {str(e)}'}), 500
 
-    # حساب المعرّف التسلسلي التالي تلقائياً لعرضه في الواجهة
     next_id_num = 1
     try:
         last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
