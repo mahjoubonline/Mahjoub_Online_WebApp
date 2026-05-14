@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, render_template, request, jsonify
 from datetime import datetime
 
-# حساب مسار القوالب برمجياً لمنع خطأ TemplateNotFound على سيرفر Railway
+# حساب مسار القوالب برمجياً بشكل دقيق لتفادي TemplateNotFound
 base_dir = os.path.abspath(os.path.dirname(__file__))
 template_dir = os.path.join(base_dir, '..', '..', 'templates')
 
@@ -17,6 +17,12 @@ def add_supplier():
     # استيراد محلي آمن ومستقل كلياً
     from models.supplier_db import Supplier
     from apps import db 
+
+    # 🔥 السحر المستقل: أمر إنشاء الجدول تلقائياً فور طلب الصفحة
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"⚠️ Database initialization notice: {e}")
 
     if request.method == 'POST':
         try:
@@ -42,7 +48,7 @@ def add_supplier():
                 bank_name = request.form.get('manual_bank_name')
             bank_acc = request.form.get('bank_acc')
 
-            # فحص تكرار البيانات في الجدول الجديد
+            # فحص التكرار
             if Supplier.query.filter_by(username=username).first():
                 return jsonify({'status': 'error', 'message': 'اسم المستخدم مسجل مسبقاً!'}), 400
             if Supplier.query.filter_by(trade_name=trade_name).first():
@@ -81,7 +87,7 @@ def add_supplier():
             db.session.rollback()
             return jsonify({'status': 'error', 'message': f'حدث خطأ في الخادم: {str(e)}'}), 500
 
-    # حساب المعرف التالي للمورد الأول (سيبدأ من 1 تلقائياً)
+    # حساب المعرف القادم للمورد
     next_id_num = 1
     try:
         last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
