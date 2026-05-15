@@ -35,25 +35,25 @@
                     <div class="mb-3">
                         <label class="form-label text-muted small">اسم المستخدم (Login)</label>
                         <div class="input-group">
-                            <input type="text" name="username" class="form-control bg-light border-0 validation-field" data-valid="min3" placeholder="ali_2026" required>
+                            <input type="text" name="username" class="form-control bg-light border-0 validation-field" data-valid="min3" data-db-check="username" placeholder="ali_2026" required>
                             <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small">كلمة مرور النظام (المؤقتة)</label>
+                        <label class="form-label text-muted small">كلمة مرور النظام</label>
                         <input type="password" name="password" class="form-control bg-light border-0" placeholder="********" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small">نوع الوثيقة / الهوية</label>
-                        <select name="identity_type" id="identityTypeSelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'identityManualDiv')" required>
-                            <option value="" selected disabled>اختر نوع الهوية...</option>
+                        <label class="form-label text-muted small">نوع الوثيقة</label>
+                        <select name="identity_type" id="identityTypeSelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'idManual')" required>
+                            <option value="" selected disabled>اختر النوع...</option>
                             <option value="بطاقة الكترونية">بطاقة إلكترونية</option>
                             <option value="سجل تجاري">سجل تجاري</option>
-                            <option value="manual">أخرى (إدخال يدوي)...</option>
+                            <option value="manual">إدخال يدوي...</option>
                         </select>
-                        <div id="identityManualDiv" style="display: none;">
+                        <div id="idManual" style="display: none;">
                             <input type="text" class="form-control border-primary" placeholder="اكتب نوع الوثيقة..." oninput="syncManualValue(this, 'identityTypeSelect')">
                         </div>
                     </div>
@@ -61,7 +61,7 @@
                     <div class="mb-3">
                         <label class="form-label text-muted small">رقم الوثيقة / الهوية</label>
                         <div class="input-group">
-                            <input type="text" name="identity_number" class="form-control bg-light border-0 validation-field" data-valid="min5" required>
+                            <input type="text" name="identity_number" class="form-control bg-light border-0 validation-field" data-valid="min5" data-db-check="identity_number" required>
                             <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
                         </div>
                     </div>
@@ -92,12 +92,12 @@
                     <div class="mb-3">
                         <label class="form-label text-muted small">الاسم التجاري للمنشأة</label>
                         <div class="input-group">
-                            <input type="text" name="trade_name" class="form-control bg-light border-0 validation-field" data-valid="min3" required>
+                            <input type="text" name="trade_name" class="form-control bg-light border-0 validation-field" data-valid="min3" data-db-check="trade_name" required>
                             <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label text-muted small">رقم هاتف المالك (شخصي)</label>
+                        <label class="form-label text-muted small">رقم هاتف المالك</label>
                         <div class="input-group dir-ltr">
                             <span class="input-group-text bg-white border-0">+967</span>
                             <input type="tel" name="owner_phone" class="form-control bg-light border-0 validation-field" data-valid="phone" placeholder="7XXXXXXXX" required>
@@ -108,7 +108,7 @@
                         <label class="form-label text-muted small">هاتف المنشأة (محل)</label>
                         <div class="input-group dir-ltr">
                             <span class="input-group-text bg-white border-0">+967</span>
-                            <input type="tel" name="shop_phone" class="form-control bg-light border-0 validation-field" data-valid="phone" placeholder="77XXXXXXX" required>
+                            <input type="tel" name="shop_phone" class="form-control bg-light border-0 validation-field" data-valid="phone" data-db-check="shop_phone" placeholder="77XXXXXXX" required>
                             <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
                         </div>
                     </div>
@@ -149,8 +149,8 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label text-muted small">جهة التحويل</label>
-                        <select name="bank_name" id="financeSelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'financeManualDiv')" required></select>
-                        <div id="financeManualDiv" style="display: none;">
+                        <select name="bank_name" id="financeSelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'finManual')" required></select>
+                        <div id="finManual" style="display: none;">
                             <input type="text" class="form-control border-primary" placeholder="اسم الجهة..." oninput="syncManualValue(this, 'financeSelect')">
                         </div>
                     </div>
@@ -164,12 +164,12 @@
                     
                     <div class="mb-4">
                         <label class="form-label text-muted small">فئة المورد</label>
-                        <select name="category" id="categorySelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'categoryManualDiv')" required>
+                        <select name="category" id="categorySelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'catManual')" required>
                             <option value="مورد جملة">مورد جملة</option>
                             <option value="مورد تجزئة">مورد تجزئة</option>
                             <option value="manual">أخرى (إدخال يدوي)...</option>
                         </select>
-                        <div id="categoryManualDiv" style="display: none;">
+                        <div id="catManual" style="display: none;">
                             <input type="text" class="form-control border-danger" placeholder="مثال: إلكترونيات..." oninput="syncManualValue(this, 'categorySelect')">
                         </div>
                     </div>
@@ -189,7 +189,6 @@
             <div class="modal-body text-center p-5">
                 <i class="fas fa-check-circle fa-5x text-success mb-4 anim-pop"></i>
                 <h3 class="fw-bold mb-3" style="color: #4B338A;">تم التعميد بنجاح!</h3>
-                <p class="text-muted">تم أرشفة بيانات المورد في السجل السيادي.</p>
                 <div class="bg-light p-3 rounded-3 mb-4 text-start border-start border-4 border-primary">
                     <small class="d-block text-muted">اسم المستخدم:</small>
                     <strong id="res-username" class="d-block mb-2 text-dark">-</strong>
@@ -203,35 +202,49 @@
 </div>
 
 <script>
-// --- الدوال الجغرافية والمالية ---
+// البيانات الأساسية
 const yemenGeography = {
     "الحديدة": ["الخوخة", "حيس", "المخا", "باجل", "زبيد"],
-    "عدن": ["المنصورة", "الشيخ عثمان", "كريتر", "المعلا"],
+    "عدن": ["المنصورة", "الشيخ عثمان", "كريتر"],
     "صنعاء": ["السبعين", "التحرير", "الوحدة"],
     "حضرموت": ["المكلا", "سيئون"],
     "تعز": ["المظفر", "القاهرة"]
 };
 
 const financeData = {
-    banks: ["بنك القطيبي الإسلامي", "بنك الشمول الإسلامي", "بنك عدن الإسلامي", "مصرف الكريمي"],
+    banks: ["بنك القطيبي الإسلامي", "بنك الشمول الإسلامي", "مصرف الكريمي", "بنك عدن الإسلامي"],
     exchange: ["شركة القطيبي للصرافة", "شركة بن دول للصرافة", "شركة الشامل للصرافة"]
 };
 
-// --- نظام التحقق اللحظي المتقدم ---
+// --- نظام التحقق اللحظي الشامل (قاعدة البيانات + المتصفح) ---
 document.querySelectorAll('.validation-field').forEach(input => {
-    input.addEventListener('input', function() {
+    input.addEventListener('change', async function() {
         const type = this.getAttribute('data-valid');
+        const dbType = this.getAttribute('data-db-check');
         const icon = this.parentElement.querySelector('.validation-icon');
+        const submitBtn = document.getElementById('submitBtn');
         let isValid = false;
 
+        // 1. التحقق من التنسيق (JS)
         switch(type) {
-            case 'name': isValid = this.value.trim().split(' ').length >= 3; break; // اسم ثلاثي
+            case 'name': isValid = this.value.trim().split(' ').length >= 3; break;
             case 'min3': isValid = this.value.length >= 3; break;
             case 'min5': isValid = this.value.length >= 5; break;
-            case 'phone': isValid = /^[7][0-9]{8}$/.test(this.value); break; // يبدأ بـ 7 وله 9 أرقام
-            case 'acc': isValid = this.value.length >= 6; break; // حساب بنكي
+            case 'phone': isValid = /^[7][0-9]{8}$/.test(this.value); break;
+            case 'acc': isValid = this.value.length >= 6; break;
         }
 
+        // 2. التحقق من قاعدة البيانات (إذا كان الحقل يتطلب ذلك)
+        if (isValid && dbType) {
+            icon.innerHTML = '<i class="fas fa-spinner fa-spin text-muted"></i>';
+            try {
+                const response = await fetch(`/admin/suppliers/check-duplicate?type=${dbType}&value=${this.value.trim()}`);
+                const result = await response.json();
+                if (result.exists) isValid = false; // إذا كان موجوداً مسبقاً نعتبره غير صالح
+            } catch (e) { console.error("DB Check Failed"); }
+        }
+
+        // 3. تحديث الأيقونات (صح خضراء أو x حمراء)
         if (isValid) {
             icon.innerHTML = '<i class="fas fa-check-circle text-success anim-pop"></i>';
             this.classList.remove('is-invalid');
@@ -241,10 +254,13 @@ document.querySelectorAll('.validation-field').forEach(input => {
             this.classList.add('is-invalid');
             this.classList.remove('is-valid');
         }
+
+        // تفعيل/تعطيل زر الإرسال بناءً على الأخطاء
+        submitBtn.disabled = document.querySelectorAll('.is-invalid').length > 0;
     });
 });
 
-// --- دوال التحكم في الفورم ---
+// دوال التحكم
 function toggleManualInput(select, divId) {
     document.getElementById(divId).style.display = (select.value === 'manual') ? 'block' : 'none';
 }
@@ -286,6 +302,7 @@ function updateFinanceOptions() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // تعبئة البيانات الأولية
     const pSelect = document.getElementById('provinceSelect');
     Object.keys(yemenGeography).forEach(p => {
         const opt = document.createElement('option');
