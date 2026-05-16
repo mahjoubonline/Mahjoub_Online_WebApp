@@ -187,7 +187,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
             <div class="modal-body p-4" id="successModalBody">
-                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -291,7 +291,6 @@ function updateFinanceOptions() {
     select.appendChild(mOpt);
 }
 
-// دالة النسخ اللحظي المعدلة لتنسخ رسالة متكاملة ومرتبة للمورد
 function copySupplierCredentials(user, id, pass) {
     const textToCopy = `✨ تم تعميدك بنجاح في منصة محجوب أونلاين ✨\n\n` +
                        `🔐 بيانات الاعتماد والوصول الخاصة بك:\n` +
@@ -347,7 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const unifiedId = result.data ? result.data.unified_id : document.getElementById('display-id').innerText;
                 const password = document.getElementById('form-password-field').value;
 
-                // بناء واجهة الإشعار الرقمي الحوكمي المتكامل
                 const modalContent = `
                     <div class="text-center mb-4">
                         <div style="display: flex; justify-content: center; margin: 0 auto 15px;">
@@ -383,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span style="color: var(--mahjoub-gold); font-weight: 700;">المنصة اللامركزية لحوكمة التجارة</span>
                     </div>
 
-                    <button type="button" class="btn w-100 py-2 btn-secondary fw-bold" style="border-radius: 12px;" onclick="location.reload()">إغلاق ومتابعة</button>
+                    <a href="${window.location.pathname}" class="btn w-100 py-2 btn-secondary fw-bold text-decoration-none text-center" style="border-radius: 12px;">إغلاق ومتابعة</a>
                 `;
 
                 document.getElementById('successModalBody').innerHTML = modalContent;
