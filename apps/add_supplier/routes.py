@@ -38,13 +38,13 @@ def add_supplier():
             # 2. التحقق النهائي (Back-end Validation) المحصن تماماً لمنع التكرار والانكسار
             try:
                 if username and Supplier.query.filter_by(username=username).first():
-                    return jsonify({'status': 'error', 'message': 'اسم المستخدم مسجل مسبقاً!'}), 400
+                    return jsonify({'status': 'error', 'message': 'فشل التعميد: اسم المستخدم مسجل مسبقاً!'}), 400
                 
                 if trade_name and Supplier.query.filter_by(trade_name=trade_name).first():
-                    return jsonify({'status': 'error', 'message': 'الاسم التجاري مسجل مسبقاً!'}), 400
+                    return jsonify({'status': 'error', 'message': 'فشل التعميد: الاسم التجاري مسجل مسبقاً!'}), 400
 
                 if identity_number and Supplier.query.filter_by(identity_number=identity_number).first():
-                    return jsonify({'status': 'error', 'message': 'رقم الوثيقة أو الهوية مسجل مسبقاً!'}), 400
+                    return jsonify({'status': 'error', 'message': 'فشل التعميد: رقم الوثيقة أو الهوية مسجل مسبقاً!'}), 400
             except Exception as db_err:
                 # حماية مرنة: في حال وجود اختلاف مؤقت في هيكل الجداول أو الحقول أثناء الفحص المبدئي،
                 # نقوم بطباعة الخطأ في الـ Logs لتتبعه دون أن نقطع عملية التسجيل الأساسية.
@@ -92,7 +92,7 @@ def add_supplier():
             # إرجاع استجابة نجاح صريحة وقطعية لتغلق الـ JavaScript نافذة "جاري المعالجة" بنجاح
             return jsonify({
                 'status': 'success',
-                'message': 'تم تعميد المورد بنجاح في النظام السجل العام',
+                'message': 'تم تعميد المورد بنجاح في نظام الأرشفة',
                 'data': {
                     'username': username,
                     'unified_id': unified_id
@@ -112,10 +112,8 @@ def add_supplier():
         print(f"Error fetching next_id: {str(e)}")
         next_id = 1
     
-    # [التصحيح الجوهري] تأمين خط الإياب والرجوع بالإشارة إلى المجلد الصحيح بالكامل
-    # إذا كانت الملفات موضوعة داخل قالب فرعي مثل templates/add_supplier.html بدلاً من المجلد الفرعي admin
-    # تأكد من مطابقتها للهيكل المعتمد لديك لتجنب TemplateNotFound
-    return render_template('add_supplier.html', next_id=next_id)
+    # [التصحيح الجوهري] استدعاء القالب بناءً على مساره الحقيقي الدقيق لتجنب انفجار السيرفر بـ TemplateNotFound
+    return render_template('admin/add_supplier.html', next_id=next_id)
 
 @admin_suppliers.route('/check-duplicate', methods=['GET'])
 @login_required
@@ -147,7 +145,6 @@ def check_duplicate():
         return jsonify({'exists': exists})
         
     except Exception as e:
-        # حماية سيادية: إذا فشل الفحص بسبب عدم تطابق أسماء الحقول أو الأعمدة، يعود بـ False
-        # هذا يمنع انكسار واجهة المستخدم ويضمن سلاسة تدفق البيانات
+        # حماية سيادية: يمنع انكسار واجهة المستخدم ويضمن سلاسة تدفق البيانات في الواجهة
         print(f"Check duplicate error for {check_type}: {str(e)}")
         return jsonify({'exists': False, 'error': str(e)})
