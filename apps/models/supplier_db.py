@@ -38,17 +38,17 @@ class Supplier(db.Model):
     # يقبل حصراً: 'نشط'، 'المراجعة'، 'محظور'، 'موقوف مؤقتاً'، 'رقابة'
     
     rank_grade = db.Column(db.String(20), nullable=False, default='ريادي') 
-    # يقبل حصراً الهرمية الفخمة: 'ريادي'، 'سيادي', 'ملكي'
+    # يقبل حصراً الهرمية الفخمة: 'ريادي'، 'سيادي'، 'ملكي'
 
-    # 7. حقول الحوكمة وتتبع نظام الصلاحيات (Audit & Origin Fields)
+    # 7. حقول الحوكمة وتتبع نظام الصلاحيات (التعديل: تحويل المعرفات إلى أرقام مباشرة لتجنب تضارب العلاقات المكسورة)
     registration_source = db.Column(db.String(30), nullable=False, default='الموقع الخارجي') 
     # يحدد مكان ولادة الحساب: 'لوحة التحكم' أو 'الموقع الخارجي'
     
     # معرف الموظف أو المؤسس الذي قام بتعميد المورد
-    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) 
+    created_by_id = db.Column(db.Integer, nullable=True) 
     
     # معرف الشخص الذي قام بآخر إجراء إداري
-    updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) 
+    updated_by_id = db.Column(db.Integer, nullable=True) 
 
     # 8. التوثيق والتحليل الزمني (Timestamps)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow) 
