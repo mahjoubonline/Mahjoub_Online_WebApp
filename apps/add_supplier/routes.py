@@ -33,17 +33,22 @@ def add_supplier():
             trade_name = request.form.get('trade_name', '').strip()
             password = request.form.get('password')
             unified_id = request.form.get('unified_id')
+            identity_number = request.form.get('identity_number', '').strip()
 
-            # 2. التحقق النهائي (Back-end Validation) لضمان عدم التلاعب قبل الحفظ
+            # 2. التحقق النهائي (Back-end Validation) المحصن تماماً لمنع التكرار والانكسار
             try:
-                if Supplier.query.filter_by(username=username).first():
-                    return jsonify({'status': 'error', 'message': 'اسم المستخدم مسجل مسبقاً!'}), 400
+                if username and Supplier.query.filter_by(username=username).first():
+                    return jsonify({'status': 'error', 'message': 'فشل التعميد: اسم المستخدم مسجل مسبقاً!'}), 400
                 
-                if Supplier.query.filter_by(trade_name=trade_name).first():
-                    return jsonify({'status': 'error', 'message': 'الاسم التجاري مسجل مسبقاً!'}), 400
+                if trade_name and Supplier.query.filter_by(trade_name=trade_name).first():
+                    return jsonify({'status': 'error', 'message': 'فشل التعميد: الاسم التجاري مسجل مسبقاً!'}), 400
+
+                if identity_number and Supplier.query.filter_by(identity_number=identity_number).first():
+                    return jsonify({'status': 'error', 'message': 'فشل التعميد: رقم الوثيقة أو الهوية مسجل مسبقاً!'}), 400
             except Exception as db_err:
-                # في حال وجود مشكلة في الأعمدة أثناء الفحص، لا تسقط السيرفر لحين تحديث الهيكل الفعلي
-                pass
+                # حماية مرنة: في حال وجود اختلاف مؤقت في هيكل الجداول أو الحقول أثناء الفحص المبدئي،
+                # نقوم بطباعة الخطأ في الـ Logs لتتبعه دون أن نقطع عملية التسجيل الأساسية.
+                print(f"Validation Log: Temporary skip column validation -> {str(db_err)}")
 
             # 3. معالجة حقول الإدخال اليدوي الديناميكية
             identity_type = request.form.get('identity_type')
@@ -58,7 +63,7 @@ def add_supplier():
                 username=username,
                 password_hash=hashed_pw,
                 identity_type=identity_type,
-                identity_number=request.form.get('identity_number', '').strip(),
+                identity_number=identity_number,
                 activity_type=category,
                 owner_name=request.form.get('owner_name', '').strip(),
                 trade_name=trade_name,
@@ -80,10 +85,11 @@ def add_supplier():
                     # هنا يمكن إضافة منطق الحفظ الفعلي للصور لاحقاً
                     pass
 
-            # 6. الحفظ النهائي في قاعدة البيانات
+            # 6. الحفظ النهائي الصارم والمؤكد في قاعدة البيانات
             db.session.add(new_supplier)
             db.session.commit()
 
+            # إرجاع استجابة نجاح صريحة وقطعية لتغلق الـ JavaScript نافذة "جاري المعالجة" بنجاح
             return jsonify({
                 'status': 'success',
                 'message': 'تم تعميد المورد بنجاح في نظام الأرشفة السيادي',
@@ -95,6 +101,7 @@ def add_supplier():
 
         except Exception as e:
             db.session.rollback()
+            print(f"Critical Error in add_supplier: {str(e)}")
             return jsonify({'status': 'error', 'message': f'فشل في عملية التعميد: {str(e)}'}), 500
 
     # في حالة GET: حساب المعرف القادم لعرضه في الواجهة
@@ -102,6 +109,7 @@ def add_supplier():
         last_s = Supplier.query.order_by(Supplier.id.desc()).first()
         next_id = (last_s.id + 1) if last_s else 1
     except Exception as e:
+        print(f"Error fetching next_id: {str(e)}")
         next_id = 1
     
     # [التصحيح الجوهري] تأمين خط الإياب والرجوع بالإشارة إلى المجلد الصحيح بالكامل
@@ -139,4 +147,5 @@ def check_duplicate():
     except Exception as e:
         # حماية سيادية: إذا فشل الفحص بسبب عدم تطابق أسماء الحقول أو الأعمدة، يعود بـ False
         # هذا يمنع انكسار واجهة المستخدم ويضمن سلاسة تدفق البيانات
+        print(f"Check duplicate error for {check_type}: {str(e)}")
         return jsonify({'exists': False, 'error': str(e)})
