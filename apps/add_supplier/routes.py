@@ -1,7 +1,6 @@
 # apps/add_supplier/routes.py
 # coding: utf-8
-import os
-from flask import Blueprint, render_template, request, jsonify
+from flask import render_template, request, jsonify
 from flask_login import login_required
 from datetime import datetime
 from werkzeug.security import generate_password_hash
@@ -10,15 +9,8 @@ from werkzeug.security import generate_password_hash
 from apps import db  
 from apps.models.supplier_db import Supplier 
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-# التأكد من مسارات القوالب داخل المديول
-template_path = os.path.join(current_dir, 'templates')
-
-admin_suppliers = Blueprint(
-    'admin_suppliers', 
-    __name__,
-    template_folder=template_path
-)
+# استيراد البلوبرينت الموحد والمثبت من ملف الـ __init__ لمنع التعارض الخفي
+from apps.add_supplier import admin_suppliers
 
 @admin_suppliers.route('/add', methods=['GET', 'POST'])
 @login_required 
@@ -112,8 +104,9 @@ def add_supplier():
         print(f"Error fetching next_id: {str(e)}")
         next_id = 1
     
-    # [التصحيح الجوهري] استدعاء القالب بناءً على مساره الحقيقي الدقيق لتجنب انفجار السيرفر بـ TemplateNotFound
+    # استدعاء القالب بناءً على مساره الحقيقي الدقيق والمثبت لتجنب TemplateNotFound
     return render_template('admin/add_supplier.html', next_id=next_id)
+
 
 @admin_suppliers.route('/check-duplicate', methods=['GET'])
 @login_required
