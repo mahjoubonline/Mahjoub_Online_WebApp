@@ -22,3 +22,5 @@ def reset_database():
     db.drop_all()
     db.create_all()
     print("✅ تم إعادة تهيئة قاعدة البيانات السيادية بنجاح.")
+
+from apps.models.supplier_db import Supplier  # مع استبدال Supplier باسم الكلاس الخاص بالموردين لديك
