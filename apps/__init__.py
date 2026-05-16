@@ -64,7 +64,10 @@ def create_app():
     # 5. بناء جدار قاعدة البيانات وزرع حساب المالك (Sovereignty Seed)
     with app.app_context():
         try:
-            import apps.models 
+            # [الربط السيادي الجوهري]: استيراد حزم الموديلات بشكل صريح لإجبار النظام على زرع أعمدة الموردين الجديدة
+            from apps.models import admin_db
+            from apps.models import supplier_db  # استدعاء ملف الموردين وحقول الحوكمة السبعة
+            
             db.create_all()
             
             # --- 🛡️ إجراءات تعميد المالك في قاعدة البيانات (الإصدار المصحح) ---
