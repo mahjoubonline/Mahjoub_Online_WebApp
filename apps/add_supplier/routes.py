@@ -104,14 +104,14 @@ def add_supplier():
     except Exception as e:
         next_id = 1
     
-    return render_template('add_supplier.html', next_id=next_id)
+    # التعديل الجوهري هنا: الإشارة للمسار الفرعي الصحيح 'admin/add_supplier.html'
+    return render_template('admin/add_supplier.html', next_id=next_id)
 
 @admin_suppliers.route('/check-duplicate', methods=['GET'])
 @login_required
 def check_duplicate():
     """
     نظام الفحص اللحظي الآمن: يتصل به الـ JavaScript لإظهار علامات الصح والخطأ ✅❌
-    تم تأمينه بالكامل لمنع ظهور رسائل الخطأ الطويلة في واجهة المستخدم في حال اختلاف الأعمدة.
     """
     try:
         check_type = request.args.get('type')
@@ -137,6 +137,4 @@ def check_duplicate():
         return jsonify({'exists': exists})
         
     except Exception as e:
-        # حماية سيادية: إذا فشل الفحص بسبب عدم تطابق اسم العمود في قاعدة البيانات، يعود بـ False
-        # هذا يمنع تعليق واجهة المستخدم ويسمح باستمرار العملية.
         return jsonify({'exists': False, 'error': str(e)})
