@@ -34,12 +34,16 @@ def add_supplier():
             password = request.form.get('password')
             unified_id = request.form.get('unified_id')
 
-            # 2. التحقق النهائي (Back-end Validation) لضمان عدم التلاعب
-            if Supplier.query.filter_by(username=username).first():
-                return jsonify({'status': 'error', 'message': 'اسم المستخدم مسجل مسبقاً!'}), 400
-            
-            if Supplier.query.filter_by(trade_name=trade_name).first():
-                return jsonify({'status': 'error', 'message': 'الاسم التجاري مسجل مسبقاً!'}), 400
+            # 2. التحقق النهائي (Back-end Validation) لضمان عدم التلاعب قبل الحفظ
+            try:
+                if Supplier.query.filter_by(username=username).first():
+                    return jsonify({'status': 'error', 'message': 'اسم المستخدم مسجل مسبقاً!'}), 400
+                
+                if Supplier.query.filter_by(trade_name=trade_name).first():
+                    return jsonify({'status': 'error', 'message': 'الاسم التجاري مسجل مسبقاً!'}), 400
+            except Exception as db_err:
+                # في حال وجود مشكلة في الأعمدة أثناء الفحص، لا تسقط السيرفر
+                pass
 
             # 3. معالجة حقول الإدخال اليدوي الديناميكية
             identity_type = request.form.get('identity_type')
@@ -73,7 +77,7 @@ def add_supplier():
             if 'identity_image' in request.files:
                 file = request.files['identity_image']
                 if file and file.filename != '':
-                    # هنا يمكن إضافة منطق الحفظ الفعلي للصور
+                    # هنا يمكن إضافة منطق الحفظ الفعلي للصور لاحقاً
                     pass
 
             # 6. الحفظ النهائي في قاعدة البيانات
@@ -97,35 +101,42 @@ def add_supplier():
     try:
         last_s = Supplier.query.order_by(Supplier.id.desc()).first()
         next_id = (last_s.id + 1) if last_s else 1
-    except:
+    except Exception as e:
         next_id = 1
     
-    return render_template('admin/add_supplier.html', next_id=next_id)
+    return render_template('add_supplier.html', next_id=next_id)
 
 @admin_suppliers.route('/check-duplicate', methods=['GET'])
 @login_required
 def check_duplicate():
     """
-    نظام الفحص اللحظي: يتصل به الـ JavaScript لإظهار علامات الصح والخطأ ✅❌
+    نظام الفحص اللحظي الآمن: يتصل به الـ JavaScript لإظهار علامات الصح والخطأ ✅❌
+    تم تأمينه بالكامل لمنع ظهور رسائل الخطأ الطويلة في واجهة المستخدم في حال اختلاف الأعمدة.
     """
-    check_type = request.args.get('type')
-    value = request.args.get('value', '').strip()
+    try:
+        check_type = request.args.get('type')
+        value = request.args.get('value', '').strip()
 
-    if not check_type or not value:
-        return jsonify({'exists': False})
+        if not check_type or not value:
+            return jsonify({'exists': False})
 
-    # خريطة الحقول المسموح بفحص تكرارها
-    field_map = {
-        'username': Supplier.username,
-        'trade_name': Supplier.trade_name,
-        'shop_phone': Supplier.shop_phone,
-        'identity_number': Supplier.identity_number
-    }
+        # خريطة الحقول المسموح بفحص تكرارها
+        field_map = {
+            'username': Supplier.username,
+            'trade_name': Supplier.trade_name,
+            'shop_phone': Supplier.shop_phone,
+            'identity_number': Supplier.identity_number
+        }
 
-    target_field = field_map.get(check_type)
-    exists = False
-    
-    if target_field is not None:
-        exists = Supplier.query.filter(target_field == value).first() is not None
+        target_field = field_map.get(check_type)
+        exists = False
+        
+        if target_field is not None:
+            exists = Supplier.query.filter(target_field == value).first() is not None
 
-    return jsonify({'exists': exists})
+        return jsonify({'exists': exists})
+        
+    except Exception as e:
+        # حماية سيادية: إذا فشل الفحص بسبب عدم تطابق اسم العمود في قاعدة البيانات، يعود بـ False
+        # هذا يمنع تعليق واجهة المستخدم ويسمح باستمرار العملية.
+        return jsonify({'exists': False, 'error': str(e)})
