@@ -16,13 +16,13 @@
         </div>
         <div class="text-center p-2 border-start ps-4">
             <small class="d-block text-muted fw-bold">المعرف الموحد</small>
-            <span class="fs-4 fw-bold" style="color: #4B338A;" id="display-id">SUP-WEL-MAH963{{ next_id }}</span>
+            <span class="fs-4 fw-bold" style="color: #4B338A;" id="display-id">{{ 'SUP-WEL-MAH963' ~ (next_id if next_id else '1') }}</span>
         </div>
     </div>
 
     <form id="addSupplierForm" method="POST" enctype="multipart/form-data" action="{{ url_for('admin_suppliers.add_supplier') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="unified_id" value="SUP-WEL-MAH963{{ next_id }}">
+        <input type="hidden" name="unified_id" value="{{ 'SUP-WEL-MAH963' ~ (next_id if next_id else '1') }}">
 
         <div class="row g-4">
             <div class="col-md-4">
@@ -274,7 +274,9 @@ function updateDistrictOptions() {
     if (yemenGeography[p]) {
         yemenGeography[p].forEach(d => {
             const opt = document.createElement('option');
-            opt.value = opt.textContent = d;
+            const optText = document.createTextNode(d);
+            opt.value = d;
+            opt.appendChild(optText);
             dSelect.appendChild(opt);
         });
     }
@@ -286,11 +288,15 @@ function updateFinanceOptions() {
     select.innerHTML = '<option value="" selected disabled>اختر جهة التحويل...</option>';
     financeData[type].forEach(item => {
         const opt = document.createElement('option');
-        opt.value = opt.textContent = item;
+        const optText = document.createTextNode(item);
+        opt.value = item;
+        opt.appendChild(optText);
         select.appendChild(opt);
     });
     const mOpt = document.createElement('option');
-    mOpt.value = 'manual'; mOpt.textContent = 'أخرى (إدخال يدوي)...';
+    const mOptText = document.createTextNode('أخرى (إدخال يدوي)...');
+    mOpt.value = 'manual';
+    mOpt.appendChild(mOptText);
     select.appendChild(mOpt);
 }
 
@@ -298,12 +304,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const pSelect = document.getElementById('provinceSelect');
     Object.keys(yemenGeography).forEach(p => {
         const opt = document.createElement('option');
-        opt.value = opt.textContent = p;
+        const optText = document.createTextNode(p);
+        opt.value = p;
+        opt.appendChild(optText);
         pSelect.appendChild(opt);
     });
     updateFinanceOptions();
 
-    // السيطرة الذكية على عملية الإرسال لضمان ظهور شاشة التعميد بنجاح
     document.getElementById('addSupplierForm').onsubmit = async function(e) {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
@@ -319,21 +326,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             
             if (response.ok && result.status === 'success') {
-                // إدراج البيانات المستلمة من السيرفر مباشرة في المودال
                 document.getElementById('res-username').innerText = result.data ? result.data.username : document.getElementById('form-username-field').value;
                 document.getElementById('res-id').innerText = result.data ? result.data.unified_id : document.getElementById('display-id').innerText;
                 
-                // إظهار نافذة النجاح والتخلص من حالة جاري المعالجة
                 const successModal = new bootstrap.Modal(document.getElementById('successModal'));
                 successModal.show();
             } else {
-                // التعامل مع رسائل الخطأ المنطقية القادمة من الـ Backend (مثل تكرار حقل)
                 alert('فشل التعميد: ' + (result.message || 'يرجى مراجعة البيانات المدخلة.'));
                 btn.disabled = false;
                 btn.innerHTML = 'اعتماد المورد الآن <i class="fas fa-paper-plane ms-2"></i>';
             }
         } catch (e) { 
-            // في حال وجود مشكلة حقيقية بالخلفية تمنع إرجاع JSON
             alert('تم تنفيذ الإجراء، يرجى تحديث الصفحة للتحقق من استقرار التزامن.'); 
             btn.disabled = false; 
             btn.innerHTML = 'اعتماد المورد الآن <i class="fas fa-paper-plane ms-2"></i>';
