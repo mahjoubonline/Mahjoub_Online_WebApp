@@ -1,10 +1,13 @@
 # apps/add_supplier/routes.py
 # coding: utf-8
 
-from flask import render_template, request, jsonify
+import os
+import secrets
+from flask import render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import datetime
 from werkzeug.security import generate_password_hash
+from werkzeug.utils import secure_filename
 
 # استيراد قاعدة البيانات والموديل
 from apps import db  
@@ -18,6 +21,7 @@ from apps.add_supplier import admin_suppliers
 def add_supplier():
     """
     محرك تعميد الموردين: يقوم بمعالجة البيانات وحفظها في السجل لـ "منصة محجوب أونلاين"
+    الحالة الافتراضية: نشط | الرتبة الافتراضية: أساسي
     """
     if request.method == 'POST':
         try:
@@ -57,15 +61,47 @@ def add_supplier():
             bank_name = request.form.get('bank_name')
             activity_type = request.form.get('activity_type', '').strip()
 
-            # 4. تشفير كلمة المرور وتجهيز الكائن
+            # 4. حساب وتوليد المعرف السيادي الحقيقي للحفظ الفعلي في الداتابيز لمنع الـ PENDING
+            try:
+                last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
+                if last_supplier and last_supplier.sovereign_id and 'SUP-WEL-MAH963' in last_supplier.sovereign_id:
+                    try:
+                        last_num_str = last_supplier.sovereign_id.replace('SUP-WEL-MAH963', '').strip()
+                        next_num = int(last_num_str) + 1
+                    except (ValueError, IndexError):
+                        next_num = (last_supplier.id or 0) + 1
+                else:
+                    next_num = (last_supplier.id or 0) + 1 if last_supplier else 1
+                
+                final_sovereign_id = f"SUP-WEL-MAH963{next_num}"
+            except Exception:
+                final_sovereign_id = request.form.get('sovereign_id', '').strip() or "SUP-WEL-MAH96319"
+
+            # 5. تشفير كلمة المرور وتجهيز الكائن الإنشائي السيادي
             hashed_pw = generate_password_hash(password)
             
+            # معالجة رفع الملفات والمرفقات (صورة الوثيقة) إن وجدت
+            image_filename = None
+            if 'identity_image' in request.files:
+                file = request.files['identity_image']
+                if file and file.filename != '':
+                    filename = secure_filename(file.filename)
+                    unique_suffix = secrets.token_hex(4)
+                    _, ext = os.path.splitext(filename)
+                    image_filename = f"doc_{unique_suffix}{ext}"
+                    
+                    # مسار الحفظ السحابي الآمن للمرفقات
+                    upload_path = os.path.join(current_app.root_path, 'static', 'uploads', 'identities')
+                    os.makedirs(upload_path, exist_ok=True)
+                    file.save(os.path.join(upload_path, image_filename))
+            
             new_supplier = Supplier(
-                sovereign_id="PENDING", 
+                sovereign_id=final_sovereign_id, 
                 username=username,
                 password_hash=hashed_pw,
                 identity_type=identity_type,
                 identity_number=identity_number,
+                identity_image=image_filename, # حفظ اسم الملف في عمود الصورة الخاص بجدول المورد
                 activity_type=activity_type,
                 owner_name=request.form.get('owner_name', '').strip(),
                 trade_name=trade_name,
@@ -77,18 +113,12 @@ def add_supplier():
                 fin_type=request.form.get('fin_type'),
                 bank_name=bank_name,
                 bank_acc=bank_acc,
-                status='المراجعة',        # إجبار إسناد حالة البدء الافتراضية لحوكمة النظام
-                rank_grade='ريادي',       # إجبار إسناد رتبة المورد الأولى للتحكم بالصلاحيات
+                status='نشط',                    # تم تعديل التعيين التلقائي ليصبح نشط مباشرة
+                rank_grade='أساسي',               # تم تعديل التعيين التلقائي ليصبح أساسي مباشرة
                 registration_source='لوحة التحكم', # تحديد ولادة الحساب من الإدارة
                 created_by_id=getattr(current_user, 'id', None), 
                 created_at=datetime.utcnow()
             )
-
-            # 5. معالجة المرفقات
-            if 'identity_image' in request.files:
-                file = request.files['identity_image']
-                if file and file.filename != '':
-                    pass
 
             # 6. الحفظ النهائي المؤكد في قاعدة البيانات
             db.session.add(new_supplier)
@@ -96,7 +126,7 @@ def add_supplier():
 
             return jsonify({
                 'status': 'success',
-                'message': 'تم تعميد المورد بنجاح في نظام الأرشفة',
+                'message': 'تم تعميد المورد بنجاح في نظام الأرشفة برتبة أساسي وحالة نشطة',
                 'data': {
                     'username': new_supplier.username,
                     'sovereign_id': new_supplier.sovereign_id
@@ -145,7 +175,7 @@ def check_duplicate():
         if not check_type or not value:
             return jsonify({'exists': False, 'valid': False, 'message': 'الحقل فارغ'})
 
-        # حوكمة إضافية في الـ Back-end لاسم المستخدم: إذا قل عن 3 أحرف يسقط كـ "غير صالح وموجود" فوراً
+        # حوكمة إضافية في الـ Back-end لاسم المستخدم: إذا قل عن 3 أحرف يسقط كـ "غير صالح وموجود" فوراً لمنع التكرار
         if check_type == 'username' and len(value) < 3:
             return jsonify({'exists': True, 'valid': False, 'message': 'اسم المستخدم قصير جداً'})
 
