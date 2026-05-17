@@ -5,7 +5,7 @@ from flask import render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
 from apps import db
 from apps.models.wallet_db import Wallet, WalletTransaction
-from apps.models.supplier_db import Supplier  # استدعاء موديل المورد
+from apps.models.supplier_db import Supplier  # استدعاء موديل المورد الفوري
 from . import admin_wallet  
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import func
@@ -40,7 +40,7 @@ def overview():
             func.coalesce(func.sum(Wallet.usd_pending), 0.0)
         ).first()
 
-        # 4. جلب طلبات السحب المعلقة
+        # 4. جلب طلبات السحب المعلقة لعرضها في الجداول المستقلة إن وجدت
         pending_withdrawals = db.session.query(WalletTransaction)\
             .options(joinedload(WalletTransaction.wallet))\
             .filter(WalletTransaction.tx_type == 'withdrawal', WalletTransaction.tx_status == 'pending')\
@@ -69,54 +69,60 @@ def overview():
 @login_required
 def search_wallets():
     """
-    نظام استدعاء وفحص المحافظ الموحد:
-    يسحب الحقول ديناميكياً من قاعدة البيانات بناءً على الموردين ومحافظهم المرتبطة.
-    دعم مرن لأسماء الحقول المختلفة (username/name/phone/mobile) لمنع مخرجات البحث الفارغة.
+    نظام استدعاء وفحص المحافظ الديناميكي المتوافق مع واجهة overview.html.
+    يدعم البحث المخصص، ويدعم جلب الكل عند إرسال '#' لحساب العدادات الكلية وإجمالي المحافظ.
     """
     query = request.args.get('query', '').strip()
     if not query:
         return jsonify({'status': 'success', 'wallets': []})
 
     try:
-        # فحص ديناميكي للحقول المتوفرة في موديل Supplier لتفادي اختلاط أسماء الأعمدة
+        # فحص بنية الجداول الحية في قاعدة البيانات ديناميكياً لتفادي الاختلافات
         supplier_columns = Supplier.__table__.columns.keys()
         
-        filters = []
-        # التحقق من حقل الاسم
-        if 'username' in supplier_columns:
-            filters.append(Supplier.username.ilike(f'%{query}%'))
-        elif 'name' in supplier_columns:
-            filters.append(Supplier.name.ilike(f'%{query}%'))
-        elif 'store_name' in supplier_columns:
-            filters.append(Supplier.store_name.ilike(f'%{query}%'))
+        # بناء الاستعلام بناءً على طلب واجهة العرض
+        if query == '#':
+            # جلب كافة الموردين لحساب العدد الإجمالي في النظام
+            suppliers = db.session.query(Supplier).all()
+        else:
+            filters = []
+            # التحقق من حقول الاسم المتوقعة في قاعدة البيانات
+            if 'username' in supplier_columns:
+                filters.append(Supplier.username.ilike(f'%{query}%'))
+            if 'name' in supplier_columns:
+                filters.append(Supplier.name.ilike(f'%{query}%'))
+            if 'store_name' in supplier_columns:
+                filters.append(Supplier.store_name.ilike(f'%{query}%'))
 
-        # التحقق من حقل الهاتف
-        if 'phone' in supplier_columns:
-            filters.append(Supplier.phone.ilike(f'%{query}%'))
-        elif 'mobile' in supplier_columns:
-            filters.append(Supplier.mobile.ilike(f'%{query}%'))
+            # التحقق من حقول الهاتف المتوقعة
+            if 'phone' in supplier_columns:
+                filters.append(Supplier.phone.ilike(f'%{query}%'))
+            if 'mobile' in supplier_columns:
+                filters.append(Supplier.mobile.ilike(f'%{query}%'))
 
-        # إذا لم نجد حقول مطابقة نعود بمصفوفة فارغة آمنة
-        if not filters:
-            return jsonify({'status': 'success', 'wallets': []})
-
-        # تنفيذ الاستعلام الموحد
-        suppliers = db.session.query(Supplier).filter(or_(*filters)).all()
+            if not filters:
+                return jsonify({'status': 'success', 'wallets': []})
+            
+            suppliers = db.session.query(Supplier).filter(or_(*filters)).all()
 
         wallets_list = []
         for sup in suppliers:
-            # سحب المحفظة المرتبطة بالمورد مباشرة من قاعدة البيانات
+            # سحب المحفظة المرتبطة بمعرف المورد المباشر
             wallet = db.session.query(Wallet).filter(Wallet.supplier_id == sup.id).first()
             
-            # تحديد اسم العرض التجاري المتاح ديناميكياً
+            # استخراج القيم المتوفرة بأمان وتجنب الانهيار في حال كانت القيمة Null
             trade_name = getattr(sup, 'username', getattr(sup, 'name', getattr(sup, 'store_name', 'مورد غير مسمى')))
             owner_phone = getattr(sup, 'phone', getattr(sup, 'mobile', 'بدون هاتف'))
+            
+            # استخراج الرتبة السيادية إذا كانت مدمجة في جدول الموردين
+            rank_grade = getattr(sup, 'rank_grade', 'ريادي')
 
             wallets_list.append({
-                'wallet_id': wallet.id if wallet else f"⏳ غير منشأة (ID: {sup.id})",
+                'wallet_id': wallet.id if wallet else f"⏳ غير منشأة",
                 'trade_name': trade_name,  
                 'sovereign_id': f"SUP-ID-{sup.id:04d}",
                 'owner_phone': owner_phone,
+                'rank_grade': rank_grade,
                 
                 # أرصدة الريال اليمني
                 'yer_total': float(wallet.yer_total) if wallet else 0.0,
