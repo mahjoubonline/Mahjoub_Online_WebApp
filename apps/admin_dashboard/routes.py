@@ -1,7 +1,7 @@
 # coding: utf-8
 # 📊 وحدة القيادة المركزية - محجوب أونلاين 2026
 
-from flask import render_template, current_app
+from flask import render_template, current_app, redirect, url_for
 from flask_login import login_required, current_user 
 import jinja2
 
@@ -30,6 +30,17 @@ def dashboard_home():
     except jinja2.exceptions.TemplateNotFound:
         current_app.logger.warning("تنبيه: تم موازنة مسار القالب المعزول لـ dashboard_content")
         return render_template('dashboard_content.html', stats=stats, owner=current_user)
+
+
+@admin_dashboard_blueprint.route('/suppliers/add')
+@login_required
+def add_supplier():
+    """
+    🛡️ جسر الحوكمة الآمن لمنع الـ BuildError والـ 500.
+    يلتقط الطلبات القديمة الموجهة للوحة التحكم ويحولها تلقائياً للمحرك المعزول.
+    """
+    current_app.logger.info("🔄 إعادة توجيه سيادية تلقائية من admin_dashboard إلى محرك الموردين المعزول admin_suppliers.")
+    return redirect(url_for('admin_suppliers.add_supplier'))
 
 
 @admin_dashboard_blueprint.route('/suppliers/list')
