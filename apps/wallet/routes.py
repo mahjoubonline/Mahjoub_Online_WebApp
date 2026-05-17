@@ -1,59 +1,64 @@
 # coding: utf-8
-# 🏢 محرك تعميد الموردين السيادي - منصة محجوب أونلاين 2026
+# 🏢 المصنع المركزي للنواة - منصة محجوب أونلاين 2026
 
-from flask import render_template, request, redirect, url_for, flash
-from apps import db
-from apps.models.admin_db import AdminUser  # أو موديل المورد الخاص بك
-from apps.models.wallet_db import Wallet    # استيراد موديل المحفظة الثلاثية
-# ... أي استيرادات أخرى تحتاجها هنا ...
+import os
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+from config import Config
 
-@admin_suppliers.route('/add', methods=['GET', 'POST'])
-@login_required
-def add_supplier():
-    if request.method == 'POST':
-        # 1. استقبال بيانات المورد الجديد من الواجهة
-        sovereign_id = request.form.get('sovereign_id')
-        username = request.form.get('username')
-        # ... بقية الحقول (الهاتف، كلمة المرور، إلخ) ...
+# إنشاء الكائنات المركزية كنسخ مستقلة لمنع التعارض الدائري
+db = SQLAlchemy()
+login_manager = LoginManager()
 
+def create_app():
+    # تعيين مجلد القوالب العام كخلفية احتياطية للتطبيق كاملاً
+    app = Flask(__name__, template_folder='templates')
+    app.config.from_object(Config)
+
+    # تهيئة الإضافات بربطها بالتطبيق الحالي
+    db.init_app(app)
+    login_manager.init_app(app)
+    
+    # 🛡️ الحماية السيادية: تحديد المسار الكامل لـ Flask-Login
+    login_manager.login_view = 'auth_portal.login'
+    login_manager.login_message = 'يرجى إثبات الهوية الرقمية للوصول إلى المنطقة السيادية.'
+    login_manager.login_message_category = 'warning'
+
+    # 🔑 تعريف الـ user_loader لجلب الهوية من قاعدة البيانات
+    @login_manager.user_loader
+    def load_user(user_id):
+        from apps.models.admin_db import AdminUser
+        return AdminUser.query.get(int(user_id))
+
+    # 📥 استيراد البلوبرينتس الفرعية بشكل آمن ومباشر لمنع التداخل الدائري
+    from apps.auth_portal import auth_blueprint
+    from apps.admin_dashboard import admin_dashboard_blueprint
+    
+    # 🎯 الاستيراد الصحيح والنقي مباشرة من مجلد حزمة الموردين المعزولة
+    from apps.add_supplier import admin_suppliers
+
+    # 💳 استيراد محرك الحوكمة المالية والمحافظ المحدث
+    from apps.wallet import admin_wallet
+
+    # ⚙️ تسجيل وعزل المسارات برمجياً لضمان استقرار المنصة بالكامل
+    app.register_blueprint(auth_blueprint, url_prefix='/auth')
+    app.register_blueprint(admin_dashboard_blueprint, url_prefix='/admin')
+    
+    # 📦 تسجيل محرك الموردين السيادي بمسار مخصص يطابق طلبات الـ Fetch في الواجهة
+    app.register_blueprint(admin_suppliers, url_prefix='/admin/suppliers')
+
+    # 💰 تسجيل محرك المحافظ والعمليات المادية الثلاثية في النواة
+    app.register_blueprint(admin_wallet)
+
+    # 🚀 الحقل السيادي المضمون: خلق الجداول مسبقاً داخل سياق التطبيق الآمن
+    with app.app_context():
         try:
-            # 2. إنشاء كائن المورد الجديد وحفظه
-            new_supplier = AdminUser(
-                sovereign_id=sovereign_id,
-                username=username,
-                # ... بقية الحقول ...
-            )
-            db.session.add(new_supplier)
-            db.session.flush() # عمل Flush للحصول على الـ ID الخاص بالمورد قبل الـ Commit
-
-            # 3. 💳 الحقن المالي التلقائي: إنشاء المحفظة الثلاثية بالـ ID المولد فوراً
-            supplier_wallet = Wallet(
-                supplier_id=new_supplier.id, # ربط المحفظة بالمورد الجديد
-                # عملة الريال اليمني
-                yer_total=0.0,
-                yer_available=0.0,
-                yer_pending=0.0,
-                yer_withdrawn=0.0,
-                # عملة الريال السعودي
-                sar_total=0.0,
-                sar_available=0.0,
-                sar_pending=0.0,
-                sar_withdrawn=0.0,
-                # عملة الدولار الأمريكي
-                usd_total=0.0,
-                usd_available=0.0,
-                usd_pending=0.0,
-                usd_withdrawn=0.0
-            )
-            db.session.add(supplier_wallet)
-            
-            # 4. حفظ الكتلة البرمجية كاملة في قاعدة بيانات Railway
-            db.session.commit()
-            flash('تم تعميد المورد بنجاح وتوليد محفظته المالية الثلاثية تلقائياً!', 'success')
-            return redirect(url_for('admin_dashboard.list_suppliers'))
-
+            # استدعاء الموديلات الماليّة لكي يراها محرك SQLAlchemy ويحقنها في الـ Postgres
+            from apps.models.wallet_db import Wallet, WalletTransaction
+            db.create_all()
+            print("✅ تم فحص وتأمين وجود جداول المحافظ المالية في Postgres بنجاح!")
         except Exception as e:
-            db.session.rollback()
-            flash(f'⚠️ فشل الإجراء السيادي: {str(e)}', 'danger')
-            
-    return render_template('admin/add_supplier.html', owner=current_user)
+            app.logger.error(f"⚠️ تنبيه حوكمي أثناء فحص جداول قاعدة البيانات: {str(e)}")
+
+    return app
