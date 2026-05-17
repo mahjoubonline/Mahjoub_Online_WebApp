@@ -3,13 +3,13 @@
 
 from flask import Blueprint
 
-# 1. إنشاء وتثبيت كائن البلوبرينت الموحد لتستطيع المسارات استيراده بدقة
+# إنشاء البلوبرينت وتحديد مسار القوالب لضمان وصول جينجا إليها
 admin_suppliers = Blueprint(
     'admin_suppliers', 
     __name__, 
-    url_prefix='/admin/suppliers'
+    url_prefix='/admin/supplier',
+    template_folder='../../templates' # توجيه صريح لمجلد القوالب الرئيسي لمنع الـ TemplateNotFound
 )
 
-# 2. استدعاء ملف الـ routes في الأسفل بعد إنشاء الكائن لقطع التعارض الدائري نهائياً
-# هذا السطر يضمن تسجيل كافة مسارات التعميد والفحص اللحظي داخل النظام فور تشغيل الخادم
+# الاستيراد المتأخر هنا يمنع الـ Circular Import نهائياً أثناء إقلاع Gunicorn
 from apps.add_supplier import routes
