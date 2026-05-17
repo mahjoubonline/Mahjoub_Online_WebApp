@@ -109,12 +109,17 @@
             text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
         }
 
+        /* نظام التنبيهات الملون المطور */
+        .flash-container { margin-bottom: 20px; }
         .flash-message {
-            background: rgba(255, 77, 77, 0.2);
-            border: 1px solid #ff4d4d;
-            padding: 10px; border-radius: 12px;
-            margin-bottom: 20px; font-size: 0.8rem;
+            padding: 12px; border-radius: 12px;
+            font-size: 0.85rem; text-align: right;
+            margin-bottom: 8px; font-weight: 600;
         }
+        .flash-danger { background: rgba(255, 77, 77, 0.15); border: 1px solid #ff4d4d; color: #ff6666; }
+        .flash-warning { background: rgba(241, 196, 15, 0.15); border: 1px solid #f1c40f; color: #f39c12; }
+        .flash-success { background: rgba(46, 204, 113, 0.15); border: 1px solid #2ecc71; color: #2ecc71; }
+        .flash-info { background: rgba(52, 152, 219, 0.15); border: 1px solid #3498db; color: #3498db; }
     </style>
 </head>
 <body>
@@ -126,16 +131,20 @@
             <p class="philosophy-text">منصة اللامركزية لحوكمة التجارة الرقمية</p>
         </div>
 
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            {% for message in messages %}
-              <div class="flash-message"><i class="fas fa-shield-virus"></i> {{ message }}</div>
+            <div class="flash-container">
+            {% for category, message in messages %}
+              <div class="flash-message flash-{{ category if category in ['danger', 'warning', 'success', 'info'] else 'danger' }}">
+                  <i class="fas fa-shield-halved me-2"></i> {{ message }}
+              </div>
             {% endfor %}
+            </div>
           {% endif %}
         {% endwith %}
 
-        <form action="{{ url_for('auth_bp.login') }}" method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <form action="{{ url_for('auth_portal.login') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
 
             <div class="form-group">
                 <label>الهوية الرقمية</label>
@@ -148,13 +157,13 @@
             <div class="form-group">
                 <label>مفتاح التشفير</label>
                 <div class="input-box">
-                    <i class="fas fa-lock-open"></i>
+                    <i class="fas fa-lock"></i>
                     <input type="password" name="password" placeholder="كلمة المرور" required>
                 </div>
             </div>
 
             <button type="submit" class="btn-access">
-                تسجيل الدخول <i class="fas fa-key"></i>
+                تسجيل الدخول <i class="fas fa-key ms-1"></i>
             </button>
         </form>
 
