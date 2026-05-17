@@ -21,7 +21,13 @@
     </div>
 
     <form id="addSupplierForm" method="POST" enctype="multipart/form-data" action="{{ url_for('admin_suppliers.add_supplier_page') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        
+        {% if csrf_token is defined %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% else %}
+            <input type="hidden" name="csrf_token" value="{{ backup_csrf }}">
+        {% endif %}
+        
         <input type="hidden" name="sovereign_id" value="{{ sovereign_id }}">
 
         <div class="row g-4">
@@ -257,16 +263,16 @@ document.querySelectorAll('.validation-field').forEach(input => {
 
             let isFinalValid = isFormatValid;
 
-            // إذا كان التنسيق صحيحاً وهناك مؤشر للفحص من قاعدة البيانات
             if (isFormatValid && dbType) {
                 try {
+                    // تحويل مسار الطلب الفوري ليتناسب مع بلوبرينت السيرفر الحقيقي
                     const response = await fetch(`/admin/suppliers/check-duplicate?type=${dbType}&value=${encodeURIComponent(value)}`);
                     const result = await response.json();
                     
                     if (result.exists === true || String(result.exists).toLowerCase() === "true") {
-                        isFinalValid = false; // الحقل مكرر ومسجل مسبقاً
+                        isFinalValid = false; 
                     } else {
-                        isFinalValid = true; // الحقل متاح وجديد
+                        isFinalValid = true; 
                     }
                 } catch (e) { 
                     console.error("DB Check Failed"); 
@@ -274,7 +280,6 @@ document.querySelectorAll('.validation-field').forEach(input => {
                 }
             }
 
-            // تحديث الرموز والـ Classes لحظياً للمستخدم (✓ / ✗)
             if (isFinalValid) {
                 icon.innerHTML = '<i class="fas fa-check-circle text-success" style="font-size: 16px;"></i>';
                 this.classList.remove('is-invalid');
@@ -294,7 +299,7 @@ function updateSubmitButtonState() {
     const submitBtn = document.getElementById('submitBtn');
     const totalValidFields = document.querySelectorAll('.validation-field.is-valid').length;
     const hasErrors = document.querySelectorAll('.is-invalid').length > 0;
-    const requiredValidationCount = 7; // تم تأكيد فحص الحقول السبعة كاملة بنجاح
+    const requiredValidationCount = 7; 
 
     if (totalValidFields === requiredValidationCount && !hasErrors) {
         submitBtn.disabled = false;
@@ -342,7 +347,7 @@ function updateFinanceOptions() {
     });
     const mOpt = document.createElement('option');
     mOpt.value = 'manual';
-    mOpt.textContent = 'أخرى (إدخال يدوي)...';
+    mOpt.textContent = 'أخرى (إدخل يدوي)...';
     select.appendChild(mOpt);
 }
 
@@ -358,7 +363,7 @@ function copySupplierCredentials(user, id, pass) {
                        `🌐 المنصة اللامركزية لحوكمة التجارة الرقمية`;
 
     navigator.clipboard.writeText(textToCopy).then(() => {
-        alert("✅ تم نسخ نص الاعتماد بالكامل بنجاح! يمكنك الآن لصقه وإرساله للمورد.");
+        alert("✅ تم نسخ نص الاعتماد بالكامل بنجاح!");
     }).catch(err => {
         console.error('فشل النسخ: ', err);
     });
