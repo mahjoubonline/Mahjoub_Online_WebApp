@@ -137,34 +137,34 @@
         </div>
 
         <nav class="nav-menu">
-            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="nav-link {% if request.endpoint == 'admin_dashboard.dashboard' %}active{% endif %}">
-                <i class="fas fa-chart-line me-3"></i> <span>مركز القيادة</span>
+            <a href="{{ url_for('admin_dashboard.dashboard_home') }}" class="nav-link {% if request.endpoint == 'admin_dashboard.dashboard_home' %}active{% endif %}">
+                <i class="fas fa-chart-line ms-3"></i> <span>مركز القيادة</span>
             </a>
 
             <div class="dropdown-section">
                 <button class="dropdown-btn" onclick="toggleDropdown()">
-                    <i class="fas fa-handshake me-3"></i> 
+                    <i class="fas fa-handshake ms-3"></i> 
                     <span>شركاء النجاح</span>
                     <i class="fas fa-chevron-left" id="arrow"></i>
                 </button>
                 <div class="dropdown-container" id="supplierDropdown">
                     <a href="{{ url_for('admin_suppliers.add_supplier') }}">
-                        <i class="fas fa-user-plus me-2"></i> تعميد مورد جديد
+                        <i class="fas fa-user-plus ms-2"></i> تعميد مورد جديد
                     </a>
                     <a href="{{ url_for('admin_dashboard.list_suppliers') }}">
-                        <i class="fas fa-database me-2"></i> سجل الموردين
+                        <i class="fas fa-database ms-2"></i> سجل الموردين
                     </a>
                 </div>
             </div>
 
             <a href="{{ url_for('admin_dashboard.system_settings') }}" class="nav-link {% if request.endpoint == 'admin_dashboard.system_settings' %}active{% endif %}">
-                <i class="fas fa-shield-halved me-3"></i> <span>إعدادات السيادة</span>
+                <i class="fas fa-shield-halved ms-3"></i> <span>إعدادات السيادة</span>
             </a>
 
             <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 2rem 0;">
 
-            <a href="{{ url_for('auth_bp.logout') }}" class="nav-link text-danger mt-auto">
-                <i class="fas fa-power-off me-3"></i> <span>تسجيل خروج آمن</span>
+            <a href="{{ url_for('auth_portal.logout') }}" class="nav-link text-danger mt-auto">
+                <i class="fas fa-power-off ms-3"></i> <span>تسجيل خروج آمن</span>
             </a>
         </nav>
     </aside>
@@ -177,7 +177,7 @@
             </div>
             
             <div class="user-badge">
-                <i class="fas fa-user-tie me-2"></i> {{ owner.full_name if owner else 'المؤسس علي' }}
+                <i class="fas fa-user-tie ms-2"></i> {{ owner.username if owner else 'المؤسس علي' }}
             </div>
         </header>
 
