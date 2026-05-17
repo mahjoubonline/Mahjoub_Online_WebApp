@@ -83,4 +83,116 @@ def add_supplier_page():
                 "bank_acc": (Supplier.query.filter_by(bank_acc=bank_acc).first(), "رقم الحساب")
             }
 
-            for key, (exists, field
+            for key, (exists, field_title) in check_fields.items():
+                if exists:
+                    return jsonify({
+                        "status": "error",
+                        "message": f"تنبيه حوكمي: حقل ({field_title}) مسجل مسبقاً في النظام ومحفوظ، يرجى تعديله."
+                    }), 400
+
+            # 3. تشفير كلمة المرور وبناء الكائن (سيقوم الـ Model تلقائياً بإنشاء sovereign_id الفريد بفضل الـ before_insert)
+            hashed_password = generate_password_hash(password)
+            
+            new_supplier = Supplier(
+                username=username,
+                password_hash=hashed_password,
+                identity_type=identity_type,
+                identity_number=identity_number,
+                owner_name=owner_name,
+                trade_name=trade_name,
+                owner_phone=owner_phone,
+                shop_phone=shop_phone,
+                province=province,
+                district=district,
+                address_detail=address_detail,
+                fin_type=fin_type,
+                bank_name=bank_name,
+                bank_acc=bank_acc,
+                activity_type=activity_type,
+                registration_source='لوحة التحكم',
+                created_by_id=current_user.id if hasattr(current_user, 'id') else None
+            )
+
+            # 4. تعميد وإدراج المورد في قاعدة البيانات بشكل رسمي
+            db.session.add(new_supplier)
+            db.session.commit()
+
+            return jsonify({
+                "status": "success",
+                "message": "تم تعميد المورد بنجاح في النظام الحوكمي وحفظه في قاعدة البيانات.",
+                "data": {
+                    "username": new_supplier.username,
+                    "sovereign_id": new_supplier.sovereign_id
+                }
+            }), 200
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"❌ خطأ بنيوي أثناء حفظ المورد: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": f"حدث خطأ غير متوقع في قاعدة البيانات: {str(e)}"
+            }), 500
+
+    # مرحلة الـ GET لعرض واجهة الإدخال للمسؤول
+    sovereign_id = get_expected_sovereign_id()
+    
+    csrf_val = ""
+    try:
+        if 'csrf' in current_app.extensions:
+            from flask_wtf.csrf import generate_csrf
+            csrf_val = generate_csrf()
+    except Exception:
+        pass
+
+    # إرسال المتغيرات بدقة إلى القوالب المتوقعة لتفادي الـ TemplateNotFound والـ BuildError
+    try:
+        return render_template('admin/add_supplier.html', sovereign_id=sovereign_id, owner=current_user, backup_csrf=csrf_val)
+    except jinja2.exceptions.TemplateNotFound:
+        return render_template('add_supplier.html', sovereign_id=sovereign_id, owner=current_user, backup_csrf=csrf_val)
+
+
+@admin_suppliers.route('/check-duplicate', methods=['GET'])
+@login_required
+def check_duplicate():
+    """
+    مستمع الفحص الفوري واللحظي المباشر لقاعدة البيانات لضمان الحوكمة وسرعة الاستجابة.
+    """
+    check_type = request.args.get('type')
+    value = request.args.get('value', '').strip()
+    
+    if not check_type or not value:
+        return jsonify({"exists": False, "error": "Missing parameters"}), 400
+        
+    is_duplicate = False
+    try:
+        # ربط دقيق وشامل للحقول السبعة بمسميات الواجهة لمنع التكرار البنيوي
+        if check_type == 'username':
+            is_duplicate = Supplier.query.filter_by(username=value).first() is not None
+            
+        elif check_type == 'identity_number':
+            is_duplicate = Supplier.query.filter_by(identity_number=value).first() is not None
+            
+        elif check_type == 'owner_name':
+            is_duplicate = Supplier.query.filter_by(owner_name=value).first() is not None
+            
+        elif check_type == 'trade_name':
+            is_duplicate = Supplier.query.filter_by(trade_name=value).first() is not None
+            
+        elif check_type == 'owner_phone':
+            is_duplicate = Supplier.query.filter_by(owner_phone=value).first() is not None
+            
+        elif check_type == 'shop_phone':
+            is_duplicate = Supplier.query.filter_by(shop_phone=value).first() is not None
+            
+        elif check_type == 'bank_acc':
+            is_duplicate = Supplier.query.filter_by(bank_acc=value).first() is not None
+            
+        else:
+            current_app.logger.warning(f"⚠️ نوع فحص غير مدعوم في منصة محجوب: {check_type}")
+
+    except Exception as e:
+        current_app.logger.error(f"❌ خطأ أثناء الاستعلام اللحظي للحقل [{check_type}]: {str(e)}")
+        return jsonify({"exists": False, "error": "Database error"}), 500
+        
+    return jsonify({"exists": is_duplicate})
