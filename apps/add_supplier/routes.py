@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
-# استيراد قاعدة البيانات والموديل الصحيح
+# استيراد قاعدة البيانات والموديل
 from apps import db  
 from apps.models.supplier_db import Supplier 
 
@@ -113,11 +113,11 @@ def add_supplier():
                 fin_type=request.form.get('fin_type'),
                 bank_name=bank_name,
                 bank_acc=bank_acc,
-                status='نشط',                                     # تعيين تلقائي مباشر
+                status='نشط',                                    # تعيين تلقائي مباشر
                 rank_grade='أساسي',                               # تعيين تلقائي مباشر
                 registration_source='لوحة التحكم', 
                 created_by_id=getattr(current_user, 'id', None), 
-                created_at=datetime.now(timezone.utc)            # التوقيت القياسي لعام 2026
+                created_at=datetime.now(timezone.utc)            # تحديث للأسلوب البرمجي الحديث لعام 2026
             )
 
             # 6. الحفظ النهائي المؤكد في قاعدة البيانات
@@ -126,7 +126,7 @@ def add_supplier():
 
             return jsonify({
                 'status': 'success',
-                'message': 'تم تعميد المورد بنجاح في نظام الأرشفة برتبة أساسي وحالة نشطة',
+                'message': 'تم تعميد Mورد بنجاح في نظام الأرشفة برتبة أساسي وحالة نشطة',
                 'data': {
                     'username': new_supplier.username,
                     'sovereign_id': new_supplier.sovereign_id
@@ -166,7 +166,7 @@ def add_supplier():
 def check_duplicate():
     """
     نظام الفحص اللحظي الآمن والمطور والمحمي من أخطاء الـ SQL:
-    يقوم بالتحقق من الحقول الفردية لضمان دقة الاستجابة وعمل الواجهة بشكل مثالي.
+    يقوم بالتحقق من الحقول الفردية السبعة لضمان دقة الاستجابة وعمل الواجهة بشكل مثالي.
     """
     try:
         check_type = request.args.get('type')
@@ -175,9 +175,11 @@ def check_duplicate():
         if not check_type or not value:
             return jsonify({'exists': False, 'valid': True, 'message': 'الحقل فارغ'})
 
+        # حوكمة إضافية في الـ Back-end لاسم المستخدم لضمان سلامة البنية
         if check_type == 'username' and len(value) < 3:
             return jsonify({'exists': True, 'valid': False, 'message': 'اسم المستخدم قصير جداً'})
 
+        # الفحص الصريح والمباشر عبر دوال تصفية الحقول لمنع تعارض مفسر SQLAlchemy الحرفي
         exists = False
         if check_type == 'username':
             exists = Supplier.query.filter_by(username=value).first() is not None
@@ -192,8 +194,10 @@ def check_duplicate():
         elif check_type == 'bank_acc':
             exists = Supplier.query.filter_by(bank_acc=value).first() is not None
 
+        # إرجاع رد مطابق 100% لمنطق معالجة الأخطاء بالجافاسكريبت المطور بالفرونت إند
         return jsonify({'exists': exists, 'valid': not exists})
         
     except Exception as e:
+        # تأمين الواجهة الرسومية من الانهيار في حال حدوث أي خطأ عابر في الداتابيز
         current_app.logger.error(f"Check duplicate raw database error for {check_type}: {str(e)}")
         return jsonify({'exists': False, 'valid': True, 'error': str(e)})
