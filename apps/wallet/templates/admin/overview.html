@@ -194,11 +194,11 @@
                         {% if pending_tx %}
                             {% for tx in pending_tx %}
                             <tr class="wallet-row-item" 
-                                data-wallet-id="{{ tx.wallet_id }}"
-                                data-sovereign-id="{{ tx.wallet.supplier.sovereign_id if tx.wallet.supplier else '' }}"
-                                data-trade-name="{{ tx.wallet.supplier.trade_name if tx.wallet.supplier else '' }}"
-                                data-username="{{ tx.wallet.supplier.username if tx.wallet.supplier else '' }}"
-                                data-phone="{{ tx.wallet.supplier.owner_phone if tx.wallet.supplier else '' }}">
+                                data-wallet-id="{{ tx.wallet_id|string }}"
+                                data-sovereign-id="{{ tx.wallet.supplier.sovereign_id|default('', true)|string }}"
+                                data-trade-name="{{ tx.wallet.supplier.trade_name|default('', true)|string }}"
+                                data-username="{{ tx.wallet.supplier.username|default('', true)|string }}"
+                                data-phone="{{ tx.wallet.supplier.owner_phone|default('', true)|string }}">
                                 
                                 <td>
                                     <code class="font-weight-bold" style="color: var(--royal-purple);">W-ID: {{ tx.wallet_id }}</code>
@@ -271,13 +271,13 @@
     const rows = document.querySelectorAll('.wallet-row-item');
     const filteredCountBadge = document.getElementById('filtered_count');
 
-    // تحديث عداد الحوالات المطابقة على الشاشة
+    // تحديث عداد الحوالات المطابقة على الشاشة بصورة آمنة
     function updateFilteredCount() {
         const visibleRows = document.querySelectorAll('.wallet-row-item:not([style*="display: none"])').length;
         filteredCountBadge.innerText = visibleRows;
     }
 
-    // مستمع البحث الفوري الذكي والمشروط
+    // مستمع البحث الفوري المطور والمؤمن ضد القيم الفارغة
     searchInput.addEventListener('input', function() {
         const query = this.value.trim().toLowerCase();
         let visibleCount = 0;
@@ -296,7 +296,6 @@
             });
             resultsContainer.style.display = 'block';
             
-            // إخفاء صف السقوط الاحتياطي إن وجد
             const fallbackRow = document.querySelector('.no-data-fallback');
             if (fallbackRow) fallbackRow.style.display = 'none';
             
@@ -304,14 +303,15 @@
             return;
         }
 
-        // معالجة الفحص المتعدد والموسع (المحفظة، المعرف السيادي، اسم المنشأة، اسم المستخدم، الهاتف)
+        // معالجة الفحص المتعدد والموسع مع حماية صارمة ضد الأخطاء البرمجية
         rows.forEach(row => {
-            const walletId = row.getAttribute('data-wallet-id').toLowerCase();
-            const sovereignId = row.getAttribute('data-sovereign-id').toLowerCase();
-            const tradeName = row.getAttribute('data-trade-name').toLowerCase();
-            const username = row.getAttribute('data-username').toLowerCase();
-            const phone = row.getAttribute('data-phone').toLowerCase();
+            const walletId = (row.getAttribute('data-wallet-id') || '').toLowerCase();
+            const sovereignId = (row.getAttribute('data-sovereign-id') || '').toLowerCase();
+            const tradeName = (row.getAttribute('data-trade-name') || '').toLowerCase();
+            const username = (row.getAttribute('data-username') || '').toLowerCase();
+            const phone = (row.getAttribute('data-phone') || '').toLowerCase();
 
+            // فحص المطابقة الشاملة
             if (walletId.includes(query) || sovereignId.includes(query) || tradeName.includes(query) || username.includes(query) || phone.includes(query)) {
                 row.style.setProperty('display', 'table-row', 'important');
                 visibleCount++;
@@ -322,15 +322,17 @@
 
         resultsContainer.style.display = 'block';
 
-        // إدارة ظهور رسالة "لا توجد بيانات مطابقة" ديناميكياً
+        // إدارة ظهور رسالة "لا توجد بيانات مطابقة" ديناميكياً بدون مسح الجدول الأصلي
         let fallbackRow = document.querySelector('.no-data-fallback');
         if (visibleCount === 0) {
             if (!fallbackRow) {
                 const tbody = document.querySelector('#pending_withdrawals_table tbody');
-                tbody.innerHTML += `<tr class="no-data-fallback"><td colspan="7" class="text-center p-4 text-muted"><i class="fas fa-search-minus me-2"></i> لا توجد أي بيانات تطابق معايير الاستدعاء المبرمة.</td></tr>`;
+                const tr = document.createElement('tr');
+                tr.className = 'no-data-fallback';
+                tr.innerHTML = `<td colspan="7" class="text-center p-4 text-muted"><i class="fas fa-search-minus me-2"></i> لا توجد أي بيانات تطابق معايير الاستدعاء المبرمة.</td>`;
+                tbody.appendChild(tr);
             } else {
                 fallbackRow.style.display = 'table-row';
-                fallbackRow.querySelector('td').innerHTML = `<i class="fas fa-search-minus me-2"></i> لا توجد أي بيانات تطابق معايير الاستدعاء المبرمة.`;
             }
         } else if (fallbackRow) {
             fallbackRow.style.display = 'none';
