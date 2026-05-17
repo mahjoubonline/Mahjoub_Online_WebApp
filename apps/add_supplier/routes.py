@@ -113,11 +113,11 @@ def add_supplier():
                 fin_type=request.form.get('fin_type'),
                 bank_name=bank_name,
                 bank_acc=bank_acc,
-                status='نشط',                                    # تعيين تلقائي مباشر
-                rank_grade='أساسي',                               # تعيين تلقائي مباشر
+                status='نشط',                                     
+                rank_grade='أساسي',                               
                 registration_source='لوحة التحكم', 
                 created_by_id=getattr(current_user, 'id', None), 
-                created_at=datetime.now(timezone.utc)            # تحديث للأسلوب البرمجي الحديث لعام 2026
+                created_at=datetime.now(timezone.utc)            
             )
 
             # 6. الحفظ النهائي المؤكد في قاعدة البيانات
@@ -126,7 +126,7 @@ def add_supplier():
 
             return jsonify({
                 'status': 'success',
-                'message': 'تم تعميد Mورد بنجاح في نظام الأرشفة برتبة أساسي وحالة نشطة',
+                'message': 'تم تعميد المورد بنجاح في نظام الأرشفة برتبة أساسي وحالة نشطة',
                 'data': {
                     'username': new_supplier.username,
                     'sovereign_id': new_supplier.sovereign_id
@@ -139,11 +139,10 @@ def add_supplier():
             return jsonify({'status': 'error', 'message': f'فشل في عملية التعميد: {str(e)}'}), 500
 
     # -------------------------------------------------------------------------
-    # في حالة GET: حساب التنبؤ الرقمي السيادي بناءً على آخر سجل حقيقي في القاعدة
+    # في حالة GET
     # -------------------------------------------------------------------------
     try:
         last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
-        
         if last_supplier and last_supplier.sovereign_id and 'SUP-WEL-MAH963' in last_supplier.sovereign_id:
             try:
                 last_num_str = last_supplier.sovereign_id.replace('SUP-WEL-MAH963', '').strip()
@@ -165,21 +164,21 @@ def add_supplier():
 @login_required
 def check_duplicate():
     """
-    نظام الفحص اللحظي الآمن والمطور والمحمي من أخطاء الـ SQL:
-    يقوم بالتحقق من الحقول الفردية السبعة لضمان دقة الاستجابة وعمل الواجهة بشكل مثالي.
+    نظام الفحص اللحظي المطور:
+    تم تدعيمه بإرجاع الحالات كـ Boolean ونصوص صريحة (status) ليتوافق مع شيفرات الجافاسكريبت المتنوعة.
     """
     try:
         check_type = request.args.get('type')
         value = request.args.get('value', '').strip()
 
+        # إذا كان الحقل فارغاً، يجب ألا يعطي الـ Front-end علامة صح أبداً
         if not check_type or not value:
-            return jsonify({'exists': False, 'valid': True, 'message': 'الحقل فارغ'})
+            return jsonify({'exists': False, 'valid': False, 'status': 'empty', 'message': 'الحقل فارغ'})
 
-        # حوكمة إضافية في الـ Back-end لاسم المستخدم لضمان سلامة البنية
+        # حوكمة طول اسم المستخدم
         if check_type == 'username' and len(value) < 3:
-            return jsonify({'exists': True, 'valid': False, 'message': 'اسم المستخدم قصير جداً'})
+            return jsonify({'exists': True, 'valid': False, 'status': 'invalid', 'message': 'اسم المستخدم قصير جداً'})
 
-        # الفحص الصريح والمباشر عبر دوال تصفية الحقول لمنع تعارض مفسر SQLAlchemy الحرفي
         exists = False
         if check_type == 'username':
             exists = Supplier.query.filter_by(username=value).first() is not None
@@ -194,10 +193,14 @@ def check_duplicate():
         elif check_type == 'bank_acc':
             exists = Supplier.query.filter_by(bank_acc=value).first() is not None
 
-        # إرجاع رد مطابق 100% لمنطق معالجة الأخطاء بالجافاسكريبت المطور بالفرونت إند
-        return jsonify({'exists': exists, 'valid': not exists})
+        # الرد الشامل والمحمي لضمان قراءة الجافاسكريبت للبيانات المكررة بشكل صحيح ومنع ظهور علامة صح بالخطأ
+        return jsonify({
+            'exists': exists, 
+            'valid': not exists,
+            'status': 'duplicate' if exists else 'unique',
+            'message': 'البيانات مسجلة مسبقاً!' if exists else 'البيانات متاحة للاستخدام'
+        })
         
     except Exception as e:
-        # تأمين الواجهة الرسومية من الانهيار في حال حدوث أي خطأ عابر في الداتابيز
         current_app.logger.error(f"Check duplicate raw database error for {check_type}: {str(e)}")
-        return jsonify({'exists': False, 'valid': True, 'error': str(e)})
+        return jsonify({'exists': False, 'valid': False, 'status': 'error', 'error': str(e)})
