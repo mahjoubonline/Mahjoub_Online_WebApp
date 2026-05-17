@@ -56,6 +56,8 @@
                         <select name="identity_type" id="identityTypeSelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'idManual')" required>
                             <option value="" selected disabled>اختر النوع...</option>
                             <option value="بطاقة الكترونية">بطاقة إلكترونية</option>
+                            <option value="بطاقة شخصية">بطاقة شخصية (عادية)</option>
+                            <option value="جواز سفر">جواز سفر</option>
                             <option value="سجل تجاري">سجل تجاري</option>
                             <option value="manual">إدخال يدوي...</option>
                         </select>
@@ -118,7 +120,7 @@
                         <label class="form-label text-muted small">هاتف المنشأة (محل)</label>
                         <div class="input-group dir-ltr">
                             <span class="input-group-text bg-white border-0">+967</span>
-                            <input type="tel" name="shop_phone" class="form-control bg-light border-0 validation-field" data-valid="phone" data-db-check="shop_phone" placeholder="77XXXXXXX" required>
+                            <input type="tel" name="shop_phone" class="form-control bg-light border-0 validation-field" data-valid="phone" data-db-check="shop_phone" placeholder="7XXXXXXXX" required>
                             <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
                         </div>
                     </div>
@@ -177,7 +179,7 @@
                     <div class="mb-4">
                         <label class="form-label text-muted small">فئة المورد</label>
                         <select name="activity_type" id="categorySelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'catManual')" required>
-                            <option value="مورد جملة">مورد جملة</option>
+                            <option value="مورد جملة" selected>مورد جملة</option>
                             <option value="مورد تجزئة">مورد تجزئة</option>
                             <option value="manual">أخرى (إدخال يدوي)...</option>
                         </select>
@@ -205,16 +207,20 @@
 
 <script>
 const yemenGeography = {
-    "الحديدة": ["الخوخة", "حيس", "باجل", "زبيد", "المراوعة", "القناوص"],
-    "عدن": ["المنصورة", "الشيخ عثمان", "كريتر", "البريقة", "المعلا"],
-    "صنعاء": ["السبعين", "التحرير", "الوحدة", "بني الحارث"],
-    "حضرموت": ["المكلا", "سيئون", "الشحر", "تريم"],
-    "تعز": ["المظفر", "القاهرة", "صالة", "المخا", "التربة"]
+    "الحديدة": ["الخوخة", "حيس", "باجل", "زبيد", "المراوعة", "القناوص", "بيت الفقيه"],
+    "عدن": ["المنصورة", "الشيخ عثمان", "كريتر", "البريقة", "المعلا", "التواهي", "خور مكسر"],
+    "صنعاء": ["السبعين", "التحرير", "الوحدة", "بني الحارث", "شعوب", "الثورة"],
+    "تعز": ["المظفر", "القاهرة", "صالة", "المخا", "التربة", "الوازعية", "ذوباب"],
+    "حضرموت": ["المكلا", "سيئون", "الشحر", "تريم", "القطن", "شبام"],
+    "مأرب": ["المدينة", "الوادي", "حريب", "صرواح"],
+    "إب": ["الظهار", "المشنة", "جبلة", "يريم", "بعدان"],
+    "ذمار": ["المدينة", "عنس", "جهران", "معبر"],
+    "شبوة": ["عتق", "بيحان", "عزان", "رضوم"]
 };
 
 const financeData = {
-    banks: ["بنك القطيبي الإسلامي", "بنك الشمول الإسلامي", "مصرف الكريمي", "بنك عدن الإسلامي", "بنك التضامن"],
-    exchange: ["شركة القطيبي للصرافة", "شركة بن دول للصرافة", "شركة الشمل للصرافة", "شركة النجم للصرافة"]
+    banks: ["بنك القطيبي الإسلامي", "بنك الشمول الإسلامي", "مصرف الكريمي", "بنك عدن الإسلامي", "بنك التضامن", "بنك اليمن والكويت"],
+    exchange: ["شركة القطيبي للصرافة", "شركة بن دول للصرافة", "شركة الشمل للصرافة", "شركة النجم للصرافة", "شركة العمقي للصرافة"]
 };
 
 const debounceTimers = {};
@@ -234,7 +240,7 @@ document.querySelectorAll('.validation-field').forEach(input => {
         debounceTimers[fieldName] = setTimeout(async () => {
             let isFormatValid = false;
 
-            // حوكمة الفراغات: إذا فرغ الحقل تماماً، يتم تصفير الحالة بدون إعطاء صح أو خطأ
+            // حوكمة الفراغات: إذا فرغ الحقل تماماً، يتم تصفير الحالة
             if (value === "") {
                 icon.innerHTML = '<i class="fas fa-minus text-muted"></i>';
                 this.classList.remove('is-valid', 'is-invalid');
@@ -254,7 +260,7 @@ document.querySelectorAll('.validation-field').forEach(input => {
                     isFormatValid = value.length >= 5; 
                     break;
                 case 'phone': 
-                    isFormatValid = /^[7][0-4,7-8][0-9]{7}$/.test(value);
+                    isFormatValid = /^[7][0-9]{8}$/.test(value); // مرونة أرقام الهواتف اليمنية 9 أرقام تبدأ بـ 7
                     break;
                 case 'acc': 
                     isFormatValid = value.length >= 5; 
@@ -265,13 +271,12 @@ document.querySelectorAll('.validation-field').forEach(input => {
 
             let isFinalValid = isFormatValid;
 
-            // إذا كان التنسيق الشكلي صحيحاً، يتم الاستعلام الفوري من السيرفر للتأكد من عدم التكرار
+            // استخدام دقيق للمسار الأساسي المعزول للموردين لمنع أخطاء الروابط
             if (isFormatValid && dbType) {
                 try {
                     const response = await fetch(`/admin/suppliers/check-duplicate?type=${dbType}&value=${encodeURIComponent(value)}`);
                     const result = await response.json();
                     
-                    // إذا عاد السيرفر بـ exists: true (موجود أو فارغ مضلل) يُسقط صلاحية الحقل فوراً
                     if (result.exists === true || String(result.exists).toLowerCase() === "true") {
                         isFinalValid = false; 
                     } else {
@@ -283,7 +288,7 @@ document.querySelectorAll('.validation-field').forEach(input => {
                 }
             }
 
-            // حقن الأيقونات والحالات البصرية بدقة لمنع التمرير المزيف
+            // حقن الأيقونات والحالات البصرية بدقة
             if (isFinalValid) {
                 icon.innerHTML = '<i class="fas fa-check-circle text-success" style="font-size: 16px;"></i>';
                 this.classList.remove('is-invalid');
@@ -304,7 +309,7 @@ function updateSubmitButtonState() {
     const totalValidFields = document.querySelectorAll('.validation-field.is-valid').length;
     const hasErrors = document.querySelectorAll('.is-invalid').length > 0;
     
-    // شرط حوكمي صارم: يجب أن تكون الحقول السبعة السيادية مضاءة بالأخضر بالكامل وبدون أي أخطاء
+    // سبعة حقول حوكمية أساسية لضمان تكامل السجل التجاري والمالي للمورد
     const requiredValidationCount = 7; 
 
     if (totalValidFields === requiredValidationCount && !hasErrors) {
@@ -455,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const successModal = new bootstrap.Modal(document.getElementById('successModal'));
                 successModal.show();
-            </div> else {
+            } else {
                 alert('فشل التعميد: ' + (result.message || 'يرجى مراجعة البيانات المدخلة.'));
                 btn.disabled = false;
                 updateSubmitButtonState();
