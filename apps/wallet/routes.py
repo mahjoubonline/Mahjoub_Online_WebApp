@@ -14,7 +14,7 @@ from sqlalchemy.sql import func
 def overview():
     """
     الواجهة السيادية الموحدة لإدارة وحوكمة المحافظ المالية للإدارة العليا.
-    تم إزالة التحميل المسبق المتداخل لحين مراجعة العلاقات في الموديل لضمان استقرار السيرفر.
+    تم تفعيل التحميل المسبق المتداخل (joinedload) بأمان تطلق بعد تثبيت العلاقة في الموديل.
     """
     try:
         # 1. احتساب المؤشرات المالية الكلية للمنصة (الريال اليمني) مع معالجة القيم الفارغة
@@ -38,9 +38,9 @@ def overview():
             func.coalesce(func.sum(Wallet.usd_pending), 0.0)
         ).first()
 
-        # 4. جلب طلبات السحب المعلقة (Pending) بأمان مع ربط المحفظة فقط لتفادي تداخل العلاقات غير المعرفة
+        # 4. جلب طلبات السحب المعلقة (Pending) مع تحميل متسلسل للمحفظة والمورد لمنع استعلامات N+1 المبطئة للسيرفر
         pending_withdrawals = db.session.query(WalletTransaction)\
-            .options(joinedload(WalletTransaction.wallet))\
+            .options(joinedload(WalletTransaction.wallet).joinedload(Wallet.supplier))\
             .filter(WalletTransaction.tx_type == 'withdrawal', WalletTransaction.tx_status == 'pending')\
             .order_by(WalletTransaction.created_at.desc())\
             .all()
@@ -75,6 +75,7 @@ def approve_withdrawal():
         return jsonify({"status": "error", "message": "المعرف الفريد للعملية مفقود."}), 400
 
     try:
+        # استخدام with_for_update لحظر تضارب السجلات (Race Condition) على السيرفر الحي
         transaction = WalletTransaction.query.with_for_update().get(tx_id)
         
         if not transaction or transaction.tx_status != 'pending':
@@ -84,7 +85,7 @@ def approve_withdrawal():
         currency = transaction.currency
         amount = transaction.amount
 
-        # الخصم المالي الحوكمي وتعديل الأرصدة الإجمالية
+        # الخصم المالي الحوكمي وتعديل الأرصدة الكلية بالتوازي مع تفريغ الحقل المعلق
         if currency == 'YER':
             if wallet.yer_pending < amount:
                 return jsonify({"status": "error", "message": "رصيد الريال اليمني المعلق غير كافٍ لإتمام العملية."}), 400
@@ -106,7 +107,7 @@ def approve_withdrawal():
             wallet.usd_total -= amount
             wallet.usd_withdrawn += amount
 
-        # تحديث حالة السجل المالي
+        # تحديث حالة السجل المالي وتوثيق هوية الإداري المعمّد للعملية
         transaction.tx_status = 'completed'
         transaction.approved_by_id = current_user.id if hasattr(current_user, 'id') else None
         
@@ -140,7 +141,7 @@ def reject_withdrawal():
         currency = transaction.currency
         amount = transaction.amount
 
-        # إعادة المال من المعلق إلى المتاح
+        # إعادة فك الحجز المالي: تحويل الرصيد من المعلق إلى المتاح
         if currency == 'YER':
             wallet.yer_pending -= amount
             wallet.yer_available += amount
@@ -151,7 +152,7 @@ def reject_withdrawal():
             wallet.usd_pending -= amount
             wallet.usd_available += amount
 
-        # إسقاط الحوالة وتوثيق مبرر الرفض
+        # إسقاط الحوالة برمجياً وتوثيق مبرر الرفض للأرشيف الإداري والتجاري
         transaction.tx_status = 'rejected'
         transaction.description = f"{transaction.description} | سبب الرفض الحوكمي: {reason}"
         transaction.approved_by_id = current_user.id if hasattr(current_user, 'id') else None
