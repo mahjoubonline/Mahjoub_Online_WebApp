@@ -144,45 +144,44 @@ def add_supplier_page():
             db.session.add(new_supplier)
             db.session.flush()  # يسحب المعرف السيادي الفريد والـ ID المتناسق رقمياً
 
-            # 5. 💳 محرك المحفظة الموحد عبر Raw SQL لقطع الطريق على مشاكل الـ ORM وحرية Mسميات الحقول
+            # 5. 💳 محرك المحفظة الموحد عبر Raw SQL المعتمد على الفحص المسبق للأعمدة منعاً للأخطاء
+            columns_query = db.session.execute(
+                db.text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'supplier_wallets'
+                """)
+            ).fetchall()
+            existing_columns = [col[0] for col in columns_query]
+
+            if 'wallet_id' in existing_columns:
+                target_column = 'wallet_id'
+            elif 'wallet_number' in existing_columns:
+                target_column = 'wallet_number'
+            else:
+                return jsonify({
+                    "status": "error", 
+                    "message": "خطأ بنيوي: لم يتم العثور على حقل المعرف المالي (wallet_id أو wallet_number) في جدول المحافظ."
+                }), 500
+
             supplier_number = re.search(r'\d+$', new_supplier.sovereign_id).group()
             wallet_num = f"WEL-MAH{supplier_number}"
 
-            insert_query = db.text(dedent("""
+            insert_query = db.text(dedent(f"""
                 INSERT INTO supplier_wallets (
-                    supplier_id, wallet_number,
+                    supplier_id, {target_column},
                     yer_total, yer_available, yer_pending, yer_withdrawn,
                     sar_total, sar_available, sar_pending, sar_withdrawn,
                     usd_total, usd_available, usd_pending, usd_withdrawn
                 ) VALUES (
-                    :supplier_id, :wallet_number,
+                    :supplier_id, :wallet_param,
                     0.0, 0.0, 0.0, 0.0,
                     0.0, 0.0, 0.0, 0.0,
                     0.0, 0.0, 0.0, 0.0
                 )
             """))
 
-            try:
-                db.session.execute(insert_query, {"supplier_id": new_supplier.id, "wallet_number": wallet_num})
-            except Exception:
-                # تصفير المعاملة المكسورة فوراً لفتح الطريق للـ Fallback النظيف بدون خطأ الـ Transaction Aborted
-                db.session.rollback()
-                
-                # خيار بديل آمن (Fallback) في حال استخدام اسم الحقل wallet_id بقاعدة البيانات
-                insert_query_fallback = db.text(dedent("""
-                    INSERT INTO supplier_wallets (
-                        supplier_id, wallet_id,
-                        yer_total, yer_available, yer_pending, yer_withdrawn,
-                        sar_total, sar_available, sar_pending, sar_withdrawn,
-                        usd_total, usd_available, usd_pending, usd_withdrawn
-                    ) VALUES (
-                        :supplier_id, :wallet_id,
-                        0.0, 0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.0
-                    )
-                """))
-                db.session.execute(insert_query_fallback, {"supplier_id": new_supplier.id, "wallet_id": wallet_num})
+            db.session.execute(insert_query, {"supplier_id": new_supplier.id, "wallet_param": wallet_num})
 
             # 6. تثبيت وحفظ العملية التبادلية بالكامل دفعة واحدة
             db.session.commit()
@@ -267,103 +266,6 @@ def check_duplicate():
 def sync_legacy_wallets():
     """
     سكربت سيادي حوكمي نهائي ومطور 100%.
-    يتجاوز الـ ORM بالكامل لتجنب خطأ تعارض الحقول في النماذج (invalid keyword argument).
-    يخاطب جداول PostgreSQL مباشرة عبر المعرفات الرقمية والنصوص النظيفة لتجنب تحميل النماذج المكسورة.
-    """
-    if not hasattr(current_user, 'id'):
-        return jsonify({"status": "error", "message": "غير مصرح لك بتنفيذ هذه العملية السيادية."}), 403
-
-    try:
-        # 1. جلب بيانات الموردين مباشرة عبر SQL مجرد لتفادي تعارض الـ ORM مع الـ Models المعلقة
-        suppliers_query = db.session.execute(
-            db.text("SELECT id, sovereign_id FROM suppliers")
-        ).fetchall()
-        
-        created_count = 0
-
-        for sup_id, sovereign_id in suppliers_query:
-            # تنظيف الجلسة لضمان استقرار ونقاء المعاملات
-            db.session.rollback()
-
-            # 2. الفحص المباشر لمعرفة هل يمتلك المورد محفظة مسبقاً في جدول المحافظ
-            check_query = db.session.execute(
-                db.text("SELECT id FROM supplier_wallets WHERE supplier_id = :sup_id"),
-                {"sup_id": sup_id}
-            ).fetchone()
-
-            if not check_query:
-                sovereign_id_str = sovereign_id.strip() if sovereign_id else ""
-                match = re.search(r'\d+$', sovereign_id_str)
-                
-                if match:
-                    supplier_number = match.group()
-                else:
-                    supplier_number = str(sup_id)
-
-                wallet_num = f"WEL-MAH{supplier_number}"
-
-                # المحاولة الأولى: استخدام حقل wallet_id (الأكثر ثبوتاً في قاعدة بيانات السيرفر الحالية)
-                insert_query_primary = db.text(dedent("""
-                    INSERT INTO supplier_wallets (
-                        supplier_id, wallet_id,
-                        yer_total, yer_available, yer_pending, yer_withdrawn,
-                        sar_total, sar_available, sar_pending, sar_withdrawn,
-                        usd_total, usd_available, usd_pending, usd_withdrawn
-                    ) VALUES (
-                        :supplier_id, :wallet_id,
-                        0.0, 0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.0
-                    )
-                """))
-
-                try:
-                    db.session.execute(insert_query_primary, {"supplier_id": sup_id, "wallet_id": wallet_num})
-                    db.session.commit()  # حفظ فوري لكل مورد لضمان الحوكمة المطلقة
-                except Exception:
-                    # تصفير الجلسة في حال عدم وجود حقل wallet_id والتحول للحقل البديل فوراً دون كسر التبادل البرمجي
-                    db.session.rollback()
-
-                    # المحاولة البديلة: استخدام حقل wallet_number
-                    insert_query_backup = db.text(dedent("""
-                        INSERT INTO supplier_wallets (
-                            supplier_id, wallet_number,
-                            yer_total, yer_available, yer_pending, yer_withdrawn,
-                            sar_total, sar_available, sar_pending, sar_withdrawn,
-                            usd_total, usd_available, usd_pending, usd_withdrawn
-                        ) VALUES (
-                            :supplier_id, :wallet_number,
-                            0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 0.0, 0.0
-                        )
-                    """))
-                    db.session.execute(insert_query_backup, {"supplier_id": sup_id, "wallet_number": wallet_num})
-                    db.session.commit()
-
-                created_count += 1
-
-        if created_count > 0:
-            return jsonify({
-                "status": "success",
-                "message": f"تم بنجاح تجاوز النموذج وتوليد عدد ({created_count}) محفظة مالية للموردين القدامى مباشرة في قاعدة البيانات بنجاح مطلق."
-            }), 200
-        else:
-            return jsonify({
-                "status": "success",
-                "message": "فحص النظام مكتمل بحوكمة تامة: جميع الموردين الحاليين يمتلكون محافظ مالية مسبقاً."
-            }), 200
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"❌ خطأ بنيوي حاد في استعلام الجداول الحوكمية: {str(e)}")
-        return jsonify({"status": "error", "message": f"فشلت المزامنة الرقمية المباشرة المحصنة: {str(e)}"}), 500
-
-@admin_suppliers.route('/sync-wallets', methods=['GET'])
-@login_required
-def sync_legacy_wallets():
-    """
-    سكربت سيادي حوكمي نهائي ومطور 100%.
     يفحص بنية الجدول في PostgreSQL أولاً ليعرف العمود الحقيقي (wallet_id أو wallet_number).
     ينفذ إدخالاً مباشراً ومضموناً يتفادى كسر الجلسات أو التخمين البرمجي تماماً.
     """
@@ -371,7 +273,7 @@ def sync_legacy_wallets():
         return jsonify({"status": "error", "message": "غير مصرح لك بتنفيذ هذه العملية السيادية."}), 403
 
     try:
-        # 1. فحص أعمدة جدول supplier_wallets في قاعدة البيانات الحالية مسبقاً
+        # 1. فحص أعمدة جدول supplier_wallets في قاعدة البيانات الحالية مسبقاً لمنع كسر معاملات الـ SQL
         columns_query = db.session.execute(
             db.text("""
                 SELECT column_name 
@@ -380,10 +282,10 @@ def sync_legacy_wallets():
             """)
         ).fetchall()
         
-        # تحويل الأعمدة المسترجعة إلى قائمة نصوص لتسهيل الفحص
+        # تحويل الأعمدة المسترجعة إلى قائمة نصوص لتسهيل الفحص اللحظي
         existing_columns = [col[0] for col in columns_query]
         
-        # تحديد العمود المتواجد فعلياً في قاعدة البيانات
+        # تحديد العمود المتواجد فعلياً في قاعدة البيانات على السيرفر
         if 'wallet_id' in existing_columns:
             target_column = 'wallet_id'
         elif 'wallet_number' in existing_columns:
@@ -394,7 +296,7 @@ def sync_legacy_wallets():
                 "message": "خطأ بنيوي حاد: لم يتم العثور على حقل المعرف المالي (wallet_id أو wallet_number) داخل الجدول."
             }), 500
 
-        # 2. جلب الموردين مباشرة عبر SQL لتفادي مشاكل النماذج
+        # 2. جلب الموردين مباشرة عبر SQL لتفادي مشاكل النماذج والـ ORM المعلقة
         suppliers_query = db.session.execute(
             db.text("SELECT id, sovereign_id FROM suppliers")
         ).fetchall()
@@ -402,7 +304,7 @@ def sync_legacy_wallets():
         created_count = 0
 
         for sup_id, sovereign_id in suppliers_query:
-            # تنظيف الجلسة لضمان استقرار المعاملات
+            # تنظيف الجلسة لضمان استقرار المعاملات ونقائها الحوكمي
             db.session.rollback()
 
             # 3. الفحص اللحظي: هل يمتلك المورد محفظة مسبقاً؟
@@ -437,7 +339,7 @@ def sync_legacy_wallets():
                     )
                 """))
 
-                # تنفيذ الاستعلام الآمن وحفظه فوراً
+                # تنفيذ الاستعلام الآمن الموجه وحفظه فوراً لكل حقل
                 db.session.execute(insert_query, {"supplier_id": sup_id, "wallet_param": wallet_num})
                 db.session.commit()
                 created_count += 1
