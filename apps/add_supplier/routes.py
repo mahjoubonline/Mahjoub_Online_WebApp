@@ -75,6 +75,13 @@ def add_supplier_page():
             bank_acc = request.form.get('bank_acc', '').strip()
             activity_type = request.form.get('activity_type', '').strip()
 
+            # ==================== التحديث السيادي الجديد لعام 2026 ====================
+            # استقبال الرتبة والمستوى التشغيلي من الواجهة (ريادي، سيادي، ملكي)
+            user_rank = request.form.get('user_rank', 'ريادي').strip()
+            # حقن التفعيل التلقائي الفوري للحساب بمجرد الاعتماد والضغط من الإدارة العليا
+            system_status = 'active'
+            # =========================================================================
+
             # التحقق الفوري الحوكمي من عدم إرسال حقول أساسية فارغة
             required_post_fields = {
                 "username": username, "identity_number": identity_number, 
@@ -107,7 +114,7 @@ def add_supplier_page():
                         "message": f"تنبيه حوكمي: حقل ({field_title}) مسجل مسبقاً في النظام ومحفوظ، يرجى تعديله."
                     }), 400
 
-            # 3. تشفير كلمة المرور وبناء الكائن
+            # 3. تشفير كلمة المرور وبناء الكائن السيادي المحدث
             hashed_password = generate_password_hash(password)
             
             new_supplier = Supplier(
@@ -127,6 +134,8 @@ def add_supplier_page():
                 bank_acc=bank_acc,
                 activity_type=activity_type,
                 registration_source='لوحة التحكم',
+                rank_grade=user_rank,         # حفظ الرتبة الفخمة المختارة
+                status=system_status,         # تفعيل فوري ومطلق في حقل النظام الأساسي
                 created_by_id=current_user.id if hasattr(current_user, 'id') else None
             )
 
@@ -134,12 +143,15 @@ def add_supplier_page():
             db.session.add(new_supplier)
             db.session.commit()
 
+            # دمج مخرجات دالة الـ Property لقراءة الـ state_title اللفظية وإرسالها للمودال
             return jsonify({
                 "status": "success",
-                "message": "تم تعميد المورد بنجاح في النظام الحوكمي وحفظه في قاعدة البيانات.",
+                "message": "تم تعميد المورد وتنشيطه بنجاح في النظام الحوكمي السيادي.",
                 "data": {
                     "username": new_supplier.username,
-                    "sovereign_id": new_supplier.sovereign_id
+                    "sovereign_id": new_supplier.sovereign_id,
+                    "rank_grade": new_supplier.rank_grade,
+                    "state_title": new_supplier.state_title
                 }
             }), 200
 
