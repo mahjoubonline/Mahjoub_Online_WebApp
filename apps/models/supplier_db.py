@@ -1,13 +1,14 @@
 # coding: utf-8
 from apps import db
 from datetime import datetime
+from sqlalchemy import event
 
 class Supplier(db.Model):
     __tablename__ = 'suppliers'
     
     # 1. المعرفات الأساسية
     id = db.Column(db.Integer, primary_key=True)
-    sovereign_id = db.Column(db.String(50), unique=True, nullable=False) # المعرف الموحد
+    sovereign_id = db.Column(db.String(50), unique=True, nullable=False, index=True) # المعرف الموحد السيادي المؤرشف
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     
@@ -55,4 +56,36 @@ class Supplier(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow) 
 
     def __repr__(self):
-        return f'<Supplier {self.trade_name}>'
+        return f'<Supplier {self.sovereign_id} - {self.trade_name}>'
+
+
+# -------------------------------------------------------------------------
+# 🛡️ نظام الحوكمة التلقائي: توليد المعرف السيادي الموحد قبل الحفظ في القاعدة
+# -------------------------------------------------------------------------
+def auto_generate_sovereign_id(mapper, connection, target):
+    """
+    دالة مراقبة (Event Listener) تعمل تلقائياً قبل الـ Insert لحساب التسلسل
+    السيادي بدون تكرار أو تداخل حتى في حالات الضغط العالي على السيرفر.
+    """
+    # استعلام لجلب آخر مورد تم تسجيله في النظام بناءً على الـ ID التلقائي
+    last_supplier = target.query.order_by(Supplier.id.desc()).first()
+    
+    if last_supplier and last_supplier.sovereign_id:
+        try:
+            # فصل المعرف الحالي لاستخراج الرقم التسلسلي الأخير بعد بادئة التشفير
+            # صيغة المعرف: SUP-WEL-MAH9631, SUP-WEL-MAH9632 ... إلخ
+            parts = last_supplier.sovereign_id.split('MAH963')
+            last_num = int(parts[-1])
+            next_num = last_num + 1
+        except (ValueError, IndexError):
+            # في حال وجود صياغة غير متوقعة، يتم الاعتماد على المعرف الرقمي كملاذ آمن
+            next_num = (last_supplier.id or 0) + 1
+    else:
+        # إذا كان الجدول فارغاً تماماً (أول مورد في تاريخ المنصة)
+        next_num = 1
+
+    # تركيب البنية السيادية الموحدة للمعرف وحقنها في الحقل فوراً قبل إتمام الحفظ
+    target.sovereign_id = f"SUP-WEL-MAH963{next_num}"
+
+# ربط الدالة بحدث "قبل الإدخال" لجدول الموردين بشكل رسمي صارم
+event.listen(Supplier, 'before_insert', auto_generate_sovereign_id)
