@@ -143,7 +143,7 @@ def add_supplier_page():
             db.session.add(new_supplier)
             db.session.flush()  # يسحب المعرف السيادي الفريد والـ ID المتناسق رقمياً
 
-            # 5. 💳 محرك المحفظة الموحد (استدعاء داخلي محمي لتجنب الانهيار الدائري لربطه بجدول supplier_wallets)
+            # 5. 💳 محرك المحفظة الموحد لربطه بجدول supplier_wallets
             from apps.models.wallet_db import Wallet
             
             # استخراج الجزء الرقمي المتسلسل التلقائي المولد (مثل 9638)
@@ -249,3 +249,63 @@ def check_duplicate():
         return jsonify({"exists": True, "error": "Database error"}), 500
         
     return jsonify({"exists": is_duplicate})
+
+
+@admin_suppliers.route('/sync-wallets', methods=['GET'])
+@login_required
+def sync_legacy_wallets():
+    """
+    سكربت سيادي حوكمي لتوليد محافظ مالية موحدة للموردين السابقين بأثر رجعي في جدول supplier_wallets.
+    يفحص الموردين الذين ليس لديهم سجل في جدول supplier_wallets ويقوم بإنشائه فوراً.
+    """
+    if not hasattr(current_user, 'id'):
+        return jsonify({"status": "error", "message": "غير مصرح لك بتنفيذ هذه العملية السيادية."}), 403
+
+    from apps.models.wallet_db import Wallet
+    try:
+        all_suppliers = db.session.query(Supplier).all()
+        created_count = 0
+
+        for supplier in all_suppliers:
+            # فحص ما إذا كان المورد يمتلك محفظة بالفعل
+            wallet_exists = db.session.query(Wallet).filter_by(supplier_id=supplier.id).first() is not None
+            
+            if not wallet_exists:
+                sovereign_id_str = supplier.sovereign_id.strip() if supplier.sovereign_id else ""
+                match = re.search(r'\d+$', sovereign_id_str)
+                
+                if match:
+                    supplier_number = match.group()
+                else:
+                    supplier_number = str(supplier.id)
+
+                # بناء المحفظة المتناسقة بالبادئة المالية المعتمدة WEL-MAH
+                legacy_wallet = Wallet(
+                    supplier_id=supplier.id,
+                    wallet_number=f"WEL-MAH{supplier_number}",
+                    
+                    # تهيئة الرصيد الصفري للعملات الثلاث لحين بدء الضخ المالي
+                    yer_total=0.0, yer_available=0.0, yer_pending=0.0, yer_withdrawn=0.0,
+                    sar_total=0.0, sar_available=0.0, sar_pending=0.0, sar_withdrawn=0.0,
+                    usd_total=0.0, usd_available=0.0, usd_pending=0.0, usd_withdrawn=0.0
+                )
+                db.session.add(legacy_wallet)
+                created_count += 1
+
+        # تعميد وحفظ التعديلات في قاعدة البيانات دفعة واحدة
+        if created_count > 0:
+            db.session.commit()
+            return jsonify({
+                "status": "success",
+                "message": f"تم بنجاح حصاد وقراءة البيانات السابقة وتوليد عدد ({created_count}) محفظة مالية موحدة للموردين القدامى."
+            }), 200
+        else:
+            return jsonify({
+                "status": "success",
+                "message": "فحص النظام مكتمل: جميع الموردين السابقين يمتلكون محافظ مالية بالفعل، ولا توجد فجوات بنيوية."
+            }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"❌ خطأ سيادي أثناء مزامنة المحافظ القديمة: {str(e)}")
+        return jsonify({"status": "error", "message": f"فشلت المزامنة بسبب خطأ في قاعدة البيانات: {str(e)}"}), 500
