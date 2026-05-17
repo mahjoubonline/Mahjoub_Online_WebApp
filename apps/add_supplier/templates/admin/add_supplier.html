@@ -255,7 +255,8 @@ document.querySelectorAll('.validation-field').forEach(input => {
 
             if (isFormatValid && dbType) {
                 try {
-                    const response = await fetch(`/admin/suppliers/check-duplicate?type=${dbType}&value=${encodeURIComponent(value)}`);
+                    // تصحيح الرابط ليتناسب مع البلوبرينت الإقليمي والمسار المنفصل لعدم حدوث 404
+                    const response = await fetch(`/admin/supplier/check-duplicate?type=${dbType}&value=${encodeURIComponent(value)}`);
                     const result = await response.json();
                     
                     if (result.exists === true || String(result.exists).toLowerCase() === "true") {
@@ -286,12 +287,10 @@ document.querySelectorAll('.validation-field').forEach(input => {
 
 function updateSubmitButtonState() {
     const submitBtn = document.getElementById('submitBtn');
-    
-    // حساب الحقول السليمة الحالية
     const totalValidFields = document.querySelectorAll('.validation-field.is-valid').length;
     const hasErrors = document.querySelectorAll('.validation-field.is-invalid').length > 0;
     
-    // الحقول الإجمالية الخاضعة للـ validation-field أصبحت 7 حقول بعد تفعيلها بالكامل
+    // إجمالي الحقول الإلزامية المطلوب مطابقتها للتحقق اللحظي
     const requiredValidationCount = 7; 
 
     if (totalValidFields === requiredValidationCount && !hasErrors) {
@@ -436,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     <div class="text-center text-muted mb-3" style="font-size: 0.85rem; line-height: 1.6; font-weight: 600;">
                         شكرًا لتسجيلك في منصة محجوب أونلاين<br>
-                        <span style="color: var(--royal-purple); font-weight: 700;">المنصة اللامركزية لحוكمة التجارة الرقمية</span>
+                        <span style="color: var(--royal-purple); font-weight: 700;">المنصة اللامركزية لحوكمة التجارة الرقمية</span>
                     </div>
 
                     <a href="${window.location.pathname}" class="btn w-100 py-2 btn-secondary fw-bold text-decoration-none text-center" style="border-radius: 12px;">إغلاق ومتابعة</a>
