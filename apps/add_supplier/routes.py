@@ -139,19 +139,37 @@ def add_supplier_page():
                 created_by_id=current_user.id if hasattr(current_user, 'id') else None
             )
 
-            # 4. تعميد وإدراج المورد في قاعدة البيانات بشكل رسمي
+            # 4. تعميد المورد مؤقتاً في الجلسة لتوليد المعرفات والحقول التلقائية
             db.session.add(new_supplier)
+            db.session.flush()  # يسحب المعرف السيادي الفريد والـ ID المتناسق رقمياً
+
+            # 5. 💳 محرك المحفظة الموحد (استدعاء داخلي محمي لتجنب الانهيار الدائري)
+            from apps.models.wallet_db import Wallet
+            
+            supplier_wallet = Wallet(
+                supplier_id=new_supplier.id,
+                # ربط رقم المحفظة ليتطابق تماماً مع المعرف الموحد السيادي (مثل SUP-WEL-MAH96320)
+                # wallet_number=new_supplier.sovereign_id,  <-- قم بإلغاء التعليق إذا أضفت هذا العمود بالاسم الموحد
+                
+                # تهيئة أرصدة العملات الثلاث بحسابات صفرية جاهزة للضخ المالي المستقبلي
+                yer_total=0.0, yer_available=0.0, yer_pending=0.0, yer_withdrawn=0.0,
+                sar_total=0.0, sar_available=0.0, sar_pending=0.0, sar_withdrawn=0.0,
+                usd_total=0.0, usd_available=0.0, usd_pending=0.0, usd_withdrawn=0.0
+            )
+            db.session.add(supplier_wallet)
+
+            # 6. تثبيت وحفظ العملية التبادلية بالكامل دفعة واحدة
             db.session.commit()
 
             # دمج مخرجات دالة الـ Property لقراءة الـ state_title اللفظية وإرسالها للمودال
             return jsonify({
                 "status": "success",
-                "message": "تم تعميد المورد وتنشيطه بنجاح في النظام الحوكمي السيادي.",
+                "message": "تم تعميد المورد وتنشيطه بنجاح وتوليد محفظته المالية الموحدة في النظام الحوكمي السيادي.",
                 "data": {
                     "username": new_supplier.username,
                     "sovereign_id": new_supplier.sovereign_id,
                     "rank_grade": new_supplier.rank_grade,
-                    "state_title": new_supplier.state_title
+                    "state_title": new_supplier.state_title if hasattr(new_supplier, 'state_title') else 'نشط'
                 }
             }), 200
 
