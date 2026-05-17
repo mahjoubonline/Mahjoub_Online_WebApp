@@ -1,203 +1,469 @@
-# apps/add_supplier/routes.py
-# coding: utf-8
+{% extends "admin_base.html" %}
 
-import os
-import secrets
-from flask import render_template, request, jsonify, current_app
-from flask_login import login_required, current_user
-from datetime import datetime, timezone
-from werkzeug.security import generate_password_hash
-from werkzeug.utils import secure_filename
+{% block title %}تعميد مورد | محجوب أونلاين{% endblock %}
 
-# استيراد النواة وقاعدة البيانات والموديل بشكل آمن ومباشر
-from apps import db  
-from apps.models.supplier_db import Supplier 
+{% block content %}
+<div class="container-fluid" id="main-content">
+    <div class="mb-4 d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm border-end border-4" style="border-color: var(--royal-purple) !important;">
+        <div class="d-flex align-items-center gap-3">
+            <a href="javascript:history.back()" class="btn btn-light rounded-circle p-2 d-flex align-items-center justify-content-center shadow-sm text-decoration-none border back-btn" style="width: 42px; height: 42px; transition: all 0.3s ease;" title="رجوع">
+                <i class="fas fa-arrow-right" style="color: var(--royal-purple); font-size: 18px;"></i>
+            </a>
+            <div>
+                <h2 class="fw-bold mb-0" style="color: var(--royal-purple); font-size: 24px;">🛡️ تعميد مورد جديد</h2>
+                <p class="text-muted mb-0 small">نظام الأرشفة السيادي - منصة محجوب أونلاين 2026.</p>
+            </div>
+        </div>
+        <div class="text-center p-2 border-start ps-4">
+            <small class="d-block text-muted fw-bold">المعرف المتوقع</small>
+            <span class="fs-4 fw-bold" style="color: var(--royal-purple);" id="display-id">{{ sovereign_id }}</span>
+        </div>
+    </div>
 
-# استيراد كائن البلوبرينت المعرّف في الـ __init__.py الفرعي
-from . import admin_suppliers
+    <form id="addSupplierForm" method="POST" enctype="multipart/form-data" action="{{ url_for('admin_suppliers.add_supplier') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="sovereign_id" value="{{ sovereign_id }}">
 
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm p-4 h-100" style="border-top: 5px solid var(--royal-purple) !important;">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-user-shield fa-lg me-2" style="color: var(--royal-purple);"></i>
+                        <h5 class="fw-bold mb-0">بيانات الوصول والتوثيق</h5>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">اسم المستخدم (Login)</label>
+                        <div class="input-group">
+                            <input type="text" name="username" id="form-username-field" class="form-control bg-light border-0 validation-field" data-valid="min3" data-db-check="username" placeholder="ali_2026" required>
+                            <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
+                        </div>
+                    </div>
 
-@admin_suppliers.route('/add', methods=['GET', 'POST'])
-@login_required 
-def add_supplier():
-    """
-    محرك تعميد الموردين: يقوم بمعالجة البيانات وحفظها في السجل لـ "منصة محجوب أونلاين"
-    الحالة الافتراضية: نشط | الرتبة الافتراضية: أساسي
-    """
-    if request.method == 'POST':
-        try:
-            # 1. استقبال البيانات الأساسية وتطهيرها من الفراغات (Sanitization)
-            username = request.form.get('username', '').strip()
-            trade_name = request.form.get('trade_name', '').strip()
-            password = request.form.get('password')
-            identity_number = request.form.get('identity_number', '').strip()
-            bank_acc = request.form.get('bank_acc', '').strip()
-            shop_phone = request.form.get('shop_phone', '').strip()
-            owner_phone = request.form.get('owner_phone', '').strip()
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">كلمة مرور النظام</label>
+                        <input type="password" name="password" id="form-password-field" class="form-control bg-light border-0" placeholder="********" required>
+                    </div>
 
-            # 2. التحقق النهائي الصارم والثابت عند الإرسال (Back-end Validation) لمنع التكرار
-            if not username or len(username) < 3:
-                return jsonify({'status': 'error', 'message': 'فشل التعميد: يجب أن يكون اسم المستخدم 3 أحرف أو أكثر!'}), 400
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">نوع الوثيقة</label>
+                        <select name="identity_type" id="identityTypeSelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'idManual')" required>
+                            <option value="" selected disabled>اختر النوع...</option>
+                            <option value="بطاقة الكترونية">بطاقة إلكترونية</option>
+                            <option value="سجل تجاري">سجل تجاري</option>
+                            <option value="manual">إدخال يدوي...</option>
+                        </select>
+                        <div id="idManual" style="display: none;">
+                            <input type="text" class="form-control border-primary" placeholder="اكتب نوع الوثيقة..." oninput="syncManualValue(this, 'identityTypeSelect')">
+                        </div>
+                    </div>
 
-            if Supplier.query.filter_by(username=username).first():
-                return jsonify({'status': 'error', 'message': 'فشل التعميد: اسم المستخدم مسجل مسبقاً!'}), 400
-            
-            if trade_name and Supplier.query.filter_by(trade_name=trade_name).first():
-                return jsonify({'status': 'error', 'message': 'فشل التعميد: الاسم التجاري مسجل مسبقاً!'}), 400
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">رقم الوثيقة / الهوية</label>
+                        <div class="input-group">
+                            <input type="text" name="identity_number" class="form-control bg-light border-0 validation-field" data-valid="min5" data-db-check="identity_number" required>
+                            <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
+                        </div>
+                    </div>
 
-            if shop_phone and Supplier.query.filter_by(shop_phone=shop_phone).first():
-                return jsonify({'status': 'error', 'message': 'فشل التعميد: هاتف المنشأة مسجل مسبقاً!'}), 400
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">صورة الوثيقة (اختياري)</label>
+                        <div class="p-3 border-dashed rounded text-center bg-light">
+                            <i class="fas fa-cloud-upload-alt mb-2 d-block" style="color: var(--royal-purple); font-size: 24px;"></i>
+                            <input type="file" name="identity_image" class="form-control form-control-sm border-0 bg-transparent">
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            if owner_phone and Supplier.query.filter_by(owner_phone=owner_phone).first():
-                return jsonify({'status': 'error', 'message': 'فشل التعميد: رقم هاتف المالك مسجل مسبقاً!'}), 400
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm p-4 h-100" style="border-top: 5px solid var(--royal-purple) !important;">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-address-card fa-lg me-2" style="color: var(--royal-purple);"></i>
+                        <h5 class="fw-bold mb-0">بيانات المالك والمنشأة</h5>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">اسم المالك الكامل</label>
+                        <div class="input-group">
+                            <input type="text" name="owner_name" class="form-control bg-light border-0 validation-field" data-valid="name" required>
+                            <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">الاسم التجاري للمنشأة</label>
+                        <div class="input-group">
+                            <input type="text" name="trade_name" class="form-control bg-light border-0 validation-field" data-valid="min3" data-db-check="trade_name" required>
+                            <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">رقم هاتف المالك</label>
+                        <div class="input-group dir-ltr">
+                            <span class="input-group-text bg-white border-0">+967</span>
+                            <input type="tel" name="owner_phone" class="form-control bg-light border-0 validation-field" data-valid="phone" data-db-check="owner_phone" placeholder="7XXXXXXXX" required>
+                            <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">هاتف المنشأة (محل)</label>
+                        <div class="input-group dir-ltr">
+                            <span class="input-group-text bg-white border-0">+967</span>
+                            <input type="tel" name="shop_phone" class="form-control bg-light border-0 validation-field" data-valid="phone" data-db-check="shop_phone" placeholder="77XXXXXXX" required>
+                            <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small">المحافظة</label>
+                            <select name="province" id="provinceSelect" class="form-select bg-light border-0" onchange="updateDistrictOptions()" required>
+                                <option value="" selected disabled>اختر...</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">المديرية</label>
+                            <select name="district" id="districtSelect" class="form-select bg-light border-0" required>
+                                <option value="" selected disabled>حدد المحافظة</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">العنوان بالتفصيل</label>
+                        <textarea name="address_detail" class="form-control bg-light border-0" rows="2" placeholder="الشارع، بجوار..." required></textarea>
+                    </div>
+                </div>
+            </div>
 
-            if identity_number and Supplier.query.filter_by(identity_number=identity_number).first():
-                return jsonify({'status': 'error', 'message': 'فشل التعميد: رقم الوثيقة أو الهوية مسجل مسبقاً!'}), 400
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm p-4 h-100" style="border-top: 5px solid var(--royal-purple) !important;">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-wallet fa-lg me-2" style="color: var(--royal-purple);"></i>
+                        <h5 class="fw-bold mb-0">الربط المالي والفئة</h5>
+                    </div>
+                    <div class="mb-3 text-center">
+                        <div class="btn-group w-100">
+                            <input type="radio" class="btn-check" name="fin_type" id="fin_bank" value="banks" onchange="updateFinanceOptions()" checked>
+                            <label class="btn btn-outline-primary" for="fin_bank" style="border-color: var(--royal-purple); color: var(--royal-purple);">بنوك</label>
+                            <input type="radio" class="btn-check" name="fin_type" id="fin_exchange" value="exchange" onchange="updateFinanceOptions()">
+                            <label class="btn btn-outline-primary" for="fin_exchange" style="border-color: var(--royal-purple); color: var(--royal-purple);">شركات</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">جهة التحويل</label>
+                        <select name="bank_name" id="financeSelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'finManual')" required></select>
+                        <div id="finManual" style="display: none;">
+                            <input type="text" class="form-control border-primary" placeholder="اسم الجهة..." oninput="syncManualValue(this, 'financeSelect')">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">رقم الحساب</label>
+                        <div class="input-group">
+                            <input type="text" name="bank_acc" class="form-control bg-light border-0 fw-bold validation-field" data-valid="acc" data-db-check="bank_acc" required>
+                            <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label text-muted small">فئة المورد</label>
+                        <select name="activity_type" id="categorySelect" class="form-select bg-light border-0 mb-2" onchange="toggleManualInput(this, 'catManual')" required>
+                            <option value="مورد جملة">مورد جملة</option>
+                            <option value="مورد تجزئة">مورد تجزئة</option>
+                            <option value="manual">أخرى (إدخال يدوي)...</option>
+                        </select>
+                        <div id="catManual" style="display: none;">
+                            <input type="text" class="form-control border-danger" placeholder="مثال: إلكترونيات..." oninput="syncManualValue(this, 'categorySelect')">
+                        </div>
+                    </div>
 
-            if bank_acc and Supplier.query.filter_by(bank_acc=bank_acc).first():
-                return jsonify({'status': 'error', 'message': 'فشل التعميد: رقم الحساب البنكي مسجل لمورد آخر مسبقاً!'}), 400
+                    <button type="submit" id="submitBtn" class="btn w-100 fw-bold py-3 mt-auto shadow" style="background: var(--royal-purple); color: white; border-radius: 12px;" disabled>
+                        اعتماد المورد الآن <i class="fas fa-paper-plane ms-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
 
-            identity_type = request.form.get('identity_type')
-            bank_name = request.form.get('bank_name')
-            activity_type = request.form.get('activity_type', '').strip()
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-body p-4" id="successModalBody">
+            </div>
+        </div>
+    </div>
+</div>
 
-            # 3. حساب وتوليد المعرف السيادي الحقيقي تلقائياً للتسجيل الفعلي
-            try:
-                last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
-                if last_supplier and last_supplier.sovereign_id and 'SUP-WEL-MAH963' in last_supplier.sovereign_id:
-                    try:
-                        last_num_str = last_supplier.sovereign_id.replace('SUP-WEL-MAH963', '').strip()
-                        next_num = int(last_num_str) + 1
-                    except (ValueError, IndexError):
-                        next_num = (last_supplier.id or 0) + 1
-                else:
-                    next_num = (last_supplier.id or 0) + 1 if last_supplier else 1
-                
-                final_sovereign_id = f"SUP-WEL-MAH963{next_num}"
-            except Exception:
-                final_sovereign_id = request.form.get('sovereign_id', '').strip() or "SUP-WEL-MAH96319"
+<script>
+const yemenGeography = {
+    "الحديدة": ["الخوخة", "حيس", "المخا", "باجل", "زبيد"],
+    "عدن": ["المنصورة", "الشيخ عثمان", "كريتر"],
+    "صنعاء": ["السبعين", "التحرير", "الوحدة"],
+    "حضرموت": ["المكلا", "سيئون"],
+    "تعز": ["المظفر", "القاهرة"]
+};
 
-            # 4. تشفير كلمة المرور وتجهيز الكائن الإنشائي
-            hashed_pw = generate_password_hash(password)
-            
-            # معالجة رفع وثائق الهوية والمرفقات بأمان
-            image_filename = None
-            if 'identity_image' in request.files:
-                file = request.files['identity_image']
-                if file and file.filename != '':
-                    filename = secure_filename(file.filename)
-                    unique_suffix = secrets.token_hex(4)
-                    _, ext = os.path.splitext(filename)
-                    image_filename = f"doc_{unique_suffix}{ext}"
-                    
-                    upload_path = os.path.join(current_app.root_path, 'static', 'uploads', 'identities')
-                    os.makedirs(upload_path, exist_ok=True)
-                    file.save(os.path.join(upload_path, image_filename))
-            
-            # 5. بناء موديل المورد الجديد بالحالة الافتراضية "نشط" والرتبة "أساسي"
-            new_supplier = Supplier(
-                sovereign_id=final_sovereign_id, 
-                username=username,
-                password_hash=hashed_pw,
-                identity_type=identity_type,
-                identity_number=identity_number,
-                identity_image=image_filename,
-                activity_type=activity_type,
-                owner_name=request.form.get('owner_name', '').strip(),
-                trade_name=trade_name,
-                shop_phone=shop_phone,
-                owner_phone=owner_phone,
-                province=request.form.get('province'),
-                district=request.form.get('district'),
-                address_detail=request.form.get('address_detail'),
-                fin_type=request.form.get('fin_type'),
-                bank_name=bank_name,
-                bank_acc=bank_acc,
-                status='نشط',                                     
-                rank_grade='أساسي',                               
-                registration_source='لوحة التحكم', 
-                created_by_id=getattr(current_user, 'id', None), 
-                created_at=datetime.now(timezone.utc)            
-            )
+const financeData = {
+    banks: ["بنك القطيبي الإسلامي", "بنك الشمول الإسلامي", "مصرف الكريمي", "بنك عدن الإسلامي"],
+    exchange: ["شركة القطيبي للصرافة", "شركة بن دول للصرافة", "شركة الشامل للصرافة"]
+};
 
-            # 6. الحفظ الفعلي المؤكد داخل داتابيز Postgres
-            db.session.add(new_supplier)
-            db.session.commit()
+const debounceTimers = {};
 
-            return jsonify({
-                'status': 'success',
-                'message': 'تم تعميد المورد بنجاح في نظام الأرشفة برتبة أساسي وحالة نشطة',
-                'data': {
-                    'username': new_supplier.username,
-                    'sovereign_id': new_supplier.sovereign_id
-                }
-            }), 200
+document.querySelectorAll('.validation-field').forEach(input => {
+    input.addEventListener('input', function() {
+        const fieldName = this.getAttribute('name');
+        
+        clearTimeout(debounceTimers[fieldName]);
+        
+        const type = this.getAttribute('data-valid');
+        const dbType = this.getAttribute('data-db-check');
+        const icon = this.parentElement.querySelector('.validation-icon');
+        const value = this.value.trim();
+        
+        icon.innerHTML = '<i class="fas fa-circle-notch fa-spin text-muted" style="font-size: 14px;"></i>';
 
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Critical Error in add_supplier: {str(e)}")
-            return jsonify({'status': 'error', 'message': f'فشل في عملية التعميد: {str(e)}'}), 500
+        debounceTimers[fieldName] = setTimeout(async () => {
+            let isFormatValid = false;
 
-    # -------------------------------------------------------------------------
-    # في حالة طلب الصفحة (GET)
-    # -------------------------------------------------------------------------
-    try:
-        last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
-        if last_supplier and last_supplier.sovereign_id and 'SUP-WEL-MAH963' in last_supplier.sovereign_id:
-            try:
-                last_num_str = last_supplier.sovereign_id.replace('SUP-WEL-MAH963', '').strip()
-                next_num = int(last_num_str) + 1
-            except (ValueError, IndexError):
-                next_num = (last_supplier.id or 0) + 1
-        else:
-            next_num = (last_supplier.id or 0) + 1 if last_supplier else 1
+            if (value === "") {
+                icon.innerHTML = '<i class="fas fa-minus text-muted"></i>';
+                this.classList.remove('is-valid', 'is-invalid');
+                updateSubmitButtonState();
+                return;
+            }
 
-        next_sovereign_id = f"SUP-WEL-MAH963{next_num}"
-    except Exception as e:
-        current_app.logger.error(f"Error fetching next_sovereign_id prediction: {str(e)}")
-        next_sovereign_id = "SUP-WEL-MAH96319"
-    
-    # استدعاء ملف القالب الموجه بدقة إلى المجلد الفرعي لتجنب الـ TemplateNotFound نهائياً
-    return render_template('admin/add_supplier.html', sovereign_id=next_sovereign_id)
+            // 1. الفحص الهيكلي الطولي الأساسي
+            switch(type) {
+                case 'name': 
+                    isFormatValid = value.split(/\s+/).filter(word => word.length > 0).length >= 3; 
+                    break;
+                case 'min3': 
+                    isFormatValid = value.length >= 3; 
+                    break;
+                case 'min5': 
+                    isFormatValid = value.length >= 5; 
+                    break;
+                case 'phone': 
+                    isFormatValid = /^[7][0-9]{8}$/.test(value); 
+                    break;
+                case 'acc': 
+                    isFormatValid = value.length >= 6; 
+                    break;
+                default:
+                    isFormatValid = value.length > 0;
+            }
 
+            let isFinalValid = isFormatValid;
 
-@admin_suppliers.route('/check-duplicate', methods=['GET'])
-@login_required
-def check_duplicate():
-    """
-    نظام الفحص اللحظي المطور للتأكد من فرادة البيانات قبل الاعتماد النهائي
-    """
-    try:
-        check_type = request.args.get('type')
-        value = request.args.get('value', '').strip()
+            // 2. فحص الداتابيز الفوري لمنع تكرار البيانات المؤرشفة سلفاً
+            if (isFormatValid && dbType) {
+                try {
+                    const response = await fetch(`/admin/suppliers/check-duplicate?type=${dbType}&value=${encodeURIComponent(value)}`);
+                    const result = await response.json();
+                    
+                    // إصلاح الحوكمة: إذا أعاد السيرفر القيمة المنطقية true صريحة أو نصية، يعتبر مكرراً (غير صالح ❌)
+                    if (result.exists === true || String(result.exists).toLowerCase() === "true") {
+                        isFinalValid = false;
+                    } else {
+                        isFinalValid = true;
+                    }
+                } catch (e) { 
+                    console.error("DB Check Failed"); 
+                    isFinalValid = false; 
+                }
+            }
 
-        if not check_type or not value:
-            return jsonify({'exists': False, 'valid': False, 'status': 'empty', 'message': 'الحقل فارغ'})
+            // 3. عكس الحالات البصرية بدقة متناهية على الواجهة
+            if (isFinalValid) {
+                icon.innerHTML = '<i class="fas fa-check-circle text-success" style="font-size: 16px;"></i>';
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                icon.innerHTML = '<i class="fas fa-times-circle text-danger" style="font-size: 16px;"></i>';
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+            }
 
-        if check_type == 'username' and len(value) < 3:
-            return jsonify({'exists': True, 'valid': False, 'status': 'invalid', 'message': 'اسم المستخدم قصير جداً'})
+            // استدعاء دالة تحديث حالة زر الإرسال
+            updateSubmitButtonState();
+        }, 400);
+    });
+});
 
-        exists = False
-        if check_type == 'username':
-            exists = Supplier.query.filter_by(username=value).first() is not None
-        elif check_type == 'trade_name':
-            exists = Supplier.query.filter_by(trade_name=value).first() is not None
-        elif check_type == 'shop_phone':
-            exists = Supplier.query.filter_by(shop_phone=value).first() is not None
-        elif check_type == 'owner_phone':
-            exists = Supplier.query.filter_by(owner_phone=value).first() is not None
-        elif check_type == 'identity_number':
-            exists = Supplier.query.filter_by(identity_number=value).first() is not None
-        elif check_type == 'bank_acc':
-            exists = Supplier.query.filter_by(bank_acc=value).first() is not None
+function updateSubmitButtonState() {
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // حساب عدد الحقول المكتملة والسليمة بنجاح داخل الفورم (المعلمة بـ ✅)
+    const totalValidFields = document.querySelectorAll('.validation-field.is-valid').length;
+    
+    // التأكد من خلو الفورم تماماً من أي حقول مكررة أو تالفة تملك كلاس (❌)
+    const hasErrors = document.querySelectorAll('.is-invalid').length > 0;
+    
+    // عدد الحقول الإجمالية الخاضعة للفحص التلقائي هي 7 حقول
+    const requiredValidationCount = 7; 
 
-        return jsonify({
-            'exists': exists, 
-            'valid': not exists,
-            'status': 'duplicate' if exists else 'unique',
-            'message': 'البيانات مسجلة مسبقاً!' if exists else 'البيانات متاحة للاستخدام'
-        })
-        
-    except Exception as e:
-        current_app.logger.error(f"Check duplicate raw database error for {check_type}: {str(e)}")
-        return jsonify({'exists': False, 'valid': False, 'status': 'error', 'error': str(e)})
+    if (totalValidFields === requiredValidationCount && !hasErrors) {
+        submitBtn.disabled = false;
+    } else {
+        submitBtn.disabled = true;
+    }
+}
+
+function toggleManualInput(select, divId) {
+    document.getElementById(divId).style.display = (select.value === 'manual') ? 'block' : 'none';
+}
+
+function syncManualValue(input, selectId) {
+    const select = document.getElementById(selectId);
+    let opt = select.querySelector('option[data-manual="true"]') || document.createElement('option');
+    opt.setAttribute('data-manual', 'true');
+    opt.value = opt.textContent = input.value;
+    if (!opt.parentElement) select.appendChild(opt);
+    select.value = input.value;
+}
+
+function updateDistrictOptions() {
+    const p = document.getElementById('provinceSelect').value;
+    const dSelect = document.getElementById('districtSelect');
+    dSelect.innerHTML = '<option value="" selected disabled>اختر المديرية...</option>';
+    if (yemenGeography[p]) {
+        yemenGeography[p].forEach(d => {
+            const opt = document.createElement('option');
+            const optText = document.createTextNode(d);
+            opt.value = d;
+            opt.appendChild(optText);
+            dSelect.appendChild(opt);
+        });
+    }
+}
+
+function updateFinanceOptions() {
+    const type = document.querySelector('input[name="fin_type"]:checked').value;
+    const select = document.getElementById('financeSelect');
+    select.innerHTML = '<option value="" selected disabled>اختر جهة التحويل...</option>';
+    financeData[type].forEach(item => {
+        const opt = document.createElement('option');
+        const optText = document.createTextNode(item);
+        opt.value = item;
+        opt.appendChild(optText);
+        select.appendChild(opt);
+    });
+    const mOpt = document.createElement('option');
+    const mOptText = document.createTextNode('أخرى (إدخال يدوي)...');
+    mOpt.value = 'manual';
+    mOpt.appendChild(mOptText);
+    select.appendChild(mOpt);
+}
+
+function copySupplierCredentials(user, id, pass) {
+    const textToCopy = `✨ تم تعميدك بنجاح في منصة محجوب أونلاين ✨\n\n` +
+                       `🔐 بيانات الاعتماد والوصول الخاصة بك:\n` +
+                       `--------------------------------------\n` +
+                       `👤 اسم المستخدم: ${user}\n` +
+                       `🆔 المعرف السيادي: ${id}\n` +
+                       `🔑 كلمة المرور المؤقتة: ${pass}\n\n` +
+                       `⚠️ تنبيه: يرجى تغيير كلمة المرور المؤقتة فور تسجيل الدخول الأول لحماية حسابك.\n\n` +
+                       `🤝 شكراً لتسجيلك معنا في منصة محجوب أونلاين\n` +
+                       `🌐 المنصة اللامركزية لحوكمة التجارة الرقمية`;
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        alert("✅ تم نسخ نص الاعتماد بالكامل بنجاح! يمكنك الآن لصقه وإرساله للمورد.");
+    }).catch(err => {
+        console.error('فشل النسخ: ', err);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pSelect = document.getElementById('provinceSelect');
+    if(pSelect) {
+        Object.keys(yemenGeography).forEach(p => {
+            const opt = document.createElement('option');
+            const optText = document.createTextNode(p);
+            opt.value = p;
+            opt.appendChild(optText);
+            pSelect.appendChild(opt);
+        });
+    }
+    updateFinanceOptions();
+
+    document.getElementById('addSupplierForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = 'جاري التعميد... <i class="fas fa-shield-alt fa-spin ms-2"></i>';
+
+        try {
+            const response = await fetch(this.action, { 
+                method: 'POST', 
+                body: new FormData(this) 
+            });
+            
+            const responseText = await response.text();
+            let result;
+            
+            try {
+                result = JSON.parse(responseText);
+            } catch (jsonErr) {
+                throw new Error('فشل داخلي في السيرفر السحابي (500)، يرجى مراجعة Logs المنصة.');
+            }
+            
+            if (response.ok && result.status === 'success') {
+                const username = result.data ? result.data.username : document.getElementById('form-username-field').value;
+                const unifiedId = result.data ? (result.data.sovereign_id || result.data.unified_id) : document.getElementById('display-id').innerText;
+                const password = document.getElementById('form-password-field').value;
+
+                const modalContent = `
+                    <div class="text-center mb-4">
+                        <div style="display: flex; justify-content: center; margin: 0 auto 15px;">
+                            <i class="fas fa-check-circle fa-5x text-success"></i>
+                        </div>
+                        <h3 class="fw-bold" style="color: var(--royal-purple);">تم التعميد بنجاح!</h3>
+                    </div>
+
+                    <div class="p-3 mb-3 border rounded-3 text-start bg-light" style="font-size: 0.95rem; border-left: 5px solid var(--royal-purple) !important;">
+                        <div class="mb-2">
+                            <strong>اسم المستخدم:</strong> <span class="text-dark fw-bold">${username}</span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>المعرف السيادي:</strong> <span class="text-primary fw-bold">${unifiedId}</span>
+                        </div>
+                        <div class="mb-0">
+                            <strong>كلمة المرور:</strong> <span class="text-danger fw-bold">${password}</span>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn w-100 mb-3 d-flex align-items-center justify-content-center gap-2" 
+                            style="background-color: var(--royal-purple); color: #fff; border-radius: 12px; padding: 12px; font-weight: 600;"
+                            onclick="copySupplierCredentials('${username}', '${unifiedId}', '${password}')">
+                        <i class="fas fa-copy"></i> نسخ بيانات الاعتماد كاملة
+                    </button>
+
+                    <div class="alert alert-warning text-center py-2 mb-3" style="font-size: 0.85rem; border-radius: 10px; font-weight: bold;">
+                        ⚠️ تنبيه: يرجى تغيير كلمة المرور المؤقتة فور تسجيل الدخول الأول.
+                    </div>
+
+                    <div class="text-center text-muted mb-3" style="font-size: 0.85rem; line-height: 1.6; font-weight: 600;">
+                        شكرًا لتسجيلك في منصة محجوب أونلاين<br>
+                        <span style="color: var(--mahjoub-gold); font-weight: 700;">المنصة اللامركزية لحوكمة التجارة الرقمية</span>
+                    </div>
+
+                    <a href="${window.location.pathname}" class="btn w-100 py-2 btn-secondary fw-bold text-decoration-none text-center" style="border-radius: 12px;">إغلاق ومتابعة</a>
+                `;
+
+                document.getElementById('successModalBody').innerHTML = modalContent;
+                
+                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                successModal.show();
+            } else {
+                alert('فشل التعميد: ' + (result.message || 'يرجى مراجعة البيانات المدخلة.'));
+                btn.disabled = false;
+                updateSubmitButtonState();
+            }
+        } catch (e) { 
+            alert(e.message || 'حدث خطأ أثناء معالجة الطلب السحابي، يرجى إعادة المحاولة.'); 
+            btn.disabled = false; 
+            updateSubmitButtonState();
+        }
+    };
+});
+</script>
+{% endblock %}
