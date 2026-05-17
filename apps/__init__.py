@@ -19,12 +19,12 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     
-    # تحديد مسار بوابة النفاذ لـ Flask-Login ونوع التنبيه
-    login_manager.login_view = 'auth_portal.login'
+    # 🛡️ الحماية السيادية: تحديد المسار الكامل بعد العزل لـ Flask-Login
+    login_manager.login_view = 'auth_portal.login'  # اسم البلوبرينت . اسم الدالة
     login_manager.login_message = 'يرجى إثبات الهوية الرقمية للوصول إلى المنطقة السيادية.'
     login_manager.login_message_category = 'warning'
 
-    # 🔑 الحارس السيادي: تعريف الـ user_loader لجلب الهوية من PostgreSQL
+    # 🔑 تعريف الـ user_loader لجلب الهوية من PostgreSQL
     @login_manager.user_loader
     def load_user(user_id):
         from apps.models.admin_db import AdminUser
