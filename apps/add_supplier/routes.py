@@ -29,7 +29,11 @@ def add_supplier():
             bank_acc = request.form.get('bank_acc', '').strip()
 
             # 2. التحقق النهائي الصارم والثابت عند الإرسال (Back-end Validation) لمنع التكرار تماماً
-            if username and Supplier.query.filter_by(username=username).first():
+            # إضافة شرط حوكمة الطول الأدنى (يجب أن لا يقل اسم المستخدم عن 3 أحرف فعلية منعا لتمرير الأسماء الثنائية)
+            if not username or len(username) < 3:
+                return jsonify({'status': 'error', 'message': 'فشل التعميد: يجب أن يكون اسم المستخدم 3 أحرف أو أكثر!'}), 400
+
+            if Supplier.query.filter_by(username=username).first():
                 return jsonify({'status': 'error', 'message': 'فشل التعميد: اسم المستخدم مسجل مسبقاً!'}), 400
             
             if trade_name and Supplier.query.filter_by(trade_name=trade_name).first():
@@ -136,14 +140,18 @@ def add_supplier():
 def check_duplicate():
     """
     نظام الفحص اللحظي الآمن والمطور: يتصل به الـ JavaScript عند الكتابة لإظهار (✅/❌)
-    ويشمل (اسم المستخدم، الاسم التجاري، هاتف المحل، رقم الهوية، ورقم الحساب البنكي) لمنع التكرار نهائياً
+    ويشمل حوكمة طول النص ومنع تكرار البيانات مع تصفية الفراغات تماماً.
     """
     try:
         check_type = request.args.get('type')
         value = request.args.get('value', '').strip()
 
         if not check_type or not value:
-            return jsonify({'exists': False})
+            return jsonify({'exists': False, 'valid': False, 'message': 'الحقل فارغ'})
+
+        # حوكمة إضافية في الـ Back-end لاسم المستخدم: إذا قل عن 3 أحرف يسقط كـ "غير صالح وموجود" فوراً
+        if check_type == 'username' and len(value) < 3:
+            return jsonify({'exists': True, 'valid': False, 'message': 'اسم المستخدم قصير جداً'})
 
         # خريطة الحقول الشاملة والمحمية بالكامل لمنع تكرار أي بيانات في محل آخر
         field_map = {
@@ -160,9 +168,9 @@ def check_duplicate():
         if target_field is not None:
             exists = Supplier.query.filter(target_field == value).first() is not None
 
-        return jsonify({'exists': exists})
+        return jsonify({'exists': exists, 'valid': not exists})
         
     except Exception as e:
         # حماية سيادية: يمنع انكسار واجهة المشرف ويضمن استقرار السيرفر عند حدوث خطأ عابر
         print(f"Check duplicate error for {check_type}: {str(e)}")
-        return jsonify({'exists': False, 'error': str(e)})
+        return jsonify({'exists': False, 'error': str(e), 'valid': False})
