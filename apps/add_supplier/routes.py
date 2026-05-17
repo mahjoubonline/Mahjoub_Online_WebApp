@@ -144,7 +144,7 @@ def add_supplier_page():
             db.session.add(new_supplier)
             db.session.flush()  # يسحب المعرف السيادي الفريد والـ ID المتناسق رقمياً
 
-            # 5. 💳 محرك المحفظة الموحد عبر Raw SQL لقطع الطريق على مشاكل الـ ORM وحرية المسميات النمطية
+            # 5. 💳 محرك المحفظة الموحد عبر Raw SQL لقطع الطريق على مشاكل الـ ORM وحرية Mسميات الحقول
             supplier_number = re.search(r'\d+$', new_supplier.sovereign_id).group()
             wallet_num = f"WEL-MAH{supplier_number}"
 
@@ -165,7 +165,7 @@ def add_supplier_page():
             try:
                 db.session.execute(insert_query, {"supplier_id": new_supplier.id, "wallet_number": wallet_num})
             except Exception:
-                # تصفير المعاملة المكسورة فوراً لفتح الطريق للـ Fallback النظيف بدون خطأ الـ Transcation Aborted
+                # تصفير المعاملة المكسورة فوراً لفتح الطريق للـ Fallback النظيف بدون خطأ الـ Transaction Aborted
                 db.session.rollback()
                 
                 # خيار بديل آمن (Fallback) في حال استخدام اسم الحقل wallet_id بقاعدة البيانات
@@ -267,38 +267,42 @@ def check_duplicate():
 def sync_legacy_wallets():
     """
     سكربت سيادي حوكمي نهائي ومطور 100%.
-    يخاطب قاعدة بيانات PostgreSQL مباشرة ويقوم بعمل تصفير للجلسات المكسورة (Rollback)
-    لتجنب خطأ InFailedSqlTransaction، مما يضمن حقن المحافظ للموردين بسلاسة كاملة.
+    يتجاوز الـ ORM بالكامل لتجنب خطأ تعارض الحقول في النماذج (invalid keyword argument).
+    يخاطب جداول PostgreSQL مباشرة عبر المعرفات الرقمية والنصوص النظيفة لتجنب تحميل النماذج المكسورة.
     """
     if not hasattr(current_user, 'id'):
         return jsonify({"status": "error", "message": "غير مصرح لك بتنفيذ هذه العملية السيادية."}), 403
 
     try:
-        all_suppliers = db.session.query(Supplier).all()
+        # 1. جلب بيانات الموردين مباشرة عبر SQL مجرد لتفادي تعارض الـ ORM مع الـ Models المعلقة
+        suppliers_query = db.session.execute(
+            db.text("SELECT id, sovereign_id FROM suppliers")
+        ).fetchall()
+        
         created_count = 0
 
-        for supplier in all_suppliers:
-            # 1. تنظيف الجلسة قبل الفحص لضمان بيئة عمل نقية
+        for sup_id, sovereign_id in suppliers_query:
+            # تنظيف الجلسة لضمان استقرار ونقاء المعاملات
             db.session.rollback()
 
-            # 2. الفحص المباشر عبر SQL لمعرفة هل يمتلك المورد محفظة في جدول supplier_wallets
+            # 2. الفحص المباشر لمعرفة هل يمتلك المورد محفظة مسبقاً في جدول المحافظ
             check_query = db.session.execute(
                 db.text("SELECT id FROM supplier_wallets WHERE supplier_id = :sup_id"),
-                {"sup_id": supplier.id}
+                {"sup_id": sup_id}
             ).fetchone()
 
             if not check_query:
-                sovereign_id_str = supplier.sovereign_id.strip() if supplier.sovereign_id else ""
+                sovereign_id_str = sovereign_id.strip() if sovereign_id else ""
                 match = re.search(r'\d+$', sovereign_id_str)
                 
                 if match:
                     supplier_number = match.group()
                 else:
-                    supplier_number = str(supplier.id)
+                    supplier_number = str(sup_id)
 
                 wallet_num = f"WEL-MAH{supplier_number}"
 
-                # المحاولة الأولى: استخدام الحقل الأكثر احتمالاً wallet_id بناءً على تتبع الاستعلام الأخير
+                # المحاولة الأولى: استخدام حقل wallet_id (الأكثر ثبوتاً في قاعدة بيانات السيرفر الحالية)
                 insert_query_primary = db.text(dedent("""
                     INSERT INTO supplier_wallets (
                         supplier_id, wallet_id,
@@ -314,10 +318,10 @@ def sync_legacy_wallets():
                 """))
 
                 try:
-                    db.session.execute(insert_query_primary, {"supplier_id": supplier.id, "wallet_id": wallet_num})
-                    db.session.commit() # تعميد فوري لكل مورد على حدة لعدم تعليق الجلسة
-                except Exception as e1:
-                    # في حال فشلت المحاولة الأولى، نغلق الجلسة المكسورة فوراً ونفتح واحدة جديدة ونظيفة
+                    db.session.execute(insert_query_primary, {"supplier_id": sup_id, "wallet_id": wallet_num})
+                    db.session.commit()  # حفظ فوري لكل مورد لضمان الحوكمة المطلقة
+                except Exception:
+                    # تصفير الجلسة في حال عدم وجود حقل wallet_id والتحول للحقل البديل فوراً دون كسر التبادل البرمجي
                     db.session.rollback()
 
                     # المحاولة البديلة: استخدام حقل wallet_number
@@ -334,26 +338,23 @@ def sync_legacy_wallets():
                             0.0, 0.0, 0.0, 0.0
                         )
                     """))
-                    db.session.execute(insert_query_backup, {"supplier_id": supplier.id, "wallet_number": wallet_num})
+                    db.session.execute(insert_query_backup, {"supplier_id": sup_id, "wallet_number": wallet_num})
                     db.session.commit()
 
                 created_count += 1
 
-        # التأكيد النهائي بعد انتهاء الحلقة
-        db.session.commit()
-
         if created_count > 0:
             return jsonify({
                 "status": "success",
-                "message": f"تم بنجاح كسر جمود المعاملات المعلقة وتوليد عدد ({created_count}) محفظة مالية للموردين القدامى بنجاح."
+                "message": f"تم بنجاح تجاوز النموذج وتوليد عدد ({created_count}) محفظة مالية للموردين القدامى مباشرة في قاعدة البيانات بنجاح مطلق."
             }), 200
         else:
             return jsonify({
                 "status": "success",
-                "message": "فحص النظام مكتمل بحوكمة تامة: جميع الموردين السابقين يمتلكون محافظ مالية مسبقاً."
+                "message": "فحص النظام مكتمل بحوكمة تامة: جميع الموردين الحاليين يمتلكون محافظ مالية مسبقاً."
             }), 200
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"❌ خطأ بنيوي أثناء معالجة معاملات المحافظ: {str(e)}")
-        return jsonify({"status": "error", "message": f"فشلت المزامنة المباشرة المحصنة: {str(e)}"}), 500
+        current_app.logger.error(f"❌ خطأ بنيوي حاد في استعلام الجداول الحوكمية: {str(e)}")
+        return jsonify({"status": "error", "message": f"فشلت المزامنة الرقمية المباشرة المحصنة: {str(e)}"}), 500
