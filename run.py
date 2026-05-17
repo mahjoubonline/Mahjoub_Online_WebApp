@@ -1,11 +1,12 @@
 # run.py
 # coding: utf-8
 # 🚀 المحرك التنفيذي لمنصة محجوب أونلاين 2026
-# التوثيق: تشغيل السيرفر وتعميد صلاحيات المالك السيادي وتحديث هيكل البيانات
+# التوثيق: تشغيل السيرفر وتعميد صلاحيات المالك السيادي وتحديث هيكل البيانات تلقائياً
 
 import os
 from apps import create_app, db
 from werkzeug.security import generate_password_hash
+from sqlalchemy import text # استيراد أداة تنفيذ النصوص البرمجية المباشرة
 
 # 1. إنشاء نسخة التطبيق عبر المصنع المركزي
 app = create_app()
@@ -20,9 +21,25 @@ def initialize_sovereignty():
             # 🚨 استدعاء محلي متأخر للموديل هنا لحماية خط الإقلاع ومنع الـ Circular Import تماماً
             from apps.models.admin_db import AdminUser
 
-            # [التحديث الجوهري]: فحص وتحديث هيكل قاعدة البيانات تلقائياً لإضافة أي أعمدة جديدة
+            # [التحديث الجوهري الأول]: إنشاء الجداول الأساسية إن لم تكن موجودة
             print("⏳ جاري مواءمة وتحديث هيكل السجلات السيادية وقاعدة البيانات...")
             db.create_all()
+            
+            # [التحديث الجوهري الثاني]: ترقيع جدول الموردين (Suppliers) بالأعمدة الناقصة تلقائياً في PostgreSQL
+            print("🛡️ جاري التحقق من الأعمدة الحوكمة لجدول الموردين...")
+            alter_query = """
+            ALTER TABLE suppliers 
+            ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active',
+            ADD COLUMN IF NOT EXISTS rank_grade VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS registration_source VARCHAR(100) DEFAULT 'لوحة التحكم',
+            ADD COLUMN IF NOT EXISTS created_by_id INTEGER,
+            ADD COLUMN IF NOT EXISTS updated_by_id INTEGER,
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+            """
+            # تنفيذ الاستعلام المباشر لترقيع الجدول دون المساس بالبيانات القديمة
+            db.session.execute(text(alter_query))
+            db.session.commit()
             print("🚀 تم تحديث جداول وأعمدة قاعدة البيانات بنجاح تام.")
             
             # البحث عن حساب المؤسس في قاعدة البيانات
@@ -42,6 +59,7 @@ def initialize_sovereignty():
                 print(f"📡 نظام الحوكمة مستقر: المالك '{owner.username}' متصل وقيد العمل.")
                 
         except Exception as e:
+            db.session.rollback()
             print(f"⚠️ تنبيه تقني: تعذر تحديث قاعدة البيانات أو الوصول للجداول أثناء البدء: {e}")
 
 if __name__ == "__main__":
