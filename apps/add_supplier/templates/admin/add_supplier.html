@@ -157,7 +157,7 @@
                     <div class="mb-3">
                         <label class="form-label text-muted small">رقم الحساب</label>
                         <div class="input-group">
-                            <input type="text" name="bank_acc" class="form-control bg-light border-0 fw-bold validation-field" data-valid="acc" required>
+                            <input type="text" name="bank_acc" class="form-control bg-light border-0 fw-bold validation-field" data-valid="acc" data-db-check="bank_acc" required>
                             <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
                         </div>
                     </div>
@@ -206,44 +206,79 @@ const financeData = {
     exchange: ["شركة القطيبي للصرافة", "شركة بن دول للصرافة", "شركة الشامل للصرافة"]
 };
 
+// حاوية لتخزين مؤقتات المدخلات (Debounce) لمنع إثقال الشبكة أثناء الكتابة اللحظية
+const debounceTimers = {};
+
 document.querySelectorAll('.validation-field').forEach(input => {
-    input.addEventListener('change', async function() {
+    // التعديل هنا: استخدام حدث 'input' ليكون التحقق لحظياً مع كل حرف يكتب
+    input.addEventListener('input', function() {
+        const fieldName = this.getAttribute('name');
+        
+        // مسح المؤقت السابق للحقل الحالي لتهيئة فترة الانتظار الجديدة
+        clearTimeout(debounceTimers[fieldName]);
+        
         const type = this.getAttribute('data-valid');
         const dbType = this.getAttribute('data-db-check');
         const icon = this.parentElement.querySelector('.validation-icon');
         const submitBtn = document.getElementById('submitBtn');
-        let isValid = false;
+        const value = this.value.trim();
+        
+        // إظهار علامة التحميل المبدئية أثناء الكتابة النشطة لبث الحيوية في الواجهة
+        icon.innerHTML = '<i class="fas fa-circle-notch fa-spin text-muted" style="font-size: 14px;"></i>';
 
-        switch(type) {
-            case 'name': isValid = this.value.trim().split(' ').length >= 3; break;
-            case 'min3': isValid = this.value.length >= 3; break;
-            case 'min5': isValid = this.value.length >= 5; break;
-            case 'phone': isValid = /^[7][0-9]{8}$/.test(this.value); break;
-            case 'acc': isValid = this.value.length >= 6; break;
-        }
+        // تفعيل الـ Debounce: الانتظار 400 ملي ثانية بعد توقف المشرف عن الكتابة
+        debounceTimers[fieldName] = setTimeout(async () => {
+            let isValid = false;
 
-        if (isValid && dbType) {
-            icon.innerHTML = '<i class="fas fa-spinner fa-spin text-muted"></i>';
-            try {
-                const response = await fetch(`/admin/suppliers/check-duplicate?type=${dbType}&value=${this.value.trim()}`);
-                const result = await response.json();
-                if (result.exists) isValid = false;
-            } catch (e) { console.error("DB Check Failed"); }
-        }
+            if (value === "") {
+                icon.innerHTML = '<i class="fas fa-minus text-muted"></i>';
+                this.classList.remove('is-valid', 'is-invalid');
+                updateSubmitButtonState();
+                return;
+            }
 
-        if (isValid) {
-            icon.innerHTML = '<i class="fas fa-check-circle text-success anim-pop"></i>';
-            this.classList.remove('is-invalid');
-            this.classList.add('is-valid');
-        } else {
-            icon.innerHTML = '<i class="fas fa-times-circle text-danger anim-pop"></i>';
-            this.classList.add('is-invalid');
-            this.classList.remove('is-valid');
-        }
+            switch(type) {
+                case 'name': isValid = value.split(' ').length >= 3; break;
+                case 'min3': isValid = value.length >= 3; break;
+                case 'min5': isValid = value.length >= 5; break;
+                case 'phone': isValid = /^[7][0-9]{8}$/.test(value); break;
+                case 'acc': isValid = value.length >= 6; break;
+            }
 
-        submitBtn.disabled = document.querySelectorAll('.is-invalid').length > 0;
+            // الفحص الخفي عبر السيرفر لمنع تكرار أي بيانات في سجل آخر
+            if (isValid && dbType) {
+                icon.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: var(--royal-purple);"></i>';
+                try {
+                    const response = await fetch(`/admin/suppliers/check-duplicate?type=${dbType}&value=${encodeURIComponent(value)}`);
+                    const result = await response.json();
+                    if (result.exists) isValid = false;
+                } catch (e) { 
+                    console.error("DB Check Failed"); 
+                }
+            }
+
+            // رسم استجابة الفحص اللحظي (✅ أو ❌) بدقة بصهر الكلاسات
+            if (isValid) {
+                icon.innerHTML = '<i class="fas fa-check-circle text-success anim-pop"></i>';
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                icon.innerHTML = '<i class="fas fa-times-circle text-danger anim-pop"></i>';
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            }
+
+            updateSubmitButtonState();
+        }, 400);
     });
 });
+
+// دالة مركزية للتحقق من سلامة الحقول وقفل أو فتح زر الإرسال بنظام الحوكمة الرقمية
+function updateSubmitButtonState() {
+    const submitBtn = document.getElementById('submitBtn');
+    const hasErrors = document.querySelectorAll('.is-invalid').length > 0;
+    submitBtn.disabled = hasErrors;
+}
 
 function toggleManualInput(select, divId) {
     document.getElementById(divId).style.display = (select.value === 'manual') ? 'block' : 'none';
@@ -300,7 +335,7 @@ function copySupplierCredentials(user, id, pass) {
                        `🔑 كلمة المرور المؤقتة: ${pass}\n\n` +
                        `⚠️ تنبيه: يرجى تغيير كلمة المرور المؤقتة فور تسجيل الدخول الأول لحماية حسابك.\n\n` +
                        `🤝 شكراً لتسجيلك معنا في منصة محجوب أونلاين\n` +
-                       `🌐 المنصة اللامركزية لحوكمة التجارة`;
+                       `🌐 المنصة اللامركزية لحوكمة التجارة الرقمية`;
 
     navigator.clipboard.writeText(textToCopy).then(() => {
         alert("✅ تم نسخ نص الاعتماد بالكامل بنجاح! يمكنك الآن لصقه وإرساله للمورد.");
@@ -345,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (response.ok && result.status === 'success') {
                 const username = result.data ? result.data.username : document.getElementById('form-username-field').value;
-                // تعديل قراءة حقل الـ sovereign_id الراجع بدقة من السيرفر لمنع تضارب الأسماء مستقبلاً
                 const unifiedId = result.data ? (result.data.sovereign_id || result.data.unified_id) : document.getElementById('display-id').innerText;
                 const password = document.getElementById('form-password-field').value;
 
