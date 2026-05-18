@@ -77,7 +77,7 @@ class Wallet(db.Model):
             "usd_pending": float(self.usd_pending)
         }
 
-# 🛡️ الحصانة الهيكلية: تعريف الكنية السيادية لقطع دابر خطأ الـ ImportError في المنظومة
+# 🛡️ الحصانة الهيكلية
 SupplierWallet = Wallet
 
 # =========================================================================
@@ -98,14 +98,14 @@ class WalletTransaction(db.Model):
 
 
 # -------------------------------------------------------------------------
-# 🛡️ مصيدة الحوكمة المحدثة لإنشاء المحافظ الآمنة بنظام الكائنات المستقرة
+# 🛡️ مصيدة الحوكمة المحدثة والنهائية باستخدام الـ ORM Session Add
 # -------------------------------------------------------------------------
 from apps.models.supplier_db import Supplier
 
 def auto_create_supplier_wallet(mapper, connection, target):
     """
-    مراقب حوكمي صارم ينشئ محفظة مالية للمورد الجديد عبر حقول الكائن الصريحة
-    لمنع وقوع أخطاء تعارض حقول قاعدة البيانات وقيم الـ null التلقائية.
+    مراقب حوكمي صارم ينشئ محفظة مالية للمورد الجديد بالاعتماد الحصري على كائن الـ ORM.
+    هذا الأسلوب يتكفل بمطابقة الأسماء البرمجية مع جداول السيرفر تلقائياً دون تضارب.
     """
     if target.sovereign_id and 'MAH963' in target.sovereign_id:
         serial_num = target.sovereign_id.split('MAH963')[-1]
@@ -114,26 +114,25 @@ def auto_create_supplier_wallet(mapper, connection, target):
         
     generated_wallet_code = f"WEL-MAH963{serial_num}"
 
-    # 🛡️ الاعتماد المباشر على أسماء خصائص كلاس الموديل لمنع التداخل وحقن قيم الـ null
-    connection.execute(
-        Wallet.__table__.insert().values(
-            supplier_id=target.id,
-            wallet_code=generated_wallet_code,
-            yer_total=0.00,       # ربط مباشر بالاسم الحقيقي في قاعدة البيانات المعتمد بالـ String
-            yer_available=0.00,   # حقل الـ Database الفعلي المتوقع من محرك psycopg2
-            yer_withdrawn=0.00,
-            yer_pending=0.00,
-            sar_total=0.00,
-            sar_available=0.00,
-            sar_withdrawn=0.00,
-            sar_pending=0.00,
-            usd_total=0.00,
-            usd_available=0.00,
-            usd_withdrawn=0.00,
-            usd_pending=0.00,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
+    # 🛡️ استخدام أسلوب الكائن النقي لإدراج المحفظة مباشرة بشكل متوافق برمجياً
+    new_wallet = Wallet(
+        supplier_id=target.id,
+        wallet_code=generated_wallet_code,
+        yer_balance=0.00,
+        yer_reserved=0.00,
+        yer_withdrawn=0.00,
+        yer_pending=0.00,
+        sar_balance=0.00,
+        sar_reserved=0.00,
+        sar_withdrawn=0.00,
+        sar_pending=0.00,
+        usd_balance=0.00,
+        usd_reserved=0.00,
+        usd_withdrawn=0.00,
+        usd_pending=0.00
     )
+    
+    # ربط الكائن بالجلسة الحية الحالية لإدراجه متزامناً مع المورد
+    db.session.add(new_wallet)
 
 event.listen(Supplier, 'after_insert', auto_create_supplier_wallet)
