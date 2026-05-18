@@ -42,7 +42,7 @@ def overview():
 
         # 4. جلب طلبات السحب المعلقة لعرضها في الجداول المستقلة إن وجدت
         pending_withdrawals = db.session.query(WalletTransaction)\
-            .options(joinedload(WalletTransaction.wallet))\
+            .options(joinedload(WalletTransaction.wallet).joinedload(Wallet.supplier))\
             .filter(WalletTransaction.tx_type == 'withdrawal', WalletTransaction.tx_status == 'pending')\
             .order_by(WalletTransaction.created_at.desc())\
             .all()
@@ -115,7 +115,7 @@ def search_wallets():
             owner_phone = getattr(sup, 'phone', getattr(sup, 'mobile', 'بدون هاتف'))
             
             # استخراج الرتبة السيادية إذا كانت مدمجة في جدول الموردين
-            rank_grade = getattr(sup, 'rank_grade', 'ريادي')
+            rank_grade = getattr(sup, 'rank_grade', 'ريادي المظهر')
 
             wallets_list.append({
                 'wallet_id': wallet.id if wallet else f"⏳ غير منشأة",
