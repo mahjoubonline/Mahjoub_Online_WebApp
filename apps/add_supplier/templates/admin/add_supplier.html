@@ -258,6 +258,7 @@ document.querySelectorAll('.validation-field').forEach(input => {
             switch(type) {
                 case 'name': 
                     isFormatValid = value.split(/\s+/).filter(word => word.length > 0).length >= 3; 
+                    style="border-color: #198754;";
                     break;
                 case 'min3': 
                     isFormatValid = value.length >= 3; 
@@ -313,7 +314,6 @@ function updateSubmitButtonState() {
     const totalValidFields = document.querySelectorAll('.validation-field.is-valid').length;
     const hasErrors = document.querySelectorAll('.is-invalid').length > 0;
     
-    // إجمالي الحقول الموثقة بـ validation-field ويجب أن تكون صالحة لتنشيط الحفظ
     const requiredValidationCount = 5; 
 
     if (totalValidFields >= requiredValidationCount && !hasErrors) {
@@ -368,6 +368,7 @@ function updateFinanceOptions() {
     select.appendChild(mOpt);
 }
 
+// 🎯 تحديث الدالة الاحترافية لتغيير مظهر الزر بدلاً من تنبيه الـ alert الافتراضي
 function copySupplierCredentials(user, supId, walId, pass) {
     const textToCopy = `✨ تم تعميدك بنجاح في منصة محجوب أونلاين ✨\n\n` +
                        `🔐 بيانات الاعتماد والوصول الخاصة بك:\n` +
@@ -381,7 +382,22 @@ function copySupplierCredentials(user, supId, walId, pass) {
                        `🌐 المنصة اللامركزية لحوكمة التجارة الرقمية`;
 
     navigator.clipboard.writeText(textToCopy).then(() => {
-        alert("✅ تم نسخ نص الاعتماد المحدث بنجاح!");
+        const copyBtn = document.getElementById('copyCredentialsBtn');
+        if (copyBtn) {
+            const originalText = copyBtn.innerHTML;
+            
+            // تحويل الزر إلى الحالة النشطة الناجحة (أخضر تفاعلي)
+            copyBtn.innerHTML = `<i class="fas fa-check"></i> تم نسخ نص الاعتماد بنجاح!`;
+            copyBtn.style.setProperty('background-color', '#198754', 'important');
+            copyBtn.disabled = true;
+            
+            // إعادة الزر إلى وضعه البنفسجي القياسي بعد ثانيتين بالضبط
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+                copyBtn.style.setProperty('background-color', 'var(--royal-purple)', 'important');
+                copyBtn.disabled = false;
+            }, 2000);
+        }
     }).catch(err => {
         console.error('فشل النسخ: ', err);
     });
@@ -470,8 +486,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
 
-                    <button type="button" class="btn w-100 mb-3 d-flex align-items-center justify-content-center gap-2" 
-                            style="background-color: var(--royal-purple); color: #fff; border-radius: 12px; padding: 12px; font-weight: 600;"
+                    <button type="button" id="copyCredentialsBtn" class="btn w-100 mb-3 d-flex align-items-center justify-content-center gap-2" 
+                            style="background-color: var(--royal-purple); color: #fff; border-radius: 12px; padding: 12px; font-weight: 600; transition: all 0.3s ease;"
                             onclick="copySupplierCredentials('${username}', '${finalSupplierId}', '${finalWalletId}', '${password}')">
                         <i class="fas fa-copy"></i> نسخ بيانات الاعتماد المحدثة
                     </button>
