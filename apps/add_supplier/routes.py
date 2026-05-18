@@ -4,19 +4,17 @@
 from flask import render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
-import random
 
 # استيراد البلوبرينت وكائن قاعدة البيانات المركزي والنماذج النواة
 from . import admin_suppliers
 from apps import db
 from apps.models.supplier_db import Supplier
-from apps.models.wallet_db import SupplierWallet
 
 @admin_suppliers.route('/add', methods=['GET', 'POST'], endpoint='add_supplier_page')
 @login_required
 def add_supplier_page():
     """
-    مسار تعميد الموردين وإنشاء المحافظ المالية المشفرة تلقائياً في السيرفر الحي
+    مسار تعميد الموردين وإنشاء المحافظ المالية تلقائياً عبر مصيدة الحوكمة (Event Listener)
     """
     if request.method == 'POST':
         try:
@@ -46,8 +44,7 @@ def add_supplier_page():
             if exists:
                 return jsonify({"status": "error", "message": "اسم المستخدم هذا مسجل مسبقاً في النظام."}), 400
 
-            # 3. 👑 تشغيل المحرك المباشر لتوليد المعرف السيادي وكود المحفظة المتناسق
-            # استعلام سريع لمعرفة آخر مورد مسجل في النظام لزيادة التسلسل الرقمي
+            # 3. 👑 تشغيل المحرك المباشر لتوليد المعرف السيادي النقي
             last_supplier = db.session.query(Supplier).order_by(Supplier.id.desc()).first()
             if last_supplier and last_supplier.sovereign_id:
                 try:
@@ -60,9 +57,8 @@ def add_supplier_page():
                 next_num = 1
 
             sovereign_id = f"SUP-MAH963{next_num}"
-            wallet_code = f"WEL-MAH963{next_num}"
 
-            # 4. تشفير كلمة المرور وتشييد كائن المورد بالبيانات المكاملة
+            # 4. تشفير كلمة المرور وتشييد كائن المورد بالبيانات المتكاملة
             hashed_password = generate_password_hash(password)
             new_supplier = Supplier(
                 sovereign_id=sovereign_id,  # حقن المعرف الحقيقي الفوري هنا لحل مشكلة قيد Null
@@ -82,31 +78,22 @@ def add_supplier_page():
                 bank_acc=bank_acc,
                 activity_type=activity_type,
                 registration_source='لوحة التحكم',
-                rank_grade='سيادي',         
-                status='active',         
+                rank_grade='سيادي',          
+                status='active',          
                 created_by_id=current_user.id if hasattr(current_user, 'id') else None
             )
 
             db.session.add(new_supplier)
-            db.session.flush()  # حجز المعرف الرقمي (ID) للمورد حياً في قاعدة البيانات لاستخدامه فوراً
-
-            # 5. 💳 التشييد الآمن للمحفظة المالية وربطها بالـ ID والكود الموحد المولد أعلاه
-            new_wallet = SupplierWallet(
-                supplier_id=new_supplier.id,
-                wallet_code=wallet_code  
-            )
-            db.session.add(new_wallet)
             
-            # تثبيت الحفظ النهائي للمعاملة المزدوجة بنجاح تام
+            # تثبيت الحفظ يطلق الـ Event Listener المالي تلقائياً لإنشاء المحفظة بالتوافق التام
             db.session.commit() 
 
             return jsonify({
                 "status": "success",
-                "message": f"تم تعميد المورد بنجاح بالمعرف السيادي ({sovereign_id}) وتوليد محفظته الموثقة.",
+                "message": f"تم تعميد المورد بنجاح بالمعرف السيادي ({sovereign_id}) وتوليد محفظته الموثقة تلقائياً.",
                 "data": {
                     "username": username,
-                    "sovereign_id": sovereign_id,
-                    "wallet_code": wallet_code
+                    "sovereign_id": sovereign_id
                 }
             }), 200
 
@@ -118,7 +105,7 @@ def add_supplier_page():
                 "message": f"بنية النظام ترفض الحفظ بسبب تعارض داخلي: {str(e)}"
             }), 500
 
-    # 6. معالجة مرحلة العرض اللحظي (GET)
+    # 5. معالجة مرحلة العرض اللحظي (GET)
     backup_csrf_token = ""
     try:
         if 'csrf' in current_app.extensions:
