@@ -24,24 +24,38 @@ def dashboard_home():
         'server_status': 'Online'
     }
 
-    # 🗺️ خريطة الروابط السيادية الديناميكية لمنع الـ BuildError مستقبلاً
-    # تفحص النواة تلقائياً إذا كان التطبيق (البلوبرينت) مسجلاً أم لا، وتولد الرابط المناسب له
+    # 🗺️ خريطة الروابط السيادية الديناميكية المعزولة لحسم الـ BuildError بشكل مطلق
     dynamic_endpoints = {
-        'add_supplier': None,
-        'list_suppliers': url_for('admin_dashboard.list_suppliers')
+        'add_supplier': '#',
+        'list_suppliers': '#'
     }
 
-    # الفحص التلقائي لمحرك الموردين المعزول في النواة
+    # 1. التوليد الآمن لرابط سجل الموردين داخل نفس البلوبرينت
+    try:
+        dynamic_endpoints['list_suppliers'] = url_for('admin_dashboard.list_suppliers')
+    except Exception:
+        dynamic_endpoints['list_suppliers'] = '#'
+
+    # 2. الفحص التلقائي والمحصن لمحرك الموردين المعزول في النواة
     if 'admin_suppliers' in current_app.blueprints:
-        # إذا تم تسجيل تطبيق الموردين، نربطه بدالته الجديدة لمنع التداخل والتعارض
-        dynamic_endpoints['add_supplier'] = url_for('admin_suppliers.add_supplier_page')
+        try:
+            # محاولة ربط دالة التعميد الجديدة
+            dynamic_endpoints['add_supplier'] = url_for('admin_suppliers.add_supplier_page')
+        except Exception as e:
+            # حارس أمان: إذا حدث عدم تطابق في أسماء الدوال داخل موديول الموردين
+            # يتم تحويل الرابط للمسار النصي الثابت فوراً لمنع انهيار الـ Dashboard بـ 500
+            current_app.logger.error(f"⚠️ تنبيه بناء الروابط: تم توجيه رابط الموردين للمسار النصي المباشر: {str(e)}")
+            dynamic_endpoints['add_supplier'] = '/admin/suppliers/add'
     else:
-        # حماية احتياطية في حال تم إلغاء تفعيل المحرك مؤقتاً لتجنب خطأ 500
+        # حماية احتياطية في حال تم إلغاء تفعيل المحرك بالكامل من النواة مؤقتاً
         dynamic_endpoints['add_supplier'] = '#'
 
-    # 💡 [مستقبلاً]: بمجرد بناء تطبيق جديد، مثلاً (apps.add_agent)، فقط أضف الفحص هنا دون لمس بقية المسارات:
+    # 💡 [مستقبلاً]: بمجرد بناء تطبيق جديد، فقط أضف الفحص المحصن هنا دون لمس بقية المسارات:
     # if 'admin_agents' in current_app.blueprints:
-    #     dynamic_endpoints['add_agent'] = url_for('admin_agents.add_agent_page')
+    #     try:
+    #         dynamic_endpoints['add_agent'] = url_for('admin_agents.add_agent_page')
+    #     except Exception:
+    #         dynamic_endpoints['add_agent'] = '/admin/agents/add'
 
     # محاولة رندرة القالب بالمسار المعزول، وإذا تعذر يتم البحث عنه في المسار المباشر منعا للانهيار
     try:
