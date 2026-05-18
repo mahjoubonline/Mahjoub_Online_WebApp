@@ -57,9 +57,33 @@ class Wallet(db.Model):
         return float(value)
 
     def to_dict(self):
+        """
+        تصدير منسق ومسطح بالكامل متوافق مع محرك جافا سكريبت لوحة المراقبة
+        لإظهار رقم المحفظة، الأرصدة المتعددة، والتحكم بالأزرار مباشرة.
+        """
         return {
             "wallet_id": self.id,
             "supplier_id": self.supplier_id,
+            
+            # أرصدة الريال اليمني
+            "yer_total": self.yer_total,
+            "yer_available": self.yer_available,
+            "yer_pending": self.yer_pending,
+            "yer_withdrawn": self.yer_withdrawn,
+            
+            # أرصدة الريال السعودي
+            "sar_total": self.sar_total,
+            "sar_available": self.sar_available,
+            "sar_pending": self.sar_pending,
+            "sar_withdrawn": self.sar_withdrawn,
+            
+            # أرصدة الدولار الأمريكي
+            "usd_total": self.usd_total,
+            "usd_available": self.usd_available,
+            "usd_pending": self.usd_pending,
+            "usd_withdrawn": self.usd_withdrawn,
+            
+            # الهيكل الشجري الاحتياطي
             "currencies": {
                 "YER": {"total": self.yer_total, "available": self.yer_available, "pending": self.yer_pending, "withdrawn": self.yer_withdrawn},
                 "SAR": {"total": self.sar_total, "available": self.sar_available, "pending": self.sar_pending, "withdrawn": self.sar_withdrawn},
@@ -113,6 +137,7 @@ class WalletTransaction(db.Model):
     def to_dict(self):
         return {
             "tx_id": self.id,
+            "wallet_id": self.wallet_id,
             "transaction_ref": self.transaction_ref,
             "tx_type": self.tx_type,
             "currency": self.currency,
@@ -147,18 +172,23 @@ def seed_initial_pending_transactions(target, connection, **kw):
     
     session = Session(bind=connection)
     try:
-        # التأكد من وجود سجلات في جدول المحافظ أولاً
         wallets = session.query(Wallet).all()
         if wallets:
-            # التحقق مما إذا كان جدول العمليات فارغاً تماماً كما ظهر في الفحص السطحي
             tx_count = session.query(WalletTransaction).count()
             if tx_count == 0:
                 for wallet in wallets:
-                    # 1. تحديث رصيد المحفظة تجريبياً ليعكس وجود مبالغ معلقة ومتاحة
+                    # 1. تحديث رصيد المحفظة تجريبياً ليعكس وجود مبالغ معلقة ومتاحة لجميع العملات لتنشيط الواجهة
+                    wallet.yer_available = 75000.0
                     wallet.yer_pending = 45000.0
-                    wallet.yer_total = 45000.0
+                    wallet.yer_total = 120000.0
+                    
+                    wallet.sar_available = 400.0
+                    wallet.sar_pending = 200.0
+                    wallet.sar_total = 600.0
+                    
+                    wallet.usd_available = 250.0
                     wallet.usd_pending = 150.0
-                    wallet.usd_total = 150.0
+                    wallet.usd_total = 400.0
                     
                     # 2. حقن طلب سحب بالريال اليمني للمورد ليظهر في لوحة البحث فوراً
                     txn_yer = WalletTransaction(
