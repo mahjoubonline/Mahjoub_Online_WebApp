@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <form id="addSupplierForm" method="POST" enctype="multipart/form-data" action="{{ url_for('admin_suppliers.add_supplier_page') }}">
+    <form id="addSupplierForm" method="POST" enctype="multipart/form-data" action="{{ endpoints.get('add_supplier', '/admin/suppliers/add') if endpoints else '/admin/suppliers/add' }}">
         
         {% if csrf_token is defined %}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -313,7 +313,6 @@ function updateSubmitButtonState() {
     const totalValidFields = document.querySelectorAll('.validation-field.is-valid').length;
     const hasErrors = document.querySelectorAll('.is-invalid').length > 0;
     
-    // 👑 تم التحديث إلى 5 حقول إلزامية حصرية للتحقق (Username, Identity Num, Owner Name, Trade Name, Bank Acc)
     const requiredValidationCount = 5; 
 
     if (totalValidFields >= requiredValidationCount && !hasErrors) {
