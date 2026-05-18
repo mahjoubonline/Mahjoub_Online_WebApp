@@ -1,4 +1,3 @@
-# apps/__init__.py
 # coding: utf-8
 # 🏢 المصنع المركزي للنواة - منصة محجوب أونلاين 2026
 
@@ -21,15 +20,17 @@ def create_app():
     # نقوم بحقن ترميز الـ UTF-8 مباشرة في محرك الـ JSON الخاص بـ Flask لضمان طباعة النصوص العربية بنقاء كامل
     app.json.ensure_ascii = False
 
-    # 🛡️ استدعاء الموديلات الحوكمة هنا لإجبار Flask و SQLAlchemy على تسجيل أحداث توليد المعرفات والمحافظ تلقائياً
-    with app.app_context():
-        from apps.models.admin_db import AdminUser
-        from apps.models.supplier_db import Supplier
-        from apps.models.wallet_db import Wallet
-
-    # تهيئة الإضافات بربطها بالتطبيق الحالي
+    # تهيئة الإضافات بربطها بالتطبيق الحالي أولاً
     db.init_app(app)
     login_manager.init_app(app)
+
+    # 🛡️ استدعاء النماذج الحوكمة فوراً بعد التهيئة لإجبار Flask و SQLAlchemy 
+    # على تسجيل الجداول وأحداث توليد المعرفات والمحافظ تلقائياً في سياق النواة
+    with app.app_context():
+        from apps.models import admin_db
+        from apps.models import supplier_db
+        from apps.models import wallet_db
+        print("🛡️ تم تعميد النماذج وإخضاع ملفات قواعد البيانات لسياق الـ SQLAlchemy بنجاح.")
     
     # 🛡️ الحماية السيادية: تحديد المسار الكامل لـ Flask-Login
     login_manager.login_view = 'auth_portal.login'
