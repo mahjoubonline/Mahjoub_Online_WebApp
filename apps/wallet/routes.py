@@ -12,10 +12,10 @@ admin_wallet = Blueprint('admin_wallet', __name__, template_folder='templates')
 
 @admin_wallet.route('/admin/wallet/overview', methods=['GET'])
 @login_required
-def wallet_overview():
+def overview():
     """
-    شاشة فحص وجرد الحسابات المادية:
-    تستقبل طلبات التفتيش الفوري بناءً على اسم المتجر أو المعرف السيادي أو كود المحفظة.
+    [إصلاح الحوكمة الحرج]: تغيير اسم الدالة إلى overview ليتطابق جينياً
+    مع الـ endpoint المطلوب في القوالب ومنع الـ BuildError تماماً.
     """
     # التأكد من الصلاحيات السيادية للمستخدم (Owner أو Admin)
     if current_user.role not in ['Owner', 'Admin']:
@@ -70,7 +70,7 @@ def adjust_balance():
     """
     if current_user.role != 'Owner':
         flash('هذا الإجراء يتطلب سلطة المالك السيادية المطلقة.', 'danger')
-        return redirect(url_for('admin_wallet.wallet_overview'))
+        return redirect(url_for('admin_wallet.overview'))
 
     wallet_id = request.form.get('wallet_id')
     currency = request.form.get('currency')  # 'YER', 'SAR', 'USD'
@@ -81,12 +81,12 @@ def adjust_balance():
         amount = float(amount_str)
         if amount <= 0:
             flash('يجب أن تكون القيمة المالية أكبر من صفر.', 'warning')
-            return redirect(url_for('admin_wallet.wallet_overview'))
+            return redirect(url_for('admin_wallet.overview'))
             
         wallet = Wallet.query.get(wallet_id)
         if not wallet:
             flash('المحفظة المستهدفة غير مسجلة في الفضاء الحالي.', 'danger')
-            return redirect(url_for('admin_wallet.wallet_overview'))
+            return redirect(url_for('admin_wallet.overview'))
 
         # المعالجة الذكية حسب خزنة العملة المحددة وتحديث الحقول المستقرة بالكامل
         if currency == 'YER':
@@ -95,7 +95,7 @@ def adjust_balance():
             elif action_type == 'withdrawal':
                 if wallet.yer_available < amount:
                     flash('رصيد الريال اليمني المتاح لا يكفي لإتمام هذه الحركة.', 'danger')
-                    return redirect(url_for('admin_wallet.wallet_overview'))
+                    return redirect(url_for('admin_wallet.overview'))
                 wallet.yer_balance = float(wallet.yer_balance) - amount
 
         elif currency == 'SAR':
@@ -104,7 +104,7 @@ def adjust_balance():
             elif action_type == 'withdrawal':
                 if wallet.sar_available < amount:
                     flash('رصيد الريال السعودي المتاح لا يكفي لإتمام هذه الحركة.', 'danger')
-                    return redirect(url_for('admin_wallet.wallet_overview'))
+                    return redirect(url_for('admin_wallet.overview'))
                 wallet.sar_balance = float(wallet.sar_balance) - amount
 
         elif currency == 'USD':
@@ -113,7 +113,7 @@ def adjust_balance():
             elif action_type == 'withdrawal':
                 if wallet.usd_available < amount:
                     flash('رصيد الدولار الأمريكي المتاح لا يكفي لإتمام هذه الحركة.', 'danger')
-                    return redirect(url_for('admin_wallet.wallet_overview'))
+                    return redirect(url_for('admin_wallet.overview'))
                 wallet.usd_balance = float(wallet.usd_balance) - amount
         
         # تدوين سجل المعاملة الحركية لتوثيق الحوكمة والتدقيق المالي مستقبلاً
@@ -136,4 +136,4 @@ def adjust_balance():
         db.session.rollback()
         flash(f'تعذر إتمام الموازنة المالية بسبب عطل داخلي: {e}', 'danger')
 
-    return redirect(url_for('admin_wallet.wallet_overview'))
+    return redirect(url_for('admin_wallet.overview'))
