@@ -51,9 +51,9 @@
             <div>
                 <h2 class="text-md font-black text-gray-900 flex items-center gap-2">
                     <i class="fa-solid fa-magnifying-glass-dollar text-purple-700 text-lg"></i>
-                    نظام استدعاء وفحص المحافظ الموحد
+                    نظام استدعاء وفحص المحافظ الموحد للمنشآت
                 </h2>
-                <p class="text-xs text-gray-400 font-medium mt-0.5">البحث الفوري باسم المتجر/المنشأة، المعرف السيادي، أو رمز (#) للجرد الشامل لبيانات السيرفر.</p>
+                <p class="text-xs text-gray-400 font-medium mt-0.5">البحث الفوري باسم المتجر التجاري، المعرف السيادي، أو إرسال الرمز (#) لجرد السيرفر كاملاً.</p>
             </div>
             <div class="w-full lg:w-[450px] flex gap-2">
                 <div class="relative flex-1">
@@ -72,19 +72,20 @@
                 <thead>
                     <tr class="bg-gray-50 text-gray-500 text-[11px] font-black border-b border-gray-100 uppercase tracking-wider">
                         <th class="p-3.5">معرف كود المحفظة</th>
-                        <th class="p-3.5">المتجر والمنشأة / البيان السيادي</th>
-                        <th class="p-3.5">الرتبة السيادية</th>
+                        <th class="p-3.5">اسم المتجر / المنشأة التجارية</th>
+                        <th class="p-3.5">هاتف المنشأة (محل)</th>
+                        <th class="p-3.5">الرتبة السيادية واللقب</th>
                         <th class="p-3.5 text-center bg-purple-50/50 text-purple-950">كشف الريال اليمني (YER)</th>
                         <th class="p-3.5 text-center bg-purple-900/5 text-purple-950">كشف الريال السعودي (SAR)</th>
                         <th class="p-3.5 text-center bg-purple-500/5 text-purple-950">كشف الدولار الأمريكي (USD)</th>
-                        <th class="p-3.5 text-center">إجراءات الحوكمة الفورية</th>
+                        <th class="p-3.5 text-center">إجراءات التحكم والخصم</th>
                     </tr>
                 </thead>
                 <tbody id="walletsResultBody" class="text-xs font-bold divide-y divide-gray-50">
                     <tr>
-                        <td colspan="7" class="p-12 text-center text-gray-400 font-medium">
-                            <i class="fa-solid fa-receipt text-4xl mb-3 block text-purple-900/10"></i>
-                            قم بإدخال استعلام التفتيش في الحقل المخصص أعلاه لجلب حسابات وبيانات الموردين والمنشآت.
+                        <td colspan="8" class="p-12 text-center text-gray-400 font-medium">
+                            <i class="fa-solid fa-store text-4xl mb-3 block text-purple-900/10"></i>
+                            قم بإدخل استعلام التفتيش في الحقل المخصص أعلاه لجلب حسابات المنشآت التجارية والموردين حياً.
                         </td>
                     </tr>
                 </tbody>
@@ -101,9 +102,9 @@
         const tbody = document.getElementById('walletsResultBody');
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="p-12 text-center text-purple-950 font-bold bg-purple-50/10">
+                <td colspan="8" class="p-12 text-center text-purple-950 font-bold bg-purple-50/10">
                     <i class="fa-solid fa-circle-notch animate-spin text-2xl mb-2 text-purple-700 block"></i>
-                    جاري فحص دفاتر الأرصدة وسحب المحافظ المعتمدة سيادياً...
+                    جاري فحص دفاتر الأرصدة وسحب بيانات المنشآت المعتمدة سيادياً...
                 </td>
             </tr>
         `;
@@ -114,6 +115,11 @@
             if(data.status === 'success' && data.wallets.length > 0) {
                 tbody.innerHTML = '';
                 data.wallets.forEach(w => {
+                    // فرز واختيار لون رتبة المورد بناءً على مصفوفة النفوذ السيادية الفخمة
+                    let badgeClass = "bg-purple-900 text-white";
+                    if(w.rank_grade === 'ملكي') badgeClass = "bg-black text-amber-400 border border-amber-500/30";
+                    else if(w.rank_grade === 'سيادي') badgeClass = "bg-purple-950 text-purple-100";
+                    
                     tbody.innerHTML += `
                         <tr class="hover:bg-purple-50/20 transition-all">
                             <td class="p-3.5 font-mono text-purple-950">
@@ -123,14 +129,23 @@
                             </td>
                             
                             <td class="p-3.5">
-                                <div class="font-black text-gray-900 text-sm">${w.trade_name ? w.trade_name : 'لم يحدد بعد'}</div>
+                                <div class="font-black text-purple-950 text-sm">${w.trade_name ? w.trade_name : 'غير محدد'}</div>
                                 <div class="text-[10px] text-gray-400 font-mono tracking-wider mt-0.5">${w.sovereign_id}</div>
+                            </td>
+
+                            <td class="p-3.5 font-mono text-gray-600">
+                                ${w.shop_phone ? w.shop_phone : 'لا يوجد'}
                             </td>
                             
                             <td class="p-3.5">
-                                <span class="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-md font-black bg-purple-900 text-white shadow-sm">
-                                    <i class="fa-solid fa-shield-halved text-[9px]"></i> ${w.rank_grade || 'سيادي المظهر'}
-                                </span>
+                                <div class="flex flex-col gap-1 items-start">
+                                    <span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md font-black ${badgeClass} shadow-sm">
+                                        <i class="fa-solid fa-shield-halved text-[9px]"></i> ${w.rank_grade}
+                                    </span>
+                                    <span class="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded font-medium">
+                                        اللقب: [ ${w.state_title || 'تحت التدقيق'} ]
+                                    </span>
+                                </div>
                             </td>
                             
                             <td class="p-3.5 text-center bg-purple-50/20">
@@ -169,21 +184,21 @@
             } else {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="p-12 text-center text-amber-900 font-bold bg-amber-50/20">
+                        <td colspan="8" class="p-12 text-center text-amber-900 font-bold bg-amber-50/20">
                             <i class="fa-solid fa-circle-exclamation text-2xl mb-1 text-amber-600 block"></i>
-                            لم نكتشف أي منشأة تجارية أو محفظة مطابقة لبيانات التفتيش الحالية.
+                            لم نكتشف أي منشأة تجارية أو محفظة مطابقة لبيانات التفتيش المالي الحالية.
                         </td>
                     </tr>
                 `;
             }
         })
         .catch(err => {
-            tbody.innerHTML = `<tr><td colspan="7" class="p-12 text-center text-rose-600 font-bold">❌ فشل الاستدعاء من السيرفر الرئيسي للمنصة: ${err}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="p-12 text-center text-rose-600 font-bold">❌ فشل الاستدعاء من السيرفر الرئيسي للمنصة: ${err}</td></tr>`;
         });
     }
 
     function triggerDirectWithdrawalPrompt(walletId, tradeName) {
-        alert(`نظام التسوية المالي المباشر للمحفظة رقم [${walletId}] التابعة لمنشأة (${tradeName}) مستقر وجاهز لجدولة عمليات الخصم.`);
+        alert(`نظام التسوية المالي المباشر للمحفظة رقم [${walletId}] التابعة لمنشأة (${tradeName}) مستقر وجاهز لجدولة عمليات الخصم وسحب الرصيد.`);
     }
 
     document.getElementById('walletQueryInput').addEventListener('keypress', function(e) {
