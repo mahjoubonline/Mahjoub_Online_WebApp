@@ -81,10 +81,10 @@ class Wallet(db.Model):
 SupplierWallet = Wallet
 
 # =========================================================================
-# 📊 كلاس سجل الحركات المالية الموحد - تخليق فوري متوافق مع الحوكمة المالية
+# 📊 كلاس سجل الحركات المالية الموحد
 # =========================================================================
 class WalletTransaction(db.Model):
-    __tablename__ = 'wallet_transactions_log' # اسم جديد محصن لمنع التداخل مع المحذوف
+    __tablename__ = 'wallet_transactions_log'
     
     id = db.Column(db.Integer, primary_key=True)
     wallet_id = db.Column(db.Integer, db.ForeignKey('supplier_wallets.id', ondelete='CASCADE'), nullable=False)
@@ -94,19 +94,18 @@ class WalletTransaction(db.Model):
     description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    # ربط الحركة بالمحفظة الرئيسية
     wallet = db.relationship('Wallet', backref=db.backref('transactions', cascade='all, delete-orphan'))
 
 
 # -------------------------------------------------------------------------
-# 🛡️ مصيدة الحوكمة التلقائية (Event Listener): فتح المحفظة تلقائياً للمورد الجديد
+# 🛡️ مصيدة الحوكمة المحدثة لإنشاء المحافظ الآمنة بنظام الكائنات المستقرة
 # -------------------------------------------------------------------------
 from apps.models.supplier_db import Supplier
 
 def auto_create_supplier_wallet(mapper, connection, target):
     """
-    مراقب حوكمي صارم يعمل فوراً أثناء عملية ولادة حساب المورد (after_insert).
-    يضمن مطابقة رقم المحفظة للمعرف السيادي للمورد بشكل متزامن وثابت مع أعمدة الجدول الحقيقي.
+    مراقب حوكمي صارم ينشئ محفظة مالية للمورد الجديد عبر حقول الكائن الصريحة
+    لمنع وقوع أخطاء تعارض حقول قاعدة البيانات وقيم الـ null التلقائية.
     """
     if target.sovereign_id and 'MAH963' in target.sovereign_id:
         serial_num = target.sovereign_id.split('MAH963')[-1]
@@ -115,13 +114,13 @@ def auto_create_supplier_wallet(mapper, connection, target):
         
     generated_wallet_code = f"WEL-MAH963{serial_num}"
 
-    wallet_table = Wallet.__table__
+    # 🛡️ الاعتماد المباشر على أسماء خصائص كلاس الموديل لمنع التداخل وحقن قيم الـ null
     connection.execute(
-        wallet_table.insert().values(
+        Wallet.__table__.insert().values(
             supplier_id=target.id,
             wallet_code=generated_wallet_code,
-            yer_total=0.00,
-            yer_available=0.00,
+            yer_total=0.00,       # ربط مباشر بالاسم الحقيقي في قاعدة البيانات المعتمد بالـ String
+            yer_available=0.00,   # حقل الـ Database الفعلي المتوقع من محرك psycopg2
             yer_withdrawn=0.00,
             yer_pending=0.00,
             sar_total=0.00,
