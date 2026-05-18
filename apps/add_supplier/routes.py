@@ -37,26 +37,35 @@ def add_supplier_page():
             bank_acc = request.form.get('bank_acc', '').strip()
             activity_type = request.form.get('activity_type', '').strip()
 
-            # 🛠️ لقط المعرفات السيادية الثابتة والمطلوبة من الواجهة لمنع تعارض قيد Not-Null
-            sovereign_id = request.form.get('sovereign_id', 'SUP-MAH9631').strip()
-            wallet_code = request.form.get('wallet_code', 'WEL-MAH9631').strip()
+            # فحص المدخلات الحرجة لضمان سلامة النواة ومنع الحقول الفارغة
+            if not username or not password or not owner_name or not identity_number or not bank_acc:
+                return jsonify({"status": "error", "message": "تنبيه حوكمي: الحقول الأساسية للتسجيل والتوثيق مطلوبة."}), 400
 
-            # فرض الرتبة والحالة الحركية للنظام تلقائياً
-            user_rank = 'سيادي'
-            system_status = 'active'
-
-            # فحص المدخلات الحرجة لضمان سلامة النواة
-            if not username or not password or not owner_name:
-                return jsonify({"status": "error", "message": "تنبيه حوكمي: حقول الوصول الأساسية مطلوبة."}), 400
-
-            # 2. فحص التكرار لمنع تضارب المسارات في Postgres
+            # 2. فحص التكرار لمنع تضارب المسارات في قاعدة البيانات
             exists = db.session.query(Supplier.id).filter_by(username=username).first()
             if exists:
                 return jsonify({"status": "error", "message": "اسم المستخدم هذا مسجل مسبقاً في النظام."}), 400
 
-            # 3. تشفير كلمة المرور وتشييد كائن المورد
+            # 3. 👑 تشغيل المحرك المباشر لتوليد المعرف السيادي وكود المحفظة المتناسق
+            # استعلام سريع لمعرفة آخر مورد مسجل في النظام لزيادة التسلسل الرقمي
+            last_supplier = db.session.query(Supplier).order_by(Supplier.id.desc()).first()
+            if last_supplier and last_supplier.sovereign_id:
+                try:
+                    parts = last_supplier.sovereign_id.split('MAH963')
+                    last_num = int(parts[-1])
+                    next_num = last_num + 1
+                except (ValueError, IndexError):
+                    next_num = (last_supplier.id or 0) + 1
+            else:
+                next_num = 1
+
+            sovereign_id = f"SUP-MAH963{next_num}"
+            wallet_code = f"WEL-MAH963{next_num}"
+
+            # 4. تشفير كلمة المرور وتشييد كائن المورد بالبيانات المكاملة
             hashed_password = generate_password_hash(password)
             new_supplier = Supplier(
+                sovereign_id=sovereign_id,  # حقن المعرف الحقيقي الفوري هنا لحل مشكلة قيد Null
                 username=username,
                 password_hash=hashed_password,
                 identity_type=identity_type,
@@ -73,18 +82,18 @@ def add_supplier_page():
                 bank_acc=bank_acc,
                 activity_type=activity_type,
                 registration_source='لوحة التحكم',
-                rank_grade=user_rank,         
-                status=system_status,         
+                rank_grade='سيادي',         
+                status='active',         
                 created_by_id=current_user.id if hasattr(current_user, 'id') else None
             )
 
             db.session.add(new_supplier)
-            db.session.flush()  # حجز المعرف التسلسلي (ID) للمورد حياً دون إغلاق المعاملة المفتوحة
+            db.session.flush()  # حجز المعرف الرقمي (ID) للمورد حياً في قاعدة البيانات لاستخدامه فوراً
 
-            # 4. 💳 التشييد الآمن للمحفظة المالية وحقن الكود المتوافق والجاهز للحفظ
+            # 5. 💳 التشييد الآمن للمحفظة المالية وربطها بالـ ID والكود الموحد المولد أعلاه
             new_wallet = SupplierWallet(
                 supplier_id=new_supplier.id,
-                wallet_code=wallet_code  # تخزين القيمة "WEL-MAH9631" رسمياً لكسر الـ Constraint
+                wallet_code=wallet_code  
             )
             db.session.add(new_wallet)
             
@@ -93,7 +102,7 @@ def add_supplier_page():
 
             return jsonify({
                 "status": "success",
-                "message": "تم تعميد المورد بنجاح وتوليد محفظته السيادية المحددة حياً.",
+                "message": f"تم تعميد المورد بنجاح بالمعرف السيادي ({sovereign_id}) وتوليد محفظته الموثقة.",
                 "data": {
                     "username": username,
                     "sovereign_id": sovereign_id,
@@ -103,13 +112,13 @@ def add_supplier_page():
 
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"❌ خطأ بنيوي حرج أثناء حفظ المورد: {str(e)}")
+            current_app.logger.error(f"❌ خطأ حرج أثناء حفظ المورد في الـ Routes: {str(e)}")
             return jsonify({
                 "status": "error",
-                "message": f"بنية السيرفر ترفض الحفظ: {str(e)}"
+                "message": f"بنية النظام ترفض الحفظ بسبب تعارض داخلي: {str(e)}"
             }), 500
 
-    # 5. معالجة مرحلة العرض اللحظي (GET)
+    # 6. معالجة مرحلة العرض اللحظي (GET)
     backup_csrf_token = ""
     try:
         if 'csrf' in current_app.extensions:
@@ -120,7 +129,6 @@ def add_supplier_page():
 
     return render_template(
         'admin/add_supplier.html', 
-        sovereign_id="SUP-MAH9631", 
         owner=current_user, 
         backup_csrf=backup_csrf_token
     )
@@ -130,7 +138,7 @@ def add_supplier_page():
 @login_required
 def check_duplicate():
     """
-    محرك الاستعلام والتحقق المباشر من الواجهة لمنع تكرار البيانات الفريدة (اسم المستخدم، رقم الوثيقة، الحساب المالي)
+    محرك الاستعلام والتحقق المباشر من الواجهة لمنع تكرار البيانات الفريدة
     """
     check_type = request.args.get('type', '').strip()
     value = request.args.get('value', '').strip()
