@@ -141,7 +141,7 @@ def add_supplier_page():
             db.session.add(new_supplier)
             db.session.flush()  
 
-            # 5. 💳 محرك المحفظة النظيف (توليد المحفظة بالاعتماد على القيم الافتراضية لقاعدة البيانات)
+            # 5. 💳 محرك المحفظة المطهّر والنظيف (توليد المحفظة بالاعتماد الكامل على القيم الافتراضية لقاعدة البيانات)
             insert_query = db.text(dedent("""
                 INSERT INTO supplier_wallets (supplier_id) 
                 VALUES (:supplier_id)
@@ -192,7 +192,7 @@ def add_supplier_page():
 @login_required
 def check_duplicate():
     """
-    مستمع الفحص الفوري واللحظي المباشر لقاعدة البيانات لضمان الحوكمة وسرعة الاستجابة.
+    مستمع الفحص الفوري واللحظي المباشر لقاعدة البيانات لضمان الحوكمة وسرعة الاستجابة ومنع تكرار الحقول السبعة.
     """
     check_type = request.args.get('type')
     value = request.args.get('value', '').strip()
@@ -231,7 +231,7 @@ def check_duplicate():
 def sync_legacy_wallets():
     """
     سكربت سيادي حوكمي نهائي ومطور 100%.
-    يقوم بمزامنة وحقن المحافظ للموردين القدامى بناءً على البنية الحقيقية الحية.
+    يقوم بمزامنة وحقن المحافظ للموردين القدامى بالاعتماد على التصفير والتواريخ التلقائية لقاعدة البيانات.
     """
     if not hasattr(current_user, 'id'):
         return jsonify({"status": "error", "message": "غير مصرح لك بتنفيذ هذه العملية السيادية."}), 403
