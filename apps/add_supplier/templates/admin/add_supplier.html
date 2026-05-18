@@ -69,7 +69,7 @@
                             <option value="manual">إدخال يدوي...</option>
                         </select>
                         <div id="idManual" style="display: none;">
-                            <input type="text" class="form-control border-primary" placeholder="اكتب نوع الوثيقة..." oninput="syncManualValue(this, 'identityTypeSelect')">
+                            <input type="text" class="form-control bg-light mb-2" style="border: 1px solid var(--royal-purple);" placeholder="اكتب نوع الوثيقة..." oninput="syncManualValue(this, 'identityTypeSelect')">
                         </div>
                     </div>
 
@@ -124,11 +124,10 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label text-muted small">هاتف المنشأة (محل)</label>
+                        <label class="form-label text-muted small">هاتف المنشأة (اختياري / أرضي أو سيار)</label>
                         <div class="input-group dir-ltr">
                             <span class="input-group-text bg-white border-0">+967</span>
-                            <input type="tel" name="shop_phone" class="form-control bg-light border-0 validation-field" data-valid="phone" data-db-check="shop_phone" placeholder="7XXXXXXXX" required>
-                            <span class="input-group-text bg-light border-0 validation-icon"><i class="fas fa-minus text-muted"></i></span>
+                            <input type="tel" name="shop_phone" class="form-control bg-light border-0" placeholder="أدخل رقم التواصل الإضافي">
                         </div>
                     </div>
                     
@@ -173,7 +172,7 @@
                             <option value="" selected disabled>اختر جهة التحويل...</option>
                         </select>
                         <div id="finManual" style="display: none;">
-                            <input type="text" class="form-control border-primary" placeholder="اسم الجهة..." oninput="syncManualValue(this, 'financeSelect')">
+                            <input type="text" class="form-control bg-light mb-2" style="border: 1px solid var(--royal-purple);" placeholder="اسم الجهة..." oninput="syncManualValue(this, 'financeSelect')">
                         </div>
                     </div>
                     
@@ -193,7 +192,7 @@
                             <option value="manual">أخرى (إدخال يدوي)...</option>
                         </select>
                         <div id="catManual" style="display: none;">
-                            <input type="text" class="form-control border-danger" placeholder="مثال: إلكترونيات..." oninput="syncManualValue(this, 'categorySelect')">
+                            <input type="text" class="form-control bg-light mb-2" style="border: 1px solid var(--royal-purple);" placeholder="مثال: إلكترونيات..." oninput="syncManualValue(this, 'categorySelect')">
                         </div>
                     </div>
 
@@ -313,6 +312,8 @@ function updateSubmitButtonState() {
     const submitBtn = document.getElementById('submitBtn');
     const totalValidFields = document.querySelectorAll('.validation-field.is-valid').length;
     const hasErrors = document.querySelectorAll('.is-invalid').length > 0;
+    
+    // 👑 تم التحديث إلى 5 حقول إلزامية حصرية للتحقق (Username, Identity Num, Owner Name, Trade Name, Bank Acc)
     const requiredValidationCount = 5; 
 
     if (totalValidFields >= requiredValidationCount && !hasErrors) {
@@ -425,7 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const username = document.getElementById('form-username-field').value;
                 const password = document.getElementById('form-password-field').value;
                 
-                // 👑 استقبال المعرف السيادي وكود المحفظة المولدين حياً في السيرفر
                 const finalSupplierId = result.data.sovereign_id;
                 const finalWalletId = result.data.wallet_code;
 
