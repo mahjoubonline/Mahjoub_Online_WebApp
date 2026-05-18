@@ -1,3 +1,13 @@
+# coding: utf-8
+# 🚀 المحرك التنفيذي وفرمان الحوكمة الشاملة لمنصة محجوب أونلاين 2026
+
+import os
+from apps import create_app, db
+from werkzeug.security import generate_password_hash
+
+# 1. إنشاء نسخة التطبيق عبر المصنع المركزي
+app = create_app()
+
 def initialize_sovereignty():
     """
     دالة تعميد وتشييد البنية التحتية لعام 2026:
@@ -7,17 +17,13 @@ def initialize_sovereignty():
         try:
             print("⏳ جاري فحص وتعميد جداول النواة في السيرفر الحي...")
             
-            # استيراد النماذج بشكل صارم لإجبار قاعدة البيانات على رؤيتها
-            from apps.models.supplier_db import Supplier
-            from apps.models.wallet_db import SupplierWallet
-            from apps.models.admin_db import AdminUser
-            
-            # أمر التشييد الشامل والسيادي
+            # أمر التشييد الشامل والسيادي لجميع الجداول المستدعاة في الـ __init__
             db.create_all()
             db.session.commit()
-            print("🚀 سيادة وحوكمة: تم فحص قاعدة البيانات وإنشاء جداول الموردين والمحافظ والمشرفين بنجاح تنفيذي مطلق.")
+            print("🚀 سيادة وحوكمة: تم فحص قاعدة البيانات وإنشاء الجداول بنجاح تنفيذي مطلق.")
             
             # تأمين حساب المؤسس والمالك السيادي للمنصة
+            from apps.models.admin_db import AdminUser
             owner = AdminUser.query.filter_by(username='علي محجوب').first()
             if not owner:
                 print("🛡️ جاري تعميد حساب المالك السيادي للمنصة...")
@@ -33,3 +39,13 @@ def initialize_sovereignty():
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ تنبيه تقني حرج: تعذر إنشاء الجداول على السيرفر الحي: {e}")
+
+if __name__ == "__main__":
+    # تنفيذ الفحص والإنشاء الآمن
+    initialize_sovereignty()
+    
+    # تحديد المنفذ الخاص ببيئة Railway
+    port = int(os.environ.get("PORT", 5000))
+    
+    # تشغيل محرك المنصة بنجاح
+    app.run(host='0.0.0.0', port=port, debug=False)
