@@ -31,6 +31,13 @@ def create_app():
         from apps.models import supplier_db
         from apps.models import wallet_db
         print("🛡️ تم تعميد النماذج وإخضاع ملفات قواعد البيانات لسياق الـ SQLAlchemy بنجاح.")
+        
+        # 🔥 الإجراء الحوكمي الحاسم: إجبار المحرك على بناء الجداول فوراً إذا لم تكن موجودة
+        try:
+            db.create_all()
+            print("🚀 سيادة وحوكمة: تم فحص قاعدة البيانات وإنشاء جداول الموردين والمحافظ والمشرفين بنجاح تنفيذي مطلق.")
+        except Exception as e:
+            app.logger.error(f"❌ تعذر توليد الجداول برمجياً أثناء الإقلاع: {str(e)}")
     
     # 🛡️ الحماية السيادية: تحديد المسار الكامل لـ Flask-Login
     login_manager.login_view = 'auth_portal.login'
