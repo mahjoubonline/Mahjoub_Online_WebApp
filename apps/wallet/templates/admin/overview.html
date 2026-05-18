@@ -3,166 +3,92 @@
 {% block title %}الفضاء المالي الحوكمي | محجوب أونلاين{% endblock %}
 
 {% block content %}
-<div class="space-y-8 p-4 md:p-6">
+<div class="space-y-8 p-4 md:p-6 bg-gray-50/50 min-h-screen">
     
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-gradient-to-br from-white to-purple-50 p-6 rounded-2xl shadow-md border-r-8 border-purple-700 relative overflow-hidden transition-all hover:scale-[1.02]">
-            <div class="absolute -left-4 -bottom-4 text-purple-200 opacity-20 transform -rotate-12"><i class="fa-solid fa-money-bill-wave text-9xl"></i></div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-r-8 border-purple-700 relative overflow-hidden transition-all hover:shadow-md hover:scale-[1.01]">
+            <div class="absolute -left-4 -bottom-4 text-purple-600 opacity-5 transform -rotate-12"><i class="fa-solid fa-money-bill-wave text-9xl"></i></div>
             <div class="flex justify-between items-start mb-4">
-                <span class="text-xs font-black text-purple-700 uppercase tracking-widest bg-purple-100 px-3 py-1 rounded-full">الريال اليمني (YER)</span>
+                <span class="text-[11px] font-black text-purple-700 uppercase tracking-widest bg-purple-50 px-3 py-1 rounded-full border border-purple-100">الريال اليمني (YER)</span>
                 <i class="fa-solid fa-building-columns text-purple-700 text-xl"></i>
             </div>
-            <div class="space-y-2">
+            <div class="space-y-2.5">
                 <div class="flex justify-between items-baseline"><span class="text-xs text-gray-500 font-bold">إجمالي الأرصدة:</span><span class="text-lg font-black text-purple-950">{{ "{:,.2f}".format(metrics.YER.total) }}</span></div>
-                <div class="flex justify-between items-baseline"><span class="text-xs text-emerald-600 font-bold">المتاح للسحب:</span><span class="text-md font-bold text-emerald-600">{{ "{:,.2f}".format(metrics.YER.available) }}</span></div>
+                <div class="flex justify-between items-baseline"><span class="text-xs text-purple-700 font-bold">المتاح للسحب:</span><span class="text-md font-bold text-purple-900">{{ "{:,.2f}".format(metrics.YER.available) }}</span></div>
                 <div class="flex justify-between items-baseline"><span class="text-xs text-amber-600 font-bold">المعلق قيد المعالجة:</span><span class="text-md font-bold text-amber-600">{{ "{:,.2f}".format(metrics.YER.pending) }}</span></div>
             </div>
         </div>
 
-        <div class="bg-gradient-to-br from-white to-emerald-50 p-6 rounded-2xl shadow-md border-r-8 border-emerald-600 relative overflow-hidden transition-all hover:scale-[1.02]">
-            <div class="absolute -left-4 -bottom-4 text-emerald-200 opacity-20 transform -rotate-12"><i class="fa-solid fa-money-bill-wave text-9xl"></i></div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-r-8 border-purple-950 relative overflow-hidden transition-all hover:shadow-md hover:scale-[1.01]">
+            <div class="absolute -left-4 -bottom-4 text-purple-950 opacity-5 transform -rotate-12"><i class="fa-solid fa-coins text-9xl"></i></div>
             <div class="flex justify-between items-start mb-4">
-                <span class="text-xs font-black text-emerald-700 uppercase tracking-widest bg-emerald-100 px-3 py-1 rounded-full">الريال السعودي (SAR)</span>
-                <i class="fa-solid fa-coins text-emerald-600 text-xl"></i>
+                <span class="text-[11px] font-black text-purple-900 uppercase tracking-widest bg-purple-900/5 px-3 py-1 rounded-full border border-purple-900/10">الريال السعودي (SAR)</span>
+                <i class="fa-solid fa-coins text-purple-900 text-xl"></i>
             </div>
-            <div class="space-y-2">
-                <div class="flex justify-between items-baseline"><span class="text-xs text-gray-500 font-bold">إجمالي الأرصدة:</span><span class="text-lg font-black text-emerald-950">{{ "{:,.2f}".format(metrics.SAR.total) }}</span></div>
-                <div class="flex justify-between items-baseline"><span class="text-xs text-emerald-600 font-bold">المتاح للسحب:</span><span class="text-md font-bold text-emerald-600">{{ "{:,.2f}".format(metrics.SAR.available) }}</span></div>
+            <div class="space-y-2.5">
+                <div class="flex justify-between items-baseline"><span class="text-xs text-gray-500 font-bold">إجمالي الأرصدة:</span><span class="text-lg font-black text-purple-950">{{ "{:,.2f}".format(metrics.SAR.total) }}</span></div>
+                <div class="flex justify-between items-baseline"><span class="text-xs text-purple-700 font-bold">المتاح للسحب:</span><span class="text-md font-bold text-purple-900">{{ "{:,.2f}".format(metrics.SAR.available) }}</span></div>
                 <div class="flex justify-between items-baseline"><span class="text-xs text-amber-600 font-bold">المعلق قيد المعالجة:</span><span class="text-md font-bold text-amber-600">{{ "{:,.2f}".format(metrics.SAR.pending) }}</span></div>
             </div>
         </div>
 
-        <div class="bg-gradient-to-br from-white to-blue-50 p-6 rounded-2xl shadow-md border-r-8 border-blue-600 relative overflow-hidden transition-all hover:scale-[1.02]">
-            <div class="absolute -left-4 -bottom-4 text-blue-200 opacity-20 transform -rotate-12"><i class="fa-solid fa-money-bill-wave text-9xl"></i></div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-r-8 border-purple-500 relative overflow-hidden transition-all hover:shadow-md hover:scale-[1.01]">
+            <div class="absolute -left-4 -bottom-4 text-purple-500 opacity-5 transform -rotate-12"><i class="fa-solid fa-dollar-sign text-9xl"></i></div>
             <div class="flex justify-between items-start mb-4">
-                <span class="text-xs font-black text-blue-700 uppercase tracking-widest bg-blue-100 px-3 py-1 rounded-full">الدولار الأمريكي (USD)</span>
-                <i class="fa-solid fa-dollar-sign text-blue-600 text-xl"></i>
+                <span class="text-[11px] font-black text-purple-600 uppercase tracking-widest bg-purple-500/5 px-3 py-1 rounded-full border border-purple-500/10">الدولار الأمريكي (USD)</span>
+                <i class="fa-solid fa-dollar-sign text-purple-600 text-xl"></i>
             </div>
-            <div class="space-y-2">
-                <div class="flex justify-between items-baseline"><span class="text-xs text-gray-500 font-bold">إجمالي الأرصدة:</span><span class="text-lg font-black text-blue-950">${{ "{:,.2f}".format(metrics.USD.total) }}</span></div>
-                <div class="flex justify-between items-baseline"><span class="text-xs text-emerald-600 font-bold">المتاح للسحب:</span><span class="text-md font-bold text-emerald-600">${{ "{:,.2f}".format(metrics.USD.available) }}</span></div>
+            <div class="space-y-2.5">
+                <div class="flex justify-between items-baseline"><span class="text-xs text-gray-500 font-bold">إجمالي الأرصدة:</span><span class="text-lg font-black text-purple-950">${{ "{:,.2f}".format(metrics.USD.total) }}</span></div>
+                <div class="flex justify-between items-baseline"><span class="text-xs text-purple-700 font-bold">المتاح للسحب:</span><span class="text-md font-bold text-purple-900">${{ "{:,.2f}".format(metrics.USD.available) }}</span></div>
                 <div class="flex justify-between items-baseline"><span class="text-xs text-amber-600 font-bold">المعلق قيد المعالجة:</span><span class="text-md font-bold text-amber-600">${{ "{:,.2f}".format(metrics.USD.pending) }}</span></div>
             </div>
         </div>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-gray-100">
             <div>
-                <h2 class="text-lg font-black text-gray-800 flex items-center gap-2">
-                    <i class="fa-solid fa-magnifying-glass-dollar text-purple-900"></i>
-                    منظومة جلب وتدقيق أرصدة الموردين وحسابات المحافظ
+                <h2 class="text-md font-black text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass-dollar text-purple-700 text-lg"></i>
+                    نظام استدعاء وفحص المحافظ الموحد
                 </h2>
-                <p class="text-xs text-gray-500">ابحث باسم المورد، المعرف السيادي، أو أرسل رمز (#) لتدقيق جرد المحافظ كلياً.</p>
+                <p class="text-xs text-gray-400 font-medium mt-0.5">البحث الفوري باسم المتجر/المنشأة، المعرف السيادي، أو رمز (#) للجرد الشامل لبيانات السيرفر.</p>
             </div>
-            <div class="w-full md:w-96 relative">
-                <input type="text" id="walletQueryInput" placeholder="أدخل اسم المورد، المعرف السيادي، أو رمز #..." 
-                       class="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl font-bold text-sm focus:border-purple-800 focus:bg-white outline-none transition-all">
-                <button onclick="executeWalletSearch()" class="absolute left-2 top-2 bottom-2 px-3 bg-purple-950 hover:bg-black text-white rounded-lg text-xs font-bold transition-all">
+            <div class="w-full lg:w-[450px] flex gap-2">
+                <div class="relative flex-1">
+                    <input type="text" id="walletQueryInput" placeholder="أدخل اسم المتجر، المعرف السيادي، أو رمز #..." 
+                           class="w-full pl-4 pr-10 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl font-bold text-xs focus:border-purple-700 focus:bg-white focus:ring-2 focus:ring-purple-100 outline-none transition-all">
+                    <i class="fa-solid fa-search absolute right-3.5 top-3.5 text-gray-400 text-xs"></i>
+                </div>
+                <button onclick="executeWalletSearch()" class="px-5 bg-purple-950 hover:bg-purple-900 text-white rounded-xl text-xs font-black shadow-sm transition-all whitespace-nowrap">
                     تفتيش فوري
                 </button>
             </div>
         </div>
 
-        <div class="overflow-x-auto rounded-xl border border-gray-100 shadow-inner">
+        <div class="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
             <table class="w-full text-right border-collapse">
                 <thead>
-                    <tr class="bg-gray-100 text-gray-700 text-xs font-black border-b border-gray-200">
-                        <th class="p-3">رقم المحفظة</th>
-                        <th class="p-3">المورد والبيان السيادي</th>
-                        <th class="p-3">هاتف التاجر</th>
-                        <th class="p-3 bg-purple-50 text-purple-950">أرصدة اليمني (YER)</th>
-                        <th class="p-3 bg-emerald-50 text-emerald-950">أرصدة السعودي (SAR)</th>
-                        <th class="p-3 bg-blue-50 text-blue-950">أرصدة الدولار (USD)</th>
-                        <th class="p-3 text-center">إجراءات الحوكمة</th>
+                    <tr class="bg-gray-50 text-gray-500 text-[11px] font-black border-b border-gray-100 uppercase tracking-wider">
+                        <th class="p-3.5">معرف كود المحفظة</th>
+                        <th class="p-3.5">المتجر والمنشأة / البيان السيادي</th>
+                        <th class="p-3.5">الرتبة السيادية</th>
+                        <th class="p-3.5 text-center bg-purple-50/50 text-purple-950">كشف الريال اليمني (YER)</th>
+                        <th class="p-3.5 text-center bg-purple-900/5 text-purple-950">كشف الريال السعودي (SAR)</th>
+                        <th class="p-3.5 text-center bg-purple-500/5 text-purple-950">كشف الدولار الأمريكي (USD)</th>
+                        <th class="p-3.5 text-center">إجراءات الحوكمة الفورية</th>
                     </tr>
                 </thead>
-                <tbody id="walletsResultBody" class="text-xs font-bold divide-y divide-gray-100">
+                <tbody id="walletsResultBody" class="text-xs font-bold divide-y divide-gray-50">
                     <tr>
-                        <td colspan="7" class="p-8 text-center text-gray-400 font-medium">
-                            <i class="fa-solid fa-receipt text-3xl mb-2 block text-gray-300"></i>
-                            قم بإدخال استعلام تفتيش وسحب في المربع أعلاه لفرز أرقام المحافظ والأرصدة
+                        <td colspan="7" class="p-12 text-center text-gray-400 font-medium">
+                            <i class="fa-solid fa-receipt text-4xl mb-3 block text-purple-900/10"></i>
+                            قم بإدخال استعلام التفتيش في الحقل المخصص أعلاه لجلب حسابات وبيانات الموردين والمنشآت.
                         </td>
                     </tr>
                 </tbody>
             </table>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-2xl shadow-md border border-gray-100 p-6">
-        <div class="mb-6">
-            <h2 class="text-lg font-black text-gray-800 flex items-center gap-2">
-                <i class="fa-solid fa-clock-rotate-left text-amber-600"></i>
-                طلبات السحب المالي المعلقة بانتظار تعميد القيادة العليا
-            </h2>
-            <p class="text-xs text-gray-500">مراجعة وثائق الصرف وحوالات الكريمي والنجم المعلقة للموردين وتعميدها لإسقاطها ماليًا.</p>
-        </div>
-
-        <div class="overflow-x-auto rounded-xl border border-gray-100 shadow-inner">
-            <table class="w-full text-right border-collapse">
-                <thead>
-                    <tr class="bg-amber-50 text-amber-950 text-xs font-black border-b border-amber-100">
-                        <th class="p-3">رقم العملية المرجعي</th>
-                        <th class="p-3">المورد صاحب الطلب</th>
-                        <th class="p-3">المبلغ والعملة</th>
-                        <th class="p-3">بيان الصرف / شبكة التحويل</th>
-                        <th class="p-3">التاريخ والوقت</th>
-                        <th class="p-3 text-center">التعميد الحوكمي</th>
-                    </tr>
-                </thead>
-                <tbody class="text-xs font-bold divide-y divide-gray-100">
-                    {% if pending_tx %}
-                        {% for tx in pending_tx %}
-                        <tr class="hover:bg-gray-50 transition-all" id="tx-row-{{ tx.id }}">
-                            <td class="p-3 font-mono text-purple-900 tracking-wider">{{ tx.transaction_ref }}</td>
-                            <td class="p-3">
-                                <div class="font-black text-gray-900">{{ tx.wallet.supplier.name or tx.wallet.supplier.username }}</div>
-                                <div class="text-[10px] text-gray-400 font-mono">{{ tx.wallet.supplier.sovereign_id }}</div>
-                            </td>
-                            <td class="p-3">
-                                <span class="px-2 py-1 rounded bg-amber-100 text-amber-900 font-black text-sm">
-                                    {{ "{:,.2f}".format(tx.amount) }} {{ tx.currency }}
-                                </span>
-                            </td>
-                            <td class="p-3 text-gray-600 max-w-xs truncate">{{ tx.description or 'طلب سحب رصيد متاح' }}</td>
-                            <td class="p-3 text-gray-400 font-mono">{{ tx.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td class="p-3 text-center space-x-2 space-x-reverse flex justify-center items-center h-full">
-                                <button onclick="approveWithdrawalTx('{{ tx.id }}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all">
-                                    <i class="fa-solid fa-circle-check"></i> تعميد مالي
-                                </button>
-                                <button onclick="openRejectModal('{{ tx.id }}')" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all">
-                                    <i class="fa-solid fa-circle-xmark"></i> رفض
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="6" class="p-8 text-center text-emerald-600 font-medium bg-emerald-50/50">
-                                <i class="fa-solid fa-shield-heart text-3xl mb-2 block"></i>
-                                كافة الدفاتر المالية مستقرة ولا توجد أي طلبات سحب معلقة حالياً في السيرفر.
-                            </td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<div id="rejectModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 p-6 space-y-4">
-        <h3 class="text-md font-black text-rose-950 flex items-center gap-2">
-            <i class="fa-solid fa-circle-exclamation text-rose-600"></i>
-            إسقاط وتجميد طلب السحب المالي للمورد
-        </h3>
-        <p class="text-xs text-gray-500">قم بتسجيل سبب رفض العملية، ليقوم السيرفر بإعادة احتجاز المبالغ للرصيد المتاح فوراً.</p>
-        <input type="hidden" id="modal_tx_id">
-        <textarea id="modal_reject_reason" placeholder="مثال: رقم حساب الكريمي المرفق غير مطابق لبيانات المورد..." 
-                  class="w-full h-24 p-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-xs focus:border-rose-600 outline-none resize-none"></textarea>
-        <div class="flex justify-end space-x-2 space-x-reverse">
-            <button onclick="closeRejectModal()" class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-all">إلغاء</button>
-            <button onclick="submitRejectWithdrawalTx()" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md">إسقاط العملية المادية</button>
         </div>
     </div>
 </div>
@@ -175,14 +101,13 @@
         const tbody = document.getElementById('walletsResultBody');
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="p-8 text-center text-purple-900 font-bold">
-                    <i class="fa-solid fa-circle-notch animate-spin text-2xl mb-2 block"></i>
-                    جاري فحص دفاتر الأرصدة وسحب بيانات المحافظ المشفرة من السيرفر...
+                <td colspan="7" class="p-12 text-center text-purple-950 font-bold bg-purple-50/10">
+                    <i class="fa-solid fa-circle-notch animate-spin text-2xl mb-2 text-purple-700 block"></i>
+                    جاري فحص دفاتر الأرصدة وسحب المحافظ المعتمدة سيادياً...
                 </td>
             </tr>
         `;
 
-        // تم تعديل مسار الاستدعاء المباشر ليتوافق تماماً مع البلوبرنت
         fetch(`/admin/wallet/api/search?query=${encodeURIComponent(query)}`)
         .then(res => res.json())
         .then(data => {
@@ -190,44 +115,53 @@
                 tbody.innerHTML = '';
                 data.wallets.forEach(w => {
                     tbody.innerHTML += `
-                        <tr class="hover:bg-gray-50 transition-all">
-                            <td class="p-3 font-mono text-gray-900 bg-gray-50/50">
-                                <span class="px-2 py-1 rounded bg-gray-200/70 text-gray-800 text-[11px] font-black">
-                                    ID-${w.wallet_id}
+                        <tr class="hover:bg-purple-50/20 transition-all">
+                            <td class="p-3.5 font-mono text-purple-950">
+                                <span class="px-2 py-1 rounded-md bg-purple-50 text-purple-900 text-[11px] font-black border border-purple-100">
+                                    W-ID: ${w.wallet_id}
                                 </span>
                             </td>
-                            <td class="p-3">
-                                <div class="font-black text-gray-900">${w.trade_name}</div>
-                                <div class="text-[10px] text-purple-700 font-mono tracking-wider">${w.sovereign_id}</div>
-                                <span class="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-900">${w.rank_grade}</span>
-                            </td>
-                            <td class="p-3 font-mono text-gray-600">${w.owner_phone}</td>
                             
-                            <td class="p-3 bg-purple-50/40">
-                                <div class="text-purple-950 font-black">${w.yer_total.toLocaleString()} YER</div>
-                                <div class="text-[10px] text-emerald-600">متاح: ${w.yer_available.toLocaleString()}</div>
-                                <div class="text-[10px] text-amber-600">معلق: ${w.yer_pending.toLocaleString()}</div>
+                            <td class="p-3.5">
+                                <div class="font-black text-gray-900 text-sm">${w.trade_name ? w.trade_name : 'لم يحدد بعد'}</div>
+                                <div class="text-[10px] text-gray-400 font-mono tracking-wider mt-0.5">${w.sovereign_id}</div>
                             </td>
-
-                            <td class="p-3 bg-emerald-50/40">
-                                <div class="text-emerald-950 font-black">${w.sar_total.toLocaleString()} SAR</div>
-                                <div class="text-[10px] text-emerald-600">متاح: ${w.sar_available.toLocaleString()}</div>
-                                <div class="text-[10px] text-amber-600">معلق: ${w.sar_pending.toLocaleString()}</div>
+                            
+                            <td class="p-3.5">
+                                <span class="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-md font-black bg-purple-900 text-white shadow-sm">
+                                    <i class="fa-solid fa-shield-halved text-[9px]"></i> ${w.rank_grade || 'سيادي المظهر'}
+                                </span>
                             </td>
-
-                            <td class="p-3 bg-blue-50/40">
-                                <div class="text-blue-950 font-black">$${w.usd_total.toLocaleString()}</div>
-                                <div class="text-[10px] text-emerald-600">متاح: $${w.usd_available.toLocaleString()}</div>
-                                <div class="text-[10px] text-amber-600">معلق: $${w.usd_pending.toLocaleString()}</div>
-                            </td>
-
-                            <td class="p-3 text-center">
-                                <div class="flex flex-col gap-1 items-center justify-center">
-                                    <button onclick="triggerDirectWithdrawalPrompt('${w.wallet_id}', '${w.trade_name}')" 
-                                            class="w-full max-w-[120px] bg-purple-900 hover:bg-black text-white px-2 py-1.5 rounded-md flex items-center justify-center gap-1 shadow-sm transition-all text-[11px] font-bold">
-                                        <i class="fa-solid fa-money-bill-transfer"></i> سحب الرصيد
-                                    </button>
+                            
+                            <td class="p-3.5 text-center bg-purple-50/20">
+                                <div class="text-purple-950 font-black text-sm">${w.yer_total.toLocaleString()} <span class="text-[10px] text-gray-400">YER</span></div>
+                                <div class="flex justify-center gap-3 mt-1 text-[10px] font-medium">
+                                    <span class="text-emerald-600">متاح: ${w.yer_available.toLocaleString()}</span>
+                                    <span class="text-amber-500">معلق: ${w.yer_pending.toLocaleString()}</span>
                                 </div>
+                            </td>
+
+                            <td class="p-3.5 text-center bg-purple-900/[0.01]">
+                                <div class="text-purple-950 font-black text-sm">${w.sar_total.toLocaleString()} <span class="text-[10px] text-gray-400">SAR</span></div>
+                                <div class="flex justify-center gap-3 mt-1 text-[10px] font-medium">
+                                    <span class="text-emerald-600">متاح: ${w.sar_available.toLocaleString()}</span>
+                                    <span class="text-amber-500">معلق: ${w.sar_pending.toLocaleString()}</span>
+                                </div>
+                            </td>
+
+                            <td class="p-3.5 text-center bg-purple-500/[0.01]">
+                                <div class="text-purple-950 font-black text-sm">$${w.usd_total.toLocaleString()}</div>
+                                <div class="flex justify-center gap-3 mt-1 text-[10px] font-medium">
+                                    <span class="text-emerald-600">متاح: $${w.usd_available.toLocaleString()}</span>
+                                    <span class="text-amber-500">معلق: $${w.usd_pending.toLocaleString()}</span>
+                                </div>
+                            </td>
+
+                            <td class="p-3.5 text-center">
+                                <button onclick="triggerDirectWithdrawalPrompt('${w.wallet_id}', '${w.trade_name}')" 
+                                        class="inline-flex items-center justify-center gap-1.5 bg-purple-950 hover:bg-black text-white px-3 py-2 rounded-xl shadow-sm transition-all text-xs font-black w-full max-w-[130px]">
+                                    <i class="fa-solid fa-money-bill-transfer text-[10px]"></i> تسوية وسحب
+                                </button>
                             </td>
                         </tr>
                     `;
@@ -235,83 +169,21 @@
             } else {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="p-8 text-center text-amber-700 font-bold bg-amber-50/30">
-                            <i class="fa-solid fa-circle-exclamation text-xl mb-1 block"></i>
-                            لم نكتشف أي مورد أو حساب مطابِق لبيانات التفتيش في قاعدة البيانات.
+                        <td colspan="7" class="p-12 text-center text-amber-900 font-bold bg-amber-50/20">
+                            <i class="fa-solid fa-circle-exclamation text-2xl mb-1 text-amber-600 block"></i>
+                            لم نكتشف أي منشأة تجارية أو محفظة مطابقة لبيانات التفتيش الحالية.
                         </td>
                     </tr>
                 `;
             }
         })
         .catch(err => {
-            tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-rose-600 font-bold">❌ فشل الاتصال بمحرك السيرفر: ${err}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="p-12 text-center text-rose-600 font-bold">❌ فشل الاستدعاء من السيرفر الرئيسي للمنصة: ${err}</td></tr>`;
         });
     }
 
-    function triggerDirectWithdrawalPrompt(walletId, supplierName) {
-        alert(`نظام سحب الأرصدة المباشر للمحفظة رقم [${walletId}] التابعة للمورد (${supplierName}) مستقر ومربوط حياً بسجل العمليات.`);
-    }
-
-    function approveWithdrawalTx(txId) {
-        if(!confirm("هل أنت متأكد بصفتك الإدارة العليا من تعميد هذا الصرف المالي وإسقاطه من رصيد المحفظة المعلق؟")) return;
-
-        const formData = new FormData();
-        formData.append('tx_id', txId);
-
-        fetch('/admin/wallet/approve-withdrawal', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.status === 'success') {
-                alert(`✅ ${data.message}`);
-                document.getElementById(`tx-row-${txId}`).remove();
-                location.reload();
-            } else {
-                alert(`❌ خطأ مالي: ${data.message}`);
-            }
-        });
-    }
-
-    function openRejectModal(txId) {
-        document.getElementById('modal_tx_id').value = txId;
-        document.getElementById('modal_reject_reason').value = '';
-        document.getElementById('rejectModal').classList.remove('hidden');
-    }
-
-    function closeRejectModal() {
-        document.getElementById('rejectModal').classList.add('hidden');
-    }
-
-    function submitRejectWithdrawalTx() {
-        const txId = document.getElementById('modal_tx_id').value;
-        const reason = document.getElementById('modal_reject_reason').value.trim();
-
-        if(!reason) {
-            alert("يرجى إدخال سبب إسقاط العملية لتوثيقها حوكمياً بالمنصة.");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('tx_id', txId);
-        formData.append('reason', reason);
-
-        fetch('/admin/wallet/reject-withdrawal', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.status === 'success') {
-                alert(`✅ تم رفض العملية بنجاح وإعادة الأموال للرصيد المتاح.`);
-                closeRejectModal();
-                document.getElementById(`tx-row-${txId}`).remove();
-                location.reload();
-            } else {
-                alert(`❌ خطأ أثناء الرفض: ${data.message}`);
-            }
-        });
+    function triggerDirectWithdrawalPrompt(walletId, tradeName) {
+        alert(`نظام التسوية المالي المباشر للمحفظة رقم [${walletId}] التابعة لمنشأة (${tradeName}) مستقر وجاهز لجدولة عمليات الخصم.`);
     }
 
     document.getElementById('walletQueryInput').addEventListener('keypress', function(e) {
