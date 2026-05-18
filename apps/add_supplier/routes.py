@@ -30,7 +30,7 @@ def add_supplier_page():
     عرض صفحة تعميد المورد (GET) ومعالجة طلب الحفظ والتعميد السحابي الفعلي في قاعدة البيانات (POST).
     """
     
-    # 🚀 هندسة الإصلاح الذاتي تلقائياً عند استدعاء المسار لضمان مزامنة حقل wallet_code في PostgreSQL السحابية
+    # 🚀 هندسة الإصلاح الذاتي تلقائياً عند استدعاء المسار لضمان وجود حقل wallet_code في PostgreSQL السحابية
     try:
         db.session.execute(db.text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS wallet_code VARCHAR(50) UNIQUE;"))
         db.session.commit()
@@ -100,10 +100,10 @@ def add_supplier_page():
                     else:
                         return jsonify({"status": "error", "message": "⚠️ صيغة الملف المرفوع غير مدعومة سيادياً، يرجى رفع صورة أو ملف PDF."}), 400
 
-            # 5. استدعاء المولد الديناميكي الآمن من الموديل مباشرة لمنع تداخل الحقول (Race Condition)
+            # 5. استدعاء المولد الديناميكي الآمن من الموديل لمنع تداخل الحقول (Race Condition)
             generated_sovereign_id = Supplier.generate_next_sovereign_id()
             
-            # 🔄 المنطق المطلوب تماماً: توليد كود المحفظة عبر استبدال البادئة بشكل آمن ومباشر من SUP إلى WEL
+            # 🔄 المنطق المتناسق والمنشود تماماً: تحويل البادئة النقدية تلقائياً من SUP إلى WEL
             if generated_sovereign_id.startswith("SUP-"):
                 generated_wallet_code = generated_sovereign_id.replace("SUP-", "WEL-", 1)
             else:
@@ -136,38 +136,36 @@ def add_supplier_page():
             )
             db.session.add(new_supplier)
             
-            # 8. حوكمة إنشاء المحفظة بفحص ديناميكي للحقول لتفادي أي ارتباك في التسميات (invalid keyword argument)
-            wallet_args = {}
+            # 8. توليد وربط المحفظة المالية المتكاملة متعددة العملات بناءً على هيكل قاعدة البيانات الفعلي
+            wallet_args = {
+                "wallet_code": generated_wallet_code,
+                "supplier_id": generated_sovereign_id
+            }
+
+            # الفحص والمطابقة الديناميكية لشبكة الحقول المالية الفرعية المكتشفة بالسيرفر
+            financial_fields = [
+                'yer_total', 'yer_available', 'yer_withdrawn', 'yer_pending',
+                'sar_total', 'sar_available', 'sar_withdrawn', 'sar_pending',
+                'usd_total', 'usd_available', 'usd_withdrawn', 'usd_pending'
+            ]
             
-            # فحص الحقول الإلزامية الأساسية للمحفظة وتمرير المتاح منها فقط في كود الموديل لديك
-            if hasattr(Wallet, 'wallet_code'):
-                wallet_args['wallet_code'] = generated_wallet_code
+            for field in financial_fields:
+                if hasattr(Wallet, field):
+                    wallet_args[field] = 0.0
+
+            # التحقق الإضافي لسلامة الحقول البسيطة والحالة في حال وجودها بالموديل الأساسي
+            for status_field in ['status', 'wallet_status']:
+                if hasattr(Wallet, status_field):
+                    wallet_args[status_field] = "نشطة"
             
-            # فحص ربط المحفظة بالمورد (هل الموديل يربطها عبر الكود المالي النقي أم معرف المورد؟)
-            if hasattr(Wallet, 'supplier_id'):
-                wallet_args['supplier_id'] = generated_sovereign_id
-            elif hasattr(Wallet, 'supplier_id_code'):
-                wallet_args['supplier_id_code'] = generated_sovereign_id
+            for balance_field in ['balance', 'current_balance', 'amount']:
+                if hasattr(Wallet, balance_field):
+                    wallet_args[balance_field] = 0.0
 
-            # الفحص الذكي والآمن لحقول الرصيد لمنع الانهيار (500)
-            if hasattr(Wallet, 'balance'):
-                wallet_args['balance'] = 0.0
-            elif hasattr(Wallet, 'current_balance'):
-                wallet_args['current_balance'] = 0.0
-            elif hasattr(Wallet, 'amount'):
-                wallet_args['amount'] = 0.0
-
-            # الفحص الذكي والآمن لحقل الحالة الخاص بالمحفظة
-            if hasattr(Wallet, 'status'):
-                wallet_args['status'] = "نشطة"
-            elif hasattr(Wallet, 'wallet_status'):
-                wallet_args['wallet_status'] = "نشطة"
-
-            # إنشاء المحفظة بالحقول التي تم إثبات وجودها فعلياً في ملف الموديل
             new_wallet = Wallet(**wallet_args)
             db.session.add(new_wallet)
 
-            # تنفيذ الحفظ النهائي الموحد الحصين (Atomic Commit) والتعميد في قاعدة البيانات
+            # تنفيذ الحفظ النهائي الموحد الحصين (Atomic Commit) وتثبيت البيانات
             db.session.commit()
 
             # 9. إرجاع استجابة الـ JSON الناجحة لتشغيل الـ Modal في الواجهة الأمامية
@@ -181,7 +179,7 @@ def add_supplier_page():
             }), 200
 
         except Exception as e:
-            db.session.rollback()  # تراجع فوري وشامل لحماية وسلامة الجداول من التلوث التراكمي
+            db.session.rollback()  # تراجع فوري شامل لحماية وسلامة الجداول من التلوث التراكمي
             return jsonify({
                 "status": "error",
                 "message": f"فشل داخلي في السيرفر السحابي (500): {str(e)}"
