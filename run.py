@@ -1,4 +1,3 @@
-# run.py
 # coding: utf-8
 # 🚀 المحرك التنفيذي وفرمان الحوكمة الشاملة لمنصة محجوب أونلاين 2026
 # التوثيق: تجاوز أخطاء الـ ImportError، سحق الجداول المتعارضة، وتصفير الفضاء المالي قسرياً
@@ -7,6 +6,13 @@ import os
 from apps import create_app, db
 from werkzeug.security import generate_password_hash
 from sqlalchemy import text # استيراد أداة تنفيذ النصوص البرمجية المباشرة
+
+# 🚨 [ربط المسارات الحية]: استيراد الموديلات المحدثة لضمان قيام db.create_all بتخليق الجداول بنجاح
+try:
+    from apps.models import supplier_db, wallet_db
+    print("📡 تم ربط النماذج المالية والموردين بالمحرك التنفيذي بنجاح.")
+except ImportError as ie:
+    print(f"⚠️ تنبيه مسارات: تعذر استيراد بعض النماذج، سيتم الاعتماد على الاستدعاء التلقائي: {ie}")
 
 # 1. إنشاء نسخة التطبيق عبر المصنع المركزي
 app = create_app()
@@ -26,6 +32,7 @@ def initialize_sovereignty():
             
             # 🚨 [خطوة التصفير التام]: سحق الجداول القديمة المسببة للأخطاء الهيكلية عبر CASCADE
             print("⏳ جاري سحق الجداول القديمة عبر CASCADE لمنع أخطاء الأرصدة الناقصة...")
+            db.session.execute(text("DROP TABLE IF EXISTS wallet_transactions_log CASCADE;"))
             db.session.execute(text("DROP TABLE IF EXISTS wallet_transactions CASCADE;"))
             db.session.execute(text("DROP TABLE IF EXISTS supplier_wallets CASCADE;"))
             db.session.execute(text("DROP TABLE IF EXISTS wallets CASCADE;"))
