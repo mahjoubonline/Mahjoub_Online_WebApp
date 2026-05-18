@@ -40,7 +40,7 @@ def overview():
             func.coalesce(func.sum(Wallet.usd_pending), 0.0)
         ).first()
 
-        # 4. جلب طلبات السحب المعلقة لعرضها في الجداول المستقلة إن وجدت
+        # 4. جلب طلبات السحب المعلقة لعرضها في الجداول المستقلة مع تحميل العلاقات مسبقاً تفادياً لـ N+1
         pending_withdrawals = db.session.query(WalletTransaction)\
             .options(joinedload(WalletTransaction.wallet).joinedload(Wallet.supplier))\
             .filter(WalletTransaction.tx_type == 'withdrawal', WalletTransaction.tx_status == 'pending')\
@@ -70,35 +70,37 @@ def overview():
 def search_wallets():
     """
     نظام استدعاء وفحص المحافظ الديناميكي المتوافق مع واجهة overview.html.
-    يدعم البحث المخصص، ويدعم جلب الكل عند إرسال '#' لحساب العدادات الكلية وإجمالي المحافظ.
+    يدعم جلب المعرف السيادي الحقيقي المخزن في قاعدة البيانات (مثل SUP-WEL-MAHxxxx).
     """
     query = request.args.get('query', '').strip()
     if not query:
         return jsonify({'status': 'success', 'wallets': []})
 
     try:
-        # فحص بنية الجداول الحية في قاعدة البيانات ديناميكياً لتفادي الاختلافات
+        # فحص بنية الجداول الحية في قاعدة البيانات ديناميكياً لتفادي التعارض مع حقول السيرفر
         supplier_columns = Supplier.__table__.columns.keys()
         
         # بناء الاستعلام بناءً على طلب واجهة العرض
         if query == '#':
-            # جلب كافة الموردين لحساب العدد الإجمالي في النظام
             suppliers = db.session.query(Supplier).all()
         else:
             filters = []
-            # التحقق من حقول الاسم المتوقعة في قاعدة البيانات
             if 'username' in supplier_columns:
                 filters.append(Supplier.username.ilike(f'%{query}%'))
             if 'name' in supplier_columns:
                 filters.append(Supplier.name.ilike(f'%{query}%'))
             if 'store_name' in supplier_columns:
                 filters.append(Supplier.store_name.ilike(f'%{query}%'))
+            if 'sovereign_id' in supplier_columns:
+                filters.append(Supplier.sovereign_id.ilike(f'%{query}%'))
 
-            # التحقق من حقول الهاتف المتوقعة
+            # التحقق من حقول الهاتف المتوقعة لتجنب أخطاء الفقدان
             if 'phone' in supplier_columns:
                 filters.append(Supplier.phone.ilike(f'%{query}%'))
             if 'mobile' in supplier_columns:
                 filters.append(Supplier.mobile.ilike(f'%{query}%'))
+            if 'phone_number' in supplier_columns:
+                filters.append(Supplier.phone_number.ilike(f'%{query}%'))
 
             if not filters:
                 return jsonify({'status': 'success', 'wallets': []})
@@ -112,15 +114,18 @@ def search_wallets():
             
             # استخراج القيم المتوفرة بأمان وتجنب الانهيار في حال كانت القيمة Null
             trade_name = getattr(sup, 'username', getattr(sup, 'name', getattr(sup, 'store_name', 'مورد غير مسمى')))
-            owner_phone = getattr(sup, 'phone', getattr(sup, 'mobile', 'بدون هاتف'))
+            owner_phone = getattr(sup, 'phone', getattr(sup, 'mobile', getattr(sup, 'phone_number', 'بدون هاتف')))
             
-            # استخراج الرتبة السيادية إذا كانت مدمجة في جدول الموردين
-            rank_grade = getattr(sup, 'rank_grade', 'ريادي المظهر')
+            # سحب المعرف السيادي المخزن حقيقياً في قاعدة البيانات (مثل: SUP-WEL-MAH9631)
+            sovereign_id = getattr(sup, 'sovereign_id', f"SUP-ID-{sup.id:04d}")
+            
+            # استخراج الرتبة السيادية إذا كانت مدمجة، أو وضع رتبة افتراضية ذكية
+            rank_grade = getattr(sup, 'rank_grade', getattr(sup, 'role', 'مورد سيادي'))
 
             wallets_list.append({
                 'wallet_id': wallet.id if wallet else f"⏳ غير منشأة",
                 'trade_name': trade_name,  
-                'sovereign_id': f"SUP-ID-{sup.id:04d}",
+                'sovereign_id': sovereign_id,
                 'owner_phone': owner_phone,
                 'rank_grade': rank_grade,
                 
