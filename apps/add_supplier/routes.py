@@ -2,6 +2,12 @@ import os
 import secrets
 from flask import Blueprint, render_template, request, jsonify, current_app, url_for
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash
+
+# استيراد كائن قاعدة البيانات المركزي والنماذج الحوكمة الفعالة
+from apps import db
+from apps.models.supplier_db import Supplier
+from apps.models.wallet_db import Wallet
 
 # 🛡️ تعريف الـ Blueprint الخاص بإضافة وتعميد الموردين
 admin_suppliers_bp = Blueprint(
@@ -10,16 +16,6 @@ admin_suppliers_bp = Blueprint(
     template_folder='templates',
     static_folder='static'
 )
-
-# ─── محاكاة لقاعدة البيانات (استبدلها بالـ Model الخاص بك في PostgreSQL/SQLAlchemy) ───
-# مثال: from apps.models import db, Supplier, Wallet
-MOCK_DB = {
-    "usernames": ["ali_2026", "admin", "mahjoub_user"],
-    "identity_numbers": ["101202303", "404505606"],
-    "owner_phones": ["771234567"],
-    "trade_names": ["مؤسسة النجاح", "مجموعة البرق"],
-    "bank_accounts": ["123456789"]
-}
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
 
@@ -31,7 +27,7 @@ def allowed_file(filename):
 @admin_suppliers_bp.route('/admin/suppliers/add', methods=['GET', 'POST'])
 def add_supplier_page():
     """
-    عرض صفحة تعميد المورد (GET) ومعالجة طلب التعميد السحابي (POST).
+    عرض صفحة تعميد المورد (GET) ومعالجة طلب الحفظ والتعميد السحابي الفعلي في قاعدة البيانات (POST).
     """
     if request.method == 'POST':
         try:
@@ -62,21 +58,25 @@ def add_supplier_page():
                     "message": "⚠️ جميع الحقول الإلزامية يجب أن تكون مكتملة وصحيحة هندسيًا."
                 }), 400
 
-            # 3. التحقق من عدم التكرار في قاعدة البيانات (خط الدفاع الثاني)
-            if username in MOCK_DB["usernames"]:
+            # 3. التحقق الفعلي من عدم التكرار في قاعدة البيانات (خط الدفاع الثاني المباشر)
+            if Supplier.query.filter_by(username=username).first():
                 return jsonify({"status": "error", "message": "اسم المستخدم هذا محجوز مسبقاً بالتشفير السيادي."}), 400
-            if identity_number in MOCK_DB["identity_numbers"]:
+            
+            if Supplier.query.filter_by(identity_number=identity_number).first():
                 return jsonify({"status": "error", "message": "رقم الوثيقة / الهوية مسجل مسبقاً في النظام."}), 400
-            if bank_acc in MOCK_DB["bank_accounts"]:
+            
+            if Supplier.query.filter_by(bank_acc=bank_acc).first():
                 return jsonify({"status": "error", "message": "رقم الحساب المالي مرتبط بمورد آخر حالياً."}), 400
 
-            # 4. معالجة رفع صورة الوثيقة (اختياري) وحفظها بأمان
+            if Supplier.query.filter_by(trade_name=trade_name).first():
+                return jsonify({"status": "error", "message": "الاسم التجاري للمنشأة مسجل مسبقاً لدينا."}), 400
+
+            # 4. معالجة رفع صورة الوثيقة وحفظها بأمان
             identity_image_path = None
             if 'identity_image' in request.files:
                 file = request.files['identity_image']
                 if file and file.filename != '' and allowed_file(file.filename):
                     filename = secure_filename(file.filename)
-                    # توليد اسم عشوائي فريد لمنع تداخل الملفات
                     unique_filename = f"doc_{secrets.token_hex(8)}_{filename}"
                     upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/identities')
                     
@@ -86,21 +86,62 @@ def add_supplier_page():
                     file.save(os.path.join(upload_folder, unique_filename))
                     identity_image_path = os.path.join(upload_folder, unique_filename)
 
-            # 5. توليد المعرفات الفريدة (التعميد السيادي اللامركزي لعام 2026)
-            # هنا يتم توليد المعرفات بشكل ديناميكي فريد لكل عملية إدخال ناجحة
-            random_suffix = secrets.randbelow(900) + 100  # رقم عشوائي بين 100 و 999
-            generated_sovereign_id = f"SUP-MAH{random_suffix}"
-            generated_wallet_code = f"WEL-MAH{random_suffix}"
+            # 5. نظام التوليد التتابعي الذكي (العداد التراكمي الفعلي)
+            # جلب إجمالي الموردين الحاليين لتوليد التسلسل القادم بأمان من قلب القاعدة
+            try:
+                current_count = Supplier.query.count()
+            except Exception:
+                current_count = 0
 
-            # 6. حفظ البيانات في قاعدة البيانات الفعلية (مثال منطقي)
-            # new_supplier = Supplier(username=username, sovereign_id=generated_sovereign_id, ...)
-            # db.session.add(new_supplier)
-            # db.session.commit()
+            next_sequence = current_count + 1
+            final_suffix = f"963{next_sequence}"
 
-            # 7. إرجاع استجابة الـ JSON الناجحة للنموذج لتشغيل الـ Modal
+            generated_sovereign_id = f"SUP-MAH{final_suffix}"
+            generated_wallet_code = f"WEL-MAH{final_suffix}"
+
+            # 6. تشفير كلمة المرور لحماية الهوية الرقمية للمورد
+            hashed_password = generate_password_hash(password)
+
+            # 7. إنشاء الكائن وحفظه في جدول الموردين (PostgreSQL)
+            new_supplier = Supplier(
+                username=username,
+                password=hashed_password,
+                sovereign_id=generated_sovereign_id,
+                wallet_code=generated_wallet_code,
+                identity_type=identity_type,
+                identity_number=identity_number,
+                identity_image=identity_image_path,
+                owner_name=owner_name,
+                trade_name=trade_name,
+                owner_phone=owner_phone,
+                shop_phone=shop_phone,
+                province=province,
+                district=district,
+                address_detail=address_detail,
+                fin_type=fin_type,
+                bank_name=bank_name,
+                bank_acc=bank_acc,
+                activity_type=activity_type,
+                status="نشط"
+            )
+            db.session.add(new_supplier)
+            
+            # 8. توليد وربط المحفظة المالية التابعة للمورد فوراً للحفاظ على حوكمة العمليات
+            new_wallet = Wallet(
+                wallet_code=generated_wallet_code,
+                supplier_id=generated_sovereign_id,  # أو ربطها بالـ ID الفردي حسب هيكلة الموديل لديك
+                balance=0.0,
+                status="نشطة"
+            )
+            db.session.add(new_wallet)
+
+            # تنفيذ الحفظ النهائي والتعميد في قاعدة البيانات
+            db.session.commit()
+
+            # 9. إرجاع استجابة الـ JSON الناجحة لتشغيل الـ Modal في الواجهة الأمامية
             return jsonify({
                 "status": "success",
-                "message": "تم إتمام التعميد والأرشفة السيادية بنجاح.",
+                "message": "تم الحفظ الفعلي، التعميد، والأرشفة السيادية بنجاح مطلق.",
                 "data": {
                     "sovereign_id": generated_sovereign_id,
                     "wallet_code": generated_wallet_code
@@ -108,14 +149,13 @@ def add_supplier_page():
             }), 200
 
         except Exception as e:
-            # معالجة أي خطأ داخلي غير متوقع في السيرفر السحابي
+            db.session.rollback()  # تراجع فوراً في حال حدوث خطأ لمنع تلوث قاعدة البيانات
             return jsonify({
                 "status": "error",
                 "message": f"فشل داخلي في السيرفر السحابي (500): {str(e)}"
             }), 500
 
     # في حالة طلب الصفحة عبر (GET)
-    # نقوم بتمرير قاموس الـ endpoints فارغًا أو مهيأً لتفادي أي خطأ BuildError في قوالب Jinja2
     endpoints_config = {
         "add_supplier": url_for('admin_suppliers.add_supplier_page'),
         "check_duplicate": "/admin/suppliers/check-duplicate"
@@ -131,7 +171,7 @@ def add_supplier_page():
 @admin_suppliers_bp.route('/admin/suppliers/check-duplicate', methods=['GET'])
 def check_duplicate():
     """
-    نقطة فحص التكرار اللحظية (API Endpoint) أثناء الكتابة في الواجهة الأمامية (Debounce Check).
+    نقطة فحص التكرار اللحظية الفعالة (Live DB Debounce Check) عبر الـ API.
     """
     check_type = request.args.get('type', '')
     value = request.args.get('value', '').strip()
@@ -141,16 +181,16 @@ def check_duplicate():
 
     exists = False
 
-    # فحص القيمة بناءً على نوع الحقل الممرر من الـ Dataset
+    # الفحص الفعلي المباشر داخل الجداول وعزل المدخلات المتطابقة
     if check_type == 'username':
-        exists = value in MOCK_DB["usernames"]
+        exists = Supplier.query.filter_by(username=value).first() is not None
     elif check_type == 'identity_number':
-        exists = value in MOCK_DB["identity_numbers"]
+        exists = Supplier.query.filter_by(identity_number=value).first() is not None
     elif check_type == 'owner_phone':
-        exists = value in MOCK_DB["owner_phones"]
+        exists = Supplier.query.filter_by(owner_phone=value).first() is not None
     elif check_type == 'trade_name':
-        exists = value in MOCK_DB["trade_names"]
+        exists = Supplier.query.filter_by(trade_name=value).first() is not None
     elif check_type == 'bank_acc':
-        exists = value in MOCK_DB["bank_accounts"]
+        exists = Supplier.query.filter_by(bank_acc=value).first() is not None
 
     return jsonify({"exists": bool(exists)})
