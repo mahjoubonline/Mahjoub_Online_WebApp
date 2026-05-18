@@ -38,14 +38,23 @@ def create_app():
             db.create_all()
             
             # 🎯 محرك التصحيح التلقائي السيادي للهيكل المالي وتوافق المعرف النصي (SUP-MAH9631)
-            # 1. كسر القيد القديم مؤقتاً
+            # 1. كسر القيد القديم مؤقتاً لشرط المفتاح الأجنبي
             db.session.execute(db.text("ALTER TABLE supplier_wallets DROP CONSTRAINT IF EXISTS supplier_wallets_supplier_id_fkey;"))
-            # 2. تحويل العمود الإجباري إلى نوع نصي ليتطابق مع الـ sovereign_id
+            
+            # 2. تحويل العمود الإجباري إلى نوع نصي VARCHAR ليتطابق مع الـ sovereign_id المفرز
             db.session.execute(db.text("ALTER TABLE supplier_wallets ALTER COLUMN supplier_id TYPE VARCHAR(50);"))
-            # 3. التأكد من حقن الأعمدة التأمينية الأخرى
+            
+            # 3. التأكد من حقن الأعمدة التأمينية للهيكل الأساسي إن لم تكن متواجدة
             db.session.execute(db.text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS wallet_code VARCHAR(50) UNIQUE;"))
             db.session.execute(db.text("ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'نشطة';"))
-            # 4. إعادة بناء المفتاح الأجنبي لربط المحفظة بالمورد بشكل سيادي مستقر
+            
+            # 🛡️ التطهير الاستثنائي الحاسم: إسقاط الحقول الثابتة القديمة من قاعدة البيانات السحابية 
+            # لتعمل الخصائص الحسابية الديناميكية (@property) المنفذة في البايثون بحرية كاملة وينتهي خطأ الـ NotNullViolation
+            db.session.execute(db.text("ALTER TABLE supplier_wallets DROP COLUMN IF EXISTS yer_available;"))
+            db.session.execute(db.text("ALTER TABLE supplier_wallets DROP COLUMN IF EXISTS sar_available;"))
+            db.session.execute(db.text("ALTER TABLE supplier_wallets DROP COLUMN IF EXISTS usd_available;"))
+            
+            # 4. إعادة بناء المفتاح الأجنبي لربط المحفظة بالمورد بشكل سيادي مستقر ومتوافق نصياً
             db.session.execute(db.text("""
                 ALTER TABLE supplier_wallets 
                 ADD CONSTRAINT supplier_wallets_supplier_id_fkey 
@@ -53,7 +62,7 @@ def create_app():
             """))
             
             db.session.commit()
-            print("🚀 سيادة وحوكمة: تم تحديث هيكل حقول المحفظة السيادية وتعديل أنواع البيانات تلقائياً بنجاح تنفيذي مطلق.")
+            print("🚀 سيادة وحوكمة: تم تطهير حقول الموازين الثابتة وإقرار البنية الرقمية النصية للمحافظ بنجاح تنفيذي مطلق.")
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"❌ تعذر توليد أو تحديث الجداول برمجياً أثناء الإقلاع: {str(e)}")
