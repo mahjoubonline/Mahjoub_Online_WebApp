@@ -117,12 +117,17 @@ class Supplier(db.Model):
 
     def to_dict(self):
         """تحويل البيانات إلى كود جيسون جاهز لإرساله لواجهات العرض والمودال"""
+        # اشتقاق الرقم التسلسلي لإظهار كود المحفظة التابع بدقة بصيغة WEL المتناسقة
+        serial_num = self.sovereign_id.split('MAH963')[-1] if self.sovereign_id and 'MAH963' in self.sovereign_id else str(self.id)
+        
         return {
             "id": self.id,
-            "sovereign_id": self.sovereign_id,
+            "sovereign_id": self.sovereign_id,                            # المعرف السيادي الأساسي: SUP-MAH9631
+            "wallet_code": f"WEL-MAH963{serial_num}",                      # كود المحفظة المالي المستنتج والموحد: WEL-MAH9631
             "username": self.username,
             "owner_name": self.owner_name,
             "trade_name": self.trade_name,
+            "shop_phone": self.shop_phone,
             "rank_grade": self.rank_grade,
             "status": self.status,
             "state_title": self.state_title  # ستخرج للفرونت إند مثل: [حَصين] أو [مُطلق]
@@ -138,7 +143,7 @@ class Supplier(db.Model):
 def auto_generate_sovereign_id(mapper, connection, target):
     """
     دالة مراقبة (Event Listener) تعمل تلقائياً قبل الـ Insert لحساب التسلسل
-    السيادي بدون تكرار أو تداخل حتى في حالات الضغط العالي على السيرفر.
+    السيادي الموحد للموردين بدون تكرار أو تداخل.
     """
     # استعلام لجلب آخر مورد تم تسجيله في النظام بناءً على الـ ID التلقائي
     last_supplier = target.query.order_by(Supplier.id.desc()).first()
@@ -146,7 +151,7 @@ def auto_generate_sovereign_id(mapper, connection, target):
     if last_supplier and last_supplier.sovereign_id:
         try:
             # فصل المعرف الحالي لاستخراج الرقم التسلسلي الأخير بعد بادئة التشفير
-            # صيغة المعرف: SUP-WEL-MAH9631, SUP-WEL-MAH9632 ... إلخ
+            # صيغة المعرف المستهدفة: SUP-MAH9631، SUP-MAH9632 ... إلخ
             parts = last_supplier.sovereign_id.split('MAH963')
             last_num = int(parts[-1])
             next_num = last_num + 1
@@ -157,8 +162,8 @@ def auto_generate_sovereign_id(mapper, connection, target):
         # إذا كان الجدول فارغاً تماماً (أول مورد في تاريخ المنصة)
         next_num = 1
 
-    # تركيب البنية السيادية الموحدة للمعرف وحقنها في الحقل فوراً قبل إتمام الحفظ
-    target.sovereign_id = f"SUP-WEL-MAH963{next_num}"
+    # تركيب البنية السيادية الفخمة الموحدة وحقنها في الحقل المخصص مباشرة
+    target.sovereign_id = f"SUP-MAH963{next_num}"
 
 
 # ربط الدالة بحدث "قبل الإدخال" لجدول الموردين بشكل رسمي صارم
