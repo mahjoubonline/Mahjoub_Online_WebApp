@@ -77,9 +77,7 @@ def add_supplier_page():
             activity_type = request.form.get('activity_type', '').strip()
 
             # ==================== التحديث السيادي الجديد لعام 2026 ====================
-            # استقبال الرتبة والمستوى التشغيلي من الواجهة (ريادي، سيادي، ملكي)
             user_rank = request.form.get('user_rank', 'ريادي').strip()
-            # حقن التفعيل التلقائي الفوري للحساب بمجرد الاعتماد والضغط من الإدارة العليا
             system_status = 'active'
             # =========================================================================
 
@@ -97,7 +95,6 @@ def add_supplier_page():
                     }), 400
 
             # 2. فحص الحقول السبعة بشكل صارم في الخلفية قبل إتمام الحفظ لمنع تجاوز التكرار
-            # 🛡️ تم تعديل الفحص للاستعلام عن الـ ID فقط لضمان عدم حدوث تعارض مع أعمدة مفقودة
             check_fields = {
                 "username": (db.session.query(Supplier.id).filter_by(username=username).first(), "اسم المستخدم (Login)"),
                 "identity_number": (db.session.query(Supplier.id).filter_by(identity_number=identity_number).first(), "رقم الوثيقة / الهوية"),
@@ -135,29 +132,19 @@ def add_supplier_page():
                 bank_acc=bank_acc,
                 activity_type=activity_type,
                 registration_source='لوحة التحكم',
-                rank_grade=user_rank,         # حفظ الرتبة الفخمة المختارة
-                status=system_status,         # تفعيل فوري ومطلق في حقل النظام الأساسي
+                rank_grade=user_rank,         
+                status=system_status,         
                 created_by_id=current_user.id if hasattr(current_user, 'id') else None
             )
 
-            # 4. تعميد المورد مؤقتاً في الجلسة لتوليد المعرفات والحقول التلقائية
+            # 4. تعميد المورد مؤقتاً في الجلسة لتوليد الـ ID المتناسق رقمياً
             db.session.add(new_supplier)
-            db.session.flush()  # يسحب المعرف السيادي الفريد والـ ID المتناسق رقمياً
+            db.session.flush()  
 
-            # 5. 💳 محرك المحفظة الموحد والمطهر المتوافق مع ملف الـ Model بنسبة 100%
-            # تم التخلص نهائياً من حقول الـ wallet_id و wallet_number لعدم وجودها في جدول قاعدة البيانات الحية
+            # 5. 💳 محرك المحفظة النظيف (توليد المحفظة بالاعتماد على القيم الافتراضية لقاعدة البيانات)
             insert_query = db.text(dedent("""
-                INSERT INTO supplier_wallets (
-                    supplier_id, created_at, updated_at,
-                    yer_total, yer_available, yer_pending, yer_withdrawn,
-                    sar_total, sar_available, sar_pending, sar_withdrawn,
-                    usd_total, usd_available, usd_pending, usd_withdrawn
-                ) VALUES (
-                    :supplier_id, NOW(), NOW(),
-                    0.0, 0.0, 0.0, 0.0,
-                    0.0, 0.0, 0.0, 0.0,
-                    0.0, 0.0, 0.0, 0.0
-                )
+                INSERT INTO supplier_wallets (supplier_id) 
+                VALUES (:supplier_id)
             """))
 
             db.session.execute(insert_query, {"supplier_id": new_supplier.id})
@@ -244,8 +231,7 @@ def check_duplicate():
 def sync_legacy_wallets():
     """
     سكربت سيادي حوكمي نهائي ومطور 100%.
-    يقوم بمزامنة وحقن المحافظ للموردين القدامى بناءً على البنية الحقيقية والنظيفة لجدول PostgreSQL.
-    يتفادى تماماً الاستعلام عن أي أعمدة مفقودة لتأمين سلامة واستقرار السيرفر الحية.
+    يقوم بمزامنة وحقن المحافظ للموردين القدامى بناءً على البنية الحقيقية الحية.
     """
     if not hasattr(current_user, 'id'):
         return jsonify({"status": "error", "message": "غير مصرح لك بتنفيذ هذه العملية السيادية."}), 403
@@ -270,20 +256,11 @@ def sync_legacy_wallets():
                 {"sup_id": sup_id}
             ).fetchone()
 
-            # 3. إذا كان المورد لا يملك محفظة، يتم حقنها فوراً بالأرقام النظيفة والصحيحة المتوافقة مع الموديل
+            # 3. إذا كان المورد لا يملك محفظة، يتم حقنها فوراً بالاعتماد على القيم الافتراضية
             if not check_query:
                 insert_query = db.text(dedent("""
-                    INSERT INTO supplier_wallets (
-                        supplier_id, created_at, updated_at,
-                        yer_total, yer_available, yer_pending, yer_withdrawn,
-                        sar_total, sar_available, sar_pending, sar_withdrawn,
-                        usd_total, usd_available, usd_pending, usd_withdrawn
-                    ) VALUES (
-                        :supplier_id, NOW(), NOW(),
-                        0.0, 0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.0,
-                        0.0, 0.0, 0.0, 0.0
-                    )
+                    INSERT INTO supplier_wallets (supplier_id) 
+                    VALUES (:supplier_id)
                 """))
 
                 # تنفيذ استعلام الحقن المباشر والتثبيت اللحظي
@@ -294,7 +271,7 @@ def sync_legacy_wallets():
         if created_count > 0:
             return jsonify({
                 "status": "success",
-                "message": f"تمت المزامنة بنجاح سيادي مطلق، وتم إنشاء وتوليد عدد ({created_count}) محفظة مالية للموردين القدامى وتصفير حسابات العملات الثلاث (YER, SAR, USD)."
+                "message": f"تمت المزامنة بنجاح سيادي مطلق، وتم إنشاء وتوليد عدد ({created_count}) محفظة مالية للموردين القدامى بنظام التصفير التلقائي لقاعدة البيانات."
             }), 200
         else:
             return jsonify({
