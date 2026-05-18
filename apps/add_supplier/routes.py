@@ -81,33 +81,29 @@ def add_supplier_page():
                 if file and file.filename != '':
                     if allowed_file(file.filename):
                         filename = secure_filename(file.filename)
-                        # توليد اسم فريد غير قابل للتخمين والاصطدام التكراري
                         unique_filename = f"doc_{secrets.token_hex(8)}_{filename}"
                         
-                        # تحديد المجلد بشكل ديناميكي آمن متوافق مع سيرفرات التشغيل الفعلي
                         base_upload_folder = current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, 'static', 'uploads', 'identities'))
-                        
                         if not os.path.exists(base_upload_folder):
                             os.makedirs(base_upload_folder, exist_ok=True)
                         
-                        # حفظ الملف ميكانيكياً في السيرفر
                         file.save(os.path.join(base_upload_folder, unique_filename))
-                        # حفظ المسار النسبي الآمن للاستدعاء البرمجي المستقبلي في قاعدة البيانات
                         identity_image_db_path = f"uploads/identities/{unique_filename}"
                     else:
                         return jsonify({"status": "error", "message": "⚠️ صيغة الملف المرفوع غير مدعومة سيادياً، يرجى رفع صورة أو ملف PDF."}), 400
 
-            # 5. نظام التوليد التتابعي الذكي (حساب آمن للعداد لتفادي التصادم الهيكلي)
+            # 5. نظام التوليد التتابعي الذكي (العداد المتغير: 1، 2، 3...)
             try:
                 current_count = db.session.query(Supplier).count()
             except Exception:
                 current_count = 0
 
-            next_sequence = current_count + 1
-            final_suffix = f"963{next_sequence}"
+            # حساب التسلسل القادم مباشرة (المورد الأول يعطي 0 + 1 = 1)
+            next_id_sequence = current_count + 1
 
-            generated_sovereign_id = f"SUP-MAH{final_suffix}"
-            generated_wallet_code = f"WEL-MAH{final_suffix}"
+            # دمج البادئة الثابتة تماماً مع المتغير التتابعي الخالص لإنتاج الهوية الرقمية والمحفظة
+            generated_sovereign_id = f"SUP-MAH963{next_id_sequence}"
+            generated_wallet_code = f"WEL-MAH963{next_id_sequence}"
 
             # 6. تشفير كلمة المرور لحماية الهوية الرقمية للمورد
             hashed_password = generate_password_hash(password)
@@ -136,7 +132,7 @@ def add_supplier_page():
             )
             db.session.add(new_supplier)
             
-            # 8. توليد وربط المحفظة المالية التابعة للمورد فوراً للحفاظ على حوكمة العمليات ومبدأ التكاملية
+            # 8. توليد وربط المحفظة المالية التابعة للمورد فوراً (رصيد 0 وحالة نشطة)
             new_wallet = Wallet(
                 wallet_code=generated_wallet_code,
                 supplier_id=generated_sovereign_id,  
