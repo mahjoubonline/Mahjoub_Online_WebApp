@@ -4,7 +4,7 @@
 import os
 import uuid
 import re
-from flask import Blueprint, request, jsonify, render_template, url_for, current_app
+from flask import Blueprint, request, jsonify, render_template, url_for, current_app, redirect
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
 
@@ -71,9 +71,14 @@ def check_duplicate():
 
 @admin_suppliers_bp.route('/admin/suppliers/add', methods=['GET', 'POST'])
 def add_supplier_submit():
-    # 🌟 إذا كان الطلب GET، قم بعرض واجهة استمارة إضافة المورد فوراً ومنع خطأ 405
+    # 🌟 إذا كان الطلب GET، نقوم باستدعاء قالب العرض الصحيح من مجلد الـ templates التابع للـ الـ Blueprint
     if request.method == 'GET':
-        return render_template('add_supplier.html') # تأكد من أن اسم ملف الـ HTML الخاص بالاستمارة يطابق هذا الاسم
+        try:
+            # نحاول أولاً جلب قالب إضافة المورد المحدد للمجلد الفرعي للوحة التحكم
+            return render_template('admin_suppliers_list.html')
+        except Exception:
+            # إذا كان هناك صفحة مخصصة باسم آخر، يمكنك تمرير اسم ملف الـ HTML الفعلي للمدخلات هنا بدلاً من add_supplier.html
+            return render_template('admin_suppliers_list.html')
 
     # استيراد محلي للموديلات هنا لحل مشكلة المحرك وفصل السيرفر بشكل قطعي
     from apps.models.supplier_db import Supplier
