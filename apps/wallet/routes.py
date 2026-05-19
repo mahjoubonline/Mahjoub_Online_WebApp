@@ -1,142 +1,156 @@
-# coding: utf-8
-# 💳 محرك الحوكمة المالية والمسارات السيادية للمحافظ اللحظية - منصة محجوب أونلاين 2026
+{% extends "admin_base.html" %}
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
-from apps import db
-from apps.models.supplier_db import Supplier
+{% block title %}حوكمة وفحص المحافظ | محجوب أونلاين{% endblock %}
 
-# 🛡️ استدعاء آمن ومحصن للموديلات لمنع الانهيار الكلي للسيرفر (Crash-Proof)
-try:
-    from apps.models.wallet_db import Wallet
-except ImportError:
-    class Wallet(object):
-        query = None
+{% block header_title %}الفضاء المالي وحوكمة الخزائن{% endblock %}
 
-WalletTransaction = None
-try:
-    import apps.models.wallet_db as w_model
-    if hasattr(w_model, 'WalletTransaction'):
-        WalletTransaction = getattr(w_model, 'WalletTransaction')
-    elif hasattr(w_model, 'WalletTransactions'):
-        WalletTransaction = getattr(w_model, 'WalletTransactions')
-except Exception:
-    pass
+{% block content %}
+<div class="container-fluid py-4" style="direction: rtl;">
+    
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white shadow-sm border-0" style="background: linear-gradient(135deg, #2e7d32, #1b5e20); border-radius: 15px;">
+                <div class="card-body">
+                    <h6>إجمالي الخزينة (YER)</h6>
+                    <h3 class="fw-bold" id="total_yer">{{ "{:,.2f}".format(totals.total_yer or 0) }} ﷼</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white shadow-sm border-0" style="background: linear-gradient(135deg, #e65100, #bf360c); border-radius: 15px;">
+                <div class="card-body">
+                    <h6>إجمالي الخزينة (SAR)</h6>
+                    <h3 class="fw-bold" id="total_sar">{{ "{:,.2f}".format(totals.total_sar or 0) }} ﷼</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white shadow-sm border-0" style="background: linear-gradient(135deg, #1565c0, #0d47a1); border-radius: 15px;">
+                <div class="card-body">
+                    <h6>إجمالي الخزينة (USD)</h6>
+                    <h3 class="fw-bold" id="total_usd">$ {{ "{:,.2f}".format(totals.total_usd or 0) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
 
-admin_wallet = Blueprint('admin_wallet', __name__, template_folder='templates')
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 15px; background: #fff;">
+        <div class="card-body p-4">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-0 text-secondary" style="border-radius: 0 12px 12px 0;">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" id="liveSearchInput" class="form-control bg-light border-0 py-2" placeholder="اكتب الآن للبحث اللحظي... (اسم المورد، كود المحفظة، المعرف السيادي)" style="border-radius: 12px 0 0 12px; font-size: 0.95rem;">
+            </div>
+        </div>
+    </div>
 
-@admin_wallet.route('/admin/wallet/overview', methods=['GET'])
-@login_required
-def overview():
-    """ الشاشة الرئيسية لفحص وجرد الحسابات المادية """
-    if current_user.role not in ['Owner', 'Admin']:
-        flash('غير مسموح لك بامتلاك صلاحية دخول الفضاء المالي.', 'danger')
-        return redirect(url_for('admin_dashboard.dashboard_home'))
-
-    # جلب كافة المحافظ أولياً لعرضها في الجدول
-    wallets = []
-    if Wallet.query is not None:
-        try:
-            wallets = Wallet.query.join(Supplier, Wallet.supplier_id == Supplier.id).all()
-        except Exception as e:
-            print(f"📡 تنبيه حوكمة المحافظ: جاري مواءمة الجداول الهيكلية: {e}")
-
-    return render_template('admin/overview.html', wallets=wallets)
-
-
-@admin_wallet.route('/admin/wallet/search_api', methods=['GET'])
-@login_required
-def search_api():
-    """ واجهة برمجية فورية (API) للبحث اللحظي وجلب بيانات المحافظ المحدثة """
-    if current_user.role not in ['Owner', 'Admin']:
-        return jsonify({"status": "error", "message": "صلاحية مرفوضة"}), 403
-
-    search_query = request.args.get('query', '').strip()
-    results = []
-
-    if Wallet.query is None:
-        return jsonify({"status": "success", "wallets": []})
-
-    try:
-        query = Wallet.query.join(Supplier, Wallet.supplier_id == Supplier.id)
+    <div class="card shadow-sm border-0" style="border-radius: 15px; background: #fff; overflow: hidden;">
+        <div class="card-header text-white p-3 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, var(--royal-purple), var(--deep-black));">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-vault me-2"></i> سجل الخزائن والأرصدة الثلاثية</h5>
+            <span class="badge bg-warning text-dark fw-bold px-3 py-2" style="border-radius: 30px;" id="liveStatusBadge">تحديث حي مباشر</span>
+        </div>
         
-        if search_query:
-            query = query.filter(
-                (Supplier.trade_name.like(f'%{search_query}%')) |
-                (Supplier.sovereign_id.like(f'%{search_query}%')) |
-                (Wallet.wallet_code.like(f'%{search_query}%'))
-            )
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead class="table-light text-secondary fw-bold">
+                    <tr>
+                        <th>كود المحفظة</th>
+                        <th>الشريك (المورد)</th>
+                        <th style="color: #2e7d32;">YER</th>
+                        <th style="color: #e65100;">SAR</th>
+                        <th style="color: #1565c0;">USD</th>
+                        <th>إجراءات المالك السيادية</th>
+                    </tr>
+                </thead>
+                <tbody id="walletsTableBody" style="font-weight: 600;">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="adjustBalanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="border-radius: 20px;">
+            <div class="modal-header text-white p-3" style="background: linear-gradient(135deg, var(--royal-purple), var(--deep-black));">
+                <h5 class="modal-title fw-bold"><i class="fas fa-tools me-2"></i> سلطة الضبط المالي المباشر</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="/admin/wallet/adjust">
+                <input type="hidden" name="wallet_id" id="modal_wallet_id">
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-3">ضبط أرصدة المحفظة: <strong class="text-dark" id="modal_wallet_code"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">العملة المستهدفة</label>
+                        <select name="currency" class="form-select py-2" required>
+                            <option value="YER">الريال اليمني (YER)</option>
+                            <option value="SAR">الريال السعودي (SAR)</option>
+                            <option value="USD">الدولار الأمريكي (USD)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">نوع العملية السيادية</label>
+                        <select name="action_type" class="form-select py-2" required>
+                            <option value="deposit" class="text-success">إيداع / شحن رصيد (➕)</option>
+                            <option value="withdrawal" class="text-danger">سحب قسري / خصم رصيد (➖)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">المبلغ</label>
+                        <input type="number" step="0.01" name="amount" class="form-control py-2" placeholder="0.00" required>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 p-3">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn text-white px-4 fw-bold" style="background: var(--royal-purple);">تنفيذ الفرمان المالي</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function formatMoney(n) { return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(n); }
+
+    function performSearch() {
+        const query = document.getElementById('liveSearchInput').value;
+        const statusBadge = document.getElementById('liveStatusBadge');
+        statusBadge.innerHTML = '<i class="fas fa-sync fa-spin me-1"></i>';
         
-        wallets = query.all()
-        
-        for w in wallets:
-            results.append({
-                "id": w.id,
-                "wallet_code": w.wallet_code,
-                "trade_name": w.supplier.trade_name if w.supplier else 'غير معرف',
-                "sovereign_id": w.supplier.sovereign_id if w.supplier else '-',
-                "yer_balance": float(getattr(w, 'yer_balance', 0.0)),
-                "sar_balance": float(getattr(w, 'sar_balance', 0.0)),
-                "usd_balance": float(getattr(w, 'usd_balance', 0.0))
-            })
-    except Exception as e:
-        print(f"❌ خطأ أثناء البحث اللحظي: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        fetch(`/admin/wallet/search_api?query=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('walletsTableBody');
+                tbody.innerHTML = "";
+                data.wallets.forEach(w => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><span class="badge bg-light text-dark border p-2">${w.wallet_code}</span></td>
+                            <td><div class="fw-bold">${w.trade_name}</div><small class="text-muted">ID: ${w.sovereign_id}</small></td>
+                            <td class="text-success">${formatMoney(w.yer_balance)}</td>
+                            <td class="text-warning">${formatMoney(w.sar_balance)}</td>
+                            <td class="text-primary">$${formatMoney(w.usd_balance)}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-success" onclick="openAdjustModal('${w.id}', '${w.wallet_code}', 'deposit')"><i class="fas fa-plus"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="openAdjustModal('${w.id}', '${w.wallet_code}', 'withdrawal')"><i class="fas fa-minus"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
+                });
+                statusBadge.innerHTML = "تحديث حي مباشر";
+            });
+    }
 
-    return jsonify({"status": "success", "wallets": results})
+    function openAdjustModal(id, code, type) {
+        document.getElementById('modal_wallet_id').value = id;
+        document.getElementById('modal_wallet_code').innerText = code;
+        document.querySelector('select[name="action_type"]').value = type;
+        new bootstrap.Modal(document.getElementById('adjustBalanceModal')).show();
+    }
 
-
-@admin_wallet.route('/admin/wallet/adjust', methods=['POST'])
-@login_required
-def adjust_balance():
-    """ سلطة الضبط المباشر للمالك لتعديل وحفظ الأرصدة الثلاثية """
-    if current_user.role != 'Owner':
-        flash('هذا الإجراء يتطلب سلطة المالك السيادية المطلقة.', 'danger')
-        return redirect(url_for('admin_wallet.overview'))
-
-    wallet_id = request.form.get('wallet_id')
-    currency = request.form.get('currency')  
-    action_type = request.form.get('action_type')  
-    amount_str = request.form.get('amount', '0')
-
-    try:
-        amount = float(amount_str)
-        if amount <= 0:
-            flash('يجب أن تكون القيمة المالية أكبر من صفر.', 'warning')
-            return redirect(url_for('admin_wallet.overview'))
-            
-        wallet = Wallet.query.get(wallet_id)
-        if not wallet:
-            flash('المحفظة المستهدفة غير مسجلة في الفضاء المالي.', 'danger')
-            return redirect(url_for('admin_wallet.overview'))
-
-        # منطق المعالجة المالية
-        if currency == 'YER':
-            current_bal = float(getattr(wallet, 'yer_balance', 0.0))
-            wallet.yer_balance = (current_bal + amount) if action_type == 'deposit' else (current_bal - amount)
-        elif currency == 'SAR':
-            current_bal = float(getattr(wallet, 'sar_balance', 0.0))
-            wallet.sar_balance = (current_bal + amount) if action_type == 'deposit' else (current_bal - amount)
-        elif currency == 'USD':
-            current_bal = float(getattr(wallet, 'usd_balance', 0.0))
-            wallet.usd_balance = (current_bal + amount) if action_type == 'deposit' else (current_bal - amount)
-        
-        # توثيق العملية في سجل الحركات (Audit Log)
-        if WalletTransaction is not None:
-            tx_log = WalletTransaction(
-                wallet_id=wallet.id,
-                transaction_type=action_type,
-                currency=currency,
-                amount=amount,
-                description=f"تعديل إداري من المالك: {action_type} بمبلغ {amount} {currency}"
-            )
-            db.session.add(tx_log)
-
-        db.session.commit()
-        flash(f'تم تنفيذ الفرمان المالي بنجاح على المحفظة {wallet.wallet_code}.', 'success')
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f'تعذر تنفيذ الفرمان المالي: {e}', 'danger')
-
-    return redirect(url_for('admin_wallet.overview'))
+    document.getElementById('liveSearchInput').addEventListener('input', performSearch);
+    document.addEventListener('DOMContentLoaded', performSearch);
+</script>
+{% endblock %}
