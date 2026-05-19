@@ -7,12 +7,11 @@ import re
 from flask import Blueprint, request, jsonify, render_template, url_for, current_app
 from werkzeug.utils import secure_filename
 
-# 🎯 التعديل الحاسم لكسر الـ Circular Import والتوافق مع بنية النواة الجديدة:
+# 🎯 التعديل الحاسم لكسر الـ Circular Import والتوافق التام مع بوابة النماذج الموحدة:
 from apps import db 
-from apps.models.supplier_db import Supplier
-from apps.models.wallet_db import SupplierWallet  # مطابقة اسم الموديل الفعلي لجدول 'supplier_wallets'
+from apps.models import Supplier, Wallet  # الاستيراد المباشر والآمن بعد ضبط ملف الـ __init__.py المركزي
 
-# تعميد البلوبرينت بالاسم المطابق تماماً لما تم استدعاؤه في الـ __init__.py
+# تعميد البلوبرينت بالاسم المطابق تماماً لما تم استدعاؤه في الـ __init__.py للتطبيق
 admin_suppliers_bp = Blueprint('add_supplier', __name__, template_folder='templates')
 
 # الامتدادات المسموح بها لصور الوثائق والتأمين الحوكمي
@@ -151,9 +150,9 @@ def add_supplier_submit():
         db.session.add(new_supplier)
         db.session.flush()  # حجز الكيان لاستخراج المعرف الفريد وتأمين عملية الربط المالي الفوري
 
-        # 6. تعميد وإنشاء المحفظة التابعة المرتبطة ماليًا بالمورد الجديد عبر الـ sovereign_id
-        new_wallet = SupplierWallet(
-            supplier_id=final_sovereign_id,  # الاعتماد المباشر على الربط النصي الحوكمي الجديد
+        # 6. تعميد وإنشاء المحفظة الموحدة التابعة المرتبطة ماليًا بالمورد الجديد عبر الـ sovereign_id
+        new_wallet = Wallet(
+            supplier_id=final_sovereign_id,  # الاعتماد المباشر على كلاس Wallet الموحد والربط الحوكمي المستقر
             wallet_code=final_wallet_code,
             status='نشطة'
         )
@@ -165,7 +164,7 @@ def add_supplier_submit():
         # 7. الاستجابة بالـ JSON المتوافق تماماً مع ميكانيكية المودال لإتمام النسخ بنجاح
         return jsonify({
             'status': 'success',
-            'message': 'تم تعميد المورد بنجاح في قاعدة البيانات السيادية.',
+            'message': 'تم تعميد المورد بنجاح في قاعدة البيانات السيادية وصناعة المحفظة الموحدة.',
             'data': {
                 'sovereign_id': final_sovereign_id,
                 'wallet_code': final_wallet_code
