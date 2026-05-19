@@ -2,67 +2,68 @@
 
 {% block title %}مركز القيادة والسيادة | محجوب أونلاين{% endblock %}
 
-{% block header_title %}لوحة مراقبة النظام والسيطرة{% endblock %}
+{% block header_title %}مركز المراقبة والتحكم{% endblock %}
 
 {% block content %}
-<style>
-    :root { --royal-purple: #632c8f; --deep-black: #08020d; --mahjoub-gold: #D4AF37; --transition: all 0.3s ease; }
-    .sovereign-card { background: #ffffff; border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(99, 44, 143, 0.05); transition: var(--transition); overflow: hidden; position: relative; }
-    .sovereign-card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(99, 44, 143, 0.15); }
-    .card-icon-box { width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-    .bg-royal { background: linear-gradient(135deg, var(--royal-purple), #8a44c4); color: #ffffff; }
-    .bg-gold-glow { background: linear-gradient(135deg, #D4AF37, #f3d267); color: #08020d; }
-    .bg-dark-engine { background: linear-gradient(135deg, #1a0c26, var(--deep-black)); color: #ffffff; }
-    .pulse-indicator { width: 12px; height: 12px; background-color: #2ecc71; border-radius: 50%; display: inline-block; animation: pulseGlow 1.5s infinite; }
-    @keyframes pulseGlow { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
-</style>
-
 <div class="container-fluid py-2 animate__animated animate__fadeIn">
+    
     <div class="row mb-4 align-items-center">
         <div class="col-md-8">
-            <h2 class="fw-black" style="color: var(--deep-black); font-weight: 900;">
-                مرحباً بالقائد والسيّد <span style="color: var(--royal-purple);">{{ owner.username if owner else 'علي محجوب' }}</span>
+            <h2 class="fw-black" style="color: #08020d; font-weight: 900;">
+                مرحباً بالقائد <span style="color: #632c8f;">{{ current_user.username }}</span>
             </h2>
             <p class="text-muted mb-0">مركز الحوكمة والتحليل الرقمي الموسع لمنصة محجوب أونلاين.</p>
         </div>
-        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <div class="col-md-4 text-md-end">
             <div class="d-inline-flex align-items-center bg-white px-4 py-2 rounded-pill shadow-sm">
-                <span class="pulse-indicator me-2"></span>
-                <span class="small fw-bold text-dark">حالة محرك الخادم: {{ stats.server_status if stats else 'Online' }}</span>
+                <span class="text-success me-2">●</span>
+                <span class="small fw-bold text-dark">النظام يعمل بكفاءة كاملة</span>
             </div>
         </div>
     </div>
 
     <div class="row g-4 mb-5">
         <div class="col-xl-3 col-md-6">
-            <div class="card sovereign-card p-4">
+            <div class="card p-4 rounded-4 border-0 shadow-sm">
                 <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-muted d-block mb-1 fw-bold">إجمالي الشركاء</span><h3 class="fw-bold mb-0">{{ stats.total_suppliers if stats else 0 }}</h3></div>
-                    <div class="card-icon-box bg-royal"><i class="fas fa-handshake"></i></div>
+                    <div>
+                        <span class="text-muted d-block mb-1 fw-bold">إجمالي الشركاء</span>
+                        <h3 class="fw-bold mb-0">{{ stats.total_suppliers }}</h3>
+                    </div>
+                    <div class="p-3 rounded-3 bg-light text-primary"><i class="fas fa-handshake fs-4"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
-            <div class="card sovereign-card p-4">
+            <div class="card p-4 rounded-4 border-0 shadow-sm">
                 <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-muted d-block mb-1 fw-bold">العمليات القائمة</span><h3 class="fw-bold mb-0">{{ stats.active_orders if stats else 0 }}</h3></div>
-                    <div class="card-icon-box bg-gold-glow"><i class="fas fa-boxes-stacked"></i></div>
+                    <div>
+                        <span class="text-muted d-block mb-1 fw-bold">العمليات القائمة</span>
+                        <h3 class="fw-bold mb-0">{{ stats.active_orders }}</h3>
+                    </div>
+                    <div class="p-3 rounded-3 bg-light text-warning"><i class="fas fa-boxes-stacked fs-4"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
-            <div class="card sovereign-card p-4">
+            <div class="card p-4 rounded-4 border-0 shadow-sm">
                 <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-muted d-block mb-1 fw-bold">سلامة البيئة</span><h3 class="fw-bold mb-0 text-success">{{ stats.system_health if stats else '100%' }}</h3></div>
-                    <div class="card-icon-box bg-dark-engine"><i class="fas fa-shield-halved"></i></div>
+                    <div>
+                        <span class="text-muted d-block mb-1 fw-bold">سلامة البيئة</span>
+                        <h3 class="fw-bold mb-0 text-success">{{ stats.system_health }}</h3>
+                    </div>
+                    <div class="p-3 rounded-3 bg-light text-success"><i class="fas fa-shield-halved fs-4"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
-            <div class="card sovereign-card p-4" style="background: linear-gradient(135deg, var(--deep-black) 0%, #1e0f2d 100%); color: white;">
+            <div class="card p-4 rounded-4 border-0 shadow-sm bg-dark text-white">
                 <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-white-50 d-block mb-1 fw-bold">الصلاحية</span><h4 class="fw-bold mb-0" style="color: var(--mahjoub-gold);">مالك سيادي</h4></div>
-                    <div class="card-icon-box" style="background: rgba(212, 175, 55, 0.15); color: var(--mahjoub-gold);"><i class="fas fa-crown"></i></div>
+                    <div>
+                        <span class="text-white-50 d-block mb-1 fw-bold">الصلاحية</span>
+                        <h4 class="fw-bold mb-0" style="color: #D4AF37;">مالك سيادي</h4>
+                    </div>
+                    <div class="p-3 rounded-3" style="background: rgba(212,175,55,0.2); color: #D4AF37;"><i class="fas fa-crown fs-4"></i></div>
                 </div>
             </div>
         </div>
@@ -70,24 +71,20 @@
 
     <div class="row g-4">
         <div class="col-lg-8">
-            <div class="card sovereign-card p-4 h-100">
-                <h5 class="fw-bold mb-4"><i class="fas fa-chart-area me-2" style="color: var(--royal-purple);"></i> مؤشر كفاءة المحرك</h5>
-                <div class="p-5 text-center bg-light rounded-4 d-flex flex-column align-items-center justify-content-center">
-                    <i class="fas fa-cubes-stacked fs-1 text-muted mb-3" style="color: var(--royal-purple)!important; opacity: 0.5;"></i>
-                    <p class="fw-bold mb-1">المحرك المالي يعمل بتناغم تام مع PostgreSQL</p>
+            <div class="card p-4 rounded-4 border-0 shadow-sm h-100">
+                <h5 class="fw-bold mb-4"><i class="fas fa-chart-area me-2" style="color: #632c8f;"></i> مؤشر كفاءة المحرك</h5>
+                <div class="p-5 text-center bg-light rounded-4">
+                    <i class="fas fa-cubes-stacked fs-1 text-muted mb-3"></i>
+                    <p class="fw-bold mb-1">المحرك المالي يعمل بتناغم تام مع قاعدة البيانات</p>
                 </div>
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card sovereign-card p-4 h-100">
-                <h5 class="fw-bold mb-4"><i class="fas fa-bolt me-2" style="color: var(--mahjoub-gold);"></i> إجراءات التوسيع</h5>
-                <div class="d-grid gap-3">
-                    <a href="{{ url_for('admin_suppliers.add_supplier') }}" class="btn py-3 fw-bold rounded-3 text-white" style="background-color: var(--royal-purple);">
-                        <i class="fas fa-user-plus me-2"></i> تعميد شريك جديد
-                    </a>
-                    <a href="{{ url_for('admin_wallet.overview') }}" class="btn btn-outline-dark py-3 fw-bold rounded-3">
-                        <i class="fas fa-vault me-2"></i> الدخول إلى الخزائن المالية
-                    </a>
+            <div class="card p-4 rounded-4 border-0 shadow-sm h-100">
+                <h5 class="fw-bold mb-4"><i class="fas fa-bolt me-2" style="color: #D4AF37;"></i> إجراءات سريعة</h5>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin_suppliers.add_supplier') }}" class="btn btn-outline-primary py-3 fw-bold">إضافة شريك جديد</a>
+                    <a href="{{ url_for('admin_wallet.overview') }}" class="btn btn-dark py-3 fw-bold">الخزائن المالية</a>
                 </div>
             </div>
         </div>
