@@ -33,19 +33,11 @@ def overview():
         flash('غير مسموح لك بامتلاك صلاحية دخول الفضاء المالي.', 'danger')
         return redirect(url_for('admin_dashboard.dashboard_home'))
 
-    search_query = request.args.get('search', '').strip()
+    # جلب كافة المحافظ أولياً لعرضها في الجدول
     wallets = []
-    
     if Wallet.query is not None:
         try:
-            query = Wallet.query.join(Supplier, Wallet.supplier_id == Supplier.id)
-            if search_query and search_query != '#':
-                query = query.filter(
-                    (Supplier.trade_name.like(f'%{search_query}%')) |
-                    (Supplier.sovereign_id.like(f'%{search_query}%')) |
-                    (Wallet.wallet_code.like(f'%{search_query}%'))
-                )
-            wallets = query.all()
+            wallets = Wallet.query.join(Supplier, Wallet.supplier_id == Supplier.id).all()
         except Exception as e:
             print(f"📡 تنبيه حوكمة المحافظ: جاري مواءمة الجداول الهيكلية: {e}")
 
@@ -107,10 +99,6 @@ def adjust_balance():
     action_type = request.form.get('action_type')  
     amount_str = request.form.get('amount', '0')
 
-    if Wallet.query is None:
-        flash('النظام متاح للقراءة فقط حالياً لعدم اكتمال الربط.', 'danger')
-        return redirect(url_for('admin_wallet.overview'))
-
     try:
         amount = float(amount_str)
         if amount <= 0:
@@ -119,9 +107,10 @@ def adjust_balance():
             
         wallet = Wallet.query.get(wallet_id)
         if not wallet:
-            flash('المحفظة المستهدفة غير مسجلة.', 'danger')
+            flash('المحفظة المستهدفة غير مسجلة في الفضاء المالي.', 'danger')
             return redirect(url_for('admin_wallet.overview'))
 
+        # منطق المعالجة المالية
         if currency == 'YER':
             current_bal = float(getattr(wallet, 'yer_balance', 0.0))
             wallet.yer_balance = (current_bal + amount) if action_type == 'deposit' else (current_bal - amount)
@@ -132,26 +121,22 @@ def adjust_balance():
             current_bal = float(getattr(wallet, 'usd_balance', 0.0))
             wallet.usd_balance = (current_bal + amount) if action_type == 'deposit' else (current_bal - amount)
         
+        # توثيق العملية في سجل الحركات (Audit Log)
         if WalletTransaction is not None:
-            try:
-                tx_log = WalletTransaction(
-                    wallet_id=wallet.id,
-                    transaction_type=action_type,
-                    currency=currency,
-                    amount=amount,
-                    description="تعديل إداري مباشر من لوحة تحكم المالك السيادية"
-                )
-                db.session.add(tx_log)
-            except Exception as tx_err:
-                print(f"⚠️ تخطي حفظ وثيقة التحويل: {tx_err}")
+            tx_log = WalletTransaction(
+                wallet_id=wallet.id,
+                transaction_type=action_type,
+                currency=currency,
+                amount=amount,
+                description=f"تعديل إداري من المالك: {action_type} بمبلغ {amount} {currency}"
+            )
+            db.session.add(tx_log)
 
         db.session.commit()
-        flash(f'تم تحديث كشف حساب المحفظة {wallet.wallet_code} بنجاح وتصفير التعارضات.', 'success')
+        flash(f'تم تنفيذ الفرمان المالي بنجاح على المحفظة {wallet.wallet_code}.', 'success')
 
-    except ValueError:
-        flash('خطأ: صيغة المبلغ المدخل غير صالحة.', 'danger')
     except Exception as e:
         db.session.rollback()
-        flash(f'تعذر تعديل الرصيد بسبب عطل في الربط الهيكلي: {e}', 'danger')
+        flash(f'تعذر تنفيذ الفرمان المالي: {e}', 'danger')
 
     return redirect(url_for('admin_wallet.overview'))
