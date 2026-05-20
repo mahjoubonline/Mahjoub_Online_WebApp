@@ -9,7 +9,6 @@ from datetime import datetime
 # الاستيراد المباشر والمحمي للبلوبرينت الموحد لمنع تعذر العثور على الكائن
 from . import auth_blueprint
 
-
 @auth_blueprint.route('/login', methods=['GET', 'POST'])
 def login():
     # 🚨 استدعاء محلي متأخر للموديل وقاعدة البيانات لحل أزمة الاستيراد الدائري نهائياً
@@ -45,7 +44,6 @@ def login():
             flash('بيانات الدخول غير صحيحة، يرجى التحقق من الهوية الرقمية.', 'danger')
     
     return render_template('auth/login.html')
-
 
 @auth_blueprint.route('/logout')
 @login_required
