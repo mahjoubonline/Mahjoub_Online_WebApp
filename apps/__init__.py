@@ -63,9 +63,10 @@ def create_app():
 
     # --- تسجيل الـ Blueprints ---
     app.register_blueprint(auth_blueprint, url_prefix='/auth', name='auth_portal')
-    # تأكد أن الاسم في ملف admin_dashboard/__init__.py هو admin_dashboard
     app.register_blueprint(admin_dashboard, url_prefix='/admin', name='admin_dashboard')
     app.register_blueprint(admin_suppliers_bp, url_prefix='/admin', name='add_supplier')
     app.register_blueprint(admin_wallet, url_prefix='/admin', name='admin_wallet')
+    
+    print("✅ تم تعميد كافة المسارات السيادية (Blueprints) بنجاح في المصنع المركزي.")
 
     return app
