@@ -1,17 +1,27 @@
 # coding: utf-8
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+# 🏦 محرك الفضاء المالي - منصة محجوب أونلاين 2026
+
+from flask import Blueprint, render_template
 from flask_login import login_required
-# تأكد من استيراد كائناتك الأساسية من ملف __init__.py الرئيسي
-from apps import db 
+from apps import db
 
-# هذا هو الاسم الذي يبحث عنه ملف __init__.py
-admin_wallet = Blueprint('admin_wallet', __name__)
+# تعريف البلوبرينت باسم 'admin_wallet' كما تم تسجيله في المصنع المركزي
+admin_wallet = Blueprint(
+    'admin_wallet', 
+    __name__, 
+    template_folder='templates'
+)
 
-# أمثلة للمسارات (Routes) داخل هذا البلوبرينت
-@admin_wallet.route('/wallet', methods=['GET'])
+@admin_wallet.route('/overview', methods=['GET'])
 @login_required
 def wallet_page():
-    # هنا تضع منطق المحفظة الخاص بك
-    return render_template('admin/wallet.html')
-
-# أضف بقية المسارات الخاصة بك هنا تحت نفس الـ Blueprint
+    """
+    عرض لوحة التحكم الخاصة بالمحفظة (حوكمة وفحص المحافظ).
+    تم تغيير اسم الدالة من wallet_overview إلى wallet_page 
+    لتتطابق مع المسار الذي يبحث عنه النظام.
+    """
+    try:
+        # هنا سيتم جلب بيانات المحافظ من قاعدة البيانات لاحقاً
+        return render_template('admin/wallet.html')
+    except Exception as e:
+        return f"خطأ في بوابة الفضاء المالي: {str(e)}", 500
