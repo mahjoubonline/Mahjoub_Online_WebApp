@@ -1,8 +1,7 @@
 # coding: utf-8
 from flask import render_template
 from flask_login import login_required, current_user
-# استيراد البلوبرينت مباشرة من الملف الذي يُعرفه (غالباً __init__.py الخاص بالمجلد)
-from . import admin_dashboard 
+from . import admin_dashboard
 from apps.models.supplier_db import Supplier
 
 @admin_dashboard.route('/dashboard', methods=['GET'])
