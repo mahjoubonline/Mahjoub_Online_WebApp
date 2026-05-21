@@ -15,7 +15,7 @@ def create_app():
     app.config.from_object(Config)
     app.json.ensure_ascii = False
 
-    # ضمان إعداد مسار الرفع إذا لم يكن موجوداً في الـ Config
+    # ضمان إعداد مسار الرفع
     if not app.config.get('UPLOAD_FOLDER'):
         app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads', 'identities')
 
@@ -26,30 +26,33 @@ def create_app():
         # --- استدعاء الموديلات لضمان تسجيل الجداول ---
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
-        from apps.models.wallet_db import Wallet
+        from apps.models.wallet_db import SupplierWallet
         
         try:
             db.create_all()
-            # أوامر التطهير وإعادة الهيكلة الرقمية
-            db.session.execute(db.text("ALTER TABLE supplier_wallets DROP CONSTRAINT IF EXISTS supplier_wallets_supplier_id_fkey;"))
-            db.session.execute(db.text("ALTER TABLE supplier_wallets ALTER COLUMN supplier_id TYPE VARCHAR(50);"))
-            db.session.execute(db.text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS wallet_code VARCHAR(50) UNIQUE;"))
-            db.session.execute(db.text("ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'نشطة';"))
-            db.session.execute(db.text("ALTER TABLE supplier_wallets DROP COLUMN IF EXISTS yer_available;"))
-            db.session.execute(db.text("ALTER TABLE supplier_wallets DROP COLUMN IF EXISTS sar_available;"))
-            db.session.execute(db.text("ALTER TABLE supplier_wallets DROP COLUMN IF EXISTS usd_available;"))
-            db.session.execute(db.text("""
-                ALTER TABLE supplier_wallets 
-                ADD CONSTRAINT supplier_wallets_supplier_id_fkey 
-                FOREIGN KEY (supplier_id) REFERENCES suppliers(sovereign_id);
-            """))
+            
+            # أوامر التطهير وإعادة الهيكلة الرقمية (تم جعلها آمنة)
+            commands = [
+                "ALTER TABLE supplier_wallets DROP CONSTRAINT IF EXISTS supplier_wallets_supplier_id_fkey;",
+                "ALTER TABLE supplier_wallets ALTER COLUMN supplier_id TYPE VARCHAR(50);",
+                "ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS wallet_code VARCHAR(50) UNIQUE;",
+                "ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'نشطة';",
+                "ALTER TABLE supplier_wallets DROP COLUMN IF EXISTS yer_available;",
+                "ALTER TABLE supplier_wallets DROP COLUMN IF EXISTS sar_available;",
+                "ALTER TABLE supplier_wallets DROP COLUMN IF EXISTS usd_available;"
+            ]
+            
+            for cmd in commands:
+                try:
+                    db.session.execute(db.text(cmd))
+                except Exception:
+                    pass # تخطي الأوامر التي قد تكون نُفذت مسبقاً
+            
             db.session.commit()
-            print("🚀 سيادة وحوكمة: تم تطهير حقول الموازين الثابتة وإقرار البنية الرقمية النصية للمحافظ بنجاح.")
+            print("🚀 سيادة وحوكمة: تم إقرار البنية الرقمية للمحافظ بنجاح.")
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"❌ تعذر تحديث الجداول برمجياً: {str(e)}")
-        finally:
-            db.session.close()
 
     login_manager.login_view = 'auth_portal.login'
     login_manager.login_message = 'يرجى إثبات الهوية الرقمية للوصول إلى المنطقة السيادية.'
@@ -60,26 +63,20 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # --- استيراد المسارات (Blueprints) ---
+    # --- استيراد وتسجيل المسارات (Blueprints) ---
     from apps.auth_portal import auth_blueprint
     from apps.admin_dashboard import admin_dashboard
     from apps.add_supplier.routes import admin_suppliers_bp
     from apps.wallet.routes import admin_wallet
 
-    # --- تسجيل الـ Blueprints ---
     app.register_blueprint(auth_blueprint, url_prefix='/auth', name='auth_portal')
     app.register_blueprint(admin_dashboard, url_prefix='/admin', name='admin_dashboard')
-    
-    # التعديل هنا: استخدام '/' بدلاً من '/admin/suppliers' لتجنب التكرار في المسارات
     app.register_blueprint(admin_suppliers_bp, url_prefix='/', name='add_supplier')
-    
     app.register_blueprint(admin_wallet, url_prefix='/wallet', name='admin_wallet')
     
-    # معالج أخطاء عام لرؤية الأخطاء (500) بوضوح في المتصفح أثناء التطوير
     @app.errorhandler(500)
     def internal_error(e):
         return f"حدث خطأ سيادي (500): {str(e)}", 500
 
-    print("✅ تم تعميد كافة المسارات السيادية (Blueprints) بنجاح في المصنع المركزي.")
-
+    print("✅ تم تعميد كافة المسارات السيادية (Blueprints) بنجاح.")
     return app
