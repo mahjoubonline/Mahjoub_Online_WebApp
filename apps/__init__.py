@@ -69,7 +69,10 @@ def create_app():
     # --- تسجيل الـ Blueprints ---
     app.register_blueprint(auth_blueprint, url_prefix='/auth', name='auth_portal')
     app.register_blueprint(admin_dashboard, url_prefix='/admin', name='admin_dashboard')
-    app.register_blueprint(admin_suppliers_bp, url_prefix='/admin/suppliers', name='add_supplier')
+    
+    # التعديل هنا: استخدام '/' بدلاً من '/admin/suppliers' لتجنب التكرار في المسارات
+    app.register_blueprint(admin_suppliers_bp, url_prefix='/', name='add_supplier')
+    
     app.register_blueprint(admin_wallet, url_prefix='/wallet', name='admin_wallet')
     
     # معالج أخطاء عام لرؤية الأخطاء (500) بوضوح في المتصفح أثناء التطوير
