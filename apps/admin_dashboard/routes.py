@@ -1,42 +1,61 @@
 # coding: utf-8
-# ⚙️ محرك تعميد الموردين - منصة محجوب أونلاين 2026
+# ⚙️ محرك لوحة التحكم السيادية - منصة محجوب أونلاين 2026
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required
-from apps import db
+from flask import render_template
+from flask_login import login_required, current_user
+from . import admin_dashboard
 from apps.models.supplier_db import Supplier
+# استيراد نموذج المحفظة إذا كنت تحتاج لحساب الإجماليات من هناك
+from apps.models.wallet_db import SupplierWallet
+from sqlalchemy import func
+from apps import db
 
-# تعريف الـ Blueprint الخاص بالموردين
-# تأكد أن الاسم هنا 'add_supplier' يطابق ما تم تسجيله في __init__.py
-admin_suppliers_bp = Blueprint('add_supplier', __name__)
-
-@admin_suppliers_bp.route('/add', methods=['GET', 'POST'])
+@admin_dashboard.route('/dashboard', methods=['GET'])
 @login_required
-def add_supplier_submit():
+def dashboard_home():
     """
-    دالة معالجة تعميد (إضافة) مورد جديد
+    عرض لوحة القيادة (Dashboard) الرئيسية مع حساب إجماليات الخزائن.
     """
-    if request.method == 'POST':
-        # استلام البيانات من النموذج
-        try:
-            name = request.form.get('name')
-            wallet_code = request.form.get('wallet_code')
-            
-            # التحقق من وجود البيانات
-            if not name or not wallet_code:
-                flash('يرجى تعبئة كافة الحقول السيادية.', 'warning')
-                return render_template('suppliers/add_supplier.html')
+    try:
+        # حساب إحصائية شركاء النجاح
+        total_suppliers = Supplier.query.count()
+        
+        # حساب إجماليات المحافظ (افتراض أسماء أعمدة مشابهة لما في موديل المحفظة لديك)
+        # إذا كانت الأسماء تختلف، يرجى تعديلها لتطابق الموديل
+        totals = db.session.query(
+            func.sum(SupplierWallet.balance_yer).label('total_yer'),
+            func.sum(SupplierWallet.balance_sar).label('total_sar'),
+            func.sum(SupplierWallet.balance_usd).label('total_usd')
+        ).first()
 
-            # إنشاء المورد الجديد
-            new_supplier = Supplier(name=name, wallet_code=wallet_code)
-            db.session.add(new_supplier)
-            db.session.commit()
-            
-            flash('تم تعميد شريك النجاح بنجاح.', 'success')
-            return redirect(url_for('admin_dashboard.list_suppliers'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'حدث خطأ في النظام أثناء التعميد: {str(e)}', 'danger')
+        # تجهيز البيانات للقالب
+        stats_data = {
+            'total_yer': totals.total_yer or 0,
+            'total_sar': totals.total_sar or 0,
+            'total_usd': totals.total_usd or 0
+        }
+        
+        return render_template('admin/dashboard_content.html', 
+                               current_user=current_user, 
+                               totals=stats_data,
+                               total_suppliers=total_suppliers)
+                               
+    except Exception as e:
+        return f"خطأ في تحميل مركز القيادة: {str(e)}", 500
 
-    return render_template('suppliers/add_supplier.html')
+@admin_dashboard.route('/settings', methods=['GET'])
+@login_required
+def system_settings():
+    """
+    إعدادات النظام السيادية
+    """
+    return render_template('admin/settings.html', current_user=current_user)
+
+@admin_dashboard.route('/suppliers', methods=['GET'])
+@login_required
+def list_suppliers():
+    """
+    قائمة الموردين المعتمدين
+    """
+    suppliers = Supplier.query.all()
+    return render_template('admin/suppliers.html', suppliers=suppliers)
