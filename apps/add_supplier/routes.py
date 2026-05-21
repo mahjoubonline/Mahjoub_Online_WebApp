@@ -1,136 +1,106 @@
 # coding: utf-8
-# 🏢 مسارات تعميد وأرشفة الموردين السيادية - منصة محجوب أونلاين 2026
+# 🛡️ وحدة تعميد الموردين - منصة محجوب أونلاين 2026
 
-import os
+from flask import Blueprint, render_template, request, jsonify, url_for
+from flask_login import login_required
+from apps import db
+from apps.models.supplier_db import Supplier
+from apps.models.wallet_db import SupplierWallet
 import uuid
-import re
-from flask import Blueprint, request, jsonify, render_template, url_for, current_app
-from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash
+import secrets
+import string
 
-# استيراد كائن db الموحد لمنع التعارض الدائري (Circular Import)
-from apps import db 
-
+# تعريف الـ Blueprint
 admin_suppliers_bp = Blueprint('add_supplier', __name__, template_folder='templates')
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
+def generate_sovereign_id():
+    """توليد معرف سيادي فريد للمورد"""
+    random_part = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+    return f"SUP-MAH{random_part}"
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+def generate_wallet_code(supplier_id):
+    """توليد كود محفظة مرتبط بمعرف المورد"""
+    return supplier_id.replace("SUP-", "WEL-")
 
-def generate_next_sequence_codes():
-    """توليد الكود التسلسلي التالي للمورد بشكل ديناميكي من قاعدة البيانات"""
-    from apps.models.supplier_db import Supplier
-    try:
-        last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
-        if last_supplier and last_supplier.sovereign_id:
-            # معالجة الرقم الموجود في السلسلة
-            match = re.search(r'\d+', last_supplier.sovereign_id)
-            if match:
-                next_num = int(match.group()) + 1
-                return f"SUP-MAH{next_num}"
-        return "SUP-MAH9631"
-    except Exception as e:
-        current_app.logger.error(f"❌ خطأ أثناء توليد التسلسل: {str(e)}")
-        return "SUP-MAH9631"
+@admin_suppliers_bp.route('/add', methods=['GET'])
+@login_required
+def add_supplier_page():
+    """عرض صفحة استمارة تعميد المورد"""
+    return render_template('add_supplier.html')
 
-# تم تعديل المسارات لتكون نسبية (تم حذف /admin/suppliers ليتوافق مع الـ url_prefix في __init__.py)
 @admin_suppliers_bp.route('/check-duplicate', methods=['GET'])
+@login_required
 def check_duplicate():
-    from apps.models.supplier_db import Supplier
-    
+    """التحقق من تكرار البيانات أو جلب التسلسل القادم"""
     check_type = request.args.get('type')
-    value = request.args.get('value', '').strip()
+    value = request.args.get('value')
 
     if check_type == 'get_next_sequence':
-        next_sup = generate_next_sequence_codes()
-        return jsonify({'next_sequence': next_sup})
-
-    if not value:
-        return jsonify({'exists': False})
+        return jsonify({"next_sequence": generate_sovereign_id()})
 
     exists = False
-    # التحقق من وجود القيمة في قاعدة البيانات باستخدام عبارة exists()
-    try:
-        if check_type == 'username':
-            exists = db.session.query(Supplier.query.filter_by(username=value).exists()).scalar()
-        elif check_type == 'identity_number':
-            exists = db.session.query(Supplier.query.filter_by(identity_number=value).exists()).scalar()
-    except Exception:
-        exists = False
-        
-    return jsonify({'exists': exists})
+    if check_type == 'username':
+        exists = Supplier.query.filter_by(username=value).first() is not None
+    elif check_type == 'identity_number':
+        exists = Supplier.query.filter_by(identity_number=value).first() is not None
+    elif check_type == 'owner_phone':
+        exists = Supplier.query.filter_by(owner_phone=value).first() is not None
+    elif check_type == 'trade_name':
+        exists = Supplier.query.filter_by(trade_name=value).first() is not None
+    elif check_type == 'bank_acc':
+        exists = Supplier.query.filter_by(bank_acc=value).first() is not None
 
-@admin_suppliers_bp.route('/add', methods=['GET', 'POST'])
+    return jsonify({"exists": exists})
+
+@admin_suppliers_bp.route('/submit', methods=['POST'])
+@login_required
 def add_supplier_submit():
-    if request.method == 'GET':
-        return render_template('admin/add_supplier.html')
-
-    from apps.models.supplier_db import Supplier
-    from apps.models.wallet_db import Wallet
-
+    """معالجة حفظ المورد الجديد في قاعدة البيانات السيادية"""
     try:
-        # استخراج البيانات مع تأمين ضد القيم الفارغة
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        identity_type = request.form.get('identity_type', 'هوية وطنية')
-        identity_number = request.form.get('identity_number', '').strip()
-        
-        # حماية: التحقق من وجود كلمة مرور
-        if not password:
-            return jsonify({'status': 'error', 'message': 'كلمة المرور مطلوبة'}), 400
-
         # توليد المعرفات
-        final_sovereign_id = generate_next_sequence_codes()
-        final_wallet_code = final_sovereign_id.replace("SUP-", "WEL-", 1)
+        sovereign_id = generate_sovereign_id()
+        wallet_code = generate_wallet_code(sovereign_id)
 
-        # حفظ الصورة (معالجة الملفات)
-        identity_image_path = None
-        if 'identity_image' in request.files:
-            file = request.files['identity_image']
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                unique_filename = f"doc_{uuid.uuid4().hex[:8]}_{filename}"
-                upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/identities')
-                if not os.path.exists(upload_folder):
-                    os.makedirs(upload_folder)
-                file.save(os.path.join(upload_folder, unique_filename))
-                identity_image_path = os.path.join(upload_folder, unique_filename)
-
-        # الحفظ في قاعدة البيانات
-        hashed_pwd = generate_password_hash(password)
+        # استقبال البيانات
         new_supplier = Supplier(
-            sovereign_id=final_sovereign_id,
-            wallet_code=final_wallet_code,
-            username=username,
-            password_hash=hashed_pwd,
-            identity_type=identity_type,
-            identity_number=identity_number,
-            identity_image=identity_image_path,
-            owner_name=request.form.get('owner_name', ''),
-            trade_name=request.form.get('trade_name', ''),
-            owner_phone=request.form.get('owner_phone', ''),
-            status='active'
+            sovereign_id=sovereign_id,
+            wallet_code=wallet_code,
+            username=request.form.get('username'),
+            password=request.form.get('password'), # يجب تشفيرها في مرحلة الإنتاج
+            identity_type=request.form.get('identity_type'),
+            identity_number=request.form.get('identity_number'),
+            owner_name=request.form.get('owner_name'),
+            trade_name=request.form.get('trade_name'),
+            owner_phone=request.form.get('owner_phone'),
+            shop_phone=request.form.get('shop_phone'),
+            province=request.form.get('province'),
+            district=request.form.get('district'),
+            address_detail=request.form.get('address_detail'),
+            bank_name=request.form.get('bank_name'),
+            bank_acc=request.form.get('bank_acc'),
+            activity_type=request.form.get('activity_type')
         )
-        
-        db.session.add(new_supplier)
-        db.session.flush()
 
-        new_wallet = Wallet(supplier_id=final_sovereign_id, wallet_code=final_wallet_code, status='نشطة')
+        # إنشاء المحفظة المرتبطة
+        new_wallet = SupplierWallet(
+            wallet_code=wallet_code,
+            supplier_id=sovereign_id,
+            status='نشطة'
+        )
+
+        db.session.add(new_supplier)
         db.session.add(new_wallet)
-        
         db.session.commit()
 
         return jsonify({
-            'status': 'success',
-            'redirect_url': url_for('add_supplier.admin_suppliers_list')
-        }), 200
+            "status": "success",
+            "message": "تم تعميد المورد بنجاح",
+            "data": {
+                "sovereign_id": sovereign_id,
+                "wallet_code": wallet_code
+            }
+        })
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"❌ خطأ الحفظ: {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@admin_suppliers_bp.route('/list')
-def admin_suppliers_list():
-    return render_template('admin_suppliers_list.html')
+        return jsonify({"status": "error", "message": str(e)}), 500
