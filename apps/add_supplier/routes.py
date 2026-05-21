@@ -10,9 +10,6 @@ from apps.models.wallet_db import SupplierWallet
 @admin_suppliers_bp.route('/check-duplicate', methods=['GET'])
 @login_required
 def check_duplicate():
-    """
-    دالة للتحقق من عدم تكرار البيانات (اسم المستخدم، رقم الهاتف، إلخ)
-    """
     field_type = request.args.get('type')
     value = request.args.get('value')
 
@@ -27,7 +24,6 @@ def check_duplicate():
     elif field_type == 'owner_phone':
         exists = Supplier.query.filter_by(owner_phone=value).first() is not None
     elif field_type == 'get_next_sequence':
-        # منطق جلب المعرف التالي (يمكنك تطويره لاحقاً)
         count = Supplier.query.count()
         next_id = f"SUP-MAH{9631 + count}"
         return jsonify({"next_sequence": next_id})
@@ -37,15 +33,9 @@ def check_duplicate():
 @admin_suppliers_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_supplier_submit():
-    """
-    مسار تعميد مورد جديد - معالجة نموذج التقديم
-    """
     if request.method == 'POST':
         try:
-            # استلام البيانات
             data = request.form
-            
-            # حفظ المورد
             new_supplier = Supplier(
                 username=data.get('username'),
                 owner_name=data.get('owner_name'),
@@ -53,37 +43,18 @@ def add_supplier_submit():
                 owner_phone=data.get('owner_phone'),
                 identity_number=data.get('identity_number'),
                 identity_type=data.get('identity_type'),
-                sovereign_id=data.get('sovereign_id') # القيمة القادمة من الحقل المخفي
+                sovereign_id=data.get('sovereign_id')
             )
             db.session.add(new_supplier)
-            
-            # إنشاء محفظة المورد
             new_wallet = SupplierWallet(
                 supplier_id=data.get('sovereign_id'),
                 wallet_code=data.get('wallet_code')
             )
             db.session.add(new_wallet)
-            
             db.session.commit()
-
-            return jsonify({
-                "status": "success",
-                "message": "تم تعميد المورد بنجاح",
-                "data": {
-                    "sovereign_id": data.get('sovereign_id'),
-                    "wallet_code": data.get('wallet_code')
-                }
-            })
-
+            return jsonify({"status": "success", "message": "تم تعميد المورد بنجاح"})
         except Exception as e:
             db.session.rollback()
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    # التعديل هنا: مسار القالب الصحيح بناءً على هيكل مجلداتك
     return render_template('admin/add_supplier.html')
-
-@admin_suppliers_bp.route('/list', methods=['GET'])
-@login_required
-def list_suppliers_data():
-    suppliers = Supplier.query.all()
-    return render_template('admin/list.html', suppliers=suppliers)
