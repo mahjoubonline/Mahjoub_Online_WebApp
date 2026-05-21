@@ -21,4 +21,19 @@
         {% set cards = [
             {'title': 'إجمالي الخزينة (YER)', 'val': totals.total_yer, 'bg': 'linear-gradient(135deg, #2e7d32, #1b5e20)', 'unit': '﷼'},
             {'title': 'إجمالي الخزينة (SAR)', 'val': totals.total_sar, 'bg': 'linear-gradient(135deg, #e65100, #bf360c)', 'unit': 'ر.س'},
-            {'title': 'إجمالي الخزينة (USD)', 'val': totals.total_usd, 'bg': 'linear-gradient(135deg, #1565c0, #0d47a1)', 'unit
+            {'title': 'إجمالي الخزينة (USD)', 'val': totals.total_usd, 'bg': 'linear-gradient(135deg, #1565c0, #0d47a1)', 'unit': '$'}
+        ] %}
+        
+        {% for card in cards %}
+        <div class="col-md-4">
+            <div class="card text-white shadow-sm" style="background: {{ card.bg }}; border-radius: 15px;">
+                <div class="card-body">
+                    <h6 class="text-white-50">{{ card.title }}</h6>
+                    <h3 class="fw-bold">{{ card.val }} <small class="fs-6">{{ card.unit }}</small></h3>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
