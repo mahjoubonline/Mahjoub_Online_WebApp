@@ -1,13 +1,13 @@
 # coding: utf-8
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required
-from apps import db
+from apps import db # استيراد الـ db من المصنع المركزي
 from apps.models.wallet_db import SupplierWallet
 from apps.models.supplier_db import Supplier
 from sqlalchemy import func
 
-# تعريف الـ Blueprint الخاص بالمحفظة
-admin_wallet = Blueprint('admin_wallet', __name__)
+# تعريف الـ Blueprint (لا تقم بتحديد url_prefix هنا، اتركه للمصنع المركزي apps/__init__.py)
+admin_wallet = Blueprint('admin_wallet', __name__, template_folder='templates')
 
 @admin_wallet.route('/overview')
 @login_required
@@ -52,9 +52,9 @@ def search_api():
             'wallet_code': w.wallet_code,
             'trade_name': s.trade_name,
             'sovereign_id': s.sovereign_id,
-            'yer_balance': float(w.yer_total),
-            'sar_balance': float(w.sar_total),
-            'usd_balance': float(w.usd_total)
+            'yer_balance': float(w.yer_total or 0),
+            'sar_balance': float(w.sar_total or 0),
+            'usd_balance': float(w.usd_total or 0)
         })
         
     return jsonify({'wallets': wallets_data})
@@ -78,7 +78,7 @@ def adjust_balance():
     
     field = field_map.get(currency)
     if field:
-        current_val = getattr(wallet, field)
+        current_val = float(getattr(wallet, field) or 0)
         if action_type == 'deposit':
             setattr(wallet, field, current_val + amount)
         else:
