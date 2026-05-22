@@ -1,43 +1,225 @@
-{% extends "admin/admin_base.html" %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}القيادة المركزية | محجوب أونلاين{% endblock %}</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --royal-purple: #632C8F; /* اللون البنفسجي الملكي */
+            --royal-purple-dark: #4A1E6D; /* درجة أغمق للظلال والتفاعلات */
+            --deep-black: #08020d;
+            --mahjoub-gold: #D4AF37;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --sidebar-width: 280px;
+            --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
 
-{% block title %}مركز المراقبة | محجوب أونلاين{% endblock %}
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background: #f0f2f5; 
+            margin: 0; 
+            display: flex; 
+            overflow-x: hidden; 
+            direction: rtl;
+        }
 
-{% block content %}
-<div class="container-fluid py-4" dir="rtl">
-    <div class="row mb-5 align-items-center">
-        <div class="col-md-12 text-end">
-            <h1 style="font-weight: 900; color: #1a0b2e; font-size: 2.5rem;">نظام الرقابة العليا</h1>
-        </div>
+        /* تعديل شريط السايد بار ليصبح بنفسجياً ملكياً كاملاً ومثبتاً */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--royal-purple) 0%, var(--royal-purple-dark) 100%);
+            height: 100vh; 
+            position: fixed; 
+            right: 0; 
+            top: 0; 
+            z-index: 1100;
+            transition: var(--transition);
+            box-shadow: -5px 0 25px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header { 
+            padding: 2.5rem 1rem; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15); 
+            text-align: center;
+        }
+
+        .logo-img { 
+            width: 80px; 
+            height: auto; 
+            filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+            margin-bottom: 15px;
+        }
+
+        .nav-menu { padding: 1.5rem 1rem; flex-grow: 1; }
+
+        .nav-link, .dropdown-btn {
+            display: flex; align-items: center; padding: 14px 18px;
+            color: rgba(255, 255, 255, 0.9); text-decoration: none;
+            border-radius: 15px; margin-bottom: 8px; transition: var(--transition);
+            cursor: pointer; border: none; background: transparent; width: 100%;
+            font-weight: 600;
+        }
+
+        /* تأثير المرور النشط مع التناسق البنفسجي والذهبي */
+        .nav-link:hover, .dropdown-btn:hover, .nav-link.active { 
+            background: rgba(255, 255, 255, 0.15); 
+            color: var(--mahjoub-gold);
+            transform: translateX(-5px);
+        }
+
+        .dropdown-container { 
+            display: none; background: rgba(0,0,0,0.15); border-radius: 12px; 
+            margin-bottom: 10px; overflow: hidden; animation: slideDown 0.4s ease;
+        }
+        
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .dropdown-container a { 
+            padding: 12px 45px; font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); 
+            display: block; text-decoration: none; transition: 0.3s; 
+        }
+        
+        .dropdown-container a:hover { color: var(--mahjoub-gold); background: rgba(255,255,255,0.08); padding-right: 55px; }
+
+        .main-wrapper { 
+            margin-right: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); 
+            min-height: 100vh; transition: var(--transition);
+        }
+
+        .top-bar { 
+            background: var(--glass-bg); backdrop-filter: blur(10px);
+            height: 75px; display: flex; align-items: center; 
+            justify-content: space-between; padding: 0 2rem; 
+            position: sticky; top: 0; z-index: 1000;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .user-badge {
+            background: rgba(99, 44, 143, 0.1);
+            padding: 8px 20px; border-radius: 50px;
+            border: 1px solid var(--royal-purple);
+            color: var(--royal-purple); font-weight: 700;
+        }
+
+        #loader {
+            display: none; position: fixed; inset: 0;
+            background: rgba(255,255,255,0.7); backdrop-filter: blur(5px);
+            z-index: 9999; place-items: center;
+        }
+
+        .fa-chevron-left { transition: 0.3s; margin-right: auto; }
+        .rotate { transform: rotate(-90deg); }
+
+        /* التحكم بالظهور الكامل وسلوك الشاشات الصغيرة */
+        @media (max-width: 991px) {
+            .sidebar { right: -280px; }
+            .sidebar.active { right: 0; }
+            .main-wrapper { margin-right: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader" class="d-none">
+        <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem; color: var(--royal-purple) !important;"></div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-md-3">
-            <div class="stat-card" style="background: linear-gradient(135deg, #632C8F, #8b44cc);">
-                <h6>إجمالي المستخدمين</h6>
-                <h2 class="fw-bold">{{ users_count|default(0) }}</h2>
-            </div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" class="logo-img" alt="Logo">
+            <h2 class="text-white h5 fw-bold mb-1">محجوب أونلاين</h2>
+            <div class="badge bg-warning text-dark px-3 py-2" style="font-size: 0.7rem; letter-spacing: 1px;">السيادة المطلقة</div>
         </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="background: linear-gradient(135deg, #2c3e50, #4b236d);">
-                <h6>الموردون المعتمدون</h6>
-                <h2 class="fw-bold">{{ suppliers_count|default(0) }}</h2>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="background: linear-gradient(135deg, #D4AF37, #f1c40f);">
-                <h6>سجل العمليات</h6>
-                <h2 class="fw-bold">{{ orders_count|default(0) }}</h2>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="background: linear-gradient(135deg, #1a0b2e, #3a1a5e);">
-                <h6>السيولة النقدية</h6>
-                <div class="small">
-                    <div>YER: {{ total_yer|default('0.0') }}</div>
-                    <div>SAR: {{ total_sar|default('0.0') }}</div>
+
+        <nav class="nav-menu">
+            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="nav-link {% if request.endpoint == 'admin_dashboard.dashboard' %}active{% endif %}">
+                <i class="fas fa-chart-line me-3"></i> <span>مركز القيادة</span>
+            </a>
+
+            <div class="dropdown-section">
+                <button class="dropdown-btn" onclick="toggleDropdown()">
+                    <i class="fas fa-handshake me-3"></i> 
+                    <span>شركاء النجاح</span>
+                    <i class="fas fa-chevron-left" id="arrow"></i>
+                </button>
+                <div class="dropdown-container" id="supplierDropdown">
+                    <a href="{{ url_for('add_supplier.add_supplier_route') if 'add_supplier' in codes else '#' }}">
+                        <i class="fas fa-user-plus me-2"></i> تعميد مورد جديد
+                    </a>
+                    <a href="{{ url_for('admin_dashboard.dashboard') }}">
+                        <i class="fas fa-database me-2"></i> سجل الموردين
+                    </a>
                 </div>
             </div>
+
+            <a href="#" class="nav-link">
+                <i class="fas fa-shield-halved me-3"></i> <span>إعدادات السيادة</span>
+            </a>
+
+            <hr style="border-color: rgba(255, 255, 255, 0.15); margin: 2rem 0;">
+
+            <a href="{{ url_for('auth_portal.logout') }}" class="nav-link text-danger mt-auto">
+                <i class="fas fa-power-off me-3"></i> <span>تسجيل خروج آمن</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-wrapper">
+        <header class="top-bar">
+            <div class="d-flex align-items-center">
+                <button class="btn d-lg-none me-3" onclick="toggleSidebar()"><i class="fas fa-bars fs-4"></i></button>
+                <h4 class="mb-0 fw-bold text-dark">{% block header_title %}مركز المراقبة{% endblock %}</h4>
+            </div>
+            
+            <div class="user-badge">
+                <i class="fas fa-user-tie me-2"></i> {{ owner.full_name if owner else 'المؤسس علي' }}
+            </div>
+        </header>
+
+        <div class="p-4 content-area">
+            {% block content %}{% endblock %}
         </div>
-    </div>
-</div>
-{% endblock %}
+    </main>
+
+    <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById("supplierDropdown");
+            const arrow = document.getElementById("arrow");
+            const isVisible = dropdown.style.display === "block";
+            dropdown.style.display = isVisible ? "none" : "block";
+            arrow.classList.toggle("rotate");
+        }
+
+        function toggleSidebar() {
+            document.getElementById("sidebar").classList.toggle("active");
+        }
+
+        window.onbeforeunload = function() {
+            document.getElementById('loader').classList.remove('d-none');
+            document.getElementById('loader').classList.add('d-grid');
+        };
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                modal.addEventListener('hidden.bs.modal', function () {
+                    const form = modal.querySelector('form');
+                    if(form) {
+                        form.reset();
+                        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                        form.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
