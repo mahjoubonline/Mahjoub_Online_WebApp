@@ -1,7 +1,7 @@
 # coding: utf-8
 # 🚀 مستند المسارات السيادي لتعميد الموردين والمحافظ - منصة محجوب أونلاين 2026
 
-from flask import request, jsonify, render_template, url_for
+from flask import request, jsonify, render_template, url_for, redirect
 from werkzeug.security import generate_password_hash
 
 # 🛡️ استدعاء الـ Blueprint الجاهز المعرف في ملف __init__.py
@@ -45,9 +45,13 @@ def check_duplicate():
     return jsonify({"error": "نوع التحقق غير معروف"}), 400
 
 
-# دالة استقبال الفورم وحفظ المورد والمحفظة بالتزامن المالي الكامل
-@admin_suppliers_bp.route('/add_supplier_submit', methods=['POST'])
+# دالة استقبال الفورم وحفظ المورد والمحفظة بالتزامن المالي الكامل (معدلة لاستقبال GET و POST مرناً)
+@admin_suppliers_bp.route('/add_supplier_submit', methods=['GET', 'POST'])
 def add_supplier_submit():
+    # صمام أمان: إذا حاول المستخدم دخول الرابط بطلب GET مباشر، يتم توجيهه تلقائياً إلى لوحة التحكم الرئيسية
+    if request.method == 'GET':
+        return redirect('/admin/dashboard')
+
     try:
         # استدعاء الامتدادات والموديلات محلياً لضمان الأمان أثناء الإرسال الحركي
         from apps.extensions import db 
@@ -128,3 +132,8 @@ def add_supplier_submit():
 
     except Exception as e:
         from apps.extensions import db
+        db.session.rollback()  # تراجع آمن في حال حدوث تصادم بيانات لحماية المحافظ الحالية
+        return jsonify({
+            "status": "error",
+            "message": f"فشل تعميد المورد في النظام: {str(e)}"
+        }), 500
