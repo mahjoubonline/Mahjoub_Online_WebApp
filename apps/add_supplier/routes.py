@@ -3,6 +3,8 @@ from flask import render_template, request, jsonify, current_app
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 import os
+
+# الاستيراد الموحد من ملف extensions لضمان عدم حدوث Circular Import
 from apps.extensions import db
 from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet
@@ -44,7 +46,11 @@ def add_supplier_submit():
         filename = None
         if file:
             filename = secure_filename(f"{sovereign_id}_{file.filename}")
-            file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+            # التأكد من وجود مجلد الرفع
+            upload_path = current_app.config['UPLOAD_FOLDER']
+            if not os.path.exists(upload_path):
+                os.makedirs(upload_path)
+            file.save(os.path.join(upload_path, filename))
 
         # إنشاء سجل المورد
         new_supplier = Supplier(
