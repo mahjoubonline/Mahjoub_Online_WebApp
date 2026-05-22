@@ -1,15 +1,14 @@
 # coding: utf-8
-# 🛡️ تعريف المسارات السيادية للوحة التحكم
+# 🛡️ مستند تعريف النواة السيادية للوحة التحكم - منصة محجوب أونلاين 2026
 
 from flask import Blueprint
-import os
 
-# تعريف الـ Blueprint مع تحديد مجلد القوالب بدقة
-admin_dashboard = Blueprint(
+# تعريف الـ Blueprint مع توحيد الاسم البرمجي لمنع انهيار الـ Workers أثناء الإقلاع
+admin_dashboard_bp = Blueprint(
     'admin_dashboard', 
     __name__, 
     template_folder='templates'
 )
 
-# استيراد الـ routes هنا ضروري لربط المسارات بالـ Blueprint
+# 🔄 استيراد المسارات أسفل التعريف ضروري جداً لربط الدوال ومنع التداخل الدائري (Circular Import)
 from . import routes
