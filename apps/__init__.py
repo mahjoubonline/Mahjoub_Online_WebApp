@@ -7,7 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from config import Config
 
-# تهيئة الإضافات الأساسية
+# تهيئة الإضافات الأساسية (الربط المباشر مع النواة الموحدة)
 db = SQLAlchemy()
 login_manager = LoginManager()
 
@@ -17,7 +17,7 @@ def create_app():
     app.config.from_object(Config)
     app.json.ensure_ascii = False
 
-    # ضمان إعداد مسار الرفع
+    # ضمان إعداد مسار الرفع للملفات والوثائق السيادية للموردين
     if not app.config.get('UPLOAD_FOLDER'):
         app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads', 'identities')
 
@@ -26,16 +26,16 @@ def create_app():
     login_manager.init_app(app)
 
     with app.app_context():
-        # --- استيراد الموديلات ---
+        # --- استيراد الموديلات وتأمين سلامة التركيب البرمجي ---
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet 
         
-        # إنشاء الجداول وتطبيق التعديلات البرمجية
+        # إنشاء الجداول وتطبيق التعديلات البرمجية على المحفظة وبنية الموردين
         try:
             db.create_all()
             
-            # أوامر التطهير وإعادة الهيكلة الرقمية
+            # أوامر التطهير وإعادة الهيكلة الرقمية المتكاملة مع الـ PostgreSQL أو الـ SQLite
             commands = [
                 "ALTER TABLE supplier_wallets DROP CONSTRAINT IF EXISTS supplier_wallets_supplier_id_fkey;",
                 "ALTER TABLE supplier_wallets ALTER COLUMN supplier_id TYPE VARCHAR(50);",
@@ -58,7 +58,7 @@ def create_app():
             db.session.rollback()
             app.logger.error(f"❌ تعذر تحديث الجداول برمجياً: {str(e)}")
 
-    # إعدادات تسجيل الدخول
+    # إعدادات تسجيل الدخول وحماية المنطقة السيادية
     login_manager.login_view = 'auth_portal.login'
     login_manager.login_message = 'يرجى إثبات الهوية الرقمية للوصول إلى المنطقة السيادية.'
     login_manager.login_message_category = 'warning'
@@ -68,22 +68,22 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # --- استيراد وتسجيل المسارات (Blueprints) ---
+    # --- استيراد وتسجيل المسارات (Blueprints) المنفصلة ---
     from apps.auth_portal import auth_blueprint
     from apps.admin_dashboard import admin_dashboard
     from apps.add_supplier import admin_suppliers_bp 
     from apps.wallet.routes import admin_wallet
 
-    # تسجيل المسارات
+    # تسجيل المسارات بالبادئات الأمنية الموحدة منعاً للتضارب
     app.register_blueprint(auth_blueprint, url_prefix='/auth', name='auth_portal')
     app.register_blueprint(admin_dashboard, url_prefix='/admin', name='admin_dashboard')
     app.register_blueprint(admin_suppliers_bp, url_prefix='/suppliers', name='add_supplier')
     app.register_blueprint(admin_wallet, url_prefix='/admin/wallet', name='admin_wallet')
     
-    # معالجة الأخطاء السيادية
+    # معالجة الأخطاء السيادية وعرض جذور المشكلة بدلاً من الشاشة البيضاء الصامتة
     @app.errorhandler(500)
     def internal_error(e):
         return f"حدث خطأ سيادي (500): {str(e)}", 500
 
-    print("✅ تم تعميد كافة المسارات السيادية (Blueprints) بنجاح.")
+    print("✅ تم تعميد كافة المسارات السيادية (Blueprints) بنجاح والمحرك مستعد للتشغيل.")
     return app
