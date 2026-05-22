@@ -112,7 +112,7 @@
                 <i class="fas fa-chevron-left ms-auto transition-all" id="supArr"></i>
             </button>
             <div class="dropdown-container" id="supDrp">
-                <a href="javascript:void(0);" onclick="loadSupplierFormInline()" class="nav-link small py-2">
+                <a href="{{ url_for('add_supplier.add_supplier_page') }}" class="nav-link small py-2">
                     <i class="fas fa-user-plus ms-2"></i> تعميد جديد
                 </a>
                 <a href="{{ url_for('admin_dashboard.list_suppliers') }}" class="nav-link small py-2">
@@ -135,13 +135,13 @@
 
     <main class="main-wrapper">
         <header class="top-bar">
-            <h4 class="mb-0 fw-bold" id="page-main-title">{% block header_title %}مركز المراقبة{% endblock %}</h4>
+            <h4 class="mb-0 fw-bold">{% block header_title %}مركز المراقبة{% endblock %}</h4>
             <div class="badge bg-light text-dark border p-2 fw-semibold">
                 <i class="fas fa-user-shield me-1 text-muted"></i> {{ current_user.username if current_user.is_authenticated else 'مسؤول النظام' }}
             </div>
         </header>
         
-        <div class="p-4" id="dynamic-content-area">
+        <div class="p-4">
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -160,45 +160,9 @@
             }
         }
 
-        // 🧠 السكريبت المطور لحقن استمارة تسجيل المورد صامتاً داخل نفس المساحة
-        function loadSupplierFormInline() {
-            const contentArea = document.getElementById('dynamic-content-area');
-            const titleArea = document.getElementById('page-main-title');
-            
-            if (contentArea) {
-                // إظهار واجهة انتظار متحركة ممتازة
-                contentArea.innerHTML = `
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-                        <h5 class="mt-3 text-muted fw-bold">جاري استدعاء حزمة تعميد الموردين والمحافظ...</h5>
-                    </div>
-                `;
-                
-                // جلب محتوى الاستمارة صامتاً من السيرفر دون إعادة تحميل
-                fetch('/suppliers/add_supplier')
-                    .then(response => {
-                        if(!response.ok) throw new Error('فشل في تحميل مسار الملف الفرعي.');
-                        return response.text();
-                    })
-                    .then(htmlContent => {
-                        // حقن المحتوى وتحديث العنوان بنجاح
-                        contentArea.innerHTML = htmlContent;
-                        if(titleArea) titleArea.innerText = "إضافة مورد جديد في محجوب أونلاين";
-                    })
-                    .catch(error => {
-                        contentArea.innerHTML = `
-                            <div class="alert alert-danger shadow-sm border-0 d-flex align-items-center" role="alert">
-                                <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
-                                <div>حدث خطأ أثناء تحميل الاستمارة: ${error.message}</div>
-                            </div>
-                        `;
-                    });
-            }
-        }
-
         document.addEventListener("DOMContentLoaded", () => {
             const currentUrl = window.location.pathname;
-            if (currentUrl.includes('/suppliers') || currentUrl.includes('/list_suppliers')) {
+            if (currentUrl.includes('/suppliers') || currentUrl.includes('/register') || currentUrl.includes('/list_suppliers')) {
                 const el = document.getElementById('supDrp');
                 const arrow = document.getElementById('supArr');
                 if (el) el.style.display = "block";
