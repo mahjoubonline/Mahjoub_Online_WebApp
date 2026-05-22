@@ -1,17 +1,17 @@
 # coding: utf-8
 # 🚀 مستند المسارات السيادي لتعميد الموردين والمحافظ - منصة محجوب أونلاين 2026
 
-from flask import Blueprint, request, jsonify, render_template, url_for
+from flask import request, jsonify, render_template, url_for
 from werkzeug.security import generate_password_hash
 import random
 
-# استيراد الامتدادات وقاعدة البيانات بشكل آمن لمنع الـ Circular Import
+# استيراد الامتدادات والنماذج الحوكمية بشكل آمن
 from apps.extensions import db 
 from apps.models.supplier_db import Supplier 
 from apps.models.wallet_db import SupplierWallet
 
-# 🛡️ تعريف الـ Blueprint بالمسمى الدقيق المتوافق مع المصنع المركزي لـ Flask
-admin_suppliers_bp = Blueprint('add_supplier', __name__, url_prefix='/add_supplier')
+# 🛡️ استدعاء الـ Blueprint الجاهز المعرف في ملف __init__.py الخاص بالـ package الحالي
+from . import admin_suppliers_bp
 
 # دالة توليد الأرقام المتسلسلة التلقائية لـ (المورد والمحفظة) عبر الـ API
 @admin_suppliers_bp.route('/check_duplicate', methods=['GET'])
@@ -55,7 +55,6 @@ def add_supplier_submit():
         sovereign_id = request.form.get('sovereign_id')
         wallet_code = request.form.get('wallet_code')
         
-        # حماية إضافية في حال عدم وصول القيم من الواجهة
         if not sovereign_id or not wallet_code:
             sovereign_id = Supplier.generate_next_sovereign_id()
             wallet_code = SupplierWallet.generate_next_wallet_code()
@@ -116,7 +115,7 @@ def add_supplier_submit():
         )
         db.session.add(new_wallet)
         
-        # إتمام عملية الحفظ المزدوجة الآمنة
+        # إتمام عملية الحفظ المزدوجة الآمنة في الداتابيز
         db.session.commit()
         
         return jsonify({
