@@ -3,8 +3,7 @@
 
 from flask import Blueprint
 
-# تعريف الـ Blueprint
-# الاسم الأول 'add_supplier' يجب أن يتطابق مع ما تستخدمه في url_for
+# تعريف الـ Blueprint لمرة واحدة فقط مركزيّاً
 admin_suppliers_bp = Blueprint(
     'add_supplier', 
     __name__, 
@@ -12,5 +11,5 @@ admin_suppliers_bp = Blueprint(
     static_folder='static'
 )
 
-# استيراد المسارات (Routes) بعد تعريف الـ Blueprint لتجنب التداخل الدائري (Circular Import)
+# استيراد المسارات بعد تعريف الـ Blueprint لتجنب التداخل الدائري
 from . import routes
