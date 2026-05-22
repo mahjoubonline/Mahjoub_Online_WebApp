@@ -3,20 +3,18 @@
 
 from flask import request, jsonify, render_template, url_for
 from werkzeug.security import generate_password_hash
-import random
 
-# استيراد الامتدادات والنماذج الحوكمية بشكل آمن
-from apps.extensions import db 
-from apps.models.supplier_db import Supplier 
-from apps.models.wallet_db import SupplierWallet
-
-# 🛡️ استدعاء الـ Blueprint الجاهز المعرف في ملف __init__.py الخاص بالـ package الحالي
+# 🛡️ استدعاء الـ Blueprint الجاهز المعرف في ملف __init__.py
 from . import admin_suppliers_bp
 
 # دالة توليد الأرقام المتسلسلة التلقائية لـ (المورد والمحفظة) عبر الـ API
 @admin_suppliers_bp.route('/check_duplicate', methods=['GET'])
 def check_duplicate():
     check_type = request.args.get('type')
+    
+    # استدعاء الموديلات محلياً داخل الدالة كسرًا للتداخل الدائري
+    from apps.models.supplier_db import Supplier 
+    from apps.models.wallet_db import SupplierWallet
     
     # 1. جلب التسلسل التلقائي الذكي المعتمد لمنصة محجوب أونلاين
     if check_type == 'get_next_sequence':
@@ -51,6 +49,11 @@ def check_duplicate():
 @admin_suppliers_bp.route('/add_supplier_submit', methods=['POST'])
 def add_supplier_submit():
     try:
+        # استدعاء الامتدادات والموديلات محلياً لضمان الأمان أثناء الإرسال الحركي
+        from apps.extensions import db 
+        from apps.models.supplier_db import Supplier 
+        from apps.models.wallet_db import SupplierWallet
+
         # استقبال المعرفات الجوهرية من حقول الواجهة المخفية
         sovereign_id = request.form.get('sovereign_id')
         wallet_code = request.form.get('wallet_code')
@@ -124,5 +127,4 @@ def add_supplier_submit():
         })
 
     except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": f"خطأ سيادي أثناء الحفظ المالي: {str(e)}"})
+        from apps.extensions import db
