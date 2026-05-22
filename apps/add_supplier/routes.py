@@ -1,66 +1,36 @@
 # coding: utf-8
-# 🚀 مستند المسارات السيادي لتعميد الموردين والمحافظ - منصة محجوب أونلاين 2026
+# 🚀 مستند المسارات السيادي لتطبيق تعميد الموردين - منصة محجوب أونلاين 2026
 
-from flask import request, jsonify, render_template, url_for, redirect
+from flask import request, jsonify, render_template
 from werkzeug.security import generate_password_hash
-from flask_login import login_required, current_user
+from flask_login import login_required
 
-# 🛡️ استدعاء الـ Blueprint الجاهز والمثبت للتطبيق المصغر
 from . import admin_suppliers_bp
 
 # ========================================================
-# 🏬 النافذة الأساسية: عرض تطبيق "تسجيل المورد" كصفحة كاملة مستقلة
+# 🏬 المسار الأول (GET): يرجع محتوى الاستمارة الصافي فقط لحقنه بالهيكل
 # ========================================================
-@admin_suppliers_bp.route('/register', methods=['GET'])
+@admin_suppliers_bp.route('/add_supplier', methods=['GET'])
 @login_required
 def add_supplier_page():
     try:
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet
         
-        # توليد الأرقام المتسلسلة التلقائية لتجهيزها في حقول النافذة المستقلة
+        # توليد المعرفات المتسلسلة تلقائياً لتجهيزها داخل الحقول
         next_supplier_id = Supplier.generate_next_sovereign_id()
         next_wallet_id = SupplierWallet.generate_next_wallet_code()
         
-        # تحويل المسؤول إلى واجهة القالب المستقلة للتطبيق المصغر بالكامل
+        # نرجع القالب الفرعي الصافي والمجرد لكي يتم حقنه صامتاً داخل الهيكل الأساسي
         return render_template('admin/add_supplier.html', 
-                               current_user=current_user,
                                next_sequence=next_supplier_id,
                                next_wallet=next_wallet_id)
     except Exception as e:
-        return f"خطأ في تحميل نافذة تطبيق الموردين: {str(e)}", 500
+        return f"<div class='alert alert-danger'>خطأ في تحميل الاستمارة: {str(e)}</div>", 500
 
 
 # ========================================================
-# 🧠 دالة فحص وتوليد الأرقام المتسلسلة التلقائية عبر الـ API للتطبيق
-# ========================================================
-@admin_suppliers_bp.route('/check_duplicate', methods=['GET'])
-def check_duplicate():
-    check_type = request.args.get('type')
-    from apps.models.supplier_db import Supplier 
-    from apps.models.wallet_db import SupplierWallet
-    
-    if check_type == 'get_next_sequence':
-        try:
-            next_supplier_id = Supplier.generate_next_sovereign_id()
-            next_wallet_id = SupplierWallet.generate_next_wallet_code()
-            return jsonify({"next_sequence": next_supplier_id, "next_wallet": next_wallet_id})
-        except Exception:
-            return jsonify({"next_sequence": "SUP-MAH9631", "next_wallet": "WEL-MAH9631"})
-            
-    if check_type == 'username':
-        val = request.args.get('value', '').strip()
-        return jsonify({"exists": Supplier.query.filter_by(username=val).first() is not None})
-        
-    if check_type == 'identity_number':
-        val = request.args.get('value', '').strip()
-        return jsonify({"exists": Supplier.query.filter_by(identity_number=val).first() is not None})
-
-    return jsonify({"error": "نوع التحقق غير معروف"}), 400
-
-
-# ========================================================
-# 💳 دالة استقبال الحفظ والتزامن المالي للمحفظة والمورد
+# 💳 المسار الثاني (POST): مخصص فقط لاستقبال البيانات وحفظها في قاعدة البيانات
 # ========================================================
 @admin_suppliers_bp.route('/add_supplier_submit', methods=['POST'])
 @login_required
@@ -107,4 +77,18 @@ def add_supplier_submit():
         new_wallet = SupplierWallet(
             supplier_id=sovereign_id, wallet_code=wallet_code,
             yer_total=0.00, yer_withdrawn=0.00, yer_pending=0.00,
-            sar_total=0.00, sar_withdrawn=0.00, sar_
+            sar_total=0.00, sar_withdrawn=0.00, sar_pending=0.00,
+            usd_total=0.00, usd_withdrawn=0.00, usd_pending=0.00, status='نشطة'
+        )
+        db.session.add(new_wallet)
+        db.session.commit()
+        
+        return jsonify({
+            "status": "success", 
+            "message": f"تم تعميد المورد بنجاح بالمعرف {sovereign_id}"
+        })
+
+    except Exception as e:
+        from apps.extensions import db
+        db.session.rollback()
+        return jsonify
