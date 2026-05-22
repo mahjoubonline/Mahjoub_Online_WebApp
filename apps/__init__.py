@@ -12,8 +12,10 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 
 def create_app():
-    # التعديل الجوهري: ضبط template_folder ليشمل كامل المجلد الرئيسي
-    app = Flask(__name__, template_folder='.')
+    # التعديل الجوهري لضمان عمل الوراثة النسبية:
+    # نقوم بإزالة الإشارة للنقطة '.' التي تلخبط الحاوية، ونترك لـ Flask دمج مجلدات الـ templates تلقائياً للـ Blueprints
+    app = Flask(__name__)
+    
     app.config.from_object(Config)
     app.json.ensure_ascii = False
 
