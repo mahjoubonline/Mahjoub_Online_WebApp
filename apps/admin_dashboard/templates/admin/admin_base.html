@@ -11,13 +11,14 @@
         :root { --royal-purple: #632C8F; --deep-black: #08020d; --mahjoub-gold: #D4AF37; }
         body { font-family: 'Cairo', sans-serif; background: #f8f9fa; margin: 0; display: flex; }
         .sidebar { width: 280px; background: linear-gradient(180deg, var(--royal-purple) 0%, var(--deep-black) 100%); min-height: 100vh; position: fixed; right: 0; top: 0; z-index: 1100; box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
-        .logo-img { width: 50px; filter: brightness(0) invert(1); } /* اللوجو أبيض */
+        .logo-img { width: 50px; filter: brightness(0) invert(1); }
         .nav-link { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.8); text-decoration: none; border-radius: 12px; margin: 5px 15px; transition: 0.3s; cursor: pointer; }
         .nav-link:hover, .nav-link.active { background: rgba(212, 175, 55, 0.2); color: var(--mahjoub-gold); }
         .main-wrapper { margin-right: 280px; width: calc(100% - 280px); }
         .top-bar { height: 70px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid #eee; }
         #dynamic-content-area { transition: opacity 0.3s ease; padding: 2rem; min-height: 85vh; }
         .user-badge { background: #f0f0f0; padding: 8px 15px; border-radius: 50px; font-size: 0.9rem; font-weight: 600; }
+        .rotate { transform: rotate(-90deg); transition: 0.3s; }
     </style>
 </head>
 <body>
