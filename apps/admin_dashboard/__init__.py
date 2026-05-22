@@ -1,7 +1,6 @@
-# مثال: apps/admin_dashboard/__init__.py
-from flask import Blueprint
+# مجلد حزمة لوحة التحكم المركزية - apps/admin_dashboard/__init__.py
 
-# هذا الاسم 'admin_dashboard_bp' يجب أن يطابق ما استوردته في المصنع
-admin_dashboard_bp = Blueprint('admin_dashboard_bp', __name__)
+# استيراد الـ Blueprint من ملف المسارات ليكون متاحاً فوراً للتطبيق الرئيسي
+from apps.admin_dashboard.routes import admin_dashboard
 
-from . import routes
+# يمكنك إضافة أي دوال تهيئة خاصة بحزمة الـ Dashboard هنا إذا لزم الأمر مستقبلاً
