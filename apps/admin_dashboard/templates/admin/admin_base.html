@@ -61,12 +61,12 @@
                 <i class="fas fa-chevron-left ms-auto" id="supArr"></i>
             </button>
             <div class="dropdown-container" id="supDrp">
-                <a href="javascript:void(0);" onclick="loadContent('{{ url_for('add_supplier.add_supplier_page') }}', 'تعميد مورد جديد')" class="nav-link small py-2">
+                <a href="javascript:void(0);" onclick="loadContent('{{ url_for('admin_suppliers.add_supplier_page') }}', 'تعميد مورد جديد')" class="nav-link small py-2">
                     <i class="fas fa-user-plus ms-2"></i> تعميد جديد
                 </a>
             </div>
 
-            <a href="javascript:void(0);" onclick="loadContent('{{ url_for('admin_wallet.wallet_home') }}', 'الفضاء المالي')" class="nav-link">
+            <a href="javascript:void(0);" onclick="loadContent('{{ url_for('wallet.wallet_home') }}', 'الفضاء المالي')" class="nav-link">
                 <i class="fas fa-wallet ms-3"></i> <span>الفضاء المالي</span>
             </a>
             
@@ -91,27 +91,16 @@
     </main>
 
     <script>
-        // محرك تحميل المحتوى (App Shell Engine)
         function loadContent(url, title) {
             const contentArea = document.getElementById('dynamic-content-area');
             const titleElement = document.getElementById('page-main-title');
-            
-            // إظهار مؤشر تحميل بسيط
             contentArea.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">جاري المعالجة...</p></div>';
             titleElement.innerText = title;
-
             fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(response => response.text())
-            .then(html => {
-                contentArea.innerHTML = html;
-                history.pushState({}, title, url);
-            })
-            .catch(err => {
-                contentArea.innerHTML = '<div class="alert alert-danger">حدث خطأ أثناء تحميل البيانات.</div>';
-                console.error(err);
-            });
+            .then(html => { contentArea.innerHTML = html; history.pushState({}, title, url); })
+            .catch(err => { contentArea.innerHTML = '<div class="alert alert-danger">حدث خطأ أثناء تحميل البيانات.</div>'; });
         }
-
         function toggleDropdown(id, arrowId) {
             const el = document.getElementById(id);
             const arrow = document.getElementById(arrowId);
