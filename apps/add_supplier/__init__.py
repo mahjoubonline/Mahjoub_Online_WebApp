@@ -1,9 +1,8 @@
 # coding: utf-8
-# ⚙️ ملف تهيئة وحدة إدارة الموردين - منصة محجوب أونلاين 2026
-
 from flask import Blueprint
 
-# تعريف الـ Blueprint لمرة واحدة فقط مركزيّاً
+# 🛡️ تعريف الـ Blueprint الخاص بـ "تعميد الموردين"
+# هذا يجعل كل المسارات المعرفة في routes.py تابعة لهذه الحزمة
 admin_suppliers_bp = Blueprint(
     'add_supplier', 
     __name__, 
@@ -11,5 +10,5 @@ admin_suppliers_bp = Blueprint(
     static_folder='static'
 )
 
-# استيراد المسارات بعد تعريف الـ Blueprint لتجنب التداخل الدائري
+# استيراد الـ routes لربطها بالـ blueprint
 from . import routes
