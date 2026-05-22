@@ -1,191 +1,123 @@
 {% extends "apps/admin_dashboard/templates/admin/admin_base.html" %}
 
-{% block title %}حوكمة وفحص المحافظ | محجوب أونلاين{% endblock %}
+{% block title %}مركز القيادة والسيطرة | محجوب أونلاين{% endblock %}
 
-{% block header_title %}الفضاء المالي وحوكمة الخزائن{% endblock %}
+{% block header_title %}مركز القيادة والسيطرة{% endblock %}
 
 {% block content %}
-<style>
-    /* 🔥 لمسات سيادية مخصصة للفضاء المالي */
-    .financial-card {
-        border-radius: 20px;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-        cursor: pointer;
-    }
-    
-    .financial-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15) !important;
-    }
-
-    /* تأثير زجاجي بلوري داخلي ناعم على الكروت */
-    .card-glass-glow {
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
-        transform: rotate(30deg);
-        transition: var(--transition);
-    }
-    
-    .financial-card:hover .card-glass-glow {
-        left: -30%;
-        top: -30%;
-    }
-
-    .icon-shape {
-        width: 55px;
-        height: 55px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(5px);
-        font-size: 1.4rem;
-        box-shadow: inset 0 1px 1px rgba(255,255,255,0.3);
-    }
-
-    .quick-action-card {
-        background: #ffffff;
-        border: 1px solid rgba(0,0,0,0.04);
-        border-radius: 16px;
-        transition: all 0.3s ease;
-    }
-
-    .quick-action-card:hover {
-        border-color: var(--royal-purple);
-        background: linear-gradient(135deg, #ffffff 0%, rgba(99, 44, 143, 0.03) 100%);
-    }
-
-    /* حوكمة ألوان الرموز السيادية */
-    .currency-tag {
-        font-size: 0.85rem;
-        padding: 4px 10px;
-        border-radius: 30px;
-        background: rgba(255, 255, 255, 0.2);
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }
-</style>
-
-<div class="container-fluid px-1">
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="border-radius: 14px; background-color: #fff; border-right: 5px solid {% if category=='success' %}#2e7d32{% else %}#d32f2f{% endif %};">
-            <div class="d-flex align-items-center">
-                <i class="fas {% if category=='success' %}fa-check-circle text-success{% else %}fa-exclamation-triangle text-danger{% endif %} me-3 fs-5"></i>
-                <div class="text-dark fw-semibold">{{ message }}</div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <div class="row g-4 mb-5">
+<div id="dashboard-main-view">
+    <div class="row g-4 mb-4">
         {% set cards = [
-            {'title': 'إجمالي خزينة اليمني', 'val': totals.total_yer, 'bg': 'linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%)', 'unit': 'YER', 'icon': 'fa-building-columns', 'symbol': '﷼'},
-            {'title': 'إجمالي خزينة السعودي', 'val': totals.total_sar, 'bg': 'linear-gradient(135deg, #b71c1c 0%, #e65100 100%)', 'unit': 'SAR', 'icon': 'fa-money-bill-trend-up', 'symbol': 'ر.س'},
-            {'title': 'إجمالي خزينة الدولار', 'val': totals.total_usd, 'bg': 'linear-gradient(135deg, #0d47a1 0%, #1976d2 100%)', 'unit': 'USD', 'icon': 'fa-sack-dollar', 'symbol': '$'}
+            {'title': 'إجمالي الخزينة (YER)', 'val': totals.total_yer, 'bg': 'linear-gradient(135deg, #1b5e20, #2e7d32)', 'unit': '﷼'},
+            {'title': 'إجمالي الخزينة (SAR)', 'val': totals.total_sar, 'bg': 'linear-gradient(135deg, #b71c1c, #e65100)', 'unit': 'ر.س'},
+            {'title': 'إجمالي الخزينة (USD)', 'val': totals.total_usd, 'bg': 'linear-gradient(135deg, #0d47a1, #1976d2)', 'unit': '$'}
         ] %}
         
         {% for card in cards %}
-        <div class="col-xl-4 col-md-6">
-            <div class="card text-white financial-card shadow border-0">
-                <div class="card-glass-glow"></div>
-                <div class="card-body p-4 position-relative">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                            <span class="currency-tag mb-1 d-inline-block">{{ card.unit }}</span>
-                            <h6 class="text-white-50 small mb-0 fw-bold">{{ card.title }}</h6>
-                        </div>
-                        <div class="icon-shape">
-                            <i class="fas {{ card.icon }}"></i>
-                        </div>
+        <div class="col-md-4">
+            <div class="card text-white shadow-sm border-0" style="background: {{ card.bg }}; border-radius: 16px; transition: transform 0.3s ease; position: relative; overflow: hidden;">
+                <div class="card-body p-4 position-relative" style="z-index: 2;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="text-white-50 mb-0 fw-bold small">{{ card.title }}</h6>
+                        <i class="fas fa-vault opacity-50 fs-5"></i>
                     </div>
-                    
-                    <div class="d-flex align-items-baseline justify-content-between mt-2">
-                        <h2 class="fw-black mb-0 tracking-tight" style="font-size: 2.2rem; font-family: 'Cairo', sans-serif;">
-                            {{ "{:,.2f}".format(card.val) if card.val is numeric else card.val if card.val is not none else '0.00' }}
-                        </h2>
-                        <span class="fs-4 fw-bold opacity-75 ms-2">{{ card.symbol }}</span>
-                    </div>
-                    
-                    <div class="progress mt-3" style="height: 4px; background: rgba(255,255,255,0.15); border-radius: 10px;">
-                        <div class="progress-bar bg-white opacity-75" role="progressbar" style="width: 100%"></div>
-                    </div>
+                    <h2 class="fw-bold mb-0" style="font-family: 'Cairo', sans-serif;">
+                        {{ "{:,.2f}".format(card.val) if card.val is numeric else card.val if card.val is not none else '0.00' }} 
+                        <small class="fs-6 fw-normal text-white-50">{{ card.unit }}</small>
+                    </h2>
                 </div>
+                <div style="position: absolute; top: -20px; left: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
             </div>
         </div>
         {% endfor %}
     </div>
 
-    <div class="row g-4">
-        <div class="col-12">
-            <div class="d-flex align-items-center mb-3">
-                <i class="fas fa-cubes text-muted me-2 fs-5"></i>
-                <h5 class="fw-bold mb-0 text-dark">بوابات الحوكمة والتنقل السريع لـ النوافذ</h5>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <a href="{{ url_for('add_supplier.add_supplier_page') }}" class="text-decoration-none text-dark">
-                <div class="card quick-action-card p-4 border-0 shadow-sm h-100">
-                    <div class="d-flex align-items-center">
-                        <div class="p-3 bg-light text-primary rounded-3 me-3">
-                            <i class="fas fa-user-plus fa-lg" style="color: var(--royal-purple);"></i>
-                        </div>
-                        <div>
-                            <h6 class="fw-bold mb-1">تعميد مورد جديد</h6>
-                            <small class="text-muted text-xs">فتح نافذة تطبيق التسجيل السيادي</small>
-                        </div>
-                        <i class="fas fa-chevron-left ms-auto text-muted small"></i>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-4">
-            <a href="{{ url_for('admin_dashboard.list_suppliers') }}" class="text-decoration-none text-dark">
-                <div class="card quick-action-card p-4 border-0 shadow-sm h-100">
-                    <div class="d-flex align-items-center">
-                        <div class="p-3 bg-light text-success rounded-3 me-3">
-                            <i class="fas fa-database fa-lg"></i>
-                        </div>
-                        <div>
-                            <h6 class="fw-bold mb-1">سجل الموردين الحقيقي</h6>
-                            <small class="text-muted text-xs">فحص ومراقبة الحسابات الجارية</small>
-                        </div>
-                        <i class="fas fa-chevron-left ms-auto text-muted small"></i>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-4">
-            <a href="{{ url_for('admin_wallet.wallet_page') }}" class="text-decoration-none text-dark">
-                <div class="card quick-action-card p-4 border-0 shadow-sm h-100">
-                    <div class="d-flex align-items-center">
-                        <div class="p-3 bg-light text-warning rounded-3 me-3">
-                            <i class="fas fa-wallet fa-lg" style="color: var(--mahjoub-gold);"></i>
-                        </div>
-                        <div>
-                            <h6 class="fw-bold mb-1">إدارة الخزائن الموحدة</h6>
-                            <small class="text-muted text-xs">عمليات السحب والإيداع والتسويات</small>
-                        </div>
-                        <i class="fas fa-chevron-left ms-auto text-muted small"></i>
-                    </div>
-                </div>
-            </a>
-        </div>
+    <div class="card border-0 shadow-sm p-4 text-center mt-4" style="border-radius: 16px; background: #ffffff;">
+        <i class="fas fa-shield-cat text-muted mb-3" style="font-size: 3rem; color: var(--royal-purple) !important;"></i>
+        <h5 class="fw-bold text-dark">نظام حوكمة المحافظ الموحد</h5>
+        <p class="text-muted small mb-0">يمكنك إدارة وتعميد الموردين أو فحص الأرصدة والتقارير المالية مباشرة عبر القوائم الجانبية دون إعادة تحميل الصفحة.</p>
     </div>
-
 </div>
+
+<script>
+/**
+ * محرك جلب وحقن النوافذ الصامت لمنصة محجوب أونلاين
+ * @param {string} endpointUrl - مسار الـ GET للتطبيق المصغر الذي يرجع HTML صافي
+ * @param {string} pageTitle - العنوان الجديد الذي سيتم كتابته في أعلى الصفحة
+ */
+function loadMicroAppInline(endpointUrl, pageTitle) {
+    const contentArea = document.getElementById('dynamic-content-area');
+    const topTitle = document.getElementById('page-main-title');
+    
+    if (!contentArea) return;
+
+    // 1. تشغيل مؤشر الانتظار البصري الموزون في المنتصف
+    contentArea.innerHTML = `
+        <div class="text-center py-5 my-5">
+            <div class="spinner-border" role="status" style="width: 3rem; height: 3rem; color: #632C8F !important;"></div>
+            <h5 class="mt-3 text-muted fw-bold">جاري استدعاء حزمة النافذة برمجياً...</h5>
+            <p class="text-muted small">تأمين الاتصال | منصة محجوب أونلاين 2026</p>
+        </div>
+    `;
+
+    // 2. تحديث العنوان العلوي في الـ Top Bar فوراً
+    if (topTitle && pageTitle) {
+        topTitle.innerText = pageTitle;
+    }
+
+    // 3. إرسال طلب Fetch الصامت لاستدعاء كود الواجهة النظيف من السيرفر
+    fetch(endpointUrl, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 405) throw new Error("الطريقة غير مسموحة (405) - تأكد أن مسار الاستدعاء يدعم استقبال GET.");
+            if (response.status === 404) throw new Error("النافذة المطلوبة غير موجودة بالسيرفر (404).");
+            throw new Error("فشل الخادم في رندرة الهيكل الصافي.");
+        }
+        return response.text();
+    })
+    .then(cleanHtml => {
+        // 4. حقن الكتلة البرمجية المجلوبة بالكامل داخل مساحة المحتوى
+        contentArea.innerHTML = cleanHtml;
+    })
+    .catch(error => {
+        // واجهة معالجة الأخطاء السيادية لحماية تجربة المستخدم
+        contentArea.innerHTML = `
+            <div class="alert alert-danger shadow-sm border-0 p-4" role="alert" style="border-radius: 14px; background-color: #fff; border-right: 6px solid #d32f2f;">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-triangle-exclamation fs-3 text-danger me-3"></i>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">خطأ في نقل البيانات الفورية</h6>
+                        <p class="mb-0 small text-muted">${error.message}</p>
+                        <button onclick="location.reload();" class="btn btn-sm btn-outline-danger mt-3 fw-bold" style="border-radius: 8px;">
+                            <i class="fas fa-rotate-left me-1"></i> إعادة تحميل الصفحة المركزية
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// ربط أزرار القائمة الجانبية الموجودة في الـ Base بالمحرك الجديد برمجياً لضمان عدم حدوث تعليق
+document.addEventListener("DOMContentLoaded", () => {
+    // ابحث عن زر "تعميد جديد" في القائمة الجانبية وقم بتحويل سلوكه للمحرك الديناميكي
+    const addSupplierBtn = document.querySelector('a[href*="/add_supplier"]');
+    if (addSupplierBtn) {
+        addSupplierBtn.setAttribute('href', 'javascript:void(0);');
+        addSupplierBtn.setAttribute('onclick', "loadMicroAppInline('/suppliers/add_supplier', 'تعميد مورد جديد ومحفظة سيادية')");
+    }
+
+    // ابحث عن زر "سجل الموردين" في القائمة الجانبية وقم بتحويل سلوكه للمحرك الديناميكي
+    const listSuppliersBtn = document.querySelector('a[href*="/list"]');
+    if (listSuppliersBtn) {
+        listSuppliersBtn.setAttribute('href', 'javascript:void(0);');
+        listSuppliersBtn.setAttribute('onclick', "loadMicroAppInline('/suppliers/list', 'سجل شركاء النجاح والموردين المعتمدين')");
+    }
+});
+</script>
 {% endblock %}
