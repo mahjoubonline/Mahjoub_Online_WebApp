@@ -5,40 +5,38 @@ from flask import request, jsonify, render_template, url_for, redirect
 from werkzeug.security import generate_password_hash
 from flask_login import login_required, current_user
 
-# 🛡️ استدعاء الـ Blueprint الجاهز المعرف في ملف __init__.py
+# 🛡️ استدعاء الـ Blueprint الجاهز والمثبت للتطبيق المصغر
 from . import admin_suppliers_bp
 
 # ========================================================
-# 🏬 1. دالة فتح واستدعاء استمارة "تسجيل المورد" داخل نفس الصفحة
+# 🏬 النافذة الأساسية: عرض تطبيق "تسجيل المورد" كصفحة كاملة مستقلة
 # ========================================================
-@admin_suppliers_bp.route('/add_supplier', methods=['GET'])
+@admin_suppliers_bp.route('/register', methods=['GET'])
 @login_required
 def add_supplier_page():
     try:
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet
         
-        # توليد المعرفات المتسلسلة التلقائية للمورد والمحفظة
+        # توليد الأرقام المتسلسلة التلقائية لتجهيزها في حقول النافذة المستقلة
         next_supplier_id = Supplier.generate_next_sovereign_id()
         next_wallet_id = SupplierWallet.generate_next_wallet_code()
         
-        # نرسل ملف الاستمارة الفرعي ليتم جلبه بالـ JavaScript وحقنه صامتاً
+        # تحويل المسؤول إلى واجهة القالب المستقلة للتطبيق المصغر بالكامل
         return render_template('admin/add_supplier.html', 
                                current_user=current_user,
                                next_sequence=next_supplier_id,
                                next_wallet=next_wallet_id)
     except Exception as e:
-        return f"<div class='alert alert-danger'>خطأ في استدعاء واجهة الموردين: {str(e)}</div>", 500
+        return f"خطأ في تحميل نافذة تطبيق الموردين: {str(e)}", 500
 
 
 # ========================================================
-# 🧠 2. دالة فحص وتوليد الأرقام المتسلسلة التلقائية عبر الـ API
+# 🧠 دالة فحص وتوليد الأرقام المتسلسلة التلقائية عبر الـ API للتطبيق
 # ========================================================
 @admin_suppliers_bp.route('/check_duplicate', methods=['GET'])
 def check_duplicate():
     check_type = request.args.get('type')
-    
-    # استدعاء الموديلات محلياً داخل الدالة كسرًا للتداخل الدائري
     from apps.models.supplier_db import Supplier 
     from apps.models.wallet_db import SupplierWallet
     
@@ -46,30 +44,26 @@ def check_duplicate():
         try:
             next_supplier_id = Supplier.generate_next_sovereign_id()
             next_wallet_id = SupplierWallet.generate_next_wallet_code()
-            return jsonify({
-                "next_sequence": next_supplier_id,
-                "next_wallet": next_wallet_id
-            })
-        except Exception as e:
+            return jsonify({"next_sequence": next_supplier_id, "next_wallet": next_wallet_id})
+        except Exception:
             return jsonify({"next_sequence": "SUP-MAH9631", "next_wallet": "WEL-MAH9631"})
             
     if check_type == 'username':
         val = request.args.get('value', '').strip()
-        exists = Supplier.query.filter_by(username=val).first() is not None
-        return jsonify({"exists": exists})
+        return jsonify({"exists": Supplier.query.filter_by(username=val).first() is not None})
         
     if check_type == 'identity_number':
         val = request.args.get('value', '').strip()
-        exists = Supplier.query.filter_by(identity_number=val).first() is not None
-        return jsonify({"exists": exists})
+        return jsonify({"exists": Supplier.query.filter_by(identity_number=val).first() is not None})
 
     return jsonify({"error": "نوع التحقق غير معروف"}), 400
 
 
 # ========================================================
-# 💳 3. دالة استقبال الفورم وحفظ المورد والمحفظة بالتزامن المالي الكامل
+# 💳 دالة استقبال الحفظ والتزامن المالي للمحفظة والمورد
 # ========================================================
 @admin_suppliers_bp.route('/add_supplier_submit', methods=['POST'])
+@login_required
 def add_supplier_submit():
     try:
         from apps.extensions import db 
@@ -85,7 +79,6 @@ def add_supplier_submit():
 
         username = request.form.get('username')
         raw_password = request.form.get('password')
-        
         password_hash = generate_password_hash(raw_password) if raw_password else "default_hash"
         
         identity_type = request.form.get('identity_type')
@@ -102,48 +95,16 @@ def add_supplier_submit():
         bank_acc = request.form.get('bank_acc')
 
         new_supplier = Supplier(
-            sovereign_id=sovereign_id,
-            wallet_code=wallet_code,
-            username=username,
-            password_hash=password_hash,
-            identity_type=identity_type,
-            identity_number=identity_number,
-            owner_name=owner_name,
-            owner_phone=owner_phone,
-            trade_name=trade_name,
-            shop_number=shop_number,
-            shop_phone=owner_phone,  
-            province=province,
-            district=district,
-            address_detail=address_detail,
-            fin_type=fin_type,
-            bank_name=bank_name,
-            bank_acc=bank_acc,
-            status='active'  
+            sovereign_id=sovereign_id, wallet_code=wallet_code, username=username,
+            password_hash=password_hash, identity_type=identity_type, identity_number=identity_number,
+            owner_name=owner_name, owner_phone=owner_phone, trade_name=trade_name,
+            shop_number=shop_number, shop_phone=owner_phone, province=province,
+            district=district, address_detail=address_detail, fin_type=fin_type,
+            bank_name=bank_name, bank_acc=bank_acc, status='active'  
         )
         db.session.add(new_supplier)
 
         new_wallet = SupplierWallet(
-            supplier_id=sovereign_id,  
-            wallet_code=wallet_code,
+            supplier_id=sovereign_id, wallet_code=wallet_code,
             yer_total=0.00, yer_withdrawn=0.00, yer_pending=0.00,
-            sar_total=0.00, sar_withdrawn=0.00, sar_pending=0.00,
-            usd_total=0.00, usd_withdrawn=0.00, usd_pending=0.00,
-            status='نشطة'
-        )
-        db.session.add(new_wallet)
-        
-        db.session.commit()
-        
-        return jsonify({
-            "status": "success", 
-            "message": f"تم تعميد المورد بنجاح بالمعرف {sovereign_id} وإنشاء محفظته الموحدة رقم {wallet_code}"
-        })
-
-    except Exception as e:
-        from apps.extensions import db
-        db.session.rollback()
-        return jsonify({
-            "status": "error",
-            "message": f"فشل تعميد المورد في النظام: {str(e)}"
-        }), 500
+            sar_total=0.00, sar_withdrawn=0.00, sar_
