@@ -39,7 +39,7 @@ def create_app():
     from apps.add_supplier import admin_suppliers_bp
     app.register_blueprint(admin_suppliers_bp, url_prefix='/suppliers')
     
-    # إدارة المحفظة
+    # إدارة المحفظة: تأكد أن الاسم في wallet/__init__.py هو 'wallet'
     from apps.wallet import wallet_bp
     app.register_blueprint(wallet_bp, url_prefix='/wallet')
 
