@@ -1,4 +1,4 @@
-{% extends "apps/admin_dashboard/templates/admin/admin_base.html" %}
+{% extends "admin/admin_base.html" %}
 
 {% block title %}مركز القيادة والسيطرة | محجوب أونلاين{% endblock %}
 
@@ -8,94 +8,76 @@
 <div id="dashboard-main-view">
     <div class="row g-4 mb-4">
         {% set cards = [
-            {'title': 'إجمالي الخزينة (YER)', 'val': totals.total_yer, 'bg': 'linear-gradient(135deg, #1b5e20, #2e7d32)', 'unit': '﷼'},
-            {'title': 'إجمالي الخزينة (SAR)', 'val': totals.total_sar, 'bg': 'linear-gradient(135deg, #b71c1c, #e65100)', 'unit': 'ر.س'},
-            {'title': 'إجمالي الخزينة (USD)', 'val': totals.total_usd, 'bg': 'linear-gradient(135deg, #0d47a1, #1976d2)', 'unit': '$'}
+            {'title': 'إجمالي الخزينة (YER)', 'val': totals.total_yer if totals else 0.0, 'bg': 'linear-gradient(135deg, #1b5e20, #2e7d32)', 'unit': '﷼'},
+            {'title': 'إجمالي الخزينة (SAR)', 'val': totals.total_sar if totals else 0.0, 'bg': 'linear-gradient(135deg, #b71c1c, #e65100)', 'unit': 'ر.س'},
+            {'title': 'إجمالي الخزينة (USD)', 'val': totals.total_usd if totals else 0.0, 'bg': 'linear-gradient(135deg, #0d47a1, #1976d2)', 'unit': '$'}
         ] %}
         
         {% for card in cards %}
         <div class="col-md-4">
-            <div class="card text-white shadow-sm border-0" style="background: {{ card.bg }}; border-radius: 16px; transition: transform 0.3s ease; position: relative; overflow: hidden;">
+            <div class="card text-white shadow-sm border-0" style="background: {{ card.bg }}; border-radius: 16px; position: relative; overflow: hidden;">
                 <div class="card-body p-4 position-relative" style="z-index: 2;">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="text-white-50 mb-0 fw-bold small">{{ card.title }}</h6>
                         <i class="fas fa-vault opacity-50 fs-5"></i>
                     </div>
                     <h2 class="fw-bold mb-0" style="font-family: 'Cairo', sans-serif;">
-                        {{ "{:,.2f}".format(card.val) if card.val is numeric else card.val if card.val is not none else '0.00' }} 
+                        {{ "{:,.2f}".format(card.val) }} 
                         <small class="fs-6 fw-normal text-white-50">{{ card.unit }}</small>
                     </h2>
                 </div>
-                <div style="position: absolute; top: -20px; left: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
             </div>
         </div>
         {% endfor %}
     </div>
 
     <div class="card border-0 shadow-sm p-4 text-center mt-4" style="border-radius: 16px; background: #ffffff;">
-        <i class="fas fa-shield-cat text-muted mb-3" style="font-size: 3rem; color: var(--royal-purple) !important;"></i>
+        <i class="fas fa-shield-halved text-muted mb-3" style="font-size: 3rem; color: #632C8F !important;"></i>
         <h5 class="fw-bold text-dark">نظام حوكمة المحافظ الموحد</h5>
-        <p class="text-muted small mb-0">يمكنك إدارة وتعميد الموردين أو فحص الأرصدة والتقارير المالية مباشرة عبر القوائم الجانبية دون إعادة تحميل الصفحة.</p>
+        <p class="text-muted small mb-0">يمكنك التحكم وإدارة وتعميد كافة النوافذ التشغيلية المباشرة عبر محرك الحقن الموحد دون إعادة تحميل القوالب.</p>
     </div>
 </div>
 
 <script>
-/**
- * محرك جلب وحقن النوافذ الصامت لمنصة محجوب أونلاين
- * @param {string} endpointUrl - مسار الـ GET للتطبيق المصغر الذي يرجع HTML صافي
- * @param {string} pageTitle - العنوان الجديد الذي سيتم كتابته في أعلى الصفحة
- */
 function loadMicroAppInline(endpointUrl, pageTitle) {
     const contentArea = document.getElementById('dynamic-content-area');
     const topTitle = document.getElementById('page-main-title');
     
     if (!contentArea) return;
 
-    // 1. تشغيل مؤشر الانتظار البصري الموزون في المنتصف
+    // تشغيل مؤشر الانتظار البصري الصافي أثناء استدعاء السيرفر
     contentArea.innerHTML = `
         <div class="text-center py-5 my-5">
             <div class="spinner-border" role="status" style="width: 3rem; height: 3rem; color: #632C8F !important;"></div>
             <h5 class="mt-3 text-muted fw-bold">جاري استدعاء حزمة النافذة برمجياً...</h5>
-            <p class="text-muted small">تأمين الاتصال | منصة محجوب أونلاين 2026</p>
+            <p class="text-muted small">تأمين الاتصال الحالي | محجوب أونلاين</p>
         </div>
     `;
 
-    // 2. تحديث العنوان العلوي في الـ Top Bar فوراً
     if (topTitle && pageTitle) {
         topTitle.innerText = pageTitle;
     }
 
-    // 3. إرسال طلب Fetch الصامت لاستدعاء كود الواجهة النظيف من السيرفر
+    // إرسال طلب صامت للسيرفر لجلب الـ HTML الصافي للمستند المطلوب
     fetch(endpointUrl, {
         method: 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => {
-        if (!response.ok) {
-            if (response.status === 405) throw new Error("الطريقة غير مسموحة (405) - تأكد أن مسار الاستدعاء يدعم استقبال GET.");
-            if (response.status === 404) throw new Error("النافذة المطلوبة غير موجودة بالسيرفر (404).");
-            throw new Error("فشل الخادم في رندرة الهيكل الصافي.");
-        }
+        if (!response.ok) throw new Error("تعذر جلب محتوى النافذة أو أن المسار غير متاح حالياً.");
         return response.text();
     })
     .then(cleanHtml => {
-        // 4. حقن الكتلة البرمجية المجلوبة بالكامل داخل مساحة المحتوى
         contentArea.innerHTML = cleanHtml;
     })
     .catch(error => {
-        // واجهة معالجة الأخطاء السيادية لحماية تجربة المستخدم
         contentArea.innerHTML = `
-            <div class="alert alert-danger shadow-sm border-0 p-4" role="alert" style="border-radius: 14px; background-color: #fff; border-right: 6px solid #d32f2f;">
+            <div class="alert alert-danger shadow-sm border-0 p-4" role="alert" style="border-radius: 14px;">
                 <div class="d-flex align-items-center">
-                    <i class="fas fa-triangle-exclamation fs-3 text-danger me-3"></i>
+                    <i class="fas fa-triangle-exclamation fs-3 me-3"></i>
                     <div>
-                        <h6 class="fw-bold text-dark mb-1">خطأ في نقل البيانات الفورية</h6>
-                        <p class="mb-0 small text-muted">${error.message}</p>
-                        <button onclick="location.reload();" class="btn btn-sm btn-outline-danger mt-3 fw-bold" style="border-radius: 8px;">
-                            <i class="fas fa-rotate-left me-1"></i> إعادة تحميل الصفحة المركزية
-                        </button>
+                        <h6 class="fw-bold mb-1">خطأ في جلب البيانات الفورية</h6>
+                        <p class="mb-0 small">${error.message}</p>
                     </div>
                 </div>
             </div>
@@ -103,16 +85,14 @@ function loadMicroAppInline(endpointUrl, pageTitle) {
     });
 }
 
-// ربط أزرار القائمة الجانبية الموجودة في الـ Base بالمحرك الجديد برمجياً لضمان عدم حدوث تعليق
+// تعديل سلوك أزرار التنقل في القائمة الجانبية تلقائياً لتمر عبر المحرك الفوري
 document.addEventListener("DOMContentLoaded", () => {
-    // ابحث عن زر "تعميد جديد" في القائمة الجانبية وقم بتحويل سلوكه للمحرك الديناميكي
     const addSupplierBtn = document.querySelector('a[href*="/add_supplier"]');
     if (addSupplierBtn) {
         addSupplierBtn.setAttribute('href', 'javascript:void(0);');
         addSupplierBtn.setAttribute('onclick', "loadMicroAppInline('/suppliers/add_supplier', 'تعميد مورد جديد ومحفظة سيادية')");
     }
 
-    // ابحث عن زر "سجل الموردين" في القائمة الجانبية وقم بتحويل سلوكه للمحرك الديناميكي
     const listSuppliersBtn = document.querySelector('a[href*="/list"]');
     if (listSuppliersBtn) {
         listSuppliersBtn.setAttribute('href', 'javascript:void(0);');
