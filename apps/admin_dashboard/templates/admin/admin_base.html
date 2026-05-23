@@ -17,7 +17,6 @@
             --deep-black: #08020d;
             --mahjoub-gold: #D4AF37;
             --glass-bg: rgba(255, 255, 255, 0.9);
-            --sidebar-width: 280px;
             --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
@@ -30,70 +29,12 @@
             direction: rtl;
         }
 
-        /* شريط السايد بار بالبنفسجي الملكي الكامل المستقر */
-        .sidebar {
-            width: var(--sidebar-width);
-            background: linear-gradient(180deg, var(--royal-purple) 0%, var(--royal-purple-dark) 100%);
-            height: 100vh; 
-            position: fixed; 
-            right: 0; 
-            top: 0; 
-            z-index: 1100;
-            transition: var(--transition);
-            box-shadow: -5px 0 25px rgba(0,0,0,0.15);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar-header { 
-            padding: 2.5rem 1rem; 
-            border-bottom: 1px solid rgba(255, 255, 255, 0.15); 
-            text-align: center;
-        }
-
-        .logo-img { 
-            width: 85px; 
-            height: auto; 
-            filter: brightness(0) invert(1) drop-shadow(0 0 12px rgba(255, 255, 255, 0.35));
-            margin-bottom: 15px;
-        }
-
-        .nav-menu { padding: 1.5rem 1rem; flex-grow: 1; overflow-y: auto; }
-        .nav-menu::-webkit-scrollbar { width: 4px; }
-        .nav-menu::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
-
-        .nav-link, .dropdown-btn {
-            display: flex; align-items: center; padding: 14px 18px;
-            color: rgba(255, 255, 255, 0.9); text-decoration: none;
-            border-radius: 15px; margin-bottom: 8px; transition: var(--transition);
-            cursor: pointer; border: none; background: transparent; width: 100%;
-            font-weight: 600;
-            text-align: right;
-        }
-
-        .nav-link:hover, .dropdown-btn:hover, .nav-link.active, .dropdown-btn.active { 
-            background: rgba(255, 255, 255, 0.15); 
-            color: var(--mahjoub-gold);
-            transform: translateX(-5px);
-        }
-
-        .dropdown-container { 
-            display: none; background: rgba(0,0,0,0.15); border-radius: 12px; 
-            margin-bottom: 10px; overflow: hidden; animation: slideDown 0.4s ease;
-        }
-        
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .dropdown-container a { 
-            padding: 12px 45px; font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); 
-            display: block; text-decoration: none; transition: 0.3s; 
-        }
-        
-        .dropdown-container a:hover { color: var(--mahjoub-gold); background: rgba(255,255,255,0.08); padding-right: 55px; }
-
+        /* 🚀 تعديل الحاضن الرئيسي ليمتد بكامل عرض الشاشة بعد إزالة الشريط الجانبي */
         .main-wrapper { 
-            margin-right: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); 
-            min-height: 100vh; transition: var(--transition);
+            margin-right: 0 !important; 
+            width: 100% !important; 
+            min-height: 100vh; 
+            transition: var(--transition);
         }
 
         .top-bar { 
@@ -116,15 +57,6 @@
             background: rgba(255,255,255,0.7); backdrop-filter: blur(5px);
             z-index: 9999; place-items: center;
         }
-
-        .fa-chevron-left { transition: 0.3s; margin-right: auto; }
-        .rotate { transform: rotate(-90deg); }
-
-        @media (max-width: 991px) {
-            .sidebar { right: -280px; }
-            .sidebar.active { right: 0; }
-            .main-wrapper { margin-right: 0; width: 100%; }
-        }
     </style>
 </head>
 <body>
@@ -133,69 +65,10 @@
         <div class="spinner-grow" style="width: 3rem; height: 3rem; color: var(--royal-purple) !important;"></div>
     </div>
 
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" class="logo-img" alt="سوقك الذكي">
-            <h2 class="text-white h5 fw-bold mb-1">محجوب أونلاين</h2>
-            <div class="badge bg-warning text-dark px-3 py-2" style="font-size: 0.7rem; letter-spacing: 1px;">سوقك الذكي</div>
-        </div>
-
-        <nav class="nav-menu">
-            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="nav-link {% if request.endpoint == 'admin_dashboard.dashboard' and not request.args.get('view') %}active{% endif %}">
-                <i class="fas fa-chart-line me-3"></i> <span>مركز القيادة</span>
-            </a>
-
-            <div class="dropdown-section">
-                <button class="dropdown-btn" onclick="toggleDropdown('supplierDropdown', 'supplierArrow')">
-                    <i class="fas fa-handshake me-3"></i> 
-                    <span>شركاء النجاح</span>
-                    <i class="fas fa-chevron-left" id="supplierArrow"></i>
-                </button>
-                <div class="dropdown-container" id="supplierDropdown">
-                    <a href="{{ url_for('add_supplier.add_supplier_page') }}">
-                        <i class="fas fa-user-plus me-2"></i> تعميد مورد جديد
-                    </a>
-                    <a href="{{ url_for('admin_dashboard.dashboard') }}">
-                        <i class="fas fa-database me-2"></i> سجل الموردين
-                    </a>
-                </div>
-            </div>
-
-            <div class="dropdown-section">
-                <button class="dropdown-btn" onclick="toggleDropdown('walletDropdown', 'walletArrow')">
-                    <i class="fas fa-wallet me-3"></i> 
-                    <span>إدارة المحافظ</span>
-                    <i class="fas fa-chevron-left" id="walletArrow"></i>
-                </button>
-                <div class="dropdown-container" id="walletDropdown">
-                    <a href="{{ url_for('wallet.wallet_home') }}">
-                        <i class="fas fa-scale-balanced me-2"></i> الأرصدة والتسويات
-                    </a>
-                    <a href="#">
-                        <i class="fas fa-money-bill-transfer me-2"></i> عمليات الشحن والسحب
-                    </a>
-                    <a href="#">
-                        <i class="fas fa-file-invoice-dollar me-2"></i> كشوفات الحسابات
-                    </a>
-                </div>
-            </div>
-
-            <a href="#" class="nav-link">
-                <i class="fas fa-shield-halved me-3"></i> <span>إعدادات السيادة</span>
-            </a>
-
-            <hr style="border-color: rgba(255, 255, 255, 0.15); margin: 1.5rem 0;">
-
-            <a href="{{ url_for('auth_portal.logout') }}" class="nav-link text-danger mt-auto">
-                <i class="fas fa-power-off me-3"></i> <span>تسجيل خروج آمن</span>
-            </a>
-        </nav>
-    </aside>
-
     <div class="main-wrapper">
         <header class="top-bar">
             <div class="d-flex align-items-center">
-                <button class="btn d-lg-none me-3" onclick="toggleSidebar()"><i class="fas fa-bars fs-4"></i></button>
+                <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" alt="سوقك الذكي" style="height: 40px; width: auto; margin-left: 15px; filter: drop-shadow(0 0 4px rgba(99, 44, 143, 0.2));">
                 <h4 class="mb-0 fw-bold text-dark">{% block header_title %}مركز المراقبة{% endblock %}</h4>
             </div>
             
@@ -210,28 +83,6 @@
     </div>
 
     <script>
-        function toggleDropdown(dropdownId, arrowId) {
-            const dropdown = document.getElementById(dropdownId);
-            const arrow = document.getElementById(arrowId);
-            const isVisible = dropdown.style.display === "block";
-            
-            if (!isVisible) {
-                document.querySelectorAll('.dropdown-container').forEach(el => el.style.display = 'none');
-                document.querySelectorAll('.fa-chevron-left').forEach(el => el.classList.remove('rotate'));
-            }
-
-            dropdown.style.display = isVisible ? "none" : "block";
-            if (!isVisible) {
-                arrow.classList.add("rotate");
-            } else {
-                arrow.classList.remove("rotate");
-            }
-        }
-
-        function toggleSidebar() {
-            document.getElementById("sidebar").classList.toggle("active");
-        }
-
         window.onbeforeunload = function() {
             document.getElementById('loader').classList.remove('d-none');
             document.getElementById('loader').classList.add('d-grid');
@@ -239,7 +90,7 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             const modals = document.querySelectorAll('.modal');
-            moals.forEach(modal => {
+            modals.forEach(modal => { // تم تصحيح الكلمة هنا من moals إلى modals لضمان الاستقرار
                 modal.addEventListener('hidden.bs.modal', function () {
                     const form = modal.querySelector('form');
                     if(form) {
