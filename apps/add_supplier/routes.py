@@ -28,7 +28,7 @@ def check_duplicate():
             'next_wallet': f"WLT-MAH{1000 + next_id}"
         })
 
-    # التحقق الحوكمي الصارم من وجود البيانات مسبقاً لمنع التكرار
+    # التحقق الحوكمة الصارم من وجود البيانات مسبقاً لمنع التكرار
     exists = False
     if check_type == 'username':
         exists = Supplier.query.filter_by(username=value).first() is not None
@@ -37,7 +37,7 @@ def check_duplicate():
         
     return jsonify({'exists': bool(exists)})
 
-# 2. دالة التنفيذ (التعميد المزدوج للمورد ومحفظته)
+# 2. دالة التنفيذ (التعميد المزدوج للمورد ومحفظته الإستراتيجية)
 @admin_suppliers_bp.route('/add_supplier_submit', methods=['POST'])
 @login_required
 def add_supplier_submit():
@@ -46,7 +46,7 @@ def add_supplier_submit():
         sovereign_id = request.form.get('sovereign_id')
         wallet_code = request.form.get('wallet_code')
         
-        # 1. معالجة وحفظ وثيقة الهوية المرفوعة
+        # 1. معالجة وحفظ وثيقة الهوية المرفوعة إن وجدت
         file = request.files.get('identity_image')
         filename = None
         if file and file.filename != '':
@@ -97,10 +97,21 @@ def add_supplier_submit():
         )
         db.session.add(new_wallet)
         
-        # التزام وحفظ الذرة المترابطة (Atomic Commit)
+        # التزام وحفظ الذرة المترابطة في قاعدة البيانات (Atomic Commit)
         db.session.commit()
         
-        return jsonify({'status': 'success', 'message': f'تم تعميد شريك النجاح بنجاح - المعرف السيادي: {sovereign_id}'})
+        # 🔥 جلب التسلسلات القادمة تلقائياً لإرسالها للواجهة الأمامية لتحديث العدادات بدون إنعاش الصفحة
+        next_sovereign = Supplier.generate_next_sovereign_id()
+        last_supplier = Supplier.query.order_by(Supplier.id.desc()).first()
+        next_id = (last_supplier.id + 1) if last_supplier else 1
+        next_wallet_code = f"WLT-MAH{1000 + next_id}"
+        
+        return jsonify({
+            'status': 'success', 
+            'message': f'تم تعميد شريك النجاح بنجاح - المعرف السيادي: {sovereign_id}',
+            'next_sequence': next_sovereign,
+            'next_wallet': next_wallet_code
+        })
 
     except Exception as e:
         db.session.rollback()
@@ -111,9 +122,9 @@ def add_supplier_submit():
 @admin_suppliers_bp.route('/add_supplier', methods=['GET'])
 @login_required
 def add_supplier_page():
-    # عند طلب الصفحة عبر AJAX (من القائمة الجانبية)، نعرض المحتوى الداخلي فقط
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    # عند طلب الصفحة عبر AJAX أو عند النقر المباشر لعرض المحتوى مدمجاً داخل الهيكل الأساسي
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.args.get('ajax') == '1':
         return render_template('admin/add_supplier.html')
     
-    # تم التصحيح الحاسم هنا واستبدال الاسم القديم بالاسم الجديد تماماً لإزالة الـ BuildError وتأمين الإقلاع السليم 🚀 ✅
-    return redirect(url_for('admin_dashboard.dashboard'))
+    # لضمان بقاء الهيكل والدوشبورد ثابتاً وتضمين القالب بشكل مستقر وسلس
+    return render_template('admin/add_supplier.html')
