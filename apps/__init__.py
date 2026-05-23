@@ -2,6 +2,7 @@
 from flask import Flask
 from apps.extensions import db, login_manager
 from config import Config
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 def create_app():
     """
@@ -10,6 +11,10 @@ def create_app():
     # 1. إنشاء التطبيق وشحن الإعدادات
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # 🚀 معالجة الـ Proxy لبيئات الإنتاج (Railway) لمنع تفكك الجلسة وحلقة التوجيه اللانهائية
+    # هذا يضمن بقاء المستخدم مسجلاً لدخوله ويفتح الهيكل والـ Dashboard مباشرة
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # 2. تهيئة الإضافات المركزية
     db.init_app(app)
@@ -29,12 +34,10 @@ def create_app():
     
     # بوابة التحكم بالدخول والسيادة الجمركية للمنصة
     from apps.auth_portal import auth_blueprint
-    # تأكدنا أن الاسم البرمجي الداخلي للـ Blueprint في ملف الـ routes الخاص به هو 'auth_portal'
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
     
     # لوحة القيادة المركزية والرقابة الفورية لـ "محجوب أونلاين"
     from apps.admin_dashboard import admin_dashboard
-    # تعديل الاسم المتغير ليتطابق مع الاستدعاء الموحد 'admin_dashboard.dashboard'
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     
     # حوكمة وإدارة الموردين (شركاء النجاح)
