@@ -8,13 +8,14 @@ from apps.models.supplier_db import Supplier  # التعديل الهيكلي ا
 # تعريف الـ Blueprint الخاص بلوحة التحكم الإدارية
 admin_dashboard = Blueprint('admin_dashboard', __name__, template_folder='templates')
 
-# تم إزالة /admin/ الزائدة ليتطابق التوجيه تماماً مع المتصفح وينهي خطأ الـ 404 المتكرر 🚀
+# ممرات لوحة القيادة المركزية المحدثة
 @admin_dashboard.route('/', methods=['GET'])
 @admin_dashboard.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
-    # التحقق من صلاحيات المسؤول لضمان أمان السيادة المطلقة
-    if not getattr(current_user, 'is_admin', False):
+    # 🚀 تصحيح الشرط الأمني الحرج: التحقق من الصلاحيات المعتمدة فعلياً في قاعدة البيانات (Owner أو Admin)
+    # هذا التصحيح ينهي حلقة التوجيه اللانهائية ويسمح بفتح الهيكل فوراً بعد تسجيل الدخول ✅
+    if not hasattr(current_user, 'role') or current_user.role not in ['Owner', 'Admin']:
         flash('غير مسموح لك بالدخول إلى هذه المنطقة الأمنية.', 'danger')
         return redirect(url_for('auth_portal.login'))
 
