@@ -146,10 +146,10 @@
             </a>
 
             <div class="dropdown-section">
-                <button class="dropdown-btn" onclick="toggleDropdown('supplierDropdown', 'supplierArrow')">
+                <button class="dropdown-btn {% if request.endpoint == 'add_supplier.add_supplier_page' %}active{% endif %}" onclick="toggleDropdown('supplierDropdown', 'supplierArrow')">
                     <i class="fas fa-handshake me-3"></i> 
                     <span>شركاء النجاح</span>
-                    <i class="fas fa-chevron-left" id="supplierArrow"></i>
+                    <i class="fas fa-chevron-left {% if request.endpoint == 'add_supplier.add_supplier_page' %}rotate{% endif %}" id="supplierArrow"></i>
                 </button>
                 <div class="dropdown-container" id="supplierDropdown" style="{% if request.endpoint == 'add_supplier.add_supplier_page' %}display: block;{% endif %}">
                     <a href="{{ url_for('add_supplier.add_supplier_page') }}" class="{% if request.endpoint == 'add_supplier.add_supplier_page' %}text-warning{% endif %}">
@@ -162,14 +162,14 @@
             </div>
 
             <div class="dropdown-section">
-                <button class="dropdown-btn" onclick="toggleDropdown('walletDropdown', 'walletArrow')">
+                <button class="dropdown-btn {% if request.endpoint == 'wallet.overview' %}active{% endif %}" onclick="toggleDropdown('walletDropdown', 'walletArrow')">
                     <i class="fas fa-wallet me-3"></i> 
                     <span>إدارة المحافظ</span>
-                    <i class="fas fa-chevron-left" id="walletArrow"></i>
+                    <i class="fas fa-chevron-left {% if request.endpoint == 'wallet.overview' %}rotate{% endif %}" id="walletArrow"></i>
                 </button>
-                <div class="dropdown-container" id="walletDropdown">
-                    <a href="{{ url_for('wallet.wallet_home') }}">
-                        <i class="fas fa-scale-balanced me-2"></i> الأرصدة والتسويات
+                <div class="dropdown-container" id="walletDropdown" style="{% if request.endpoint == 'wallet.overview' %}display: block;{% endif %}">
+                    <a href="{{ url_for('wallet.overview') }}" class="{% if request.endpoint == 'wallet.overview' %}text-warning{% endif %}">
+                        <i class="fas fa-scale-balanced me-2"></i> الأرصدة والتسويات الإجمالية
                     </a>
                     <a href="#">
                         <i class="fas fa-money-bill-transfer me-2"></i> عمليات الشحن والسحب
@@ -216,8 +216,12 @@
             const isVisible = dropdown.style.display === "block";
             
             if (!isVisible) {
-                document.querySelectorAll('.dropdown-container').forEach(el => el.style.display = 'none');
-                document.querySelectorAll('.fa-chevron-left').forEach(el => el.classList.remove('rotate'));
+                document.querySelectorAll('.dropdown-container').forEach(el => {
+                    if(el.id !== dropdownId) el.style.display = 'none';
+                });
+                document.querySelectorAll('.fa-chevron-left').forEach(el => {
+                    if(el.id !== arrowId) el.classList.remove('rotate');
+                });
             }
 
             dropdown.style.display = isVisible ? "none" : "block";
