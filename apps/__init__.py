@@ -23,6 +23,10 @@ def create_app():
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
         from apps.models.settlements_db import AdminSettlement
         
+        # --- السطر التالي هو "المنقذ" لسيرفرك حالياً ---
+        db.create_all() 
+        # ---------------------------------------------
+        
         @login_manager.user_loader
         def load_user(user_id):
             return AdminUser.query.get(int(user_id))
@@ -31,13 +35,11 @@ def create_app():
         from apps.auth_portal.routes import auth_blueprint
         from apps.admin_dashboard.routes import admin_dashboard
         from apps.add_supplier.routes import admin_suppliers_bp
-        # استيراد البلوبرينت بعد التعديل في __init__.py الخاص بمجلد wallet
-        from apps.wallet.routes import wallet_blueprint
+        from apps.wallet.routes import wallet_blueprint # تأكد أن اسم البلوبرينت في routes.py هو wallet_blueprint
 
         app.register_blueprint(auth_blueprint, url_prefix='/auth')
         app.register_blueprint(admin_dashboard)
         app.register_blueprint(admin_suppliers_bp, url_prefix='/suppliers')
-        # تسجيل البلوبرينت الخاص بالمحفظة مع تحديد بادئة المسار
         app.register_blueprint(wallet_blueprint, url_prefix='/wallet')
 
     return app
