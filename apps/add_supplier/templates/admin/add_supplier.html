@@ -190,4 +190,333 @@
                         <label class="form-label text-muted small">رقم الحساب / الرقم البنكي (IBAN)</label>
                         <div class="input-group">
                             <input type="text" name="bank_acc" id="input-bank-acc" class="form-control" required>
-                            <span class="input-group-text bg-white" id="status-bank-acc"><i class="fas fa
+                            <span class="input-group-text bg-white" id="status-bank-acc"><i class="fas fa-minus text-muted"></i></span>
+                        </div>
+                        <div class="feedback-msg small mt-1" id="msg-bank-acc"></div>
+                    </div>
+                    
+                    <button type="submit" id="submitBtn" class="btn btn-lg w-100 text-white mt-auto" style="background: var(--royal-purple); border-radius: 12px;">
+                        <span id="btnText">اعتماد المورد الآن</span>
+                        <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    .card { border-radius: 16px !important; }
+    .form-control, .form-select { background: #f8f9fa !important; border: 1px solid #e9ecef !important; border-radius: 10px !important; padding: 12px !important; }
+    .form-control:focus { background: #fff !important; border-color: var(--royal-purple) !important; box-shadow: 0 0 0 0.2rem rgba(99, 44, 143, 0.1); }
+    .copy-btn { border-radius: 8px; padding: 6px 12px; font-size: 13px; transition: all 0.2s; font-weight: bold; }
+    .copy-btn:hover { background: var(--royal-purple) !important; color: white !important; }
+    .extra-small { font-size: 11px; }
+    .feedback-msg { font-weight: bold; display: block; }
+</style>
+
+<script>
+    // البيانات الجغرافية اليمنية المعتمدة بالمنصة
+    const geographicData = {
+        "الحديدة": ["الخوخة", "حيس", "الحوك", "الميناء", "الحالي", "بيت الفقيه", "باجل", "الزهرة"],
+        "عدن": ["المنصورة", "الشيخ عثمان", "كريتر", "المعلا", "التواهي", "خور مكسر", "البريقة", "دار سعد"],
+        "تعز": ["المخا", "المظفر", "القاهرة", "صالة", "التربة", "ذوباب", "الوازعية", "موزع"],
+        "صنعاء": ["السبعين", "التحرير", "شعوب", "الوحدة", "الثورة", "بني الحارث", "معين"],
+        "حضرموت": ["المكلا", "سيئون", "الشحر", "تريم", "القطن", "شبام"]
+    };
+
+    // القوائم المالية
+    const financialData = {
+        "بنوك": [
+            "بنك القطيبي الإسلامي", 
+            "بنك البسيري الدقيق", 
+            "بنك التضامن الإسلامي", 
+            "بنك Yemen والكويت", 
+            "بنك الكريمي الإسلامي للتمويل الأصغر",
+            "بنك سبأ الإسلامي"
+        ],
+        "شركات صرافة": [
+            "شركة العمقي وإخوانه للصرافة", 
+            "شركة النجم للصرافة", 
+            "شركة سويد وأولاده للصرافة", 
+            "شركة دادية للصرافة", 
+            "شركة مصلح للصرافة",
+            "شبكة الامتياز والحزم"
+        ]
+    };
+
+    // معالجة تغيير المحافظة والمديرية
+    const provinceSelect = document.getElementById('provinceSelect');
+    const districtSelect = document.getElementById('districtSelect');
+
+    provinceSelect.addEventListener('change', function() {
+        const selectedProvince = this.value;
+        districtSelect.innerHTML = '<option value="" selected disabled>اختر المديرية...</option>';
+        
+        if (geographicData[selectedProvince]) {
+            geographicData[selectedProvince].forEach(district => {
+                const option = document.createElement('option');
+                option.value = district;
+                option.textContent = district;
+                districtSelect.appendChild(option);
+            });
+            districtSelect.disabled = false;
+        } else {
+            districtSelect.disabled = true;
+        }
+    });
+
+    // معالجة بطاقات الربط المالي وعرضها التفاعلي
+    const finTypeSelect = document.getElementById('finTypeSelect');
+    const financialCardContainer = document.getElementById('financialCardContainer');
+    const bankSubCard = document.getElementById('bankSubCard');
+    const companySubCard = document.getElementById('companySubCard');
+    const bankSelectField = document.getElementById('bankSelectField');
+    const companySelectField = document.getElementById('companySelectField');
+    const hiddenBankName = document.getElementById('hiddenBankName');
+
+    finTypeSelect.addEventListener('change', function() {
+        const value = this.value;
+        financialCardContainer.classList.remove('d-none');
+        
+        if (value === 'بنوك') {
+            bankSubCard.classList.remove('d-none');
+            companySubCard.classList.add('d-none');
+            buildFinancialOptions(bankSelectField, financialData['بنوك'], 'البنك');
+            updateHiddenFinancialValue(bankSelectField.value);
+        } else if (value === 'شركات صرافة') {
+            companySubCard.classList.remove('d-none');
+            bankSubCard.classList.add('d-none');
+            buildFinancialOptions(companySelectField, financialData['شركات صرافة'], 'الشركة');
+            updateHiddenFinancialValue(companySelectField.value);
+        } else {
+            financialCardContainer.classList.add('d-none');
+            hiddenBankName.value = "";
+        }
+    });
+
+    function buildFinancialOptions(selectElement, items, typeLabel) {
+        selectElement.innerHTML = `<option value="" selected disabled>اختر ${typeLabel}...</option>`;
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            option.textContent = item;
+            selectElement.appendChild(option);
+        });
+    }
+
+    bankSelectField.addEventListener('change', function() { updateHiddenFinancialValue(this.value); });
+    companySelectField.addEventListener('change', function() { updateHiddenFinancialValue(this.value); });
+    
+    function updateHiddenFinancialValue(val) {
+        hiddenBankName.value = val || "";
+    }
+
+    // محرك الاستعلام الفوري والتحقق اللحظي الشامل
+    const validationTargets = [
+        { id: 'input-username', type: 'username', statusId: 'status-username', msgId: 'msg-username' },
+        { id: 'input-owner-name', type: 'owner_name', statusId: 'status-owner-name', msgId: 'msg-owner-name' },
+        { id: 'input-owner-phone', type: 'owner_phone', statusId: 'status-owner-phone', msgId: 'msg-owner-phone' },
+        { id: 'input-tradename', type: 'trade_name', statusId: 'status-tradename', msgId: 'msg-tradename' },
+        { id: 'input-shop-number', type: 'shop_number', statusId: 'status-shop-number', msgId: 'msg-shop-number' },
+        { id: 'input-identity-number', type: 'identity_number', statusId: 'status-identity-number', msgId: 'msg-identity-number' },
+        { id: 'input-bank-acc', type: 'bank_acc', statusId: 'status-bank-acc', msgId: 'msg-bank-acc' }
+    ];
+
+    let typingTimer;
+    const doneTypingInterval = 500;
+
+    validationTargets.forEach(target => {
+        const inputElement = document.getElementById(target.id);
+        if(inputElement) {
+            inputElement.addEventListener('input', function() {
+                clearTimeout(typingTimer);
+                resetStatusIndicator(target);
+                if (this.value.trim() !== '') {
+                    typingTimer = setTimeout(() => { performCheck(this.value.trim(), target); }, doneTypingInterval);
+                }
+            });
+        }
+    });
+
+    function resetStatusIndicator(target) {
+        const statusIcon = document.getElementById(target.statusId);
+        const msgDiv = document.getElementById(target.msgId);
+        statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+        statusIcon.className = "input-group-text bg-white";
+        msgDiv.textContent = "";
+    }
+
+    function performCheck(value, target) {
+        const url = `{{ url_for('add_supplier.check_duplicate') }}?type=${target.type}&value=${encodeURIComponent(value)}`;
+        
+        fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            const statusIcon = document.getElementById(target.statusId);
+            const msgDiv = document.getElementById(target.msgId);
+            
+            if (data.available === true) {
+                statusIcon.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
+                statusIcon.className = "input-group-text bg-white";
+                msgDiv.textContent = "✓ متاح للاستخدام";
+                msgDiv.className = "feedback-msg small mt-1 text-success";
+            } else {
+                statusIcon.innerHTML = '<i class="fas fa-times-circle text-danger"></i>';
+                statusIcon.className = "input-group-text bg-white";
+                msgDiv.textContent = "✗ مكرر ومسجل مسبقاً بالنظام!";
+                msgDiv.className = "feedback-msg small mt-1 text-danger";
+            }
+        })
+        .catch(err => {
+            console.error("خطأ أثناء الفحص اللحظي:", err);
+        });
+    }
+
+    // دالة نسخ البيانات الشاملة والموحدة بنقرة واحدة
+    function copyAllSupplierData(username, password, tradeName, ownerName, sovereignId, btnElement) {
+        const structuredText = `🚨 بيانات تعميد شريك النجاح منصة محجوب أونلاين 🚨\n\n` +
+                               `🔹 الكيان التجاري: ${tradeName}\n` +
+                               `🔹 المالك المسؤول: ${ownerName}\n` +
+                               `🔹 المعرف السيادي: ${sovereignId}\n` +
+                               `----------------------------------------\n` +
+                               `🔐 اسم المستخدم: ${username}\n` +
+                               `🔒 كلمة المرور المؤقتة: ${password}\n\n` +
+                               `⚠️ تنبيه أمني: يرجى تسجيل الدخول وتغيير كلمة المرور المؤقتة فوراً للحفاظ على سلامة أرشفتك المالية.\n` +
+                               `💡 سوقك الذكي - خيارك التجاري الأكثر أماناً.`;
+
+        navigator.clipboard.writeText(structuredText).then(() => {
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = '<i class="fas fa-check-double"></i> تم نسخ البيانات الشاملة !';
+            btnElement.classList.replace('btn-primary', 'btn-success');
+            setTimeout(() => {
+                btnElement.innerHTML = originalHTML;
+                btnElement.classList.replace('btn-success', 'btn-primary');
+            }, 2500);
+        }).catch(err => console.error("فشل النسخ الموحد للحافظة:", err));
+    }
+
+    // جلب التسلسل التلقائي عند التحميل
+    fetch("{{ url_for('add_supplier.check_duplicate', type='get_next_sequence') }}")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('display-supplier-id').textContent = data.next_sequence;
+        document.getElementById('display-wallet-id').textContent = data.next_wallet;
+        document.getElementById('hidden-sovereign-id').value = data.next_sequence;
+        document.getElementById('hidden-wallet-code').value = data.next_wallet;
+    })
+    .catch(err => console.error("Error fetching sequence:", err));
+
+    // معالجة إرسال الفورم المحدث لإنتاج الإشعار الحوكمي الشامل
+    document.getElementById('addSupplierForm').onsubmit = function(e) {
+        e.preventDefault();
+        
+        const form = this;
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const btnSpinner = document.getElementById('btnSpinner');
+        const alertContainer = document.getElementById('alert-container');
+
+        // تخزين البيانات المدخلة قبل إعادة تعيين النموذج لعرضها بداخل الإشعار والنسخ
+        const cachedUsername = document.getElementById('input-username').value;
+        const cachedPassword = document.getElementById('input-password').value;
+        const cachedTradeName = document.getElementById('input-tradename').value;
+        const cachedOwnerName = document.getElementById('input-owner-name').value;
+        const currentSovereignId = document.getElementById('hidden-sovereign-id').value;
+
+        submitBtn.disabled = true;
+        btnText.textContent = "جاري الحفظ والتعميد...";
+        btnSpinner.classList.remove('d-none');
+        alertContainer.innerHTML = ''; 
+
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            btnText.textContent = "اعتماد المورد الآن";
+            btnSpinner.classList.add('d-none');
+
+            if (data.status === 'success') {
+                // إظهار الإشعار المطور والذكي مع زر النسخ الموحد والكامل وشكر المنصة
+                alertContainer.innerHTML = `
+                    <div class="alert alert-success alert-dismissible fade show rounded-4 p-4 mb-4 border-0 shadow-sm position-relative animate__animated animate__fadeIn" role="alert" style="background-color: #f4fbf7; border-right: 6px solid #28a745 !important;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="fs-3 me-2">🎉</span>
+                            <h4 class="fw-bold text-success mb-0">تم تعميد المورد ونشاطه بنجاح فوري ومباشر!</h4>
+                        </div>
+                        <p class="text-dark mb-3">${data.message}</p>
+                        
+                        <div class="bg-white p-4 rounded-3 shadow-sm border mb-3">
+                            <div class="row g-3 mb-3">
+                                <div class="col-6 col-sm-3 border-end"><small class="text-muted d-block extra-small">الكيان التجاري</small><strong class="text-dark fs-6">${cachedTradeName}</strong></div>
+                                <div class="col-6 col-sm-3 border-end"><small class="text-muted d-block extra-small">المالك المسؤول</small><strong class="text-dark fs-6">${cachedOwnerName}</strong></div>
+                                <div class="col-6 col-sm-3 border-end"><small class="text-muted d-block extra-small">اسم مستخدم الدخول</small><strong class="text-primary fs-6">${cachedUsername}</strong></div>
+                                <div class="col-6 col-sm-3"><small class="text-muted d-block extra-small">كلمة المرور المؤقتة</small><strong class="text-danger fs-6">${cachedPassword}</strong></div>
+                            </div>
+                            
+                            <div class="text-end border-top pt-3">
+                                <button type="button" class="btn btn-primary btn-md copy-btn shadow-sm px-4" 
+                                        onclick="copyAllSupplierData('${cachedUsername}', '${cachedPassword}', '${cachedTradeName}', '${cachedOwnerName}', '${currentSovereignId}', this)">
+                                    <i class="far fa-copy me-1"></i> نسخ بيانات الحساب كاملة ومشاركتها
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning rounded-3 p-3 mb-3 border-0 small d-flex align-items-center" style="background: #fff9e6;">
+                            <i class="fas fa-exclamation-triangle text-warning fs-5 me-3"></i>
+                            <span class="fw-bold text-dark">تنبيه حماية الأرشفة: يرجى توجيه شريك النجاح لتغيير كلمة المرور المؤقتة فور تسجيل الدخول الأول له لضمان سلامة حساباته.</span>
+                        </div>
+
+                        <div class="text-center pt-2 border-top mt-3">
+                            <p class="mb-0 fw-bold text-muted small">🚨 شكراً لاستخدامكم منصة محجوب أونلاين | سوقك الذكي 🚨</p>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="top: 20px; left: 20px; right: auto;"></button>
+                    </div>
+                `;
+                
+                // تصفير وتنظيف الحقول فور النجاح
+                form.reset();
+                districtSelect.disabled = true;
+                financialCardContainer.classList.add('d-none');
+                validationTargets.forEach(target => {
+                    document.getElementById(target.statusId).innerHTML = '<i class="fas fa-minus text-muted"></i>';
+                    document.getElementById(target.statusId).className = "input-group-text bg-white";
+                    document.getElementById(target.msgId).textContent = "";
+                });
+                
+                // استقبال وعرض العداد الحركي التالي للعملية القادمة لمنع التوقف
+                if (data.next_sequence && data.next_wallet) {
+                    document.getElementById('display-supplier-id').textContent = data.next_sequence;
+                    document.getElementById('display-wallet-id').textContent = data.next_wallet;
+                    document.getElementById('hidden-sovereign-id').value = data.next_sequence;
+                    document.getElementById('hidden-wallet-code').value = data.next_wallet;
+                }
+            } else {
+                alertContainer.innerHTML = `
+                    <div class="alert alert-danger alert-dismissible fade show rounded-3 p-3 mb-4" role="alert">
+                        <strong>⚠️ فشل التعميد:</strong> ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+            }
+        })
+        .catch(err => {
+            submitBtn.disabled = false;
+            btnText.textContent = "اعتماد المورد الآن";
+            btnSpinner.classList.add('d-none');
+            alertContainer.innerHTML = `
+                <div class="alert alert-danger alert-dismissible fade show rounded-3 p-3 mb-4" role="alert">
+                    <strong>❌ خطأ في النظام:</strong> تعذر الاتصال بالخادم. يرجى التحقق من استقرار اتصال الداتابيز.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            console.error("Error submitting form:", err);
+        });
+    };
+</script>
+{% endblock %}
