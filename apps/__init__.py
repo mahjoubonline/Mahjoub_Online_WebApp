@@ -31,11 +31,13 @@ def create_app():
         from apps.auth_portal.routes import auth_blueprint
         from apps.admin_dashboard.routes import admin_dashboard
         from apps.add_supplier.routes import admin_suppliers_bp
+        # استيراد البلوبرينت بعد التعديل في __init__.py الخاص بمجلد wallet
         from apps.wallet.routes import wallet_blueprint
 
         app.register_blueprint(auth_blueprint, url_prefix='/auth')
         app.register_blueprint(admin_dashboard)
         app.register_blueprint(admin_suppliers_bp, url_prefix='/suppliers')
+        # تسجيل البلوبرينت الخاص بالمحفظة مع تحديد بادئة المسار
         app.register_blueprint(wallet_blueprint, url_prefix='/wallet')
 
     return app
