@@ -3,240 +3,82 @@
 {% block title %}جدول موافقة الطلبات والتسوية المالية | محجوب أونلاين{% endblock %}
 
 {% block content %}
-<head>
-    <style>
-        :root {
-            --royal-purple: #632C8F;
-            --royal-purple-dark: #4A1E6D;
-            --pure-white: #FFFFFF;
-            --soft-bg: #F4F5F8;
-            --text-dark: #2A2A2A;
-            --text-muted: #7A7A7A;
-            --success-green: #2E7D32;
-            --pending-orange: #EF6C00;
-            --danger-red: #C62828;
-            --mahjoub-gold: #D4AF37;
-        }
+<style>
+    :root {
+        --royal-purple: #632C8F;
+        --royal-purple-dark: #4A1E6D;
+        --pure-white: #FFFFFF;
+        --soft-bg: #F4F5F8;
+        --text-dark: #2A2A2A;
+        --text-muted: #7A7A7A;
+        --success-green: #2E7D32;
+        --pending-orange: #EF6C00;
+        --danger-red: #C62828;
+        --mahjoub-gold: #D4AF37;
+    }
 
-        /* الهيدر الرئيسي للمنظومة */
-        .header-governance {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--pure-white);
-            padding: 20px 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(99, 44, 143, 0.05);
-            margin-bottom: 25px;
-            border-right: 6px solid var(--royal-purple);
-        }
-
-        .header-title h1 {
-            color: var(--royal-purple);
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .header-title p {
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-top: 5px;
-        }
-
-        .slogan-badge {
-            background: rgba(99, 44, 143, 0.1);
-            color: var(--royal-purple);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        /* شريط الإحصائيات الشامل للنظام */
-        .system-stats-bar {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-box {
-            background: linear-gradient(135deg, var(--pure-white) 0%, #FAF8FC 100%);
-            border: 1px solid rgba(99, 44, 143, 0.1);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.01);
-        }
-
-        .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
-            background: rgba(99, 44, 143, 0.08);
-            color: var(--royal-purple);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-        }
-
-        .stat-details p { font-size: 12px; color: var(--text-muted); font-weight: 600; margin: 0; }
-        .stat-details h3 { font-size: 20px; font-weight: 700; color: var(--text-dark); margin-top: 2px; margin-bottom: 0; }
-
-        /* أدوات البحث والفلترة المتقدمة */
-        .search-filter-card {
-            background: var(--pure-white);
-            padding: 20px 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
-            margin-bottom: 30px;
-            border: 1px solid rgba(99, 44, 143, 0.05);
-        }
-
-        .filter-form { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-        .input-group-custom { flex: 1; min-width: 280px; position: relative; }
-        .input-group-custom i { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 5; }
-        .input-group-custom input { width: 100%; padding: 12px 45px 12px 15px; border: 1.5px solid #EAEAEA; border-radius: 8px; font-size: 14px; outline: none; transition: all 0.3s ease; }
-        .input-group-custom input:focus { border-color: var(--royal-purple); box-shadow: 0 0 0 3px rgba(99, 44, 143, 0.1); }
-
-        .btn-governance {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-
-        .btn-primary-gov { background-color: var(--royal-purple); color: var(--pure-white); }
-        .btn-primary-gov:hover { background-color: var(--royal-purple-dark); color: var(--pure-white); }
-        .btn-secondary-gov { background-color: #F0F0F2; color: var(--text-dark); border: 1px solid #E0E0E4; }
-        .btn-secondary-gov:hover { background-color: #E2E2E6; }
-        
-        .btn-action-success { background-color: var(--success-green); color: white; padding: 6px 12px; font-size: 12px; border-radius: 6px; }
-        .btn-action-danger { background-color: var(--danger-red); color: white; padding: 6px 12px; font-size: 12px; border-radius: 6px; }
-
-        /* كارت هوية الكيان التجاري المبحوث عنه */
-        .supplier-identity-card {
-            background: linear-gradient(45deg, #2b1042, var(--royal-purple));
-            color: white;
-            padding: 20px 25px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .identity-info h2 { font-size: 18px; font-weight: 700; margin: 0; color: var(--mahjoub-gold); }
-        .identity-info p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
-        .identity-meta { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-        .meta-item { background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 8px; font-size: 13px; }
-
-        /* شبكة بطاقات العملات الثلاثية */
-        .currency-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 25px;
-            margin-bottom: 35px;
-        }
-
-        .wallet-card {
-            background: var(--pure-white);
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(99, 44, 143, 0.08);
-            transition: transform 0.3s ease;
-        }
-
-        .wallet-card:hover { transform: translateY(-5px); }
-        .card-header-wallet { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #EAEAEA; padding-bottom: 15px; margin-bottom: 15px; }
-        .currency-info { display: flex; align-items: center; gap: 12px; }
-        .currency-flag { font-size: 28px; }
-        .currency-name { font-weight: 700; color: var(--royal-purple); font-size: 18px; }
-        .wallet-code-badge { font-size: 11px; background: #F0F0F0; padding: 4px 10px; border-radius: 6px; font-family: monospace; color: var(--text-dark); }
-
-        .balance-main { margin-bottom: 20px; }
-        .balance-label { font-size: 13px; color: var(--text-muted); }
-        .balance-amount { font-size: 32px; font-weight: 700; color: var(--royal-purple); margin-top: 5px; }
-        .balance-amount span { font-size: 16px; font-weight: 600; margin-right: 5px; }
-
-        .balance-sub-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: var(--soft-bg); padding: 12px; border-radius: 8px; }
-        .sub-row-item { display: flex; flex-direction: column; }
-        .sub-row-label { font-size: 12px; color: var(--text-muted); }
-        .sub-row-val { font-size: 15px; font-weight: 600; margin-top: 2px; }
-        .val-withdrawn { color: var(--text-dark); }
-        .val-pending { color: var(--pending-orange); }
-
-        /* الجداول والمقاطع الإدارية */
-        .transactions-section { background: var(--pure-white); border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02); margin-bottom: 35px; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .section-title { font-size: 18px; font-weight: 700; color: var(--royal-purple); display: flex; align-items: center; gap: 10px; }
-        
-        .gov-table { width: 100%; border-collapse: collapse; text-align: right; }
-        .gov-table th { background-color: var(--soft-bg); color: var(--royal-purple); padding: 15px; font-weight: 700; border-bottom: 2px solid rgba(99, 44, 143, 0.1); }
-        .gov-table td { padding: 15px; border-bottom: 1px solid #EAEAEA; font-size: 14px; vertical-align: middle; }
-        
-        .status-pill { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
-        .status-pill.pending { background: rgba(239, 108, 0, 0.1); color: var(--pending-orange); }
-        .status-pill.success { background: rgba(46, 125, 50, 0.1); color: var(--success-green); }
-        .status-pill.danger { background: rgba(198, 40, 40, 0.1); color: var(--danger-red); }
-    </style>
-</head>
+    .header-governance { background: var(--pure-white); padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(99, 44, 143, 0.05); margin-bottom: 25px; border-right: 6px solid var(--royal-purple); display: flex; justify-content: space-between; align-items: center; }
+    .header-title h1 { color: var(--royal-purple); font-size: 24px; font-weight: 700; margin: 0; }
+    .slogan-badge { background: rgba(99, 44, 143, 0.1); color: var(--royal-purple); padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 13px; }
+    
+    .system-stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-box { background: linear-gradient(135deg, var(--pure-white) 0%, #FAF8FC 100%); border: 1px solid rgba(99, 44, 143, 0.1); border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 15px; }
+    .stat-icon { width: 50px; height: 50px; border-radius: 10px; background: rgba(99, 44, 143, 0.08); color: var(--royal-purple); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+    .stat-details h3 { font-size: 20px; font-weight: 700; color: var(--text-dark); margin: 0; }
+    
+    .search-filter-card { background: var(--pure-white); padding: 20px 25px; border-radius: 12px; margin-bottom: 30px; border: 1px solid rgba(99, 44, 143, 0.05); }
+    .filter-form { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .input-group-custom { flex: 1; min-width: 280px; position: relative; }
+    .input-group-custom input { width: 100%; padding: 12px 15px; border: 1.5px solid #EAEAEA; border-radius: 8px; outline: none; }
+    
+    .btn-governance { padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-primary-gov { background-color: var(--royal-purple); color: white; }
+    
+    .supplier-identity-card { background: linear-gradient(45deg, #2b1042, var(--royal-purple)); color: white; padding: 20px 25px; border-radius: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+    
+    .currency-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; margin-bottom: 35px; }
+    .wallet-card { background: var(--pure-white); border-radius: 16px; padding: 25px; border: 1px solid rgba(99, 44, 143, 0.08); }
+    .balance-amount { font-size: 32px; font-weight: 700; color: var(--royal-purple); }
+    
+    .transactions-section { background: var(--pure-white); border-radius: 16px; padding: 30px; margin-bottom: 35px; }
+    .gov-table { width: 100%; border-collapse: collapse; text-align: right; }
+    .gov-table th { background-color: var(--soft-bg); color: var(--royal-purple); padding: 15px; }
+    .gov-table td { padding: 15px; border-bottom: 1px solid #EAEAEA; }
+    .status-pill { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-pill.pending { background: rgba(239, 108, 0, 0.1); color: var(--pending-orange); }
+    .btn-action-success { background-color: var(--success-green); color: white; padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; }
+    .btn-action-danger { background-color: var(--danger-red); color: white; padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; }
+</style>
 
 <div class="container-fluid p-0">
-
     <header class="header-governance">
         <div class="header-title">
             <h1><i class="fa-solid fa-scale-balanced"></i> جدول موافقة الطلبات والتسوية المالية</h1>
-            <p>منصة محجوب أونلاين لعام 2026 | الرقابة المركزية وتعميد القيود والسندات الاستثنائية</p>
+            <p>منصة محجوب أونلاين لعام 2026 | الرقابة المركزية وتعميد القيود</p>
         </div>
-        <div class="slogan-badge">
-            <i class="fa-solid fa-shield-halved"></i> سوقك الذكي - سوقك الآمن الموحد
-        </div>
+        <div class="slogan-badge"><i class="fa-solid fa-shield-halved"></i> سوقك الآمن الموحد</div>
     </header>
 
     <section class="system-stats-bar">
         <div class="stat-box">
             <div class="stat-icon"><i class="fa-solid fa-vault"></i></div>
             <div class="stat-details">
-                <p>إجمالي عدد المحافظ</p>
-                <h3>{{ total_wallets_count }} محفظة</h3>
+                <p>إجمالي المحافظ</p>
+                <h3>{{ total_wallets_count }}</h3>
             </div>
         </div>
         <div class="stat-box">
             <div class="stat-icon" style="color: var(--success-green);"><i class="fa-solid fa-money-bill-wave"></i></div>
             <div class="stat-details">
-                <p>مجموع أرصدة الريال اليمني</p>
-                <h3>{{ "{:,.2f}".format(total_yer_system) }} <span style="font-size:12px;">YER</span></h3>
+                <p>إجمالي YER</p>
+                <h3>{{ "{:,.2f}".format(total_yer_system) }}</h3>
             </div>
         </div>
         <div class="stat-box">
             <div class="stat-icon" style="color: #D4AF37;"><i class="fa-solid fa-coins"></i></div>
             <div class="stat-details">
-                <p>مجموع أرصدة الريال السعودي</p>
-                <h3>{{ "{:,.2f}".format(total_sar_system) }} <span style="font-size:12px;">SAR</span></h3>
-            </div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-icon" style="color: #0D6EFD;"><i class="fa-solid fa-dollar-sign"></i></div>
-            <div class="stat-details">
-                <p>مجموع أرصدة الدولار الأمريكي</p>
-                <h3>{{ "{:,.2f}".format(total_usd_system) }} <span style="font-size:12px;">USD</span></h3>
+                <p>إجمالي SAR</p>
+                <h3>{{ "{:,.2f}".format(total_sar_system) }}</h3>
             </div>
         </div>
     </section>
@@ -244,277 +86,55 @@
     <section class="search-filter-card">
         <form method="GET" action="{{ url_for('wallet.display_management_table') }}" class="filter-form">
             <div class="input-group-custom">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" name="search_query" value="{{ current_search or '' }}" placeholder="ابحث بمعرف المورد، كود المحفظة، أو الكيان التجاري المعتمد لإجراء تسوية...">
+                <input type="text" name="search_query" value="{{ current_search or '' }}" placeholder="ابحث بمعرف المورد أو كود المحفظة...">
             </div>
-            <button type="submit" class="btn-governance btn-primary-gov">
-                <i class="fa-solid fa-filter"></i> استدعاء وفحص
-            </button>
-            {% if current_search %}
-                <a href="{{ url_for('wallet.display_management_table') }}" class="btn-governance btn-secondary-gov">
-                    <i class="fa-solid fa-eye"></i> إظهار الجميع
-                </a>
-            {% endif %}
+            <button type="submit" class="btn-governance btn-primary-gov"><i class="fa-solid fa-filter"></i> بحث وفحص</button>
         </form>
     </section>
 
     {% if wallet %}
     <section class="supplier-identity-card">
-        <div class="identity-info">
-            <h2><i class="fa-solid fa-building-shield"></i> الكيان التجاري المستهدف بالتسوية</h2>
-            <p>معرّف المورد المالي: <strong>{{ wallet.supplier_id }}</strong> | رمز المحفظة السيادي: <strong>{{ wallet.wallet_code }}</strong></p>
+        <div>
+            <h2>الكيان التجاري المستهدف</h2>
+            <p>معرّف: {{ wallet.supplier_id }} | كود المحفظة: {{ wallet.wallet_code }}</p>
         </div>
-        <div class="identity-meta">
-            <button class="btn btn-warning fw-bold px-4 py-2" data-bs-toggle="modal" data-bs-target="#adminSettlementModal" style="border-radius:8px;">
-                <i class="fa-solid fa-scale-balanced"></i> إصدار سند تسوية مالية
-            </button>
-        </div>
+        <button class="btn btn-warning fw-bold" data-bs-toggle="modal" data-bs-target="#adminSettlementModal">إصدار سند تسوية</button>
     </section>
 
     <main class="currency-grid">
+        {% for curr in [('🇾🇪', 'الريال اليمني', wallet.yer_available, wallet.yer_total, wallet.yer_withdrawn, wallet.yer_pending, 'YER'), ('🇸🇦', 'الريال السعودي', wallet.sar_available, wallet.sar_total, wallet.sar_withdrawn, wallet.sar_pending, 'SAR'), ('🇺🇸', 'الدولار', wallet.usd_available, wallet.usd_total, wallet.usd_withdrawn, wallet.usd_pending, 'USD')] %}
         <div class="wallet-card">
-            <div class="card-header-wallet">
-                <div class="currency-info"><span class="currency-flag">🇾🇪</span><span class="currency-name">الال ريال اليمني</span></div>
-                <span class="wallet-code-badge">{{ wallet.wallet_code }}</span>
+            <div class="d-flex justify-content-between">
+                <div class="fw-bold">{{ curr[0] }} {{ curr[1] }}</div>
+                <small class="text-muted">{{ wallet.wallet_code }}</small>
             </div>
-            <div class="balance-main">
-                <div class="balance-label">الرصيد المتاح للسحب الصافي</div>
-                <div class="balance-amount">{{ "{:,.2f}".format(wallet.yer_available or 0) }} <span>YER</span></div>
-            </div>
-            <div class="balance-sub-rows">
-                <div class="sub-row-item"><span class="sub-row-label">إجمالي الأرباح</span><span class="sub-row-val">{{ "{:,.2f}".format(wallet.yer_total or 0) }}</span></div>
-                <div class="sub-row-item"><span class="sub-row-label">المسحوبات المعتمدة</span><span class="sub-row-val val-withdrawn">{{ "{:,.2f}".format(wallet.yer_withdrawn or 0) }}</span></div>
-                <div class="sub-row-item" style="grid-column: span 2; margin-top: 5px; border-top: 1px dashed #DDD; padding-top: 5px;">
-                    <span class="sub-row-label">المعلق في الحركات الجارية</span><span class="sub-row-val val-pending">{{ "{:,.2f}".format(wallet.yer_pending or 0) }} YER</span>
-                </div>
-            </div>
+            <div class="balance-amount mt-3">{{ "{:,.2f}".format(curr[2] or 0) }} <span>{{ curr[6] }}</span></div>
         </div>
-
-        <div class="wallet-card">
-            <div class="card-header-wallet">
-                <div class="currency-info"><span class="currency-flag">🇸🇦</span><span class="currency-name">الريال السعودي</span></div>
-                <span class="wallet-code-badge">{{ wallet.wallet_code }}</span>
-            </div>
-            <div class="balance-main">
-                <div class="balance-label">الرصيد المتاح للسحب الصافي</div>
-                <div class="balance-amount">{{ "{:,.2f}".format(wallet.sar_available or 0) }} <span>SAR</span></div>
-            </div>
-            <div class="balance-sub-rows">
-                <div class="sub-row-item"><span class="sub-row-label">إجمالي الأرباح</span><span class="sub-row-val">{{ "{:,.2f}".format(wallet.sar_total or 0) }}</span></div>
-                <div class="sub-row-item"><span class="sub-row-label">المسحوبات المعتمدة</span><span class="sub-row-val val-withdrawn">{{ "{:,.2f}".format(wallet.sar_withdrawn or 0) }}</span></div>
-                <div class="sub-row-item" style="grid-column: span 2; margin-top: 5px; border-top: 1px dashed #DDD; padding-top: 5px;">
-                    <span class="sub-row-label">المعلق في الحركات الجارية</span><span class="sub-row-val val-pending">{{ "{:,.2f}".format(wallet.sar_pending or 0) }} SAR</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="wallet-card">
-            <div class="card-header-wallet">
-                <div class="currency-info"><span class="currency-flag">🇺🇸</span><span class="currency-name">الدولار الأمريكي</span></div>
-                <span class="wallet-code-badge">{{ wallet.wallet_code }}</span>
-            </div>
-            <div class="balance-main">
-                <div class="balance-label">الرصيد المتاح للسحب الصافي</div>
-                <div class="balance-amount">{{ "{:,.2f}".format(wallet.usd_available or 0) }} <span>USD</span></div>
-            </div>
-            <div class="balance-sub-rows">
-                <div class="sub-row-item"><span class="sub-row-label">إجمالي الأرباح</span><span class="sub-row-val">{{ "{:,.2f}".format(wallet.usd_total or 0) }}</span></div>
-                <div class="sub-row-item"><span class="sub-row-label">المسحوبات المعتمدة</span><span class="sub-row-val val-withdrawn">{{ "{:,.2f}".format(wallet.usd_withdrawn or 0) }}</span></div>
-                <div class="sub-row-item" style="grid-column: span 2; margin-top: 5px; border-top: 1px dashed #DDD; padding-top: 5px;">
-                    <span class="sub-row-label">المعلق في الحركات الجارية</span><span class="sub-row-val val-pending">{{ "{:,.2f}".format(wallet.usd_pending or 0) }} USD</span>
-                </div>
-            </div>
-        </div>
+        {% endfor %}
     </main>
-
-    <section class="transactions-section">
-        <div class="section-header">
-            <div class="section-title" style="color: var(--royal-purple);">
-                <i class="fa-solid fa-clock-rotate-left"></i> سجل السندات والتسويات الإدارية المنفذة لهذه المحفظة
-            </div>
-        </div>
-        <div class="table-responsive">
-            <table class="gov-table">
-                <thead>
-                    <tr>
-                        <th>كود السند</th>
-                        <th>نوع التسوية</th>
-                        <th>المبلغ</th>
-                        <th>العملة</th>
-                        <th>الجهة المالية المرجعية</th>
-                        <th>المبرر والملاحظات المحاسبية</th>
-                        <th>المسؤول المالي</th>
-                        <th>التاريخ والوقت</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for settle in wallet_settlements %}
-                    <tr>
-                        <td style="font-family: monospace; font-weight: 700;">{{ settle.settlement_code }}</td>
-                        <td>
-                            {% if 'شحن' in settle.settlement_type %}
-                                <span class="badge bg-success-subtle text-success p-2"><i class="fa-solid fa-arrow-up-right-from-square"></i> إيداع شحن</span>
-                            {% else %}
-                                <span class="badge bg-danger-subtle text-danger p-2"><i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center"></i> خصم عكسي</span>
-                            {% endif %}
-                        </td>
-                        <td style="font-weight: 700;">{{ "{:,.2f}".format(settle.amount) }}</td>
-                        <td><span class="badge bg-light text-dark fw-bold">{{ settle.currency }}</span></td>
-                        <td>{{ settle.financial_entity }} <div style="font-size: 11px; color: var(--text-muted);">{{ settle.reference_number }}</div></td>
-                        <td style="font-size: 13px; max-width: 250px;">{{ settle.reason_notes }}</td>
-                        <td><span class="badge bg-secondary text-white">{{ settle.created_by }}</span></td>
-                        <td style="color:var(--text-muted); font-size: 13px;">{{ settle.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">
-                            لا توجد تسويات مالية استثنائية مسجلة في كشف حوكمة هذه المحفظة مسبقاً.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    {% else %}
-    <div style="background: var(--pure-white); padding: 40px; border-radius: 12px; text-align: center; color: var(--text-muted); border: 1px dashed rgba(99, 44, 143, 0.2); margin-bottom: 35px;">
-        <i class="fa-solid fa-circle-info" style="font-size: 32px; color: var(--royal-purple); margin-bottom: 10px;"></i>
-        <p style="font-weight: 600;">يرجى إدخل كود المحفظة أو معرف المورد في حقل البحث أعلاه لاستدعاء السجلات التاريخية وإصدار سندات التسوية الاستثنائية.</p>
-    </div>
     {% endif %}
 
     <section class="transactions-section">
-        <div class="section-header">
-            <div class="section-title" style="color: var(--pending-orange);">
-                <i class="fa-solid fa-hand-holding-dollar"></i> طلبات السحب النقدي المرفوعة (بانتظار موافقة الإدارة المركزية)
-            </div>
-        </div>
-        <div class="table-responsive">
-            <table class="gov-table">
-                <thead>
-                    <tr>
-                        <th>المعامل المالي</th>
-                        <th>كود المحفظة</th>
-                        <th>المبلغ المطلوب</th>
-                        <th>العملة</th>
-                        <th>طريقة السحب وبيانات الحوالة</th>
-                        <th>تاريخ الطلب</th>
-                        <th>الحالة الحاليّة</th>
-                        <th>الإجراء الإداري</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for request in pending_withdrawals %}
-                    <tr>
-                        <td>
-                            <strong style="color: var(--text-dark);">مورد معتمد</strong>
-                            <div style="font-size:11px; color: var(--text-muted); font-family: monospace;">ID: {{ request.wallet_id }}</div>
-                        </td>
-                        <td style="font-family: monospace;">{{ request.wallet.wallet_code if request.wallet else 'WEL-MAH963' }}</td>
-                        <td style="font-weight: 700; color: var(--royal-purple);">{{ "{:,.2f}".format(request.amount) }}</td>
-                        <td><span class="badge bg-light text-dark fw-bold">{{ request.currency }}</span></td>
-                        <td>
-                            <strong>{{ request.financial_entity or 'حوالة مصرفية' }}</strong>
-                            <div style="font-size:12px; color:var(--text-muted);">رقم السند: {{ request.reference_number or 'لا يوجد' }}</div>
-                        </td>
-                        <td style="color:var(--text-muted);">{{ request.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        <td>
-                            <span class="status-pill pending"><i class="fa-solid fa-circle-dot"></i> قيد المراجعة</span>
-                        </td>
-                        <td>
-                            <div class="d-flex gap-2">
-                                <form action="{{ url_for('wallet.handle_supplier_withdrawal', tx_id=request.id, decision='approve') }}" method="POST" style="display:inline;">
-                                    <button type="submit" class="btn btn-action-success border-0 fw-bold"><i class="fa-solid fa-check"></i> موافقة وصرف</button>
-                                </form>
-                                <form action="{{ url_for('wallet.handle_supplier_withdrawal', tx_id=request.id, decision='reject') }}" method="POST" style="display:inline;">
-                                    <button type="submit" class="btn btn-action-danger border-0 fw-bold"><i class="fa-solid fa-xmark"></i> رفض وإرجاع</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">
-                            لا توجد طلبات سحب معلقة بانتظار اتخاذ قرار وتعميد فوري حالياً في النظام.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <table class="gov-table">
+            <thead>
+                <tr>
+                    <th>كود السند</th>
+                    <th>النوع</th>
+                    <th>المبلغ</th>
+                    <th>الإجراء</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for settle in wallet_settlements %}
+                <tr>
+                    <td>{{ settle.settlement_code }}</td>
+                    <td>{{ settle.settlement_type }}</td>
+                    <td>{{ "{:,.2f}".format(settle.amount) }}</td>
+                    <td>{{ settle.created_by }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </section>
-
 </div>
-
-{% if wallet %}
-<div class="modal fade" id="adminSettlementModal" tabindex="-1" aria-labelledby="adminSettlementModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius:14px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
-            <div class="modal-header text-white" style="background-color: var(--royal-purple); border-top-left-radius: 14px; border-top-right-radius: 14px;">
-                <h5 class="modal-title fw-bold" id="adminSettlementModalLabel"><i class="fa-solid fa-scale-balanced"></i> إصدار وتعميد قيد تسوية إدارية</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ url_for('wallet.execute_admin_settlement', wallet_code=wallet.wallet_code) }}" method="POST">
-                <div class="modal-body p-4">
-                    <div class="alert alert-info py-2" style="font-size:13px; background-color: rgba(99, 44, 143, 0.05); color: var(--royal-purple); border-color: rgba(99, 44, 143, 0.1);">
-                        تسوية الحساب الجاري للمحفظة: <strong>{{ wallet.wallet_code }}</strong>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark" style="font-size:14px;">نوع العملية الاستثنائية</label>
-                        <select class="form-select" name="settlement_type" required style="border-radius:8px;">
-                            <option value="deposit">شحن / إضافة رصيد يدوي للمحفظة (إيداع إداري)</option>
-                            <option value="deduct">خصم عكسي / اقتطاع تسوية من الرصيد المتاح (سحب إداري)</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark" style="font-size:14px;">العملة المالية المستهدفة</label>
-                        <div class="d-flex gap-3 mt-1">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="currency" id="curr_yer" value="YER" checked>
-                                <label class="form-check-label fw-bold" for="curr_yer">🇾🇪 YER</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="currency" id="curr_sar" value="SAR">
-                                <label class="form-check-label fw-bold" for="curr_sar">🇸🇦 SAR</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="currency" id="curr_usd" value="USD">
-                                <label class="form-check-label fw-bold" for="curr_usd">🇺🇸 USD</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark" style="font-size:14px;">مبلغ القيد</label>
-                        <input type="number" step="0.01" min="0.01" class="form-control" name="amount" placeholder="0.00" required style="border-radius:8px;">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark" style="font-size:14px;">الجهة المصرفية المرجعية</label>
-                        <input type="text" class="form-control" name="financial_entity" value="الإدارة المركزية للمنصة" required style="border-radius:8px;">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark" style="font-size:14px;">رقم السند المرجعي المرفق</label>
-                        <input type="text" class="form-control" name="reference_number" value="SETTLE-ADMIN-2026" required style="border-radius:8px;">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark" style="font-size:14px;">البيان / السبب المحاسبي الصارم</label>
-                        <textarea class="form-control" name="notes" rows="2" placeholder="اكتب مبرر الحركة القانوني بالتفصيل لضمان الحوكمة المادية..." required style="border-radius:8px; font-size:13px;"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer" style="background:#F8F9FA; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px;">
-                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal" style="border-radius:8px;">إلغاء السند</button>
-                    <button type="submit" class="btn btn-primary px-4" style="background-color: var(--royal-purple); border:none; border-radius:8px;">اعتماد القيد بالتسويات</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
-
 {% endblock %}
