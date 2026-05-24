@@ -8,7 +8,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # حماية المسارات
+    # حماية المسارات في بيئة الإنتاج
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # تهيئة الإضافات
@@ -16,8 +16,8 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'auth_portal.login'
 
-    # تسجيل الموديلات (لضمان وجودها في الـ Registry)
     with app.app_context():
+        # 1. استيراد الموديلات داخل السياق لكسر حلقة الاستيراد
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
@@ -26,7 +26,7 @@ def create_app():
         def load_user(user_id):
             return AdminUser.query.get(int(user_id))
 
-        # تسجيل المسارات (الاستيراد هنا لا يسبب حلقة لأننا داخل السياق)
+        # 2. استيراد وتسجيل البلوبرينتس (Routes)
         from apps.auth_portal.routes import auth_blueprint
         from apps.admin_dashboard.routes import admin_dashboard
         from apps.add_supplier.routes import admin_suppliers_bp
@@ -37,10 +37,7 @@ def create_app():
         app.register_blueprint(admin_suppliers_bp, url_prefix='/suppliers')
         app.register_blueprint(wallet_blueprint, url_prefix='/wallet')
 
-        # إنشاء الجداول (اختياري، يفضل استخدامه مرة واحدة)
-        # db.create_all()
-
     return app
 
-# إسناد التطبيق (سيتم استدعاؤه بواسطة run.py)
+# نقطة التشغيل الرئيسية
 app = create_app()
