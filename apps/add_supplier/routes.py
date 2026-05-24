@@ -109,7 +109,7 @@ def add_supplier_submit():
         raw_password = request.form.get('password')
         hashed_password = generate_password_hash(raw_password) if raw_password else ""
 
-        # إنشاء كائن المورد
+        # إنشاء كائن المورد وتعميد البيانات حياً ونشطاً فوراً ⚡
         new_supplier = Supplier(
             sovereign_id=sovereign_id,
             username=request.form.get('username'),
@@ -120,28 +120,30 @@ def add_supplier_submit():
             owner_name=request.form.get('owner_name'),
             owner_phone=request.form.get('owner_phone'),
             trade_name=request.form.get('trade_name'),
-            shop_number=request.form.get('shop_number'),
+            shop_number=request.form.get('shop_number'),  # تفعيل بروبرتي دمج رقم المحل الذكي بالعنوان
             shop_phone=request.form.get('owner_phone'),
+            activity_type=request.form.get('activity_type'),  # تخزين فرز المورد (جملة / تجزئة) الحقيقي
             province=request.form.get('province'),
             district=request.form.get('district'),
             address_detail=request.form.get('detailed_address'),
+            fin_type=request.form.get('fin_type'),  # ربط الوعاء المالي والبنكي الحاكم بالجدول
             bank_name=request.form.get('bank_name'),
             bank_acc=request.form.get('bank_acc'),
-            wallet_code=wallet_code
+            wallet_code=wallet_code,
+            status='active'  # تعميد المورد ليكون "نشط" ومُطلق برمجياً بشكل فوري ومستقر 🎯
         )
 
         db.session.add(new_supplier)
         
-        # إنشاء المحفظة المالية المرتبطة لشركاء النجاح
-        # تم إزالة معامل balance لإنهاء الخطأ المتسبب في الانهيار 🛠️
+        # إنشاء المحفظة المالية الموحدة الموازية لشركاء النجاح
         new_wallet = SupplierWallet(
             supplier_id=sovereign_id,
             wallet_code=wallet_code,
-            status='نشطة'
+            status='نشطة'  # بقيم افتراضية صفرية لجميع العملات الثلاث الحية (YER, SAR, USD)
         )
         db.session.add(new_wallet)
         
-        # التزام وحفظ في قاعدة البيانات
+        # التزام وحفظ في قاعدة البيانات (Atomic Commit)
         db.session.commit()
         
         # جلب التسلسلات القادمة تلقائياً لإرسالها للواجهة لتحديث العدادات الفورية
@@ -152,7 +154,7 @@ def add_supplier_submit():
         
         return jsonify({
             'status': 'success', 
-            'message': f'تم تعميد شريك النجاح بنجاح - المعرف السيادي: {sovereign_id}',
+            'message': f'تم تعميد شريك النجاح بنجاح بنظام الأرشفة السيادي - المعرف: {sovereign_id}',
             'next_sequence': next_sovereign,
             'next_wallet': next_wallet_code
         })
