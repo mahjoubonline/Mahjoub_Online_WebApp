@@ -6,7 +6,9 @@ from flask_login import login_required
 from apps.extensions import db
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from datetime import datetime
+import os
 
+# تعريف البلوبرينت
 wallet_blueprint = Blueprint('wallet', __name__)
 
 @wallet_blueprint.route('/management', methods=['GET'])
@@ -17,6 +19,7 @@ def display_management_table():
     wallet_settlements = []
     pending_withdrawals = []
 
+    # حساب إحصائيات النظام العامة
     total_wallets_count = SupplierWallet.query.count()
     total_yer_system = db.session.query(db.func.sum(SupplierWallet.yer_total)).scalar() or 0
     total_sar_system = db.session.query(db.func.sum(SupplierWallet.sar_total)).scalar() or 0
@@ -33,15 +36,21 @@ def display_management_table():
                 .order_by(WalletTransaction.created_at.desc()).all()
             pending_withdrawals = WalletTransaction.query.filter_by(wallet_id=wallet.id, status='معلقة').all()
 
-    return render_template('admin/settlement_and_withdrawal.html',
-                           total_wallets_count=total_wallets_count,
-                           total_yer_system=total_yer_system,
-                           total_sar_system=total_sar_system,
-                           total_usd_system=total_usd_system,
-                           wallet=wallet,
-                           wallet_settlements=wallet_settlements,
-                           pending_withdrawals=pending_withdrawals,
-                           current_search=search_query)
+    # محاولة عرض القالب
+    try:
+        return render_template('admin/settlement_and_withdrawal.html',
+                               total_wallets_count=total_wallets_count,
+                               total_yer_system=total_yer_system,
+                               total_sar_system=total_sar_system,
+                               total_usd_system=total_usd_system,
+                               wallet=wallet,
+                               wallet_settlements=wallet_settlements,
+                               pending_withdrawals=pending_withdrawals,
+                               current_search=search_query)
+    except Exception as e:
+        # هذه الرسالة ستظهر في سجلات الـ Logs إذا فشل العثور على الملف
+        print(f"Template Error: {e}")
+        return f"Error loading template: {str(e)}", 500
 
 @wallet_blueprint.route('/execute-settlement/<wallet_code>', methods=['POST'])
 @login_required
