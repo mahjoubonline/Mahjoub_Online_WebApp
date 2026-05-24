@@ -222,7 +222,7 @@
             "بنك القطيبي الإسلامي", 
             "بنك البسيري الدقيق", 
             "بنك التضامن الإسلامي", 
-            "بنك اليمن والكويت", 
+            "بنك Yemen والكويت", 
             "بنك الكريمي الإسلامي للتمويل الأصغر",
             "بنك سبأ الإسلامي"
         ],
@@ -303,7 +303,7 @@
         hiddenBankName.value = val || "";
     }
 
-    // ⚡ محرك الاستعلام الفوري والتحقق اللحظي الشامل (تمت إضافة حقل المالك ورقم المحل)
+    // ⚡ محرك الاستعلام الفوري والتحقق اللحظي الشامل
     const validationTargets = [
         { id: 'input-username', type: 'username', statusId: 'status-username', msgId: 'msg-username' },
         { id: 'input-owner-name', type: 'owner_name', statusId: 'status-owner-name', msgId: 'msg-owner-name' },
@@ -484,4 +484,12 @@
             btnSpinner.classList.add('d-none');
             alertContainer.innerHTML = `
                 <div class="alert alert-danger alert-dismissible fade show rounded-3 p-3 mb-4" role="alert">
-                    <strong>❌ خطأ في النظام:</strong> تعذر الاتصال بالخادم. يرجى التحقق من سجل
+                    <strong>❌ خطأ في النظام:</strong> تعذر الاتصال بالخادم. يرجى التحقق من سجل الأخطاء.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            console.error("Error submitting form:", err);
+        });
+    };
+</script>
+{% endblock %}
