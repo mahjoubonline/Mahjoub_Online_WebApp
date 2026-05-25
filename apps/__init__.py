@@ -24,6 +24,8 @@ def create_app():
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
         from apps.models.settlements_db import AdminSettlement
+        # إضافة موديل كشف الحساب الجديد
+        from apps.models.statement_db import SupplierStatement 
         
         # إنشاء الجداول في قاعدة البيانات
         db.create_all() 
@@ -36,14 +38,16 @@ def create_app():
         from apps.auth_portal.routes import auth_blueprint
         from apps.admin_dashboard.routes import admin_dashboard
         from apps.add_supplier.routes import admin_suppliers_bp
-        # تسجيل البلوبرينت الجديد الخاص بالعمليات المالية
         from apps.financial_ops.routes import financial_blueprint 
+        # استيراد البلوبرينت الجديد الخاص بالكشوفات
+        from apps.statement import statement_blueprint
 
         app.register_blueprint(auth_blueprint, url_prefix='/auth')
         app.register_blueprint(admin_dashboard)
         app.register_blueprint(admin_suppliers_bp, url_prefix='/suppliers')
-        # تسجيل البلوبرينت الجديد تحت المسار /finance
         app.register_blueprint(financial_blueprint, url_prefix='/finance')
+        # تسجيل البلوبرينت الجديد الخاص بالكشوفات
+        app.register_blueprint(statement_blueprint, url_prefix='/statement')
 
     return app
 
