@@ -1,78 +1,84 @@
 {% extends "admin/admin_base.html" %}
 
-{% block title %}جدول موافقة الطلبات والتسوية المالية | محجوب أونلاين{% endblock %}
+{% block title %}لوحة التحكم المالية المركزية | محجوب أونلاين{% endblock %}
 
 {% block content %}
-<style>
-    /* الأنماط التصميمية */
-    :root {
-        --royal-purple: #632C8F;
-        --royal-purple-dark: #4A1E6D;
-        --pure-white: #FFFFFF;
-        --soft-bg: #F4F5F8;
-        --text-dark: #2A2A2A;
-        --success-green: #2E7D32;
-        --pending-orange: #EF6C00;
-        --danger-red: #C62828;
-    }
-    .gov-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    .gov-table th { background-color: var(--soft-bg); padding: 15px; text-align: right; color: var(--royal-purple); }
-    .gov-table td { padding: 15px; border-bottom: 1px solid #EAEAEA; }
-    .status-pill { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .status-pending { background: rgba(239, 108, 0, 0.1); color: var(--pending-orange); }
-</style>
-
-<div class="container-fluid">
-    <section class="search-filter-card">
-        <form method="GET" action="{{ url_for('wallet.display_management_table') }}" class="filter-form">
+<div class="container-fluid py-4">
+    <section class="search-filter-card bg-white p-4 rounded shadow-sm mb-4">
+        <form method="GET" action="{{ url_for('wallet.display_management_table') }}" class="d-flex gap-2">
             <input type="text" name="search_query" value="{{ current_search or '' }}" 
-                   placeholder="بحث بالاسم، المتجر، كود المحفظة، أو المعرّف..." class="form-control">
-            <button type="submit" class="btn btn-primary">بحث وفحص</button>
+                   class="form-control" placeholder="ابحث بالاسم، المتجر، أو كود المحفظة...">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-search"></i> بحث وفحص</button>
         </form>
     </section>
 
     {% if wallet %}
-    <div class="supplier-identity-card">
-        <h3>الكيان: {{ wallet.supplier.name }} ({{ wallet.supplier.owner_name }})</h3>
-        <p>كود المحفظة: {{ wallet.wallet_code }} | معرّف: {{ wallet.supplier_id }}</p>
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body bg-dark text-white rounded">
+            <h3>{{ wallet.supplier.name }} <small class="text-white-50">| {{ wallet.supplier.owner_name }}</small></h3>
+            <p class="mb-0">كود المحفظة: <strong>{{ wallet.wallet_code }}</strong> | معرّف المورد: {{ wallet.supplier_id }}</p>
+        </div>
     </div>
 
-    <section class="transactions-section">
-        <h4>سجل التسويات والطلبات</h4>
-        <table class="gov-table">
-            <thead>
-                <tr>
-                    <th>كود السند</th>
-                    <th>النوع</th>
-                    <th>المبلغ</th>
-                    <th>الحالة</th>
-                    <th>الإجراء</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for tx in wallet_settlements %}
-                <tr>
-                    <td>{{ tx.settlement_code }}</td>
-                    <td>{{ tx.settlement_type }}</td> <td>{{ "{:,.2f}".format(tx.amount) }}</td>
-                    <td>
-                        {% if tx.status == 'pending' %}
-                            <span class="status-pill status-pending">قيد الانتظار</span>
-                        {% else %}
-                            <span>{{ tx.status }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if tx.status == 'pending' %}
+    <ul class="nav nav-tabs mb-3" id="financeTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#withdrawals">طلبات السحب المعلقة</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#settlements">سندات التسوية الإدارية</button>
+        </li>
+    </ul>
+
+    <div class="tab-content bg-white p-3 rounded shadow-sm">
+        <div class="tab-pane fade show active" id="withdrawals">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>رقم الطلب</th><th>المبلغ</th><th>الحالة</th><th>الإجراء</th></tr>
+                </thead>
+                <tbody>
+                    {% for tx in pending_withdrawals %}
+                    <tr>
+                        <td>{{ tx.id }}</td>
+                        <td>{{ "{:,.2f}".format(tx.amount) }}</td>
+                        <td><span class="badge bg-warning text-dark">قيد الانتظار</span></td>
+                        <td>
                             <form action="{{ url_for('wallet.handle_supplier_withdrawal', tx_id=tx.id, decision='approve') }}" method="POST">
-                                <button type="submit" class="btn btn-sm btn-success">اعتماد</button>
+                                <button type="submit" class="btn btn-success btn-sm">اعتماد العملية</button>
                             </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </section>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="text-center">لا توجد طلبات سحب معلقة حالياً.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="tab-pane fade" id="settlements">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>كود السند</th><th>النوع</th><th>المبلغ</th><th>المسؤول</th><th>التاريخ</th></tr>
+                </thead>
+                <tbody>
+                    {% for settle in settlements %}
+                    <tr>
+                        <td>{{ settle.settlement_code }}</td>
+                        <td>{{ settle.settlement_type }}</td>
+                        <td>{{ "{:,.2f}".format(settle.amount) }}</td>
+                        <td>{{ settle.created_by }}</td>
+                        <td>{{ settle.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center">لا توجد سجلات تسوية إدارية.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+        {% if current_search %}
+        <div class="alert alert-info">لا توجد نتائج مطابقة لـ: "{{ current_search }}"</div>
+        {% endif %}
     {% endif %}
 </div>
 {% endblock %}
