@@ -13,7 +13,6 @@
     .bg-credit { background: #2e7d32; }
     .bg-balance { background: #1565c0; }
     
-    /* تنسيق Select2 للهوية البنفسجية */
     .select2-container--default .select2-selection--single { height: 45px !important; padding: 8px !important; border: 1px solid #ced4da; border-radius: 10px; }
     .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: var(--mahjoub-purple) !important; }
     .btn-mahjoub { background-color: var(--mahjoub-purple); color: white; border-radius: 10px; }
@@ -42,16 +41,16 @@
                 </div>
             </div>
             <div class="col-md-2">
-                <button class="btn btn-mahjoub w-100 py-2" onclick="loadFinancialData()"><i class="fas fa-sync"></i> تحديث النتائج</button>
+                <button class="btn btn-mahjoub w-100 py-2" onclick="loadFinancialData()"><i class="fas fa-sync"></i> تحديث</button>
             </div>
         </div>
     </div>
 
     <div id="summaryCards" class="row mb-4" style="display: none;">
         <div class="col-md-3"><div class="card stat-card bg-profit"><h6>إجمالي الأرباح</h6><h2 id="totalProfit">0.00</h2></div></div>
-        <div class="col-md-3"><div class="card stat-card bg-debit"><h6>إجمالي المدين (عليه)</h6><h2 id="totalDebit">0.00</h2></div></div>
-        <div class="col-md-3"><div class="card stat-card bg-credit"><h6>إجمالي الدائن (له)</h6><h2 id="totalCredit">0.00</h2></div></div>
-        <div class="col-md-3"><div class="card stat-card bg-balance"><h6>صافي الرصيد الحالي</h6><h2 id="netBalance">0.00</h2></div></div>
+        <div class="col-md-3"><div class="card stat-card bg-debit"><h6>إجمالي المدين</h6><h2 id="totalDebit">0.00</h2></div></div>
+        <div class="col-md-3"><div class="card stat-card bg-credit"><h6>إجمالي الدائن</h6><h2 id="totalCredit">0.00</h2></div></div>
+        <div class="col-md-3"><div class="card stat-card bg-balance"><h6>صافي الرصيد</h6><h2 id="netBalance">0.00</h2></div></div>
     </div>
 
     <div class="card shadow-sm border-0 rounded-4">
@@ -68,7 +67,7 @@
                     </tr>
                 </thead>
                 <tbody id="statementBody">
-                    <tr><td colspan="6" class="text-center py-5 text-muted">يرجى اختيار المورد وتحديد الفترة لعرض البيانات</td></tr>
+                    <tr><td colspan="6" class="text-center py-5 text-muted">يرجى اختيار المورد لعرض البيانات</td></tr>
                 </tbody>
             </table>
         </div>
@@ -85,7 +84,7 @@
     var pickerEnd = moment();
 
     $(function() {
-        // تهيئة البحث الذكي عبر AJAX
+        // تهيئة البحث الذكي
         $('#supplierSearch').select2({
             placeholder: "ابحث بالاسم، المتجر، أو الرقم الموحد...",
             ajax: {
@@ -97,6 +96,11 @@
                 cache: true
             },
             minimumInputLength: 1
+        });
+
+        // التحديث التلقائي عند اختيار مورد
+        $('#supplierSearch').on('select2:select', function (e) {
+            loadFinancialData();
         });
 
         // تهيئة ديت رينج بيكر
@@ -116,7 +120,7 @@
 
     function loadFinancialData() {
         let supplierId = $('#supplierSearch').val();
-        if(!supplierId) return alert('يرجى اختيار المورد أولاً');
+        if(!supplierId) return; // لا حاجة للتنبيه إذا كان التحديث لحظي
 
         let url = `/api/statement/report?id=${supplierId}&currency=${$('#currencyFilter').val()}&start=${pickerStart.format('YYYY-MM-DD')}&end=${pickerEnd.format('YYYY-MM-DD')}`;
 
