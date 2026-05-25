@@ -2,7 +2,7 @@
 # 📂 apps/statement/routes.py
 # ⚙️ محرك كشوفات الموردين المركزية - نظام محجوب أونلاين 2026
 
-from flask import render_template, request
+from flask import render_template, request, flash
 from flask_login import login_required
 from apps.statement import statement_blueprint
 from apps.models.supplier_db import Supplier
@@ -19,30 +19,37 @@ def view_statement():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     
-    all_suppliers = Supplier.query.all()
     selected_supplier = None
     statements = []
 
     # 2. منطق البحث الذكي
     if q:
-        selected_supplier = Supplier.query.filter(or_(
-            Supplier.trade_name.ilike(f'%{q}%'),
-            Supplier.owner_name.ilike(f'%{q}%'),
-            Supplier.sovereign_id == q
-        )).first()
+        try:
+            selected_supplier = Supplier.query.filter(or_(
+                Supplier.trade_name.ilike(f'%{q}%'),
+                Supplier.owner_name.ilike(f'%{q}%'),
+                Supplier.sovereign_id == q
+            )).first()
+            
+            # 3. استخدام محرك التقارير مع حماية ضد الانهيار
+            if selected_supplier:
+                statements = ReportGenerator.get_detailed_transactions(
+                    supplier_id=selected_supplier.id,
+                    currency=currency,
+                    start_date=start_date,
+                    end_date=end_date
+                ) or [] # التأكد من عدم رجوع None
+            else:
+                flash("لم يتم العثور على مورد بهذه البيانات.", "warning")
         
-        # 3. استخدام محرك التقارير (ReportGenerator) لجلب البيانات
-        if selected_supplier:
-            statements = ReportGenerator.get_detailed_transactions(
-                supplier_id=selected_supplier.id,
-                currency=currency,
-                start_date=start_date,
-                end_date=end_date
-            )
+        except Exception as e:
+            # في حال حدوث أي خطأ في قاعدة البيانات أو التوليد، لا ينهار النظام
+            print(f"Error generating statement: {e}")
+            flash("حدث خطأ أثناء تحميل الكشف، يرجى المحاولة لاحقاً.", "danger")
+            statements = []
 
     return render_template(
         'admin/statement.html',
-        all_suppliers=all_suppliers,
         selected_supplier=selected_supplier,
         statements=statements,
         report_type=report_type,
