@@ -38,7 +38,7 @@
         <table class="table table-hover align-middle mb-0" id="mainTable">
             <thead class="table-custom-purple">
                 <tr>
-                    <th>التاريخ</th>
+                    <th>التاريخ والوقت</th>
                     <th>الكيان (المتجر/المالك)</th>
                     <th>كود المحفظة</th>
                     <th>المرجع</th>
@@ -50,17 +50,19 @@
             <tbody id="tableBody">
                 {% for tx in pending_withdrawals %}
                 <tr class="op-row" data-status="pending">
-                    <td>{{ tx.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="text-nowrap">{{ tx.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td>
                         <strong>{{ tx.wallet.supplier.name }}</strong><br>
                         <small class="text-muted">{{ tx.wallet.supplier.owner_name }}</small>
                     </td>
                     <td>{{ tx.wallet.wallet_code }}</td>
                     <td>{{ tx.id }}</td>
-                    <td>{{ "{:,.2f}".format(tx.amount) }}</td>
+                    <td class="fw-bold">{{ "{:,.2f}".format(tx.amount) }}</td>
                     <td><span class="badge bg-warning text-dark">قيد الانتظار</span></td>
                     <td>
-                        <button class="btn btn-sm btn-success">اعتماد</button>
+                        <form action="{{ url_for('financial_ops.handle_supplier_withdrawal', tx_id=tx.id, decision='approve') }}" method="POST">
+                            <button type="submit" class="btn btn-sm btn-success">اعتماد</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
