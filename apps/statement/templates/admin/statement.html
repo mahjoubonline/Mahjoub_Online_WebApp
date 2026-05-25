@@ -4,7 +4,7 @@
 <div class="container-fluid py-4">
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ url_for('statement.view_statement') }}" class="row g-3 align-items-end">
+            <form method="GET" action="{{ url_for('statement_blueprint.view_statement') }}" class="row g-3 align-items-end">
                 <div class="col-md-8">
                     <label class="form-label fw-bold">اختر المورد:</label>
                     <select name="supplier_id" class="form-select" onchange="this.form.submit()">
@@ -47,8 +47,12 @@
                         <td>{{ stmt.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>{{ stmt.description }}</td>
                         <td>{{ stmt.currency }}</td>
-                        <td class="text-danger">{{ "{:,.2f}".format(stmt.debit) }}</td>
-                        <td class="text-success">{{ "{:,.2f}".format(stmt.credit) }}</td>
+                        <td class="text-danger">{{ "{:,.2f}".format(stmt.debit or 0) }}</td>
+                        <td class="text-success">{{ "{:,.2f}".format(stmt.credit or 0) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-3">لا توجد حركات مسجلة.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
