@@ -1,37 +1,42 @@
 # coding: utf-8
 # 📂 apps/models/settlements_db.py
+# 📜 مستند حوكمة إدارة التسويات المالية الاستثنائية والسندات الإدارية - منصة محجوب أونلاين 2026
+
 import random
 from datetime import datetime
 from apps.extensions import db
 
 class AdminSettlement(db.Model):
     """
-    جدول مخصص مستقل حصرياً لإدارة وتوثيق التسويات المالية الإدارية.
+    جدول مخصص مستقل حصرياً لإدارة وتوثيق التسويات المالية الإدارية والاستثنائية.
+    يعمل كجدول مخصص مغذّي لنوافذ التسويات والرقابة المادية في لوحة التحكم المركزية.
     """
     __tablename__ = 'admin_settlements'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     
-    # الربط مع المحفظة
+    # الربط الحوكمي مع ملف الأب (SupplierWallet)
     wallet_id = db.Column(db.Integer, db.ForeignKey('supplier_wallets.id'), nullable=False)
-    wallet_code = db.Column(db.String(50), nullable=False)
+    wallet_code = db.Column(db.String(50), nullable=False) 
     
-    # الربط البرمجي للوصول لبيانات المورد (Supplier) من خلال المحفظة
+    # الربط البرمجي للوصول السريع لبيانات المورد والمحفظة
     wallet = db.relationship('SupplierWallet', backref=db.backref('settlements', lazy=True))
     
-    # تفاصيل السند
-    settlement_code = db.Column(db.String(60), unique=True, nullable=False)
-    settlement_type = db.Column(db.String(30), nullable=False) # إيداع / خصم
-    currency = db.Column(db.String(10), nullable=False)
+    # تفاصيل السند المالي للحركة
+    settlement_code = db.Column(db.String(60), unique=True, nullable=False) # رمز السند المالي (STL-...)
+    settlement_type = db.Column(db.String(30), nullable=False)             # إيداع شحن / خصم عكسي / تسوية غرامة
+    currency = db.Column(db.String(10), nullable=False)                    # YER / SAR / USD
     amount = db.Column(db.Numeric(15, 2), nullable=False)
     
-    # تفاصيل الحوكمة
-    financial_entity = db.Column(db.String(100), default="إدارة المنصة المركزية", nullable=True)
-    reference_number = db.Column(db.String(100), default="SETTLE-ADMIN", nullable=True)
-    reason_notes = db.Column(db.Text, nullable=False)
-    created_by = db.Column(db.String(50), nullable=True)
+    # توثيق التدقيق البنكي والربط الخارجي الصادر
+    financial_entity = db.Column(db.String(100), default="إدارة المنصة المركزية", nullable=True) 
+    reference_number = db.Column(db.String(100), default="SETTLE-ADMIN", nullable=True)          
     
-    # الحالة (مهمة للفلترة في الجدول الجديد)
+    # حوكمة وضبط الصلاحيات البشرية لمنع التلاعب بالمدخلات
+    reason_notes = db.Column(db.Text, nullable=False)  # بيان السبب الإجباري لفرض القيد والتسوية
+    created_by = db.Column(db.String(50), nullable=True) # هوية المسؤول أو الإداري الذي قام بالعملية
+    
+    # الحالة المعتمدة في النظام
     status = db.Column(db.String(20), default='منفذة', nullable=False) # منفذة / معلقة / ملغاة
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -39,7 +44,8 @@ class AdminSettlement(db.Model):
 
     @staticmethod
     def generate_settlement_code():
+        """ 📊 محرك التوليد الآلي والمشفر لرموز سندات التسوية الإدارية لعام 2026 """
         return f"STL-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{random.randint(1000, 9999)}"
 
     def __repr__(self):
-        return f"<AdminSettlement {self.settlement_code} | {self.status}>"
+        return f"<AdminSettlement {self.settlement_code} | Wallet {self.wallet_code} | {self.amount} {self.currency}>"
