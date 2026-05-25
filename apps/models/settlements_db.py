@@ -1,51 +1,53 @@
 # coding: utf-8
-# 📂 apps/models/settlements_db.py
-# 📜 مستند حوكمة إدارة التسويات المالية الاستثنائية والسندات الإدارية - منصة محجوب أونلاين 2026
+# 📊 نموذج كشوفات الحسابات الموحد (Ledger) - منصة محجوب أونلاين 2026
+# هذا النموذج هو "سجل العمليات" الذي تبحث فيه لحظياً لاستخراج شجرة الحسابات والتقارير
 
-import random
 from datetime import datetime
 from apps.extensions import db
 
-class AdminSettlement(db.Model):
-    """
-    جدول مخصص مستقل حصرياً لإدارة وتوثيق التسويات المالية الإدارية والاستثنائية.
-    يعمل كجدول مخصص مغذّي لنوافذ التسويات والرقابة المادية في لوحة التحكم المركزية.
-    """
-    __tablename__ = 'admin_settlements'
+class SupplierStatement(db.Model):
+    __tablename__ = 'supplier_statements'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     
-    # الربط الحوكمي مع ملف الأب (SupplierWallet)
-    wallet_id = db.Column(db.Integer, db.ForeignKey('supplier_wallets.id'), nullable=False)
-    wallet_code = db.Column(db.String(50), nullable=False) 
+    # 🔗 الربط: nullable=True يسمح بتسجيل حركات "المنصة" العامة بدون مورد محدد
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True, index=True)
     
-    # الربط البرمجي للوصول السريع لبيانات المورد والمحفظة
-    wallet = db.relationship('SupplierWallet', backref=db.backref('settlements', lazy=True))
+    # 🕒 التوقيت (فهرس لتسريع البحث اللحظي بين الفترات)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     
-    # تفاصيل السند المالي للحركة
-    settlement_code = db.Column(db.String(60), unique=True, nullable=False) # رمز السند المالي (STL-...)
-    settlement_type = db.Column(db.String(30), nullable=False)             # إيداع شحن / خصم عكسي / تسوية غرامة
-    currency = db.Column(db.String(10), nullable=False)                    # YER / SAR / USD
-    amount = db.Column(db.Numeric(15, 2), nullable=False)
+    # 📝 البيانات المالية
+    description = db.Column(db.String(255), nullable=False) 
+    currency = db.Column(db.String(10), nullable=False, index=True) # YER, SAR, USD
     
-    # توثيق التدقيق البنكي والربط الخارجي الصادر
-    financial_entity = db.Column(db.String(100), default="إدارة المنصة المركزية", nullable=True) 
-    reference_number = db.Column(db.String(100), default="SETTLE-ADMIN", nullable=True)          
+    debit = db.Column(db.Numeric(15, 2), default=0.00, nullable=False)  # مدين
+    credit = db.Column(db.Numeric(15, 2), default=0.00, nullable=False) # دائن
+    running_balance = db.Column(db.Numeric(15, 2), nullable=False, default=0.00) 
     
-    # حوكمة وضبط الصلاحيات البشرية لمنع التلاعب بالمدخلات
-    reason_notes = db.Column(db.Text, nullable=False)  # بيان السبب الإجباري لفرض القيد والتسوية
-    created_by = db.Column(db.String(50), nullable=True) # هوية المسؤول أو الإداري الذي قام بالعملية
-    
-    # الحالة المعتمدة في النظام
-    status = db.Column(db.String(20), default='منفذة', nullable=False) # منفذة / معلقة / ملغاة
-    
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    @staticmethod
-    def generate_settlement_code():
-        """ 📊 محرك التوليد الآلي والمشفر لرموز سندات التسوية الإدارية لعام 2026 """
-        return f"STL-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{random.randint(1000, 9999)}"
+    # 🛡️ نوع الحركة (محوري لشجرة الحسابات)
+    # أمثلة: (SALE, PURCHASE, SETTLEMENT, PROFIT_TRANS, SYSTEM_FEE)
+    reference_type = db.Column(db.String(50), nullable=False, index=True) 
+    reference_id = db.Column(db.Integer, nullable=True)     
 
     def __repr__(self):
-        return f"<AdminSettlement {self.settlement_code} | Wallet {self.wallet_code} | {self.amount} {self.currency}>"
+        return f"<Statement {self.id} | {self.reference_type} | {self.currency}>"
+
+    # --- دوال المساعدة للتقارير (تستخدم في الـ Route) ---
+    
+    @classmethod
+    def get_platform_tree(cls, currency='ALL', start_date=None, end_date=None):
+        """تجميع الحركات حسب نوعها لشجرة حسابات المنصة"""
+        query = db.session.query(
+            cls.reference_type,
+            db.func.sum(cls.debit).label('total_debit'),
+            db.func.sum(cls.credit).label('total_credit')
+        )
+        
+        if currency != 'ALL':
+            query = query.filter_by(currency=currency)
+        if start_date:
+            query = query.filter(cls.created_at >= start_date)
+        if end_date:
+            query = query.filter(cls.created_at <= end_date)
+            
+        return query.group_by(cls.reference_type).all()
