@@ -1,79 +1,62 @@
 {% extends "admin/admin_base.html" %}
-
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <form method="GET" action="{{ url_for('statement_blueprint.view_statement') }}" class="row g-3 align-items-end">
-                <div class="col-md-8">
-                    <label class="form-label fw-bold">البحث عن مورد:</label>
-                    <input type="text" name="q" class="form-control" placeholder="اسم المتجر، المالك، أو ID..." value="{{ search_query or '' }}">
-                </div>
-                <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary w-100">بحث وتصفية</button>
-                </div>
-            </form>
-        </div>
+    <div class="card p-3 mb-4 shadow-sm">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control" placeholder="اسم المورد أو ID" value="{{ request.args.get('q', '') }}">
+            </div>
+            <div class="col-md-2">
+                <select name="currency" class="form-select">
+                    <option value="ALL">كل العملات</option>
+                    <option value="SAR">ريال سعودي</option>
+                    <option value="YER">ريال يمني</option>
+                    <option value="USD">دولار</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="report_type" class="form-select">
+                    <option value="detailed">تفصيلي</option>
+                    <option value="summary">إجمالي</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary">بحث</button>
+                <button type="button" onclick="window.print()" class="btn btn-dark">طباعة</button>
+            </div>
+        </form>
     </div>
 
-    {% if selected_supplier and wallet %}
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card bg-info text-white shadow p-3">
-                <h6>رصيد الريال اليمني (YER)</h6>
-                <h4 class="mb-0">{{ "{:,.2f}".format(wallet.yer_available) }} ر.ي</h4>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-success text-white shadow p-3">
-                <h6>رصيد الريال السعودي (SAR)</h6>
-                <h4 class="mb-0">{{ "{:,.2f}".format(wallet.sar_available) }} ر.س</h4>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-warning text-dark shadow p-3">
-                <h6>رصيد الدولار الأمريكي (USD)</h6>
-                <h4 class="mb-0">{{ "{:,.2f}".format(wallet.usd_available) }} $</h4>
-            </div>
-        </div>
+    {% if selected_supplier %}
+    <div class="card shadow-sm">
+        <div class="card-header"><h4>كشف حساب: {{ selected_supplier.trade_name }}</h4></div>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>نوع العملية</th>
+                    <th>التفاصيل</th>
+                    <th>العملة</th>
+                    <th>مدين</th>
+                    <th>دائن</th>
+                    <th>الرصيد</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stmt in statements %}
+                <tr>
+                    <td>{{ stmt.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td><span class="badge bg-info">{{ stmt.reference_type or 'عملية مالية' }}</span></td>
+                    <td>{{ stmt.description }}</td>
+                    <td>{{ stmt.currency }}</td>
+                    <td class="text-danger">{{ "{:,.2f}".format(stmt.debit) }}</td>
+                    <td class="text-success">{{ "{:,.2f}".format(stmt.credit) }}</td>
+                    <td class="fw-bold">{{ "{:,.2f}".format(stmt.running_balance) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">كشف حساب: {{ selected_supplier.store_name }}</h5>
-            <button onclick="window.print()" class="btn btn-outline-dark btn-sm"><i class="fas fa-print"></i> طباعة/تصدير PDF</button>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>التاريخ</th>
-                        <th>العملية</th>
-                        <th>العملة</th>
-                        <th class="text-danger">مدين</th>
-                        <th class="text-success">دائن</th>
-                        <th class="text-primary">الرصيد التراكمي</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stmt in statements %}
-                    <tr>
-                        <td>{{ stmt.created_at.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ stmt.description }}</td>
-                        <td><span class="badge bg-secondary">{{ stmt.currency }}</span></td>
-                        <td class="text-danger">{{ "{:,.2f}".format(stmt.debit or 0) }}</td>
-                        <td class="text-success">{{ "{:,.2f}".format(stmt.credit or 0) }}</td>
-                        <td class="text-primary fw-bold">{{ "{:,.2f}".format(stmt.running_balance or 0) }}</td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="6" class="text-center py-4">لا توجد حركات مالية لهذا المورد.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% elif search_query %}
-    <div class="alert alert-warning">عذراً، لم يتم العثور على مورد يطابق معايير البحث.</div>
     {% endif %}
 </div>
 {% endblock %}
