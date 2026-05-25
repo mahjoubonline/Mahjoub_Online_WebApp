@@ -15,12 +15,12 @@ def view_statement():
     currencies = ['USD', 'YER', 'SAR'] 
     return render_template('admin/statement.html', currencies=currencies)
 
-# 1. محرك البحث الذكي (Live Search) - مُنسق ليعمل مباشرة داخل Select2
+# 1. محرك البحث الذكي (Live Search) - مُنسق لـ Select2
 @statement_blueprint.route('/api/suppliers/search', methods=['GET'])
 @login_required
 def api_search_suppliers():
     term = request.args.get('q', '')
-    # البحث الشامل في كافة الحقول المطلوبة
+    # البحث الشامل في كافة الحقول المطلوبة لضمان دقة النتائج
     suppliers = Supplier.query.filter(or_(
         Supplier.trade_name.ilike(f'%{term}%'),
         Supplier.sovereign_id.ilike(f'%{term}%'),
@@ -28,7 +28,7 @@ def api_search_suppliers():
         Supplier.owner_name.ilike(f'%{term}%')
     )).limit(15).all()
     
-    # تنسيق النتيجة ليفهمها Select2 مباشرة
+    # تنسيق النتائج بهيكل {results: [...]} ليطابق متطلبات Select2
     results = [
         {
             'id': s.id, 
@@ -70,7 +70,7 @@ def api_get_report():
         if start_date and end_date: 
             profit_query = profit_query.filter(WalletTransaction.created_at.between(start_date, end_date))
         
-        # استخدام func.sum للقيام بعملية الجمع داخل قاعدة البيانات مباشرة للأداء الأفضل
+        # استخدام func.sum لجمع الأرباح بفعالية
         total_profit = profit_query.with_entities(func.sum(WalletTransaction.profit_margin)).scalar() or 0
 
     return jsonify({
