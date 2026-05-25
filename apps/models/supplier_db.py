@@ -1,8 +1,9 @@
 # coding: utf-8
 # 🔑 مستند النموذج الحوكمي للموردين - منصة محجوب أونلاين 2026
+# تم تعديل الاستيراد من apps.extensions لكسر حلقة Circular Import
 
 import random  # 🧠 استيراد مطلوب للمحرك الداخلي عند حدوث استثناء في التوليد
-from apps import db
+from apps.extensions import db
 from datetime import datetime
 from sqlalchemy.orm import validates
 
@@ -20,12 +21,12 @@ class Supplier(db.Model):
     identity_image = db.Column(db.String(255))   
     
     owner_name = db.Column(db.String(150), unique=True, nullable=False)
-    owner_phone = db.Column(db.String(20), unique=True, nullable=False)       
+    owner_phone = db.Column(db.String(20), unique=True, nullable=False)        
     trade_name = db.Column(db.String(150), unique=True, nullable=False)
     
     # 🛑 تم إلغاء العمود الحقيقي هنا لحماية الموردين الحاليين وعدم تخريب الداتابيز
     shop_phone = db.Column(db.String(20), unique=True, nullable=False)
-    activity_type = db.Column(db.String(50))     
+    activity_type = db.Column(db.String(50))      
     
     province = db.Column(db.String(50))
     district = db.Column(db.String(50))
