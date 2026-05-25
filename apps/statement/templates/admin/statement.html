@@ -1,36 +1,156 @@
 {% extends "admin/admin_base.html" %}
+
 {% block content %}
-<div class="container-fluid">
-    <div class="card glass-card p-4">
-        <select id="supplierSearch" class="form-control" style="width: 100%"></select>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+<style>
+    .mahjoub-toolbar { background: #fff; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; }
+    .stat-card { border-radius: 15px; border: none; transition: 0.3s; color: white; }
+    .bg-profit { background: linear-gradient(45deg, #632C8F, #8E44AD); }
+    .bg-debit { background: linear-gradient(45deg, #d32f2f, #ef5350); }
+    .bg-credit { background: linear-gradient(45deg, #2e7d32, #66bb6a); }
+    .bg-balance { background: linear-gradient(45deg, #1565c0, #42a5f5); }
+    .quick-btn { border-radius: 10px; font-weight: bold; font-size: 13px; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="card mahjoub-toolbar p-4 mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="small fw-bold text-muted mb-2">البحث الذكي عن المورد</label>
+                <select id="supplierSearch" class="form-control select2-mahjoub"></select>
+            </div>
+            <div class="col-md-2">
+                <label class="small fw-bold text-muted mb-2">العملة</label>
+                <select id="currencyFilter" class="form-select">
+                    <option value="ALL">كل العملات</option>
+                    {% for curr in currencies %}<option value="{{ curr }}">{{ curr }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="small fw-bold text-muted mb-2">تحديد الفترة الزمنية</label>
+                <div id="reportrange" class="form-control d-flex justify-content-between align-items-center" style="cursor: pointer;">
+                    <i class="fa fa-calendar"></i>&nbsp;<span></span> <i class="fa fa-caret-down"></i>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-dark w-100 py-2 rounded-3" onclick="loadFinancialData()"><i class="fas fa-sync"></i> تحديث</button>
+            </div>
+        </div>
     </div>
 
-    <div class="row mt-4" id="dashboard" style="display:none;">
-        <div class="col-md-3"><div class="card p-3"><h6>صافي الربح</h6><h3 id="profitVal">0</h3></div></div>
-        <div class="col-md-3"><div class="card p-3"><h6>رصيد YER</h6><h3 id="yerVal">0</h3></div></div>
-        <div class="col-md-3"><div class="card p-3"><h6>رصيد SAR</h6><h3 id="sarVal">0</h3></div></div>
-        <div class="col-md-3"><div class="card p-3"><h6>رصيد USD</h6><h3 id="usdVal">0</h3></div></div>
+    <div id="summaryCards" class="row mb-4" style="display: none;">
+        <div class="col-md-3">
+            <div class="card stat-card bg-profit p-3 shadow-sm">
+                <span class="small">إجمالي الأرباح</span>
+                <h2 id="totalProfit" class="mb-0 fw-bold">0.00</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-debit p-3 shadow-sm">
+                <span class="small">إجمالي المدين (عليه)</span>
+                <h2 id="totalDebit" class="mb-0 fw-bold">0.00</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-credit p-3 shadow-sm">
+                <span class="small">إجمالي الدائن (له)</span>
+                <h2 id="totalCredit" class="mb-0 fw-bold">0.00</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-balance p-3 shadow-sm">
+                <span class="small">صافي الرصيد الحالي</span>
+                <h2 id="netBalance" class="mb-0 fw-bold">0.00</h2>
+            </div>
+        </div>
     </div>
 
-    <table class="table mt-4">
-        <thead><tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
-        <tbody id="stmtBody"></tbody>
-    </table>
+    <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        <div class="card-header bg-white py-3 border-0">
+            <h6 class="mb-0 fw-bold"><i class="fas fa-list-ul text-primary"></i> الحركة التفصيلية للعمليات المالية</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="statementTable">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="px-4">التاريخ والوقت</th>
+                        <th>البيان</th>
+                        <th class="text-center">المرجع/السند</th>
+                        <th class="text-center">مدين</th>
+                        <th class="text-center">دائن</th>
+                        <th class="text-center">الرصيد التراكمي</th>
+                    </tr>
+                </thead>
+                <tbody id="statementBody">
+                    <tr><td colspan="6" class="text-center py-5 text-muted">بانتظار اختيار المورد...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
 <script>
-$('#supplierSearch').select2({
-    ajax: { url: '/api/suppliers/search', dataType: 'json' }
-}).on('select2:select', function(e) {
-    let id = e.params.data.id;
-    fetch('/api/statement/data?id=' + id)
-    .then(res => res.json())
-    .then(data => {
-        document.getElementById('dashboard').style.display = 'flex';
-        document.getElementById('profitVal').innerText = data.total_profit;
-        document.getElementById('yerVal').innerText = data.wallet.yer;
-        // ملء الجدول هنا...
+    var start = moment().subtract(29, 'days');
+    var end = moment();
+
+    $(function() {
+        // تهيئة البحث الذكي
+        $('#supplierSearch').select2({
+            placeholder: "ابحث بالاسم، الرقم الموحد، أو كود المحفظة...",
+            ajax: { url: '/api/suppliers/search', dataType: 'json' }
+        });
+
+        // تهيئة التقويم (يوم، أسبوع، شهر، سنة)
+        function cb(start, end) {
+            $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+        }
+        $('#reportrange').daterangepicker({
+            startDate: start,
+            endDate: end,
+            ranges: {
+               'اليوم': [moment(), moment()],
+               'الأمس': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+               'آخر 7 أيام': [moment().subtract(6, 'days'), moment()],
+               'هذا الشهر': [moment().startOf('month'), moment().endOf('month')],
+               'الشهر الماضي': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+            }
+        }, cb);
+        cb(start, end);
     });
-});
+
+    function loadFinancialData() {
+        let supplierId = $('#supplierSearch').val();
+        if(!supplierId) return alert('يرجى اختيار مورد أولاً');
+
+        let url = `/api/statement/report?id=${supplierId}&currency=${$('#currencyFilter').val()}&start=${start.format('YYYY-MM-DD')}&end=${end.format('YYYY-MM-DD')}`;
+
+        fetch(url).then(res => res.json()).then(data => {
+            $('#summaryCards').fadeIn();
+            $('#totalProfit').text(data.summary.total_profit.toLocaleString());
+            $('#totalDebit').text(data.summary.total_debit.toLocaleString());
+            $('#totalCredit').text(data.summary.total_credit.toLocaleString());
+            $('#netBalance').text(data.summary.net_balance.toLocaleString());
+
+            let html = '';
+            data.details.forEach(s => {
+                html += `<tr>
+                    <td class="px-4 text-muted small">${s.date}</td>
+                    <td class="fw-bold">${s.desc}</td>
+                    <td class="text-center"><span class="badge bg-light text-dark">${s.ref}</span></td>
+                    <td class="text-center text-danger fw-bold">${s.debit || '-'}</td>
+                    <td class="text-center text-success fw-bold">${s.credit || '-'}</td>
+                    <td class="text-center fw-bold bg-light">${s.balance}</td>
+                </tr>`;
+            });
+            $('#statementBody').html(html || '<tr><td colspan="6" class="text-center">لا توجد عمليات لهذه الفترة</td></tr>');
+        });
+    }
 </script>
 {% endblock %}
