@@ -4,14 +4,14 @@
 <div class="container-fluid py-4">
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ url_for('statement_ops.view_statement_by_supplier') }}" class="row g-3 align-items-end">
+            <form method="GET" action="{{ url_for('statement_blueprint.view_statement') }}" class="row g-3 align-items-end">
                 <div class="col-md-8">
-                    <label class="form-label fw-bold">اختر المورد للبحث:</label>
+                    <label class="form-label fw-bold">اختر المورد لعرض كشف الحساب:</label>
                     <select name="supplier_id" class="form-select" onchange="this.form.submit()">
                         <option value="">-- اختر مورد --</option>
                         {% for s in all_suppliers %}
                         <option value="{{ s.id }}" {% if selected_supplier and selected_supplier.id == s.id %}selected{% endif %}>
-                            {{ s.full_name }}
+                            {{ s.trade_name }}
                         </option>
                         {% endfor %}
                     </select>
@@ -28,27 +28,21 @@
     {% if selected_supplier %}
     <div class="row mb-4">
         <div class="col-md-4">
-            <div class="card bg-primary text-white shadow-sm border-0">
-                <div class="card-body">
-                    <h6>أرباح الإدارة الحالية</h6>
-                    <h3 class="mb-0">{{ "{:,.2f}".format(admin_profits) }} ر.س</h3>
-                </div>
+            <div class="card bg-success text-white shadow-sm border-0 p-3">
+                <h6>رصيد الريال السعودي (SAR)</h6>
+                <h3 class="mb-0">{{ "{:,.2f}".format(balances['SAR']) }}</h3>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card bg-success text-white shadow-sm border-0">
-                <div class="card-body">
-                    <h6>إجمالي رصيد المورد</h6>
-                    <h3 class="mb-0">{{ "{:,.2f}".format(selected_supplier.balance or 0) }} ر.س</h3>
-                </div>
+            <div class="card bg-info text-white shadow-sm border-0 p-3">
+                <h6>رصيد الريال اليمني (YER)</h6>
+                <h3 class="mb-0">{{ "{:,.0f}".format(balances['YER']) }}</h3>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card bg-warning text-dark shadow-sm border-0">
-                <div class="card-body">
-                    <h6>عدد العمليات</h6>
-                    <h3 class="mb-0">{{ statements|length }} عملية</h3>
-                </div>
+            <div class="card bg-warning text-dark shadow-sm border-0 p-3">
+                <h6>رصيد الدولار (USD)</h6>
+                <h3 class="mb-0">{{ "{:,.2f}".format(balances['USD']) }}</h3>
             </div>
         </div>
     </div>
@@ -57,7 +51,7 @@
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white py-3">
             <h5 class="mb-0 fw-bold">
-                {% if selected_supplier %} كشف حساب: {{ selected_supplier.full_name }} {% else %} الرجاء اختيار مورد لعرض الكشف {% endif %}
+                {% if selected_supplier %} كشف حساب: {{ selected_supplier.trade_name }} {% else %} الرجاء اختيار مورد {% endif %}
             </h5>
         </div>
         <div class="table-responsive">
@@ -67,9 +61,8 @@
                         <th>التاريخ</th>
                         <th>العملية</th>
                         <th>العملة</th>
-                        <th class="text-danger">مدين (خصم)</th>
-                        <th class="text-success">دائن (إضافة)</th>
-                        <th class="fw-bold">الرصيد التراكمي</th>
+                        <th class="text-danger">مدين (سحب)</th>
+                        <th class="text-success">دائن (إيداع)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,11 +73,10 @@
                         <td>{{ stmt.currency }}</td>
                         <td class="text-danger">{{ "{:,.2f}".format(stmt.debit) }}</td>
                         <td class="text-success">{{ "{:,.2f}".format(stmt.credit) }}</td>
-                        <td class="fw-bold">{{ "{:,.2f}".format(stmt.running_balance) }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center py-4 text-muted">لا توجد حركات مالية مسجلة لهذا المورد.</td>
+                        <td colspan="5" class="text-center py-4 text-muted">لا توجد حركات مالية مسجلة.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
