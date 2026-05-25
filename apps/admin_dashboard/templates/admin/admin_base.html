@@ -12,8 +12,8 @@
     
     <style>
         :root {
-            --royal-purple: #632C8F; /* اللون البنفسجي الملكي المعتمد للبراند */
-            --royal-purple-dark: #4A1E6D; /* درجة أغمق للتفاعلات العميقة */
+            --royal-purple: #632C8F;
+            --royal-purple-dark: #4A1E6D;
             --deep-black: #08020d;
             --mahjoub-gold: #D4AF37;
             --glass-bg: rgba(255, 255, 255, 0.9);
@@ -30,7 +30,6 @@
             direction: rtl;
         }
 
-        /* شريط السايد بار بالبنفسجي الملكي الكامل المستقر */
         .sidebar {
             width: var(--sidebar-width);
             background: linear-gradient(180deg, var(--royal-purple) 0%, var(--royal-purple-dark) 100%);
@@ -162,19 +161,19 @@
             </div>
 
             <div class="dropdown-section">
-                <button class="dropdown-btn {% if request.endpoint == 'wallet.display_management_table' %}active{% endif %}" onclick="toggleDropdown('walletDropdown', 'walletArrow')">
+                <button class="dropdown-btn {% if 'financial_ops' in request.endpoint %}active{% endif %}" onclick="toggleDropdown('walletDropdown', 'walletArrow')">
                     <i class="fas fa-wallet me-3"></i> 
-                    <span>إدارة المحافظ</span>
-                    <i class="fas fa-chevron-left {% if request.endpoint == 'wallet.display_management_table' %}rotate{% endif %}" id="walletArrow"></i>
+                    <span>إدارة العمليات المالية</span>
+                    <i class="fas fa-chevron-left {% if 'financial_ops' in request.endpoint %}rotate{% endif %}" id="walletArrow"></i>
                 </button>
-                <div class="dropdown-container" id="walletDropdown" style="{% if request.endpoint == 'wallet.display_management_table' %}display: block;{% endif %}">
-                    <a href="{{ url_for('wallet.display_management_table') }}" class="{% if request.endpoint == 'wallet.display_management_table' %}text-warning{% endif %}">
-                        <i class="fas fa-scale-balanced me-2"></i> الأرصدة والتسويات الإجمالية
+                <div class="dropdown-container" id="walletDropdown" style="{% if 'financial_ops' in request.endpoint %}display: block;{% endif %}">
+                    <a href="{{ url_for('financial_ops.display_management_table') }}" class="{% if request.endpoint == 'financial_ops.display_management_table' %}text-warning{% endif %}">
+                        <i class="fas fa-scale-balanced me-2"></i> طلبات السحب والتسويات
                     </a>
-                    <a href="{{ url_for('wallet.display_management_table') }}">
+                    <a href="{{ url_for('financial_ops.display_management_table') }}">
                         <i class="fas fa-money-bill-transfer me-2"></i> عمليات الشحن والسحب
                     </a>
-                    <a href="{{ url_for('wallet.display_management_table') }}">
+                    <a href="{{ url_for('financial_ops.display_management_table') }}">
                         <i class="fas fa-file-invoice-dollar me-2"></i> كشوفات الحسابات
                     </a>
                 </div>
