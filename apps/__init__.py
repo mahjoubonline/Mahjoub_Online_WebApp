@@ -3,7 +3,6 @@
 from flask import Flask
 from config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
-from sqlalchemy import text 
 
 def create_app():
     app = Flask(__name__)
@@ -17,32 +16,21 @@ def create_app():
     login_manager.login_view = 'auth_portal.login'
 
     with app.app_context():
-        # 1. استيراد الموديلات (المخزن)
+        # 1. استيراد الموديلات (يجب أن تحتوي الموديلات على كافة الأعمدة المطلوبة)
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
         from apps.models.settlements_db import AdminSettlement
         from apps.models.statement_db import SupplierStatement 
         
-        # 2. إنشاء الجداول
+        # 2. إنشاء الجداول (هذا يكفي لمزامنة قاعدة البيانات)
         db.create_all() 
-        
-        # 3. حماية برمجية متكاملة (Schema Sync) - لضمان توافق الأعمدة
-        try:
-            with db.engine.begin() as conn:
-                conn.execute(text("ALTER TABLE supplier_statements ADD COLUMN IF NOT EXISTS supplier_id INTEGER"))
-                conn.execute(text("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS cost_price NUMERIC(15, 2) DEFAULT 0.00"))
-                conn.execute(text("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS retail_price NUMERIC(15, 2) DEFAULT 0.00"))
-                conn.execute(text("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS profit_margin NUMERIC(15, 2) DEFAULT 0.00"))
-            print("نظام الحماية: تم مزامنة هيكل الجداول بنجاح.")
-        except Exception as e:
-            print(f"نظام الحماية: حدث خطأ أثناء المزامنة: {e}")
         
         @login_manager.user_loader
         def load_user(user_id):
             return AdminUser.query.get(int(user_id))
 
-        # 4. تسجيل البلوبرينتس (المنافذ)
+        # 3. تسجيل البلوبرينتس
         from apps.auth_portal.routes import auth_blueprint
         from apps.admin_dashboard.routes import admin_dashboard
         from apps.add_supplier.routes import admin_suppliers_bp
