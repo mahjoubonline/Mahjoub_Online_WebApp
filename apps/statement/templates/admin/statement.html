@@ -12,11 +12,13 @@
     .bg-debit { background: #d32f2f; }
     .bg-credit { background: #2e7d32; }
     .bg-balance { background: #1565c0; }
-    /* تنسيق Select2 للهوية */
-    .select2-container--default .select2-selection--single { height: 45px !important; padding: 8px !important; border: 1px solid #ced4da; }
+    
+    /* تنسيق Select2 للهوية البنفسجية */
+    .select2-container--default .select2-selection--single { height: 45px !important; padding: 8px !important; border: 1px solid #ced4da; border-radius: 10px; }
     .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: var(--mahjoub-purple) !important; }
     .btn-mahjoub { background-color: var(--mahjoub-purple); color: white; border-radius: 10px; }
     .btn-mahjoub:hover { background-color: #4a216b; color: white; }
+    .text-purple { color: var(--mahjoub-purple); }
 </style>
 
 <div class="container-fluid py-4">
@@ -24,7 +26,7 @@
         <div class="row g-3 align-items-end">
             <div class="col-md-4">
                 <label class="small fw-bold text-muted mb-2">البحث الذكي عن المورد</label>
-                <select id="supplierSearch" class="form-control"></select>
+                <select id="supplierSearch" class="form-control" style="width: 100%;"></select>
             </div>
             <div class="col-md-2">
                 <label class="small fw-bold text-muted mb-2">العملة</label>
@@ -83,11 +85,21 @@
     var pickerEnd = moment();
 
     $(function() {
+        // تهيئة البحث الذكي عبر AJAX
         $('#supplierSearch').select2({
-            placeholder: "ابحث بالاسم أو الرقم الموحد...",
-            ajax: { url: '/api/suppliers/search', dataType: 'json' }
+            placeholder: "ابحث بالاسم، المتجر، أو الرقم الموحد...",
+            ajax: {
+                url: '/api/suppliers/search',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) { return { q: params.term }; },
+                processResults: function (data) { return { results: data.results }; },
+                cache: true
+            },
+            minimumInputLength: 1
         });
 
+        // تهيئة ديت رينج بيكر
         $('#reportrange').daterangepicker({
             startDate: pickerStart, endDate: pickerEnd,
             ranges: {
@@ -109,6 +121,8 @@
         let url = `/api/statement/report?id=${supplierId}&currency=${$('#currencyFilter').val()}&start=${pickerStart.format('YYYY-MM-DD')}&end=${pickerEnd.format('YYYY-MM-DD')}`;
 
         fetch(url).then(res => res.json()).then(data => {
+            if(data.error) return alert(data.error);
+            
             $('#summaryCards').fadeIn();
             $('#totalProfit').text(data.summary.total_profit.toLocaleString());
             $('#totalDebit').text(data.summary.total_debit.toLocaleString());
@@ -126,7 +140,7 @@
                     <td class="text-center fw-bold">${s.balance}</td>
                 </tr>`;
             });
-            $('#statementBody').html(html);
+            $('#statementBody').html(html || '<tr><td colspan="6" class="text-center">لا توجد عمليات</td></tr>');
         });
     }
 </script>
