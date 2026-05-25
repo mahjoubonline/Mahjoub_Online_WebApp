@@ -1,78 +1,81 @@
 {% extends "admin/admin_base.html" %}
 
-{% block header_title %}سجل كشوفات الحسابات{% endblock %}
+{% block header_title %}نظام الكشوفات المركزي{% endblock %}
 
 {% block content %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
-    .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(99, 44, 143, 0.1); border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.05); }
-    .search-glow { border: 2px solid #632C8F !important; transition: 0.3s; }
-    .table thead { background: #632C8F; color: white; }
-    .debit-val { color: #dc3545; font-weight: bold; }
-    .credit-val { color: #198754; font-weight: bold; }
+    .glass-card { background: rgba(255, 255, 255, 0.98); border-radius: 20px; border: 1px solid #e0d0f0; box-shadow: 0 10px 30px rgba(99, 44, 143, 0.08); }
+    .select2-container--default .select2-selection--single { height: 50px; padding: 10px; border-radius: 15px; border: 2px solid #632C8F; }
+    .stat-card { background: linear-gradient(135deg, #632C8F, #4A1E6D); color: white; border-radius: 15px; }
 </style>
 
 <div class="container-fluid">
-    <div class="card glass-card mb-4">
-        <div class="card-body p-4">
-            <div class="row g-3">
-                <div class="col-md-12">
-                    <label class="small fw-bold text-muted mb-1">استدعاء لحظي (اسم المورد أو الرقم الموحد)</label>
-                    <input type="text" id="dynamicSearch" class="form-control form-control-lg search-glow" 
-                           placeholder="اكتب للبحث السريع..." value="{{ request.args.get('q', '') }}">
-                </div>
+    <div class="card glass-card p-4 mb-4">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <label class="fw-bold text-muted mb-2">بحث ذكي عن المورد</label>
+                <select id="supplierSearch" class="form-select" style="width: 100%;"></select>
+            </div>
+            <div class="col-md-3">
+                <label class="fw-bold text-muted mb-2">من تاريخ</label>
+                <input type="date" id="startDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="fw-bold text-muted mb-2">إلى تاريخ</label>
+                <input type="date" id="endDate" class="form-control">
             </div>
         </div>
     </div>
 
-    <div id="resultsArea">
-        {% if selected_supplier %}
-        <div class="card glass-card">
-            <div class="card-header bg-transparent py-3 border-0 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 text-primary fw-bold">كشف حساب: <span class="text-dark">{{ selected_supplier.trade_name }}</span></h5>
-                <button onclick="window.print()" class="btn btn-outline-dark"><i class="fas fa-print"></i> طباعة</button>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th class="text-center">التاريخ</th>
-                                <th>البيان</th>
-                                <th class="text-center">رقم السند</th>
-                                <th class="text-center">مدين</th>
-                                <th class="text-center">دائن</th>
-                                <th class="text-center">الرصيد</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for stmt in statements %}
-                            <tr>
-                                <td class="text-center text-muted">{{ stmt.created_at.strftime('%Y-%m-%d') }}</td>
-                                <td>{{ stmt.description or '---' }}</td>
-                                <td class="text-center">{{ stmt.reference_number or '---' }}</td>
-                                <td class="text-center debit-val">{{ stmt.debit if stmt.debit > 0 else '-' }}</td>
-                                <td class="text-center credit-val">{{ stmt.credit if stmt.credit > 0 else '-' }}</td>
-                                <td class="text-center fw-bold text-primary">{{ stmt.running_balance }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <div id="statsRow" class="row mb-4"></div>
+
+    <div class="card glass-card p-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead style="background: #632C8F; color: white;">
+                    <tr>
+                        <th>التاريخ</th><th>البيان</th><th>السند</th><th>مدين</th><th>دائن</th><th>الرصيد</th>
+                    </tr>
+                </thead>
+                <tbody id="statementBody">
+                    <tr><td colspan="6" class="text-center py-5">يرجى اختيار المورد لعرض الكشف</td></tr>
+                </tbody>
+            </table>
         </div>
-        {% endif %}
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    // الاستدعاء الديناميكي عند الكتابة
-    const searchInput = document.getElementById('dynamicSearch');
-    searchInput.addEventListener('input', function() {
-        let query = this.value;
-        if (query.length > 2) {
-            // تحديث رابط الصفحة تلقائياً مع الحفاظ على التفاعل
-            window.location.href = "{{ url_for('statement_blueprint.view_statement') }}?q=" + encodeURIComponent(query);
+    $('#supplierSearch').select2({
+        ajax: {
+            url: '/admin/suppliers/search', // تأكد من وجود هذا المسار في الـ routes
+            dataType: 'json',
+            processResults: function (data) { return { results: data }; }
+        },
+        placeholder: 'اكتب اسم المورد أو الرقم الموحد...'
+    });
+
+    // عند تغيير المورد أو التاريخ يتم تحديث الجدول تلقائياً
+    $('#supplierSearch, #startDate, #endDate').on('change', function() {
+        let supplierId = $('#supplierSearch').val();
+        let start = $('#startDate').val();
+        let end = $('#endDate').val();
+        
+        if(supplierId) {
+            fetch(`/statement/get_data?id=${supplierId}&start=${start}&end=${end}`)
+                .then(res => res.json())
+                .then(data => {
+                    // تحديث الجدول والإجماليات
+                    updateUI(data);
+                });
         }
     });
+
+    function updateUI(data) {
+        // منطق تحديث الجدول ديناميكياً (DOM Manipulation)
+    }
 </script>
 {% endblock %}
