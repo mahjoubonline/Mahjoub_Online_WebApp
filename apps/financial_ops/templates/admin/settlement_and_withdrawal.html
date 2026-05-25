@@ -30,7 +30,6 @@
             <button class="btn btn-outline-custom" onclick="filterTable('approved')">تم الاعتماد</button>
             <button class="btn btn-outline-custom" onclick="filterTable('rejected')">الملغي</button>
         </div>
-        <input type="date" class="form-control w-auto shadow-sm">
     </div>
 
     <div class="table-responsive bg-white rounded shadow-sm">
@@ -38,7 +37,7 @@
             <thead class="table-custom-purple">
                 <tr>
                     <th>التاريخ والوقت</th>
-                    <th>الكيان (المتجر/المالك)</th>
+                    <th>الكيان</th>
                     <th>كود المحفظة</th>
                     <th>المرجع</th>
                     <th>المبلغ</th>
@@ -60,7 +59,7 @@
                     <td><span class="badge bg-warning text-dark">قيد الانتظار</span></td>
                     <td>
                         <button type="button" class="btn btn-sm btn-success" 
-                                onclick="openApprovalModal({{ tx.id }}, '{{ tx.wallet.supplier.name }}', {{ tx.amount }})">
+                                onclick="openApprovalModal({{ tx.id }})">
                             اعتماد
                         </button>
                     </td>
@@ -74,25 +73,22 @@
 <div class="modal fade" id="approvalModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">إتمام تصفية مالية</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+            <div class="modal-header bg-primary text-white"><h5>إتمام تصفية مالية</h5></div>
             <form id="approvalForm" method="POST">
                 <div class="modal-body">
                     <input type="hidden" name="tx_id" id="modalTxId">
                     <div class="mb-3">
-                        <label class="form-label">رقم الحوالة:</label>
-                        <input type="text" name="ref_number" class="form-control" required placeholder="أدخل رقم الحوالة المرجعي">
+                        <label>رقم الحوالة:</label>
+                        <input type="text" name="ref_number" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">جهة التحويل:</label>
-                        <input type="text" name="financial_entity" class="form-control" required placeholder="مثال: بنك القطيبي">
+                        <label>جهة التحويل:</label>
+                        <input type="text" name="financial_entity" class="form-control" required>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success">اعتماد وطباعة الإشعار</button>
+                    <button type="submit" class="btn btn-success">اعتماد</button>
                 </div>
             </form>
         </div>
@@ -100,7 +96,16 @@
 </div>
 
 <script>
-// فتح المودال وتعيين مسار الفورم
 function openApprovalModal(id) {
     document.getElementById('modalTxId').value = id;
-    document.getElementById('approvalForm').action = `/financial_ops/withdrawal
+    document.getElementById('approvalForm').action = '/financial_ops/withdrawal/handle/' + id + '/approve';
+    new bootstrap.Modal(document.getElementById('approvalModal')).show();
+}
+
+function filterTable(status) {
+    document.querySelectorAll('.op-row').forEach(row => {
+        row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}
