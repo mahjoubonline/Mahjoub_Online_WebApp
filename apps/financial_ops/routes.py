@@ -1,12 +1,12 @@
 # coding: utf-8
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
 from flask_login import login_required
 from apps.extensions import db
 from apps.models.wallet_db import SupplierWallet as Wallet, WalletTransaction
 from apps.models.supplier_db import Supplier
 from apps.models.settlements_db import AdminSettlement
 
-# تعريف البلوبرينت مع تحديد مسار القوالب لتجنب خطأ TemplateNotFound
+# تعريف البلوبرينت مع تحديد مجلد القوالب المحلي
 financial_blueprint = Blueprint(
     'financial_ops', 
     __name__, 
@@ -21,13 +21,8 @@ def display_management_table():
     pending_withdrawals = []
     settlements = []
     
-    # إحصائيات النظام العامة
-    total_wallets_count = Wallet.query.count()
-    total_yer_system = db.session.query(db.func.sum(Wallet.yer_total)).scalar() or 0
-    total_sar_system = db.session.query(db.func.sum(Wallet.sar_total)).scalar() or 0
-    
     if search_query:
-        # البحث الشامل في المحافظ ومرتبطاتها
+        # البحث الشامل
         wallet = Wallet.query.join(Supplier).filter(
             (Wallet.wallet_code.ilike(f'%{search_query}%')) |
             (Wallet.supplier_id.ilike(f'%{search_query}%')) |
@@ -36,24 +31,15 @@ def display_management_table():
         ).first()
         
         if wallet:
-            # جلب طلبات السحب المعلقة
-            pending_withdrawals = WalletTransaction.query.filter_by(
-                wallet_id=wallet.id, status='معلقة'
-            ).all()
-            
-            # جلب سندات التسوية
-            settlements = AdminSettlement.query.filter_by(
-                wallet_id=wallet.id
-            ).order_by(AdminSettlement.created_at.desc()).all()
+            # جلب البيانات المرتبطة بالمحفظة
+            pending_withdrawals = WalletTransaction.query.filter_by(wallet_id=wallet.id).all()
+            settlements = AdminSettlement.query.filter_by(wallet_id=wallet.id).order_by(AdminSettlement.created_at.desc()).all()
     
     return render_template(
         'admin/settlement_and_withdrawal.html',
         wallet=wallet,
         pending_withdrawals=pending_withdrawals,
         settlements=settlements,
-        total_wallets_count=total_wallets_count,
-        total_yer_system=total_yer_system,
-        total_sar_system=total_sar_system,
         current_search=search_query
     )
 
@@ -70,5 +56,12 @@ def handle_supplier_withdrawal(tx_id, decision):
         flash("تم رفض العملية", "danger")
         
     db.session.commit()
-    # العودة إلى صفحة الإدارة باستخدام اسم البلوبرينت الجديد
     return redirect(url_for('financial_ops.display_management_table', search_query=request_obj.wallet.wallet_code))
+
+# مسار لجلب البيانات بصيغة JSON للبحث التلقائي (اختياري لاحقاً)
+@financial_blueprint.route('/api/search', methods=['GET'])
+@login_required
+def api_search():
+    query = request.args.get('q', '')
+    # يمكنك إضافة منطق البحث هنا للـ AJAX
+    return jsonify({"status": "ready", "query": query})
