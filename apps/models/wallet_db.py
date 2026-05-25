@@ -1,5 +1,6 @@
 # coding: utf-8
 # 💳 مستند النموذج الحوكمي المطوّر للمحافظ الموحدة وسجلات التسوية - منصة محجوب أونلاين 2026
+# تم تعديل الاستيراد من apps.extensions لكسر حلقة Circular Import
 
 import random
 from datetime import datetime
