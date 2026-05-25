@@ -27,7 +27,7 @@ class AdminSettlement(db.Model):
     
     # توثيق التدقيق البنكي والربط الخارجي الصادر
     financial_entity = db.Column(db.String(100), default="إدارة المنصة المركزية", nullable=True) # اسم الجهة أو الصراف
-    reference_number = db.Column(db.String(100), default="SETTLE-ADMIN", nullable=True)         # رقم السند المرجعي أو الحوالة
+    reference_number = db.Column(db.String(100), default="SETTLE-ADMIN", nullable=True)          # رقم السند المرجعي أو الحوالة
     
     # حوكمة وضبط الصلاحيات البشرية لمنع التلاعب بالمدخلات
     reason_notes = db.Column(db.Text, nullable=False)  # بيان السبب الإجباري لفرض القيد والتسوية
