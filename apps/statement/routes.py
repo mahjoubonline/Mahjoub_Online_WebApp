@@ -1,12 +1,13 @@
 # coding: utf-8
+# 📂 apps/statement/routes.py
+
 from flask import render_template, request, jsonify
 from flask_login import login_required
-from apps.extensions import db
 from apps.statement import statement_blueprint
 from apps.models.supplier_db import Supplier
-from apps.models.statement_db import SupplierStatement
-from apps.models.wallet_db import SupplierWallet, WalletTransaction
-from sqlalchemy import or_, func
+from apps.utils.report_generator import ReportGenerator  # استدعاء محرك التقارير المركزي
+from sqlalchemy import or_
+from datetime import datetime
 
 @statement_blueprint.route('/view', methods=['GET'])
 @login_required
@@ -14,7 +15,8 @@ def view_statement():
     currencies = ['USD', 'YER', 'SAR'] 
     return render_template('admin/statement.html', currencies=currencies)
 
-# 1. البحث الذكي المتوافق مع متطلبات الـ Select2
+
+# 1. البحث الذكي المتوافق بالكامل مع متطلبات الـ Select2 في الواجهة
 @statement_blueprint.route('/api/suppliers/search', methods=['GET'])
 @login_required
 def api_search_suppliers():
@@ -22,6 +24,7 @@ def api_search_suppliers():
     if not term:
         return jsonify({"results": []})
 
+    # استعلام ذكي يبحث في كافة تفاصيل المورد
     suppliers = Supplier.query.filter(or_(
         Supplier.trade_name.ilike(f'%{term}%'),
         Supplier.sovereign_id.ilike(f'%{term}%'),
@@ -29,7 +32,7 @@ def api_search_suppliers():
         Supplier.owner_name.ilike(f'%{term}%')
     )).limit(15).all()
     
-    # تنسيق العرض الاحترافي للمستخدم في القائمة المنسدلة
+    # تنسيق العرض للمستخدم في القائمة المنسدلة لـ Select2
     results = [
         {
             'id': s.id, 
@@ -38,14 +41,15 @@ def api_search_suppliers():
     ]
     return jsonify({"results": results})
 
-# 2. جلب كشف الحساب الشامل (تفصيلي + إجمالي الأرباح والحركات)
+
+# 2. جلب كشف الحساب الشامل والتقارير المالي عبر استدعاء الـ ReportGenerator
 @statement_blueprint.route('/api/statement/report', methods=['GET'])
 @login_required
 def api_get_report():
     s_id = request.args.get('id')
     curr = request.args.get('currency', 'ALL')
-    start = request.args.get('start')
-    end = request.args.get('end')
+    start_str = request.args.get('start')
+    end_str = request.args.get('end')
 
     if not s_id:
         return jsonify({'error': 'يرجى تحديد المورد أولاً'}), 400
@@ -54,31 +58,34 @@ def api_get_report():
     if not supplier: 
         return jsonify({'error': 'المورد غير موجود بالشرائح الحالية'}), 404
 
-    # أ. جلب كشف الحساب التفصيلي من SupplierStatement
-    stmt_query = SupplierStatement.query.filter_by(supplier_id=supplier.id)
-    if curr != 'ALL': 
-        stmt_query = stmt_query.filter_by(currency=curr)
-    if start and end: 
-        stmt_query = stmt_query.filter(SupplierStatement.created_at.between(start, end))
+    # تحويل نصوص التواريخ القادمة من daterangepicker إلى كائنات datetime متوافقة مع قاعدة البيانات
+    start_date = None
+    end_date = None
     
-    # ترتيب الحركات تنازلياً لعرض الأحدث دائماً في أعلى الجدول للوحة الإدارة
-    statements = stmt_query.order_by(SupplierStatement.created_at.desc()).all()
+    try:
+        if start_str:
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').replace(hour=0, minute=0, second=0)
+        if end_str:
+            end_date = datetime.strptime(end_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+    except ValueError:
+        return jsonify({'error': 'صيغة التاريخ غير صحيحة'}), 400
 
-    # ب. جلب الأرباح من العمليات المالية للمحفظة 
-    # تم تعديل الفلتر ليعتمد على supplier_id الرقمي الموحد لضمان سلامة الاستعلام
-    wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
-    total_profit = 0
-    
-    if wallet:
-        pq = WalletTransaction.query.filter_by(wallet_id=wallet.id)
-        if curr != 'ALL': 
-            pq = pq.filter_by(currency=curr)
-        if start and end: 
-            pq = pq.filter(WalletTransaction.created_at.between(start, end))
-        
-        # جلب الإجمالي مباشرة من قاعدة البيانات لتوظيف موارد السيرفر بالشكل الأمثل
-        total_profit = pq.with_entities(func.sum(WalletTransaction.profit_margin)).scalar() or 0
+    # أ. استخراج الحركات التفصيلية للمورد من قاعدة البيانات عبر المحرك المركزي
+    statements = ReportGenerator.get_detailed_transactions(
+        supplier_id=supplier.id, 
+        currency=curr, 
+        start_date=start_date, 
+        end_date=end_date
+    )
 
+    # ب. حساب صافي أرباح المنصة المرتبطة بالمورد والمحفظة عبر المحرك المركزي
+    total_profit = ReportGenerator.calculate_net_profit(
+        currency=curr, 
+        start_date=start_date, 
+        end_date=end_date
+    )
+
+    # ج. تجميع وإرسال البيانات بصيغة JSON النهائية لتغذية جدول الواجهة الفورية
     return jsonify({
         'summary': {
             'total_debit': float(sum(s.debit for s in statements)),
@@ -93,6 +100,6 @@ def api_get_report():
             'currency': s.currency,
             'debit': float(s.debit),
             'credit': float(s.credit),
-            'balance': float(s.running_balance) # الاعتماد المباشر على الرصيد المحسوب سطر بسطر في الموديل
+            'balance': float(s.running_balance)
         } for s in statements]
     })
