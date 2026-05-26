@@ -2,43 +2,46 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>كشف الحساب المالي - محجوب أونلاين</title>
     <style>
-        /* 🛡️ تنسيق الطباعة */
-        @media print {
-            .no-print { display: none !important; }
-            body { margin: 0; padding: 20px; }
-        }
+        body { font-family: 'Arial', sans-serif; color: #333; margin: 0; padding: 10px; background: #f8f9fa; }
         
-        body { font-family: 'Arial', sans-serif; color: #333; margin: 0; padding: 20px; background: #f8f9fa; }
+        /* 🛡️ شريط الأدوات - لا يظهر عند الطباعة */
+        @media print { .no-print { display: none !important; } body { padding: 0; } }
         
-        /* 🛠️ شريط أدوات العرض */
-        .toolbar { 
-            background: #632C8F; color: white; padding: 15px; border-radius: 10px; 
-            margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; 
-        }
-        .btn-action { 
-            background: white; color: #632C8F; border: none; padding: 10px 20px; 
-            border-radius: 8px; cursor: pointer; font-weight: bold; 
-        }
+        .toolbar { background: #632C8F; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-action { background: white; color: #632C8F; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
-        /* تنسيقات الجدول والتقارير */
-        .report-container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .company-title { font-size: 24pt; color: #632C8F; font-weight: bold; }
-        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .data-table th { background-color: #632C8F; color: #ffffff; padding: 10px; text-align: center; }
+        /* 📱 التجاوب */
+        .report-container { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 100%; max-width: 900px; margin: auto; box-sizing: border-box; }
+        
+        .company-title { font-size: 20pt; color: #632C8F; font-weight: bold; margin-bottom: 10px; }
+        
+        /* 📊 جدول مرن */
+        .table-responsive { width: 100%; overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        .data-table th { background-color: #632C8F; color: #ffffff; padding: 12px; }
         .data-table td { padding: 10px; border: 1px solid #ddd; text-align: center; }
         
-        .summary-box { margin-top: 30px; width: 300px; float: left; border: 1px solid #eee; }
-        .summary-box td { padding: 10px; border: 1px solid #eee; }
+        /* 💰 صندوق الملخص متجاوب */
+        .summary-wrapper { display: flex; justify-content: flex-end; margin-top: 20px; }
+        .summary-box { width: 100%; max-width: 300px; border-collapse: collapse; }
+        .summary-box td { padding: 8px; border: 1px solid #eee; }
+
+        @media (max-width: 600px) {
+            .company-title { font-size: 16pt; }
+            .data-table { font-size: 12px; }
+            .data-table th, .data-table td { padding: 6px; }
+        }
     </style>
 </head>
 <body>
 
     <div class="toolbar no-print">
-        <div>عرض كشف الحساب - محجوب أونلاين</div>
+        <div>محجوب أونلاين</div>
         <div>
-            <button class="btn-action" onclick="window.print()">🖨️ طباعة التقرير</button>
+            <button class="btn-action" onclick="window.print()">🖨️ طباعة</button>
             <button class="btn-action" onclick="window.close()">✖️ إغلاق</button>
         </div>
     </div>
@@ -48,43 +51,38 @@
         <hr style="border: 1px solid #632C8F;">
 
         <h3>كشف حساب: {{ supplier_name }}</h3>
-        <p><strong>كود المحفظة (WEL):</strong> {{ wallet_code }} | <strong>العملة:</strong> {{ currency }}</p>
+        <p><strong>كود المحفظة:</strong> {{ wallet_code }} | <strong>العملة:</strong> {{ currency }}</p>
 
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>التاريخ</th><th>البيان</th><th>العملة</th>
-                    <th>مدين</th><th>دائن</th><th>الرصيد التراكمي</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for statement in statements %}
-                <tr>
-                    <td>{{ statement.created_at.strftime('%Y/%m/%d') }}</td>
-                    <td style="text-align: right;">{{ statement.description }}</td>
-                    <td>{{ statement.currency }}</td>
-                    <td style="color: #c0392b;">{{ "{:,.2f}".format(statement.debit or 0) }}</td>
-                    <td style="color: #27ae60;">{{ "{:,.2f}".format(statement.credit or 0) }}</td>
-                    <td style="font-weight: bold;">{{ "{:,.2f}".format(statement.running_balance or 0) }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th><th>البيان</th><th>العملة</th>
+                        <th>مدين</th><th>دائن</th><th>الرصيد</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for statement in statements %}
+                    <tr>
+                        <td>{{ statement.created_at.strftime('%Y/%m/%d') }}</td>
+                        <td style="text-align: right;">{{ statement.description }}</td>
+                        <td>{{ statement.currency }}</td>
+                        <td style="color: #c0392b;">{{ "{:,.2f}".format(statement.debit or 0) }}</td>
+                        <td style="color: #27ae60;">{{ "{:,.2f}".format(statement.credit or 0) }}</td>
+                        <td style="font-weight: bold;">{{ "{:,.2f}".format(statement.running_balance or 0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-        <table class="summary-box">
-            <tr><td>إجمالي المدين:</td><td>{{ "{:,.2f}".format(total_debit) }}</td></tr>
-            <tr><td>إجمالي الدائن:</td><td>{{ "{:,.2f}".format(total_credit) }}</td></tr>
-            <tr style="background:#632C8F; color:white;"><td>صافي الرصيد:</td><td>{{ "{:,.2f}".format(net_balance) }}</td></tr>
-        </table>
+        <div class="summary-wrapper">
+            <table class="summary-box">
+                <tr><td>إجمالي المدين:</td><td>{{ "{:,.2f}".format(total_debit) }}</td></tr>
+                <tr><td>إجمالي الدائن:</td><td>{{ "{:,.2f}".format(total_credit) }}</td></tr>
+                <tr style="background:#632C8F; color:white;"><td>صافي الرصيد:</td><td>{{ "{:,.2f}".format(net_balance) }}</td></tr>
+            </table>
+        </div>
     </div>
-
-    <script>
-        // فتح نافذة الطباعة تلقائياً عند فتح صفحة العرض
-        window.onload = function() {
-            console.log("التقرير جاهز للطباعة...");
-            // يمكنك إلغاء التعليق عن السطر التالي ليطبع تلقائياً عند الفتح
-            // window.print();
-        };
-    </script>
 </body>
 </html>
