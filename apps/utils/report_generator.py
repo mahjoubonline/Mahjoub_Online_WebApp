@@ -39,8 +39,20 @@ class ReportGenerator:
 
     @staticmethod
     def get_detailed_transactions(supplier_id=None, currency='ALL', start_date=None, end_date=None):
-        """ استخراج الحركات التفصيلية لمورد معين بشكل منظم مع حماية الحقول """
-        query = SupplierStatement.query
+        """ استخراج الحركات التفصيلية لمورد معين مع تجنب استعلام الحقل غير الموجود في قاعدة البيانات """
+        
+        # 🛡️ استعلام انتقائي: نطلب فقط الأعمدة الفعالية والموجودة لتفادي UndefinedColumn Error
+        query = db.session.query(
+            SupplierStatement.id,
+            SupplierStatement.supplier_id,
+            SupplierStatement.created_at,
+            SupplierStatement.description,
+            SupplierStatement.currency,
+            SupplierStatement.debit,
+            SupplierStatement.credit,
+            SupplierStatement.running_balance,
+            SupplierStatement.notes
+        )
         
         if supplier_id:
             query = query.filter(SupplierStatement.supplier_id == supplier_id)
@@ -51,14 +63,25 @@ class ReportGenerator:
         if end_date:
             query = query.filter(SupplierStatement.created_at <= end_date)
             
-        statements = query.order_by(SupplierStatement.created_at.desc()).all()
+        results = query.order_by(SupplierStatement.created_at.desc()).all()
 
-        # 🛡️ نظام الحماية الذكي: معالجة الحقول غير الموجودة لمنع الـ OperationalError و AttributeError
-        for s in statements:
-            if not hasattr(s, 'reference_number'):
-                # تفحص الحقول البديلة الشائعة مثل 'ref' أو 'invoice_id' أو وضع خطوط عند غيابها تماماً
-                alternative_ref = getattr(s, 'ref', getattr(s, 'id', '---'))
-                setattr(s, 'reference_number', alternative_ref)
+        # بناء كائنات مرنة متوافقة بنسبة 100% مع مسارات النظام والواجهات
+        statements = []
+        for r in results:
+            s = SupplierStatement()
+            s.id = r.id
+            s.supplier_id = r.supplier_id
+            s.created_at = r.created_at
+            s.description = r.description
+            s.currency = r.currency
+            s.debit = r.debit
+            s.credit = r.credit
+            s.running_balance = r.running_balance
+            s.notes = r.notes
+            
+            # حقن قيمة افتراضية آمنة برمجياً لتعويض غياب الحقل في قاعدة البيانات الحالية
+            s.reference_number = "---"
+            statements.append(s)
 
         return statements
 
