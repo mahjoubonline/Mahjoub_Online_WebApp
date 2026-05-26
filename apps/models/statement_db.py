@@ -12,14 +12,16 @@ class SupplierStatement(db.Model):
     
     # تفاصيل العملية المحاسبية
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    reference_number = db.Column(db.String(50), nullable=True)  # رقم الفاتورة أو السند
+    
+    # تم تعليق reference_number لأن قاعدة البيانات لا تحتويه حالياً
+    # reference_number = db.Column(db.String(50), nullable=True) 
+    
     description = db.Column(db.String(255), nullable=True)     # بيان الحركة
     
     # العملة
     currency = db.Column(db.String(10), default='USD') # USD, YER, SAR
     
     # الجانب المحاسبي (دائن/مدين)
-    # إذا كان المبلغ إيجابياً فهو دائن (Credit)، وإذا كان سالباً فهو مدين (Debit)
     debit = db.Column(db.Float, default=0.0)    # مدين (ما عليك للمورد)
     credit = db.Column(db.Float, default=0.0)   # دائن (ما للمورد عندك)
     
