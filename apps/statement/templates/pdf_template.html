@@ -1,1 +1,237 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>كشف الحساب المالي - محجوب أونلاين</title>
+    <style>
+        /* 🛡️ تهيئة مقاسات الصفحة المخصصة للطباعة وحساب ترقيم الصفحات تلقائياً */
+        @page {
+            size: A4;
+            margin: 20mm 15mm;
+            @bottom-left {
+                content: "صفحة " counter(page) " من " counter(pages);
+                font-family: 'Arial', sans-serif;
+                font-size: 9pt;
+                color: #777777;
+            }
+            @bottom-right {
+                content: "سوقك الذكي - محجوب أونلاين";
+                font-family: 'Arial', sans-serif;
+                font-size: 9pt;
+                color: #632C8F;
+                font-weight: bold;
+            }
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            line-height: 1.4;
+        }
+        
+        /* 🟣 الترويسة العلوية بالهوية البصرية للمنصة */
+        .header-container {
+            border-bottom: 3px solid #632C8F;
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .company-title {
+            font-size: 24pt;
+            color: #632C8F;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .company-slogan {
+            font-size: 11pt;
+            color: #555555;
+            margin: 5px 0 0 0;
+        }
+        
+        .report-title {
+            text-align: center;
+            font-size: 18pt;
+            font-weight: bold;
+            background-color: #f4f0f8;
+            color: #632C8F;
+            padding: 8px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        /* 📊 جدول البيانات التعريفية للكشف */
+        .meta-table {
+            width: 100%;
+            margin-bottom: 25px;
+            border-collapse: collapse;
+        }
+        
+        .meta-table td {
+            padding: 5px 10px;
+            font-size: 11pt;
+        }
+        
+        .meta-label {
+            font-weight: bold;
+            color: #555555;
+            width: 15%;
+        }
+        
+        .meta-value {
+            color: #111111;
+            width: 35%;
+        }
+        
+        /* 🧾 جدول رصد الحركات التفصيلية */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .data-table th {
+            background-color: #632C8F;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 11pt;
+            padding: 10px;
+            border: 1px solid #632C8F;
+            text-align: center;
+        }
+        
+        .data-table td {
+            padding: 9px 7px;
+            font-size: 10pt;
+            border: 1px solid #e0e0e0;
+            text-align: center;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+        
+        /* 🧮 صندوق مجاميع الحسابات الحصين */
+        .summary-box {
+            margin-top: 30px;
+            width: 40%;
+            float: left;
+            border-collapse: collapse;
+        }
+        
+        .summary-box td {
+            padding: 8px 12px;
+            font-size: 11pt;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .summary-label {
+            background-color: #f4f0f8;
+            font-weight: bold;
+            color: #333333;
+        }
+        
+        .summary-value {
+            font-weight: bold;
+            text-align: left;
+        }
+        
+        /* 🔲 رسالة حماية برمجية مخصصة عند خلو الحساب من الحركات */
+        .empty-message {
+            text-align: center;
+            padding: 30px;
+            font-style: italic;
+            color: #777777;
+            font-size: 12pt;
+            border: 1px dashed #cccccc;
+            background-color: #fafafa;
+        }
+    </style>
+</head>
+<body>
 
+    <div class="header-container">
+        <table style="width: 100%;">
+            <tr>
+                <td>
+                    <div class="company-title">محجوب أونلاين</div>
+                    <div class="company-slogan">سوقك الذكي (Your Smart Marketplace)</div>
+                </td>
+                <td style="text-align: left; font-size: 10pt; color: #666666; vertical-align: bottom;">
+                    تاريخ الطبع الرقمي: {{ generated_at }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="report-title">كشـف الحـساب المـالي التـفصيلي</div>
+
+    <table class="meta-table">
+        <tr>
+            <td class="meta-label">الحساب / المورد:</td>
+            <td class="meta-value">{{ supplier_name }}</td>
+            <td class="meta-label">الفترة الزمنية:</td>
+            <td class="meta-value">من {{ start_date }} إلى {{ end_date }}</td>
+        </tr>
+        <tr>
+            <td class="meta-label">العملة المحددة:</td>
+            <td class="meta-value">
+                {% if currency == 'ALL' %}كل العملات التداولية{% else %}{{ currency }}{% endif %}
+            </td>
+            <td class="meta-label">حالة التقرير:</td>
+            <td class="meta-value" style="color: green; font-weight: bold;">معتمد ومستقر حاسوبياً</td>
+        </tr>
+    </table>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 15%;">التاريخ</th>
+                <th style="width: 20%;">الحساب / المورد</th>
+                <th style="width: 30%;">البيان / الوصف التفصيلي</th>
+                <th style="width: 10%;">العملة</th>
+                <th style="width: 10%;">مدين (-)</th>
+                <th style="width: 10%;">دائن (+)</th>
+                <th style="width: 15%;">الرصيد التراكمي</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for statement in statements %}
+            <tr>
+                <td>{{ statement.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
+                <td>{{ statement.supplier_name }}</td>
+                <td style="text-align: right;">{{ statement.description }}</td>
+                <td>{{ statement.currency }}</td>
+                <td style="color: #c0392b;">{{ "{:,.2f}".format(statement.debit or 0) }}</td>
+                <td style="color: #27ae60;">{{ "{:,.2f}".format(statement.credit or 0) }}</td>
+                <td style="font-weight: bold;">{{ "{:,.2f}".format(statement.running_balance or 0) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="empty-message">
+                    لا توجد حركات مالية مسجلة لهذا الحساب خلال الفترة الزمنية المحددة.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="summary-box">
+        <tr>
+            <td class="summary-label">إجمالي المدين:</td>
+            <td class="summary-value" style="color: #c0392b;">{{ "{:,.2f}".format(total_debit) }}</td>
+        </tr>
+        <tr>
+            <td class="summary-label">إجمالي الدائن:</td>
+            <td class="summary-value" style="color: #27ae60;">{{ "{:,.2f}".format(total_credit) }}</td>
+        </tr>
+        <tr style="border-top: 2px solid #632C8F;">
+            <td class="summary-label" style="background-color: #632C8F; color: white;">صافي الرصيد الحالي:</td>
+            <td class="summary-value" style="background-color: #f4f0f8; color: #632C8F; font-size: 12pt;">{{ "{:,.2f}".format(net_balance) }}</td>
+        </tr>
+    </table>
+
+</body>
+</html>
