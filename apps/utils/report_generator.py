@@ -8,8 +8,28 @@ from apps.models.supplier_db import Supplier
 
 class ReportGenerator:
     """
-    محرك مركزي آمن ومطور لاستخراج التقارير المالي الشاملة والطباعة - منصة محجوب أونلاين
+    محرك مركزي آمن ومطور لاستخراج التقارير المالية الشاملة - منصة محجوب أونلاين
     """
+
+    @staticmethod
+    def get_all_wallets_summary():
+        """ 
+        استخراج ملخص أرصدة كافة الحسابات (المتجر، المالك، كود المحفظة، الرصيد)
+        تستخدم لعرض الكيان المالي الشامل للمنصة وتحديد من له ومن عليه
+        """
+        suppliers = Supplier.query.all()
+        summary = []
+        for s in suppliers:
+            # افتراض أن الموديل يحتوي على حقل balance أو يتم حسابه
+            # إذا كان الحقل في الموديل مختلفاً، تأكد من مطابقة الاسم
+            summary.append({
+                'trade_name': getattr(s, 'trade_name', '---'),
+                'owner_name': getattr(s, 'owner_name', '---'),
+                'wallet_code': getattr(s, 'sovereign_id', '---'), # نستخدم sovereign_id ككود للمحفظة
+                'balance': float(getattr(s, 'balance', 0))
+            })
+        # ترتيب حسب الرصيد (من الأكثر رصيداً إلى الأقل)
+        return sorted(summary, key=lambda x: x['balance'], reverse=True)
 
     @staticmethod
     def get_platform_financial_tree(currency='ALL', start_date=None, end_date=None):
@@ -40,12 +60,7 @@ class ReportGenerator:
 
     @staticmethod
     def get_detailed_transactions(supplier_id=None, currency='ALL', start_date=None, end_date=None):
-        """ 
-        استخراج الحركات التفصيلية لمورد معين أو لجميع الحسابات (عرض شامل)
-        🛡️ تم استخدام cast لحل مشكلة تعارض الأنظمة (character varying = integer) في PostgreSQL
-        """
-        
-        # 🛡️ نقوم بتحويل الأعمدة برمجياً إلى سلاسل نصية أثناء المقارنة لتفادي خطأ الـ UndefinedFunction تماماً
+        """ استخراج الحركات التفصيلية لمورد معين أو لجميع الحسابات """
         query = db.session.query(
             SupplierStatement.id,
             SupplierStatement.supplier_id,
@@ -62,7 +77,6 @@ class ReportGenerator:
             cast(SupplierStatement.supplier_id, String) == cast(Supplier.id, String)
         )
         
-        # 🧠 تطوير ذكي: الفلترة بالمورد فقط إذا تم تحديد مورد معين ولم يكن الخيار هو العرض الشامل ALL
         if supplier_id and str(supplier_id).strip() != '' and str(supplier_id) != 'ALL':
             query = query.filter(cast(SupplierStatement.supplier_id, String) == cast(supplier_id, String))
             
@@ -75,7 +89,6 @@ class ReportGenerator:
             
         results = query.order_by(SupplierStatement.created_at.desc()).all()
 
-        # بناء البيانات وحقنها للـ HTML والـ Routes
         statements = []
         for r in results:
             s = SupplierStatement()
@@ -87,14 +100,7 @@ class ReportGenerator:
             s.debit = r.debit
             s.credit = r.credit
             s.running_balance = r.running_balance
-            
-            # حقول الحماية المعتادة
-            s.reference_number = "---"
-            s.notes = "---"
-            
-            # ربط الاسم المطلوب لعرضه في كشف الحساب والبحث الذكي
             s.supplier_name = r.supplier_trade_name or r.supplier_owner_name or "مورد غير معروف"
-            
             statements.append(s)
 
         return statements
