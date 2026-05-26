@@ -14,11 +14,14 @@ def view_statement():
     currencies = ['USD', 'YER', 'SAR'] 
     return render_template('admin/statement.html', currencies=currencies)
 
-# 1. البحث الذكي (يجب أن يعيد مفتاح "results" لـ Select2)
+# 1. البحث الذكي المتوافق مع متطلبات الـ Select2
 @statement_blueprint.route('/api/suppliers/search', methods=['GET'])
 @login_required
 def api_search_suppliers():
     term = request.args.get('q', '')
+    if not term:
+        return jsonify({"results": []})
+
     suppliers = Supplier.query.filter(or_(
         Supplier.trade_name.ilike(f'%{term}%'),
         Supplier.sovereign_id.ilike(f'%{term}%'),
@@ -26,16 +29,16 @@ def api_search_suppliers():
         Supplier.owner_name.ilike(f'%{term}%')
     )).limit(15).all()
     
-    # تنسيق العرض للمستخدم في القائمة المنسدلة
+    # تنسيق العرض الاحترافي للمستخدم في القائمة المنسدلة
     results = [
         {
             'id': s.id, 
-            'text': f"{s.trade_name} | {s.store_name} | المالك: {s.owner_name} | الرقم: {s.sovereign_id}"
+            'text': f"{s.trade_name} | {s.store_name} (المالك: {s.owner_name}) - المعرف: {s.sovereign_id}"
         } for s in suppliers
     ]
     return jsonify({"results": results})
 
-# 2. جلب البيانات (تفصيلي + إجمالي)
+# 2. جلب كشف الحساب الشامل (تفصيلي + إجمالي الأرباح والحركات)
 @statement_blueprint.route('/api/statement/report', methods=['GET'])
 @login_required
 def api_get_report():
@@ -44,22 +47,36 @@ def api_get_report():
     start = request.args.get('start')
     end = request.args.get('end')
 
+    if not s_id:
+        return jsonify({'error': 'يرجى تحديد المورد أولاً'}), 400
+
     supplier = Supplier.query.get(s_id)
-    if not supplier: return jsonify({'error': 'المورد غير موجود'}), 404
+    if not supplier: 
+        return jsonify({'error': 'المورد غير موجود بالشرائح الحالية'}), 404
 
     # أ. جلب كشف الحساب التفصيلي من SupplierStatement
     stmt_query = SupplierStatement.query.filter_by(supplier_id=supplier.id)
-    if curr != 'ALL': stmt_query = stmt_query.filter_by(currency=curr)
-    if start and end: stmt_query = stmt_query.filter(SupplierStatement.created_at.between(start, end))
+    if curr != 'ALL': 
+        stmt_query = stmt_query.filter_by(currency=curr)
+    if start and end: 
+        stmt_query = stmt_query.filter(SupplierStatement.created_at.between(start, end))
+    
+    # ترتيب الحركات تنازلياً لعرض الأحدث دائماً في أعلى الجدول للوحة الإدارة
     statements = stmt_query.order_by(SupplierStatement.created_at.desc()).all()
 
-    # ب. جلب الأرباح من WalletTransaction عبر الربط بـ sovereign_id
-    wallet = SupplierWallet.query.filter_by(supplier_id=supplier.sovereign_id).first()
+    # ب. جلب الأرباح من العمليات المالية للمحفظة 
+    # تم تعديل الفلتر ليعتمد على supplier_id الرقمي الموحد لضمان سلامة الاستعلام
+    wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
     total_profit = 0
+    
     if wallet:
         pq = WalletTransaction.query.filter_by(wallet_id=wallet.id)
-        if curr != 'ALL': pq = pq.filter_by(currency=curr)
-        if start and end: pq = pq.filter(WalletTransaction.created_at.between(start, end))
+        if curr != 'ALL': 
+            pq = pq.filter_by(currency=curr)
+        if start and end: 
+            pq = pq.filter(WalletTransaction.created_at.between(start, end))
+        
+        # جلب الإجمالي مباشرة من قاعدة البيانات لتوظيف موارد السيرفر بالشكل الأمثل
         total_profit = pq.with_entities(func.sum(WalletTransaction.profit_margin)).scalar() or 0
 
     return jsonify({
@@ -73,8 +90,9 @@ def api_get_report():
             'date': s.created_at.strftime('%Y-%m-%d %H:%M'),
             'desc': s.description or '---',
             'ref': s.reference_number or '---',
+            'currency': s.currency,
             'debit': float(s.debit),
             'credit': float(s.credit),
-            'balance': float(s.running_balance)
+            'balance': float(s.running_balance) # الاعتماد المباشر على الرصيد المحسوب سطر بسطر في الموديل
         } for s in statements]
     })
