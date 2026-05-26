@@ -24,22 +24,27 @@ def api_search_suppliers():
     if not term:
         return jsonify({"results": []})
 
-    # استعلام ذكي يبحث في كافة تفاصيل المورد
-    suppliers = Supplier.query.filter(or_(
-        Supplier.trade_name.ilike(f'%{term}%'),
-        Supplier.sovereign_id.ilike(f'%{term}%'),
-        Supplier.store_name.ilike(f'%{term}%'),
-        Supplier.owner_name.ilike(f'%{term}%')
-    )).limit(15).all()
-    
-    # تنسيق العرض للمستخدم في القائمة المنسدلة لـ Select2
-    results = [
-        {
-            'id': s.id, 
-            'text': f"{s.trade_name} | {s.store_name} (المالك: {s.owner_name}) - المعرف: {s.sovereign_id}"
-        } for s in suppliers
-    ]
-    return jsonify({"results": results})
+    try:
+        # تم تنظيف الفلتر من حقل 'store_name' لحل مشكلة الـ AttributeError نهائياً
+        suppliers = Supplier.query.filter(or_(
+            Supplier.trade_name.ilike(f'%{term}%'),
+            Supplier.owner_name.ilike(f'%{term}%'),
+            Supplier.sovereign_id.ilike(f'%{term}%')
+        )).limit(15).all()
+        
+        # استخدام getattr لضمان عدم توقف النظام حتى لو غاب أحد الحقول برمجياً
+        results = [
+            {
+                'id': s.id, 
+                'text': f"{getattr(s, 'trade_name', '---')} (المالك: {getattr(s, 'owner_name', '---')}) - المعرف: {getattr(s, 'sovereign_id', '---')}"
+            } for s in suppliers
+        ]
+        return jsonify({"results": results})
+
+    except Exception as e:
+        # طباعة الخطأ في سجلات Railway لمتابعة جودة الاستعلام والتحقق اللحظي
+        print(f"❌ Error during supplier search: {str(e)}")
+        return jsonify({"results": [], "error": "حدث خطأ داخلي أثناء استعلام قاعدة البيانات"}), 500
 
 
 # 2. جلب كشف الحساب الشامل والتقارير المالي عبر استدعاء الـ ReportGenerator
