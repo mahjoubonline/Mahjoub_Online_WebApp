@@ -5,23 +5,23 @@ from flask import render_template, request, jsonify, make_response
 from flask_login import login_required
 from apps.statement import statement_blueprint
 from apps.models.supplier_db import Supplier
-from apps.utils.report_generator import ReportGenerator  # استدعاء محرك التقارير المركزي
+from apps.utils.report_generator import ReportGenerator
 from sqlalchemy import or_
-from datetime import datetime, timedelta
+from datetime import datetime
 
 @statement_blueprint.route('/view', methods=['GET'])
 @login_required
 def view_statement():
-    currencies = ['USD', 'YER', 'SAR'] 
+    currencies = ['USD', 'YER', 'SAR']
     return render_template('admin/statement.html', currencies=currencies)
 
 # مسار لجلب خلاصة أرصدة كافة المحافظ (الملخص الشامل للمنصة)
 @statement_blueprint.route('/api/statement/summary_all', methods=['GET'])
 @login_required
 def api_get_all_summary():
-    """ جلب خلاصة الأرصدة لكافة الملاك والمتاجر """
-    # نعتمد هنا على دالة في محرك التقارير تقوم بجلب كافة المحافظ
-    summary_data = ReportGenerator.get_all_wallets_summary()
+    # تمرير العملة لضمان التصفية الصحيحة للملخص
+    curr = request.args.get('currency', 'ALL')
+    summary_data = ReportGenerator.get_all_wallets_summary(currency=curr)
     return jsonify({'results': summary_data})
 
 # 1. البحث الذكي المتوافق بالكامل
@@ -39,15 +39,12 @@ def api_search_suppliers():
             Supplier.sovereign_id.ilike(f'%{term}%')
         )).limit(15).all()
         
-        results = [
-            {
-                'id': s.id, 
-                'text': f"{getattr(s, 'trade_name', '---')} (المالك: {getattr(s, 'owner_name', '---')}) - المعرف: {getattr(s, 'sovereign_id', '---')}"
-            } for s in suppliers
-        ]
+        results = [{
+            'id': s.id, 
+            'text': f"{getattr(s, 'trade_name', '---')} (المالك: {getattr(s, 'owner_name', '---')}) - WEL: {getattr(s, 'sovereign_id', '---')}"
+        } for s in suppliers]
         return jsonify({"results": results})
     except Exception as e:
-        print(f"❌ Error during supplier search: {str(e)}")
         return jsonify({"results": [], "error": "حدث خطأ داخلي"}), 500
 
 # 2. جلب كشف الحساب التفصيلي
@@ -60,8 +57,8 @@ def api_get_report():
     end_str = request.args.get('end')
 
     try:
-        start_date = datetime.strptime(start_str, '%Y-%m-%d').replace(hour=0, minute=0, second=0) if start_str else datetime.utcnow() - timedelta(days=30)
-        end_date = datetime.strptime(end_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59) if end_str else datetime.utcnow()
+        start_date = datetime.strptime(start_str, '%Y-%m-%d') if start_str else None
+        end_date = datetime.strptime(end_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59) if end_str else None
     except ValueError:
         return jsonify({'error': 'صيغة التاريخ غير صحيحة'}), 400
 
@@ -70,13 +67,13 @@ def api_get_report():
 
     return jsonify({
         'summary': {
-            'total_debit': float(sum(s.debit for s in statements)) if statements else 0.0,
-            'total_credit': float(sum(s.credit for s in statements)) if statements else 0.0,
-            'net_balance': float(sum(s.credit for s in statements) - sum(s.debit for s in statements)) if statements else 0.0,
+            'total_debit': float(sum(s.debit or 0 for s in statements)),
+            'total_credit': float(sum(s.credit or 0 for s in statements)),
+            'net_balance': float(sum(s.credit or 0 for s in statements) - sum(s.debit or 0 for s in statements)),
             'total_profit': float(total_profit)
         },
         'details': [{
-            'date': s.created_at.strftime('%Y-%m-%d %H:%M') if s.created_at else '---',
+            'date': s.created_at.strftime('%Y-%m-%d %H:%M'),
             'desc': getattr(s, 'description', '---'),
             'ref': getattr(s, 'reference_number', '---'),
             'currency': getattr(s, 'currency', 'USD'),
@@ -86,42 +83,43 @@ def api_get_report():
         } for s in statements]
     })
 
-# 3. مسار تصدير وطباعة التقرير المالي PDF
+# 3. مسار عرض التقرير (يفتح كصفحة طباعة/تنزيل)
 @statement_blueprint.route('/api/statement/report/pdf', methods=['GET'])
 @login_required
 def export_report_pdf():
     s_id = request.args.get('supplier_id', 'ALL')
     curr = request.args.get('currency', 'ALL')
+    start_str = request.args.get('start_date')
+    end_str = request.args.get('end_date')
     
+    start_date = datetime.strptime(start_str, '%Y-%m-%d') if start_str else None
+    end_date = datetime.strptime(end_str, '%Y-%m-%d') if end_str else None
+
     # جلب بيانات المورد للترويسة
     wallet_code = "---"
-    owner_name = "---"
-    supplier_name = "جميع الموردين (تقرير شامل)"
+    supplier_name = "تقرير شامل للمنصة"
     
     if s_id and s_id != 'ALL':
         supplier = Supplier.query.get(s_id)
         if supplier:
             wallet_code = getattr(supplier, 'sovereign_id', '---')
-            owner_name = getattr(supplier, 'owner_name', '---')
             supplier_name = getattr(supplier, 'trade_name', '---')
 
-    statements = ReportGenerator.get_detailed_transactions(s_id, curr)
+    statements = ReportGenerator.get_detailed_transactions(s_id, curr, start_date, end_date)
     
-    # حساب الإجماليات المطلوبة في القالب
     total_debit = sum(s.debit or 0 for s in statements)
     total_credit = sum(s.credit or 0 for s in statements)
-    net_balance = total_credit - total_debit
     
-    html_content = render_template(
+    return render_template(
         'pdf_template.html',
         statements=statements,
         supplier_name=supplier_name,
-        owner_name=owner_name,
         wallet_code=wallet_code,
         currency=curr,
         total_debit=total_debit,
         total_credit=total_credit,
-        net_balance=net_balance,
+        net_balance=total_credit - total_debit,
+        start_date=start_str,
+        end_date=end_str,
         generated_at=datetime.utcnow().strftime('%Y/%m/%d %H:%M')
     )
-    return make_response(html_content)
