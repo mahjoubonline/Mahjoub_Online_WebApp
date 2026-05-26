@@ -7,7 +7,8 @@
 <style>
     :root { --mahjoub-purple: #632C8F; }
     .mahjoub-toolbar { background: #fff; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-right: 5px solid var(--mahjoub-purple); }
-    .stat-card { border-radius: 15px; border: none; color: white; padding: 20px; }
+    .stat-card { border-radius: 15px; border: none; color: white; padding: 20px; transition: transform 0.2s ease; }
+    .stat-card:hover { transform: translateY(-3px); }
     .bg-profit { background: var(--mahjoub-purple); }
     .bg-debit { background: #d32f2f; }
     .bg-credit { background: #2e7d32; }
@@ -20,7 +21,7 @@
     .text-purple { color: var(--mahjoub-purple); }
 </style>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4" style="direction: rtl; text-align: right;">
     <div class="card mahjoub-toolbar p-4 mb-4">
         <div class="row g-3 align-items-end">
             <div class="col-md-4">
@@ -29,15 +30,15 @@
             </div>
             <div class="col-md-2">
                 <label class="small fw-bold text-muted mb-2">العملة</label>
-                <select id="currencyFilter" class="form-select">
+                <select id="currencyFilter" class="form-select" style="height: 45px; border-radius: 10px;">
                     <option value="ALL">كل العملات</option>
                     {% for curr in currencies %}<option value="{{ curr }}">{{ curr }}</option>{% endfor %}
                 </select>
             </div>
             <div class="col-md-4">
                 <label class="small fw-bold text-muted mb-2">تحديد الفترة الزمنية</label>
-                <div id="reportrange" class="form-control" style="cursor: pointer; height: 45px; display: flex; align-items: center;">
-                    <i class="fa fa-calendar me-2"></i> <span></span>
+                <div id="reportrange" class="form-control" style="cursor: pointer; height: 45px; display: flex; align-items: center; border-radius: 10px;">
+                    <i class="fa fa-calendar me-2 text-muted"></i> &nbsp;<span></span>
                 </div>
             </div>
             <div class="col-md-2">
@@ -61,13 +62,17 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th>التاريخ</th><th>البيان</th><th>المرجع/السند</th>
-                        <th class="text-center">مدين</th><th class="text-center">دائن</th>
+                        <th>التاريخ</th>
+                        <th>البيان</th>
+                        <th>المرجع/السند</th>
+                        <th class="text-center">العملة</th>
+                        <th class="text-center">مدين</th>
+                        <th class="text-center">دائن</th>
                         <th class="text-center">الرصيد التراكمي</th>
                     </tr>
                 </thead>
                 <tbody id="statementBody">
-                    <tr><td colspan="6" class="text-center py-5 text-muted">يرجى اختيار المورد لعرض البيانات</td></tr>
+                    <tr><td colspan="7" class="text-center py-5 text-muted">يرجى اختيار المورد لعرض البيانات</td></tr>
                 </tbody>
             </table>
         </div>
@@ -84,11 +89,16 @@
     var pickerEnd = moment();
 
     $(function() {
-        // تهيئة البحث الذكي
+        // تهيئة البحث الذكي لـ Select2 بالاعتماد على مسار ديناميكي آمن
         $('#supplierSearch').select2({
             placeholder: "ابحث بالاسم، المتجر، أو الرقم الموحد...",
+            language: {
+                inputTooShort: function () { return "يرجى إدخال حرف واحد أو أكثر للبحث..."; },
+                searching: function () { return "جاري البحث..."; },
+                noResults: function () { return "لا توجد نتائج مطابقة"; }
+            },
             ajax: {
-                url: '/api/suppliers/search',
+                url: "{{ url_for('statement_blueprint.api_search_suppliers') }}",
                 dataType: 'json',
                 delay: 250,
                 data: function (params) { return { q: params.term }; },
@@ -98,53 +108,78 @@
             minimumInputLength: 1
         });
 
-        // التحديث التلقائي عند اختيار مورد
+        // التحديث التلقائي والفلترة المباشرة عند الاختيارات
         $('#supplierSearch').on('select2:select', function (e) {
+            loadFinancialData();
+        });
+
+        $('#currencyFilter').on('change', function() {
             loadFinancialData();
         });
 
         // تهيئة ديت رينج بيكر
         $('#reportrange').daterangepicker({
             startDate: pickerStart, endDate: pickerEnd,
+            locale: { format: 'YYYY/MM/DD', applyLabel: 'تطبيق', cancelLabel: 'إلغاء' },
             ranges: {
                'اليوم': [moment(), moment()],
                'آخر 7 أيام': [moment().subtract(6, 'days'), moment()],
-               'هذا الشهر': [moment().startOf('month'), moment().endOf('month')]
+               'هذا الشهر': [moment().startOf('month'), moment().endOf('month')],
+               'الشهر السابق': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
             }
         }, function(start, end) {
             pickerStart = start; pickerEnd = end;
             $('#reportrange span').html(start.format('YYYY/MM/DD') + ' - ' + end.format('YYYY/MM/DD'));
+            loadFinancialData();
         });
         $('#reportrange span').html(pickerStart.format('YYYY/MM/DD') + ' - ' + pickerEnd.format('YYYY/MM/DD'));
     });
 
     function loadFinancialData() {
         let supplierId = $('#supplierSearch').val();
-        if(!supplierId) return; // لا حاجة للتنبيه إذا كان التحديث لحظي
+        if(!supplierId) return;
 
-        let url = `/api/statement/report?id=${supplierId}&currency=${$('#currencyFilter').val()}&start=${pickerStart.format('YYYY-MM-DD')}&end=${pickerEnd.format('YYYY-MM-DD')}`;
+        let selectedCurrency = $('#currencyFilter').val();
+        
+        // ربط ديناميكي كامل بالـ API لتجنب مشاكل الـ Routes المباشرة
+        let url = "{{ url_for('statement_blueprint.api_get_report') }}?id=" + supplierId + 
+                  "&currency=" + selectedCurrency + 
+                  "&start=" + pickerStart.format('YYYY-MM-DD') + 
+                  "&end=" + pickerEnd.format('YYYY-MM-DD');
+
+        $('#statementBody').html('<tr><td colspan="7" class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i> جاري جلب حركات كشف الحساب...</td></tr>');
 
         fetch(url).then(res => res.json()).then(data => {
             if(data.error) return alert(data.error);
             
             $('#summaryCards').fadeIn();
-            $('#totalProfit').text(data.summary.total_profit.toLocaleString());
-            $('#totalDebit').text(data.summary.total_debit.toLocaleString());
-            $('#totalCredit').text(data.summary.total_credit.toLocaleString());
-            $('#netBalance').text(data.summary.net_balance.toLocaleString());
+            let currencyLabel = selectedCurrency !== 'ALL' ? ` ${selectedCurrency}` : '';
+            
+            $('#totalProfit').text(data.summary.total_profit.toLocaleString(undefined, {minimumFractionDigits: 2}) + currencyLabel);
+            $('#totalDebit').text(data.summary.total_debit.toLocaleString(undefined, {minimumFractionDigits: 2}) + currencyLabel);
+            $('#totalCredit').text(data.summary.total_credit.toLocaleString(undefined, {minimumFractionDigits: 2}) + currencyLabel);
+            $('#netBalance').text(data.summary.net_balance.toLocaleString(undefined, {minimumFractionDigits: 2}) + currencyLabel);
 
             let html = '';
-            data.details.forEach(s => {
-                html += `<tr>
-                    <td class="small">${s.date}</td>
-                    <td class="fw-bold">${s.desc}</td>
-                    <td><span class="badge bg-secondary">${s.ref}</span></td>
-                    <td class="text-center text-danger">${s.debit || '-'}</td>
-                    <td class="text-center text-success">${s.credit || '-'}</td>
-                    <td class="text-center fw-bold">${s.balance}</td>
-                </tr>`;
-            });
-            $('#statementBody').html(html || '<tr><td colspan="6" class="text-center">لا توجد عمليات</td></tr>');
+            if(data.details && data.details.length > 0) {
+                data.details.forEach(s => {
+                    html += `<tr>
+                        <td class="small text-muted">${s.date}</td>
+                        <td class="fw-bold">${s.desc}</td>
+                        <td><span class="badge bg-light text-dark border">${s.ref}</span></td>
+                        <td class="text-center fw-bold text-secondary">${s.currency}</td>
+                        <td class="text-center text-danger fw-bold">${s.debit > 0 ? s.debit.toLocaleString() : '-'}</td>
+                        <td class="text-center text-success fw-bold">${s.credit > 0 ? s.credit.toLocaleString() : '-'}</td>
+                        <td class="text-center fw-bold text-primary">${s.balance.toLocaleString()}</td>
+                    </tr>`;
+                });
+            } else {
+                html = '<tr><td colspan="7" class="text-center py-5 text-muted">لا توجد عمليات مسجلة خلال هذه الفترة.</td></tr>';
+            }
+            $('#statementBody').html(html);
+        }).catch(err => {
+            console.error("Fetch error:", err);
+            $('#statementBody').html('<tr><td colspan="7" class="text-center text-danger py-4">خطأ في الاتصال بالسيرفر.</td></tr>');
         });
     }
 </script>
