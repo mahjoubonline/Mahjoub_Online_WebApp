@@ -1,35 +1,25 @@
-# coding: utf-8
-# 📂 apps/models/statement_db.py
-from apps.extensions import db
-from datetime import datetime
+# 📂 apps/utils/report_generator.py
+from apps.models.statement_db import SupplierStatement
+from sqlalchemy import and_
 
-class SupplierStatement(db.Model):
-    __tablename__ = 'supplier_statements'
+class ReportGenerator:
     
-    id = db.Column(db.Integer, primary_key=True)
-    # الربط مع المورد
-    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
-    
-    # تفاصيل العملية المحاسبية
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # تم تعليق reference_number لأن قاعدة البيانات لا تحتويه حالياً
-    # reference_number = db.Column(db.String(50), nullable=True) 
-    
-    description = db.Column(db.String(255), nullable=True)     # بيان الحركة
-    
-    # العملة
-    currency = db.Column(db.String(10), default='USD') # USD, YER, SAR
-    
-    # الجانب المحاسبي (دائن/مدين)
-    debit = db.Column(db.Float, default=0.0)    # مدين (ما عليك للمورد)
-    credit = db.Column(db.Float, default=0.0)   # دائن (ما للمورد عندك)
-    
-    # الرصيد التراكمي بعد هذه الحركة
-    running_balance = db.Column(db.Float, nullable=False)
-    
-    # ملاحظات إضافية
-    notes = db.Column(db.Text, nullable=True)
+    @staticmethod
+    def get_detailed_transactions(supplier_id, currency, start_date, end_date):
+        # بناء الفلاتر ديناميكياً
+        filters = []
+        if supplier_id != 'ALL':
+            filters.append(SupplierStatement.supplier_id == supplier_id)
+        if currency != 'ALL':
+            filters.append(SupplierStatement.currency == currency)
+        if start_date:
+            filters.append(SupplierStatement.created_at >= start_date)
+        if end_date:
+            filters.append(SupplierStatement.created_at <= end_date)
+            
+        return SupplierStatement.query.filter(and_(*filters)).order_by(SupplierStatement.created_at.asc()).all()
 
-    def __repr__(self):
-        return f'<SupplierStatement {self.id} - Supplier: {self.supplier_id}>'
+    @staticmethod
+    def calculate_net_profit(currency, start_date, end_date):
+        # منطق حساب الأرباح (يمكنك تخصيصه لاحقاً)
+        return 0.0
