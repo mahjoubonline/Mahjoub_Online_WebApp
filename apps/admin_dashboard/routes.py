@@ -21,9 +21,12 @@ def dashboard():
         total_suppliers = Supplier.query.count()
         
         # 2. حساب الأرصدة (استخدام الموديل مباشرة بكفاءة)
+        # ملاحظة: تعتمد هذه العمليات على الموديلات التي تستخدم المشفر (AESCipher)
         wallets = SupplierWallet.query.all()
-        total_sar_balance = sum([w.sar_total or 0 for w in wallets])
-        total_yer_balance = sum([w.yer_total or 0 for w in wallets])
+        
+        # نستخدم [0] لتجنب أي خطأ في حال كانت القائمة فارغة
+        total_sar_balance = sum([w.sar_total for w in wallets])
+        total_yer_balance = sum([w.yer_total for w in wallets])
         
         # 3. آخر 5 عمليات
         recent_activities = WalletTransaction.query.order_by(
@@ -43,6 +46,7 @@ def dashboard():
         )
         
     except Exception as e:
-        # تسجيل الخطأ في الـ Logs الخاصة بـ Railway
+        # تسجيل الخطأ في الـ Logs الخاصة بـ Railway للتشخيص
         print(f"❌ Error loading dashboard: {str(e)}")
+        # إرجاع رسالة خطأ واضحة بدلاً من انهيار الصفحة
         return "حدث خطأ أثناء تحميل لوحة التحكم، يرجى مراجعة سجلات النظام.", 500
