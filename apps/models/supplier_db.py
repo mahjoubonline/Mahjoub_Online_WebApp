@@ -23,7 +23,7 @@ class Supplier(db.Model):
     shop_phone_enc = db.Column('shop_phone', db.String(255), nullable=False)
     bank_acc_enc = db.Column('bank_acc', db.String(255), nullable=False)
     
-    # حقول إضافية لضمان عدم وجود UndefinedColumn
+    # حقول التصنيف والتعلم الذكي
     category = db.Column('category', db.String(50), default='عام') 
     behavior_score = db.Column('behavior_score', db.Float, default=100.0)
     total_transactions = db.Column('total_transactions', db.Integer, default=0)
