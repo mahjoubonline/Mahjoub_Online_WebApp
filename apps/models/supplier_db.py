@@ -1,12 +1,10 @@
 # coding: utf-8
 # 🔑 مستند النموذج الحوكمي المشفر للموردين - منصة محجوب أونلاين 2026
 
-import random
 import os
 from apps.extensions import db
 from datetime import datetime
-from sqlalchemy.orm import validates
-from apps.utils.security import AESCipher # مفترض وجوده في ملف الأمان
+from apps.utils.security import AESCipher
 
 # تهيئة مشفر البيانات
 cipher = AESCipher(os.getenv('ENCRYPTION_KEY', 'your-32-byte-key-here-must-be-secure'))
@@ -18,12 +16,12 @@ class Supplier(db.Model):
     sovereign_id = db.Column(db.String(50), unique=True, nullable=False, index=True) 
     wallet_code = db.Column(db.String(50), unique=True, nullable=False)
     
-    # حقول مشفرة (تخزين Ciphertext)
-    _owner_name = db.Column(db.String(255), nullable=False)
-    _owner_phone = db.Column(db.String(255), nullable=False)
-    _trade_name = db.Column(db.String(255), nullable=False)
-    _shop_phone = db.Column(db.String(255), nullable=False)
-    _bank_acc = db.Column(db.String(255), nullable=False)
+    # حقول مشفرة (ربط الاسم البرمجي بالاسم الحقيقي في القاعدة بدون شرطة سفلية)
+    owner_name_enc = db.Column('owner_name', db.String(255), nullable=False)
+    owner_phone_enc = db.Column('owner_phone', db.String(255), nullable=False)
+    trade_name_enc = db.Column('trade_name', db.String(255), nullable=False)
+    shop_phone_enc = db.Column('shop_phone', db.String(255), nullable=False)
+    bank_acc_enc = db.Column('bank_acc', db.String(255), nullable=False)
     
     # حقول التصنيف والتعلم الذكي
     category = db.Column(db.String(50), default='عام') 
@@ -40,7 +38,7 @@ class Supplier(db.Model):
     province = db.Column(db.String(50))
     district = db.Column(db.String(50))
     address_detail = db.Column(db.Text) 
-    fin_type = db.Column(db.String(20))          
+    fin_type = db.Column(db.String(20))         
     bank_name = db.Column(db.String(100))        
     status = db.Column(db.String(20), nullable=False, default='pending') 
     rank_grade = db.Column(db.String(20), nullable=False, default='ريادي') 
@@ -51,33 +49,38 @@ class Supplier(db.Model):
     # --- خصائص التشفير الذكي (Properties) ---
 
     @property
-    def owner_name(self): return cipher.decrypt(self._owner_name)
+    def owner_name(self): return cipher.decrypt(self.owner_name_enc)
     @owner_name.setter
-    def owner_name(self, value): self._owner_name = cipher.encrypt(value)
+    def owner_name(self, value): self.owner_name_enc = cipher.encrypt(value)
 
     @property
-    def trade_name(self): return cipher.decrypt(self._trade_name)
+    def owner_phone(self): return cipher.decrypt(self.owner_phone_enc)
+    @owner_phone.setter
+    def owner_phone(self, value): self.owner_phone_enc = cipher.encrypt(value)
+
+    @property
+    def trade_name(self): return cipher.decrypt(self.trade_name_enc)
     @trade_name.setter
-    def trade_name(self, value): self._trade_name = cipher.encrypt(value)
+    def trade_name(self, value): self.trade_name_enc = cipher.encrypt(value)
 
-    # --- منطق التعلم الذكي ---
+    @property
+    def shop_phone(self): return cipher.decrypt(self.shop_phone_enc)
+    @shop_phone.setter
+    def shop_phone(self, value): self.shop_phone_enc = cipher.encrypt(value)
 
+    @property
+    def bank_acc(self): return cipher.decrypt(self.bank_acc_enc)
+    @bank_acc.setter
+    def bank_acc(self, value): self.bank_acc_enc = cipher.encrypt(value)
+
+    # --- باقي الدوال كما هي ---
+    
     def learn_from_interaction(self, is_positive):
-        """نظام التعلم من سلوك البشر"""
         self.behavior_score += (0.5 if is_positive else -2.0)
         self.total_transactions += 1
-        
-        # التكيف التلقائي للفئة
         if self.behavior_score > 150: self.category = 'مورد استراتيجي'
         elif self.behavior_score < 50: self.category = 'مورد تحت المراقبة'
         db.session.commit()
-
-    @property
-    def get_smart_status(self):
-        if self.behavior_score < 50: return "مورد عالي المخاطر"
-        return self.state_title
-
-    # --- الدوال الأساسية ---
 
     @property
     def balance(self):
@@ -90,13 +93,3 @@ class Supplier(db.Model):
         last = Supplier.query.order_by(Supplier.id.desc()).first()
         num = int(last.sovereign_id.split('MAH963')[-1]) + 1 if last else 1
         return f"SUP-MAH963{num}"
-
-    def to_dict(self):
-        return {
-            "sovereign_id": self.sovereign_id,
-            "trade_name": self.trade_name,
-            "category": self.category,
-            "behavior_score": self.behavior_score,
-            "balance": self.balance,
-            "status": self.get_smart_status
-        }
