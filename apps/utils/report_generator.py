@@ -10,7 +10,7 @@ class ReportGenerator:
 
     @staticmethod
     def get_detailed_transactions(supplier_id, currency, start_date, end_date):
-        """جلب كشف الحساب التفصيلي"""
+        """جلب كشف الحساب التفصيلي مع الفلترة الديناميكية"""
         query = db.session.query(SupplierStatement)
         
         if supplier_id != 'ALL':
@@ -29,11 +29,12 @@ class ReportGenerator:
 
     @staticmethod
     def get_all_wallets_summary(currency):
-        """جلب ملخص أرصدة جميع الموردين الحالي"""
+        """جلب ملخص أرصدة جميع الموردين بآخر رصيد تراكمي"""
         suppliers = Supplier.query.all()
         results = []
         
         for s in suppliers:
+            # البحث عن آخر حركة للمورد لضمان دقة الرصيد
             query = db.session.query(SupplierStatement).filter(SupplierStatement.supplier_id == s.id)
             
             if currency != 'ALL':
@@ -52,8 +53,8 @@ class ReportGenerator:
 
     @staticmethod
     def calculate_net_profit(currency, start_date, end_date):
-        """حساب إجمالي الأرباح في الفترة المحددة باستخدام دالة sum البرمجية"""
-        query = db.session.query(func.sum(SupplierStatement.profit)) # افتراض وجود حقل profit
+        """حساب إجمالي الأرباح في الفترة المحددة باستخدام محرك SQL"""
+        query = db.session.query(func.sum(SupplierStatement.profit))
         
         if currency != 'ALL':
             query = query.filter(SupplierStatement.currency == currency)
