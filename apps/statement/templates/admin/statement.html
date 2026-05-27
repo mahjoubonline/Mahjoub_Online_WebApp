@@ -124,17 +124,23 @@
         $('#tableHeader').html('<tr><th>التاريخ</th><th>البيان</th><th>العملة</th><th>مدين</th><th>دائن</th><th>الرصيد التراكمي</th></tr>');
         let url = "{{ url_for('statement_blueprint.api_get_report') }}?id=" + ($('#supplierSearch').val() || 'ALL') + "&currency=" + $('#currencyFilter').val() + "&start=" + pickerStart.format('YYYY-MM-DD') + "&end=" + pickerEnd.format('YYYY-MM-DD');
         
+        $('#statementBody').html('<tr><td colspan="6" class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin"></i> جاري تحميل البيانات...</td></tr>');
+
         fetch(url).then(res => res.json()).then(data => {
             $('#totalProfit').text(data.summary.total_profit.toLocaleString());
             $('#totalDebit').text(data.summary.total_debit.toLocaleString());
             $('#totalCredit').text(data.summary.total_credit.toLocaleString());
             $('#netBalance').text(data.summary.net_balance.toLocaleString());
 
-            let html = '';
-            data.details.forEach(s => {
-                html += `<tr><td>${s.date}</td><td>${s.desc}</td><td>${s.currency}</td><td class="text-danger">${s.debit.toLocaleString()}</td><td class="text-success">${s.credit.toLocaleString()}</td><td class="fw-bold">${s.balance.toLocaleString()}</td></tr>`;
-            });
-            $('#statementBody').html(html);
+            if (!data.details || data.details.length === 0) {
+                $('#statementBody').html('<tr><td colspan="6" class="text-center py-4 text-secondary"><i class="fas fa-info-circle fa-2x d-block mb-2"></i> لا توجد أي سجلات أو حركات لهذه الفترة.</td></tr>');
+            } else {
+                let html = '';
+                data.details.forEach(s => {
+                    html += `<tr><td>${s.date}</td><td>${s.desc}</td><td>${s.currency}</td><td class="text-danger">${s.debit.toLocaleString()}</td><td class="text-success">${s.credit.toLocaleString()}</td><td class="fw-bold">${s.balance.toLocaleString()}</td></tr>`;
+                });
+                $('#statementBody').html(html);
+            }
         });
     }
 
@@ -143,11 +149,15 @@
         $('#tableHeader').html('<tr><th>الاسم التجاري</th><th>اسم المالك</th><th>كود المحفظة</th><th>الرصيد</th><th>الحالة</th></tr>');
         fetch("{{ url_for('statement_blueprint.api_get_all_summary') }}?currency=" + $('#currencyFilter').val())
         .then(res => res.json()).then(data => {
-            let html = '';
-            data.results.forEach(s => {
-                html += `<tr><td>${s.trade_name}</td><td>${s.owner_name}</td><td><code>${s.wallet_code}</code></td><td>${s.balance.toLocaleString()}</td><td><span class="badge ${s.balance >= 0 ? 'bg-success' : 'bg-danger'}">${s.balance >= 0 ? 'دائن' : 'مدين'}</span></td></tr>`;
-            });
-            $('#statementBody').html(html);
+            if (!data.results || data.results.length === 0) {
+                $('#statementBody').html('<tr><td colspan="5" class="text-center py-4 text-secondary">لا توجد بيانات موردين.</td></tr>');
+            } else {
+                let html = '';
+                data.results.forEach(s => {
+                    html += `<tr><td>${s.trade_name}</td><td>${s.owner_name}</td><td><code>${s.wallet_code}</code></td><td>${s.balance.toLocaleString()}</td><td><span class="badge ${s.balance >= 0 ? 'bg-success' : 'bg-danger'}">${s.balance >= 0 ? 'دائن' : 'مدين'}</span></td></tr>`;
+                });
+                $('#statementBody').html(html);
+            }
         });
     }
 
