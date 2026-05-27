@@ -1,32 +1,27 @@
-from sqlalchemy import text
+# database_fixer.py
+from apps import create_app
 from apps.extensions import db
+from sqlalchemy import text
 
-def apply_database_fixes(app):
+def run_fixer():
+    app = create_app()
     with app.app_context():
-        # قائمة بالأعمدة الناقصة في جدول suppliers
-        supplier_cols = [
-            ("category", "VARCHAR(50) DEFAULT 'عام'"),
-            ("behavior_score", "FLOAT DEFAULT 100.0"),
-            ("total_transactions", "INTEGER DEFAULT 0"),
-            ("status", "VARCHAR(20) DEFAULT 'pending'"),
-            ("rank_grade", "VARCHAR(20) DEFAULT 'ريادي'"),
-            ("registration_source", "VARCHAR(30) DEFAULT 'الموقع الخارجي'")
-        ]
-        
-        # قائمة بالأعمدة الناقصة في جدول supplier_wallets
-        wallet_cols = [
-            ("_yer_total", "VARCHAR(255)"),
-            ("_sar_total", "VARCHAR(255)"),
-            ("_usd_total", "VARCHAR(255)")
-        ]
-
-        # تنفيذ الإضافات لجدول الموردين
-        for col, col_type in supplier_cols:
-            db.session.execute(text(f"ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS {col} {col_type}"))
-        
-        # تنفيذ الإضافات لجدول المحافظ
-        for col, col_type in wallet_cols:
-            db.session.execute(text(f"ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS {col} {col_type}"))
+        print("🔧 جاري تشغيل أداة إصلاح قاعدة البيانات...")
+        try:
+            # إضافة الأعمدة لجدول المعاملات
+            db.session.execute(text("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS _amount VARCHAR(255)"))
+            db.session.execute(text("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS _profit_margin VARCHAR(255)"))
+            db.session.execute(text("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS _notes VARCHAR(255)"))
             
-        db.session.commit()
-        print("✅ تم تحديث هيكل قاعدة البيانات تلقائياً.")
+            # إضافة الأعمدة لجدول المحافظ
+            db.session.execute(text("ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS _yer_total VARCHAR(255)"))
+            db.session.execute(text("ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS _sar_total VARCHAR(255)"))
+            db.session.execute(text("ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS _usd_total VARCHAR(255)"))
+            
+            db.session.commit()
+            print("✅ تم إصلاح الهيكل بنجاح!")
+        except Exception as e:
+            print(f"❌ حدث خطأ أثناء الإصلاح: {e}")
+
+if __name__ == "__main__":
+    run_fixer()
