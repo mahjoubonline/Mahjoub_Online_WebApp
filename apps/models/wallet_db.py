@@ -3,8 +3,8 @@ import os
 from apps.extensions import db
 from apps.utils.security import AESCipher
 
-# تهيئة المشفر
-cipher = AESCipher(os.getenv('ENCRYPTION_KEY', 'your-32-byte-key-here-must-be-secure'))
+# تهيئة المشفر باستخدام المفتاح من المتغيرات البيئية
+cipher = AESCipher(os.getenv('ENCRYPTION_KEY'))
 
 class SupplierWallet(db.Model):
     __tablename__ = 'supplier_wallets'
@@ -15,9 +15,9 @@ class SupplierWallet(db.Model):
     wallet_code = db.Column(db.String(50), nullable=False, unique=True)
     
     # حقول مشفرة
-    _yer_total = db.Column(db.String(255), default=cipher.encrypt("0.00"))
-    _sar_total = db.Column(db.String(255), default=cipher.encrypt("0.00"))
-    _usd_total = db.Column(db.String(255), default=cipher.encrypt("0.00"))
+    _yer_total = db.Column(db.String(255), default=lambda: cipher.encrypt("0.00"))
+    _sar_total = db.Column(db.String(255), default=lambda: cipher.encrypt("0.00"))
+    _usd_total = db.Column(db.String(255), default=lambda: cipher.encrypt("0.00"))
     
     status = db.Column(db.String(20), default='نشطة', nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now(), nullable=False)
@@ -25,21 +25,19 @@ class SupplierWallet(db.Model):
 
     transactions = db.relationship('WalletTransaction', backref='wallet', lazy=True, cascade="all, delete-orphan")
 
-    # --- خصائص التشفير ---
     @property
-    def yer_total(self): return float(cipher.decrypt(self._yer_total))
+    def yer_total(self): 
+        try: return float(cipher.decrypt(self._yer_total))
+        except: return 0.0
     @yer_total.setter
     def yer_total(self, val): self._yer_total = cipher.encrypt(str(val))
 
     @property
-    def sar_total(self): return float(cipher.decrypt(self._sar_total))
+    def sar_total(self): 
+        try: return float(cipher.decrypt(self._sar_total))
+        except: return 0.0
     @sar_total.setter
     def sar_total(self, val): self._sar_total = cipher.encrypt(str(val))
-
-    @property
-    def usd_total(self): return float(cipher.decrypt(self._usd_total))
-    @usd_total.setter
-    def usd_total(self, val): self._usd_total = cipher.encrypt(str(val))
 
 class WalletTransaction(db.Model):
     __tablename__ = 'wallet_transactions'
@@ -52,26 +50,32 @@ class WalletTransaction(db.Model):
     tx_type = db.Column(db.String(30), nullable=False) 
     currency = db.Column(db.String(10), nullable=False)
     
-    # حقول مشفرة
-    _amount = db.Column(db.String(255), nullable=False)
-    _profit_margin = db.Column(db.String(255), default=cipher.encrypt("0.00"))
+    # حقول مشفرة (مع السماح بـ Null لتجنب الانهيار أثناء الترقية)
+    _amount = db.Column(db.String(255), nullable=True)
+    _profit_margin = db.Column(db.String(255), nullable=True)
     _notes = db.Column(db.Text, nullable=True)
     
     status = db.Column(db.String(20), default='ناجحة', nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now(), nullable=False)
 
-    # --- خصائص التشفير للمعاملات ---
+    # --- خصائص التشفير مع محاصرة الأخطاء (Try-Except) ---
     @property
-    def amount(self): return float(cipher.decrypt(self._amount))
+    def amount(self): 
+        try: return float(cipher.decrypt(self._amount)) if self._amount else 0.0
+        except: return 0.0
     @amount.setter
     def amount(self, val): self._amount = cipher.encrypt(str(val))
 
     @property
-    def profit_margin(self): return float(cipher.decrypt(self._profit_margin))
+    def profit_margin(self): 
+        try: return float(cipher.decrypt(self._profit_margin)) if self._profit_margin else 0.0
+        except: return 0.0
     @profit_margin.setter
     def profit_margin(self, val): self._profit_margin = cipher.encrypt(str(val))
 
     @property
-    def notes(self): return cipher.decrypt(self._notes) if self._notes else ""
+    def notes(self): 
+        try: return cipher.decrypt(self._notes) if self._notes else ""
+        except: return ""
     @notes.setter
     def notes(self, val): self._notes = cipher.encrypt(str(val))
