@@ -1,6 +1,1 @@
-cryptography
-flask
-flask-sqlalchemy
-flask-login
-gunicorn
-# أي مكتبات أخرى تستخدمها أضفها هنا
+python-3.12.3
