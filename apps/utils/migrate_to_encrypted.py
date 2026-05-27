@@ -16,28 +16,32 @@ def run_migration():
         
         try:
             # 3. معالجة الموردين
-            for s in Supplier.query.all():
+            # ملاحظة: تعيين القيمة لنفسها (s.owner_name = s.owner_name) 
+            # سيقوم بتشغيل دالة الـ setter التي تشفر البيانات
+            suppliers = Supplier.query.all()
+            for s in suppliers:
                 s.owner_name = s.owner_name 
                 s.trade_name = s.trade_name
+                s.owner_phone = s.owner_phone
+                s.shop_phone = s.shop_phone
+                s.bank_acc = s.bank_acc
                 print(f"✅ تمت معالجة المورد: {s.sovereign_id}")
             
             # 4. معالجة كشوفات الحسابات
-            for stmt in SupplierStatement.query.all():
+            statements = SupplierStatement.query.all()
+            for stmt in statements:
+                # إذا كانت هذه الحقول تستخدم مشفر، تأكد من وجود setter لها في الموديل
                 stmt.description = stmt.description
-                stmt.debit = stmt.debit
-                stmt.credit = stmt.credit
-                stmt.running_balance = stmt.running_balance
             
             # 5. معالجة المحافظ
-            for w in SupplierWallet.query.all():
-                w.yer_total = w.yer_total
-                w.sar_total = w.sar_total
-                w.usd_total = w.usd_total
+            wallets = SupplierWallet.query.all()
+            for w in wallets:
+                # المحافظ غالباً لا تحتاج تشفير (أرقام)، لكن تم الاحتفاظ بها للنمط
+                pass
                 
             # 6. معالجة الحركات
-            for tx in WalletTransaction.query.all():
-                tx.amount = tx.amount
-                tx.profit_margin = tx.profit_margin
+            transactions = WalletTransaction.query.all()
+            for tx in transactions:
                 tx.notes = tx.notes
 
             # 7. الحفظ النهائي في قاعدة البيانات
