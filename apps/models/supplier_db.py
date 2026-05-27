@@ -73,7 +73,7 @@ class Supplier(db.Model):
     @bank_acc.setter
     def bank_acc(self, value): self.bank_acc_enc = cipher.encrypt(value)
 
-    # --- باقي الدوال كما هي ---
+    # --- باقي الدوال ---
     
     def learn_from_interaction(self, is_positive):
         self.behavior_score += (0.5 if is_positive else -2.0)
