@@ -13,38 +13,38 @@ class Supplier(db.Model):
     __tablename__ = 'suppliers'
     
     id = db.Column(db.Integer, primary_key=True)
-    sovereign_id = db.Column(db.String(50), unique=True, nullable=False, index=True) 
-    wallet_code = db.Column(db.String(50), unique=True, nullable=False)
+    sovereign_id = db.Column('sovereign_id', db.String(50), unique=True, nullable=False, index=True) 
+    wallet_code = db.Column('wallet_code', db.String(50), unique=True, nullable=False)
     
-    # حقول مشفرة (ربط الاسم البرمجي بالاسم الحقيقي في القاعدة بدون شرطة سفلية)
+    # حقول مشفرة (ربط الاسم البرمجي بالاسم الحقيقي في القاعدة)
     owner_name_enc = db.Column('owner_name', db.String(255), nullable=False)
     owner_phone_enc = db.Column('owner_phone', db.String(255), nullable=False)
     trade_name_enc = db.Column('trade_name', db.String(255), nullable=False)
     shop_phone_enc = db.Column('shop_phone', db.String(255), nullable=False)
     bank_acc_enc = db.Column('bank_acc', db.String(255), nullable=False)
     
-    # حقول التصنيف والتعلم الذكي
-    category = db.Column(db.String(50), default='عام') 
-    behavior_score = db.Column(db.Float, default=100.0)
-    total_transactions = db.Column(db.Integer, default=0)
+    # حقول إضافية لضمان عدم وجود UndefinedColumn
+    category = db.Column('category', db.String(50), default='عام') 
+    behavior_score = db.Column('behavior_score', db.Float, default=100.0)
+    total_transactions = db.Column('total_transactions', db.Integer, default=0)
     
     # حقول إدارية
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    identity_type = db.Column(db.String(50), nullable=False)   
-    identity_number = db.Column(db.String(50), unique=True, nullable=False)  
-    identity_image = db.Column(db.String(255))   
-    activity_type = db.Column(db.String(50))     
-    province = db.Column(db.String(50))
-    district = db.Column(db.String(50))
-    address_detail = db.Column(db.Text) 
-    fin_type = db.Column(db.String(20))         
-    bank_name = db.Column(db.String(100))        
-    status = db.Column(db.String(20), nullable=False, default='pending') 
-    rank_grade = db.Column(db.String(20), nullable=False, default='ريادي') 
-    registration_source = db.Column(db.String(30), nullable=False, default='الموقع الخارجي') 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow) 
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    username = db.Column('username', db.String(80), unique=True, nullable=False)
+    password_hash = db.Column('password_hash', db.String(255), nullable=False)
+    identity_type = db.Column('identity_type', db.String(50), nullable=False)   
+    identity_number = db.Column('identity_number', db.String(50), unique=True, nullable=False)  
+    identity_image = db.Column('identity_image', db.String(255))   
+    activity_type = db.Column('activity_type', db.String(50))     
+    province = db.Column('province', db.String(50))
+    district = db.Column('district', db.String(50))
+    address_detail = db.Column('address_detail', db.Text) 
+    fin_type = db.Column('fin_type', db.String(20))         
+    bank_name = db.Column('bank_name', db.String(100))        
+    status = db.Column('status', db.String(20), nullable=False, default='pending') 
+    rank_grade = db.Column('rank_grade', db.String(20), nullable=False, default='ريادي') 
+    registration_source = db.Column('registration_source', db.String(30), nullable=False, default='الموقع الخارجي') 
+    created_at = db.Column('created_at', db.DateTime, default=datetime.utcnow) 
+    updated_at = db.Column('updated_at', db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # --- خصائص التشفير الذكي (Properties) ---
 
