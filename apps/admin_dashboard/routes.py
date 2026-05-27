@@ -13,21 +13,22 @@ admin_dashboard = Blueprint('admin_dashboard', __name__)
 @login_required
 def dashboard():
     """
-    تحميل بيانات لوحة التحكم مع معالجة آمنة للأخطاء.
+    تحميل بيانات لوحة التحكم مع معالجة أعمدة قاعدة البيانات المشفرة
     """
     try:
         # 1. إحصائيات الموردين
         total_suppliers = Supplier.query.count()
         
-        # 2. حساب الأرصدة (معالجة آمنة للقيم في حال كانت None أو مشفرة)
+        # 2. حساب الأرصدة 
+        # تم استخدام الأعمدة التي تبدأ بـ (_) لتطابق الموديل المشفر
         wallets = SupplierWallet.query.all()
         
-        # نستخدم (w.sar_total or 0) لضمان عدم وجود قيمة فارغة تسبب خطأ في sum
-        total_sar_balance = sum([float(w.sar_total or 0) for w in wallets])
-        total_yer_balance = sum([float(w.yer_total or 0) for w in wallets])
+        # استخدام (w._sar_total) بدلاً من (w.sar_total) لتجنب خطأ الحقل غير الموجود
+        total_sar_balance = sum([float(w._sar_total or 0) for w in wallets])
+        total_yer_balance = sum([float(w._yer_total or 0) for w in wallets])
         
-        # إجمالي الرصيد للعرض في القالب (بما أن القالب يتوقع total_balance)
-        total_balance = total_sar_balance + (total_yer_balance / 3.75) # مثال للتحويل إذا لزم الأمر
+        # إجمالي الرصيد للعرض في القالب
+        total_balance = total_sar_balance + (total_yer_balance / 3.75) 
         
         # 3. آخر 5 عمليات
         recent_activities = WalletTransaction.query.order_by(
@@ -46,13 +47,14 @@ def dashboard():
         )
         
     except Exception as e:
-        # تسجيل الخطأ بالتفصيل في سجلات Railway للتشخيص
+        # تسجيل الخطأ في السجلات للتشخيص
         print(f"❌ Error loading dashboard: {str(e)}")
-        # في حال حدوث أي خطأ، لا نترك الصفحة تنهار، بل نظهر رسالة ودية
+        
+        # رسالة واجهة المستخدم في حال فشل تحميل البيانات
         return """
         <div style="text-align:center; margin-top:50px; font-family:sans-serif;">
             <h2>حدث خطأ أثناء تحميل لوحة التحكم</h2>
-            <p>يرجى التأكد من أن هيكل قاعدة البيانات محدث.</p>
-            <a href="/admin/dashboard">حاول مجدداً</a>
+            <p>يرجى التأكد من تحديث هيكل قاعدة البيانات (الأعمدة مفقودة).</p>
+            <a href="/admin/dashboard" style="padding:10px; background:#632C8F; color:white; text-decoration:none; border-radius:5px;">حاول مجدداً</a>
         </div>
         """, 500
