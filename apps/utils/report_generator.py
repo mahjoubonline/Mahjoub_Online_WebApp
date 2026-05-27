@@ -34,7 +34,7 @@ class ReportGenerator:
         results = []
         
         for s in suppliers:
-            # البحث عن آخر حركة للمورد لضمان دقة الرصيد
+            # البحث عن آخر حركة للمورد لضمان دقة الرصيد الحالي
             query = db.session.query(SupplierStatement).filter(SupplierStatement.supplier_id == s.id)
             
             if currency != 'ALL':
