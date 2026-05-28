@@ -29,13 +29,17 @@ def dashboard():
 
     try:
         # 1. إحصائيات الموردين
-        stats['total_suppliers'] = Supplier.query.count()
+        try:
+            stats['total_suppliers'] = Supplier.query.count()
+        except Exception as e:
+            print(f"⚠️ Suppliers Query Warning: {e}")
         
         # 2. حساب الأرصدة (تحقق من وجود الأعمدة ديناميكياً)
         try:
             wallets = SupplierWallet.query.all()
             total_sar = sum([getattr(w, 'sar_total', 0) for w in wallets])
             total_yer = sum([getattr(w, 'yer_total', 0) for w in wallets])
+            # معادلة تحويل بسيطة للأرصدة
             total_balance = total_sar + (total_yer / 3.75) if total_yer else total_sar
             stats['total_balance'] = f"{total_balance:,.2f}"
         except Exception as e:
@@ -63,5 +67,5 @@ def dashboard():
         
     except Exception as e:
         print(f"❌ Critical Dashboard Error: {str(e)}")
-        # نرسل القيم الافتراضية حتى تظهر الصفحة ولا تظهر رسالة 500
+        # نرسل القيم الافتراضية حتى تظهر الصفحة ولا تظهر رسالة 500 للمستخدم
         return render_template('admin/dashboard_content.html', **stats)
