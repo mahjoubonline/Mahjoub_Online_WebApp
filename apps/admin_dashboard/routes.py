@@ -7,8 +7,7 @@ from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.utils.security import cipher_suite
 
-# تعريف الـ Blueprint مع تحديد مجلد القوالب المحلي
-# هذا المسار يضمن أن Flask يبحث عن القوالب في: apps/admin_dashboard/templates/
+# تعريف الـ Blueprint
 admin_dashboard = Blueprint(
     'admin_dashboard', 
     __name__, 
@@ -19,24 +18,24 @@ admin_dashboard = Blueprint(
 @login_required
 def dashboard():
     """
-    تحميل بيانات لوحة التحكم مع معالجة آمنة للقيم المشفرة والأعمدة
+    تحميل بيانات لوحة التحكم مع الاعتماد على الموديل المرن
     """
     try:
         # 1. إحصائيات الموردين
         total_suppliers = Supplier.query.count()
         
-        # 2. حساب الأرصدة 
-        # نستخدم الدالة الآمنة لفك التشفير أو التحويل المباشر لتجنب الانهيار
+        # 2. حساب الأرصدة (نستخدم خصائص الموديل الآمنة التي أنشأناها)
         wallets = SupplierWallet.query.all()
         
-        # جمع الأرصدة مع التعامل مع القيم المشفرة (تنسيق Fernet)
-        total_sar_balance = sum([cipher_suite.decrypt_to_float(w._sar_total) for w in wallets])
-        total_yer_balance = sum([cipher_suite.decrypt_to_float(w._yer_total) for w in wallets])
+        # استخدام الخصائص (yer_total, sar_total) التي تتعامل مع التشفير داخلياً
+        total_sar_balance = sum([w.sar_total for w in wallets])
+        total_yer_balance = sum([w.yer_total for w in wallets])
         
         # حساب الإجمالي
         total_balance = total_sar_balance + (total_yer_balance / 3.75) 
         
-        # 3. آخر 5 عمليات (ترتيب حسب التاريخ)
+        # 3. آخر 5 عمليات 
+        # ملاحظة: الكود سيستخدم الآن الخصائص المرنة الموجودة في WalletTransaction
         recent_activities = WalletTransaction.query.order_by(
             WalletTransaction.created_at.desc()
         ).limit(5).all()
@@ -44,7 +43,6 @@ def dashboard():
         # 4. التسويات المعلقة
         pending_settlements = WalletTransaction.query.filter_by(status='معلقة').count()
 
-        # إرجاع القالب من المسار: apps/admin_dashboard/templates/admin/dashboard_content.html
         return render_template(
             'admin/dashboard_content.html',
             total_suppliers=total_suppliers,
@@ -54,14 +52,13 @@ def dashboard():
         )
         
     except Exception as e:
-        # تسجيل الخطأ في السجلات للتشخيص
         print(f"❌ Error loading dashboard: {str(e)}")
         
-        # رسالة واجهة المستخدم في حال فشل التحميل
-        return f"""
+        # رسالة خطأ بسيطة للمستخدم دون كشف تفاصيل تقنية حساسة
+        return """
         <div style="text-align:center; margin-top:50px; font-family:sans-serif; direction:rtl;">
-            <h2>حدث خطأ أثناء تحميل لوحة التحكم</h2>
-            <p>يرجى التأكد من هيكل البيانات: {str(e)}</p>
+            <h2>عذراً، حدث خطأ تقني</h2>
+            <p>يتم العمل على تحديث البيانات، يرجى المحاولة بعد قليل.</p>
             <a href="/admin/dashboard" style="padding:10px; background:#632C8F; color:white; text-decoration:none; border-radius:5px;">حاول مجدداً</a>
         </div>
         """, 500
