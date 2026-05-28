@@ -4,24 +4,10 @@
 
 {% block content %}
 <div class="container-fluid" id="main-content">
-    <div class="mb-4 d-flex justify-content-between 
-
-
-
-أجهزة الكمبيوتر السحابية
-جديد
-
-full_encrypted_supplier_form.html
-{% extends "admin/admin_base.html" %}
-
-{% block title %}تعميد مورد | محجوب أونلاين{% endblock %}
-
-{% block content %}
-<div class="container-fluid" id="main-content">
     <div class="mb-4 d-flex justify-content-between align-items-center bg-white p-4 rounded-4 shadow-sm border-end border-4" style="border-color: var(--royal-purple) !important;">
         <div>
-            <h2 class="fw-bold mb-1" style="color: var(--royal-purple);">🛡️ تعميد مورد جديد (تشفير كامل AES-256)</h2>
-            <p class="text-muted mb-0 small">نظام الأرشفة السيادي - جميع الحقول مشفرة بالكامل</p>
+            <h2 class="fw-bold mb-1" style="color: var(--royal-purple);">🛡️ تعميد مورد جديد (AES-256 Encrypted)</h2>
+            <p class="text-muted mb-0 small">نظام الأرشفة السيادي - يتم تشفير كافة البيانات قبل الإرسال</p>
         </div>
         <div class="d-flex gap-4 text-center">
             <div class="px-3 border-start"><small class="d-block text-muted fw-bold">معرف المورد</small><span class="fs-5 fw-bold text-dark" id="display-supplier-id">...</span></div>
@@ -31,19 +17,14 @@ full_encrypted_supplier_form.html
 
     <div id="alert-container"></div>
 
-    <!-- مكتبة التشفير CryptoJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
     <form id="addSupplierForm" method="POST" enctype="multipart/form-data" action="{{ url_for('add_supplier.add_supplier_submit') }}">
-        <!-- حقول السيادة -->
         <input type="hidden" name="sovereign_id" id="hidden-sovereign-id">
         <input type="hidden" name="wallet_code" id="hidden-wallet-code">
-        
-        <!-- الحقل الذي سيحوي جميع البيانات المشفرة -->
         <input type="hidden" name="full_encrypted_data" id="full-encrypted-data">
 
         <div class="row g-4">
-            <!-- القسم الأول: بيانات الوصول -->
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm p-4 h-100">
                     <h5 class="fw-bold mb-4">بيانات الوصول والوثائق</h5>
@@ -56,17 +37,15 @@ full_encrypted_supplier_form.html
                         </select>
                     </div>
                     <div class="mb-3"><label class="form-label text-muted small">رقم الوثيقة</label><input type="text" id="identity_number" class="form-control" required></div>
-                    <div class="mb-3"><label class="form-label text-muted small">صور الوثيقة (تُرفع كملفات)</label><input type="file" name="identity_images" class="form-control" multiple required></div>
+                    <div class="mb-3"><label class="form-label text-muted small">صور الوثيقة</label><input type="file" name="identity_images" class="form-control" multiple required></div>
                 </div>
             </div>
 
-            <!-- القسم الثاني: الهوية والتصنيف -->
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm p-4 h-100">
                     <h5 class="fw-bold mb-4">الهوية والتصنيف</h5>
                     <div class="mb-3"><label class="form-label text-muted small">الاسم الكامل</label><input type="text" id="owner_name" class="form-control" required></div>
                     <div class="mb-3"><label class="form-label text-muted small">الاسم التجاري</label><input type="text" id="trade_name" class="form-control" required></div>
-                    
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-bold">فئة المورد</label>
                         <div class="input-group">
@@ -74,12 +53,10 @@ full_encrypted_supplier_form.html
                                 <option value="" selected disabled>اختر الفئة...</option>
                                 <option value="ملابس">ملابس</option>
                                 <option value="إلكترونيات">إلكترونيات</option>
-                                <option value="القوائم">القوائم</option>
                             </select>
                             <button type="button" class="btn btn-outline-primary" onclick="addNewCategory()">+</button>
                         </div>
                     </div>
-
                     <div class="mb-3"><label class="form-label text-muted small">المحافظة</label>
                         <select id="provinceSelect" class="form-select" required>
                             <option value="صنعاء">صنعاء</option>
@@ -87,23 +64,14 @@ full_encrypted_supplier_form.html
                             <option value="تعز">تعز</option>
                         </select>
                     </div>
-                    <div class="mb-3"><label class="form-label text-muted small">المديرية</label>
-                        <input type="text" id="districtInput" class="form-control" placeholder="أدخل المديرية" required>
-                    </div>
+                    <div class="mb-3"><label class="form-label text-muted small">المديرية</label><input type="text" id="districtInput" class="form-control" required></div>
                 </div>
             </div>
 
-            <!-- القسم الثالث: التأكيد -->
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm p-4 h-100">
                     <h5 class="fw-bold mb-4">الربط والسيادة المالية</h5>
-                    <div class="alert alert-warning small">
-                        <strong>تنبيه أمني:</strong> سيتم تشفير 100% من البيانات النصية المدخلة باستخدام AES-256 قبل إرسالها إلى قاعدة البيانات.
-                    </div>
-                    <div class="p-3 bg-light rounded-3 mb-4">
-                        <small class="text-muted d-block">حالة التشفير:</small>
-                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> جاهز للتشفير الشامل</span>
-                    </div>
+                    <div class="alert alert-warning small"><strong>تنبيه:</strong> سيتم تشفير كافة المدخلات لحظياً قبل الإرسال.</div>
                     <button type="submit" id="submitBtn" class="btn btn-lg w-100 text-white mt-auto" style="background: var(--royal-purple);">اعتماد المورد الآن</button>
                 </div>
             </div>
@@ -112,12 +80,10 @@ full_encrypted_supplier_form.html
 </div>
 
 <script>
-    // مفتاح التشفير السري (يجب حمايته أو جلبه ديناميكياً)
     const SECRET_KEY = "YOUR_SUPER_SECRET_AES_KEY_256";
 
-    // دالة التعلم للفئات والقوائم
     function addNewCategory() {
-        const newCat = prompt("أدخل اسم الفئة الجديدة ليتم تعلمها وإضافتها للقوائم:");
+        const newCat = prompt("أدخل اسم الفئة الجديدة:");
         if (newCat && newCat.trim() !== "") {
             const select = document.getElementById('categorySelect');
             const option = document.createElement('option');
@@ -125,55 +91,30 @@ full_encrypted_supplier_form.html
             option.textContent = newCat;
             select.appendChild(option);
             select.value = newCat;
-            console.log("تم تعلم فئة جديدة:", newCat);
         }
     }
 
-    // وظيفة التشفير الشامل عند الإرسال
     document.getElementById('addSupplierForm').addEventListener('submit', function(e) {
-        e.preventDefault(); // إيقاف الإرسال العادي مؤقتاً
+        e.preventDefault(); 
         
-        // 1. تجميع كافة الحقول في كائن واحد
         const allData = {
-            auth: {
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value
-            },
-            identity: {
-                type: document.getElementById('identity_type').value,
-                number: document.getElementById('identity_number').value,
-                owner: document.getElementById('owner_name').value,
-                trade: document.getElementById('trade_name').value
-            },
-            classification: {
-                category: document.getElementById('categorySelect').value,
-                province: document.getElementById('provinceSelect').value,
-                district: document.getElementById('districtInput').value
-            },
-            system: {
-                sovereign_id: document.getElementById('hidden-sovereign-id').value,
-                wallet_code: document.getElementById('hidden-wallet-code').value,
-                timestamp: new Date().toISOString()
-            }
+            auth: { username: document.getElementById('username').value, password: document.getElementById('password').value },
+            identity: { type: document.getElementById('identity_type').value, number: document.getElementById('identity_number').value, owner: document.getElementById('owner_name').value, trade: document.getElementById('trade_name').value },
+            classification: { category: document.getElementById('categorySelect').value, province: document.getElementById('provinceSelect').value, district: document.getElementById('districtInput').value },
+            system: { sovereign_id: document.getElementById('hidden-sovereign-id').value, wallet_code: document.getElementById('hidden-wallet-code').value }
         };
 
-        // 2. تحويل الكائن الكامل إلى نص JSON
         const rawJson = JSON.stringify(allData);
-
-        // 3. تشفير النص بالكامل باستخدام AES-256
+        // التشفير باستخدام AES (معيار CryptoJS)
         const encrypted = CryptoJS.AES.encrypt(rawJson, SECRET_KEY).toString();
 
-        // 4. وضع النتيجة المشفرة في الحقل المخفي
         document.getElementById('full-encrypted-data').value = encrypted;
-
-        // 5. مسح الحقول الأصلية قبل الإرسال لزيادة الأمان (اختياري لمنع تسرب البيانات من الذاكرة)
-        // document.getElementById('password').value = "********";
-
-        console.log("✅ تم تشفير جميع الحقول (100%) بنجاح.");
         
-        // 6. إرسال النموذج فعلياً إلى قاعدة البيانات
+        // إفراغ الحقول النصية الحساسة لتقليل أثرها في الذاكرة
+        document.getElementById('username').value = "";
+        document.getElementById('password').value = "";
+        
         this.submit();
     });
 </script>
 {% endblock %}
-إضافة فئة تشفير AES-256 وإرسال البيانات مشفرة - Manus
