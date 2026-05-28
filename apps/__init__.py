@@ -1,7 +1,6 @@
 # coding: utf-8
 # 🏗️ مصنع التطبيق المركزي (Application Factory) - منصة محجوب أونلاين 2026
 
-import os
 from flask import Flask
 from config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -22,7 +21,6 @@ def create_app():
 
     db.init_app(app)
     login_manager.init_app(app)
-    # تأكد من أن اسم الـ login_view يطابق المسار المسجل للـ auth
     login_manager.login_view = 'auth_blueprint.login' 
 
     with app.app_context():
@@ -41,20 +39,17 @@ def create_app():
                 return AdminUser.query.get(int(user_id))
 
             # 2. استيراد وتسجيل البلوبرينتس
+            # تأكد أن الأسماء (add_supplier) تطابق ما هو معرف داخل كل ملف routes.py
             from apps.auth_portal.routes import auth_blueprint
             from apps.admin_dashboard.routes import admin_dashboard
-            from apps.add_supplier.routes import admin_suppliers_bp
+            from apps.add_supplier.routes import add_supplier as add_supplier_bp 
             from apps.financial_ops.routes import financial_blueprint 
             from apps.statement.routes import statement_blueprint
 
+            # تسجيل المسارات
             app.register_blueprint(auth_blueprint, url_prefix='/auth')
-            
-            # تم تعديل تسجيل الـ dashboard ليصبح منظماً
-            # بما أن المسار في routes.py هو '/admin/dashboard'
-            # فإنه سيعمل مباشرة عند زيارة /admin/dashboard
-            app.register_blueprint(admin_dashboard)
-            
-            app.register_blueprint(admin_suppliers_bp, url_prefix='/suppliers')
+            app.register_blueprint(admin_dashboard) # الـ Dashboard الأساسي
+            app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
             app.register_blueprint(financial_blueprint, url_prefix='/finance')
             app.register_blueprint(statement_blueprint, url_prefix='/statement')
             
@@ -62,5 +57,6 @@ def create_app():
 
         except Exception as e:
             print(f"❌ خطأ فادح أثناء تهيئة التطبيق: {e}")
+            # في حال حدوث خطأ هنا، الـ Dashboard لن تظهر!
 
     return app
