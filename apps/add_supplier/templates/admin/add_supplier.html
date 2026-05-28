@@ -2,44 +2,24 @@
 
 {% block title %}تعميد مورد | محجوب أونلاين{% endblock %}
 
-{% block content %}
-<div class="container-fluid" id="main-content">
-    <!-- الهيدر والتعريف السيادي -->
-    <div class="mb-4 d-flex justify-content-between align-items-center bg-white p-4 rounded-4 shadow-sm border-end border-4" style="border-color: var(--royal-purple) !important;">
-        <div>
-            <h2 class="fw-bold mb-1" style="color: var(--royal-purple);">🛡️ تعميد مورد جديد</h2>
-            <p class="text-muted mb-0 small">نظام الأرشفة السيادي - محجوب أونلاين 2026</p>
-        </div>
-        <div class="d-flex gap-4 text-center">
-            <div class="px-3 border-start">
-                <small class="d-block text-muted fw-bold">معرف المورد</small>
-                <span class="fs-5 fw-bold text-dark" id="display-supplier-id">...</span>
-            </div>
-            <div class="px-3">
-                <small class="d-block text-muted fw-bold">معرف المحفظة</small>
-                <span class="fs-5 fw-bold text-success" id="display-wallet-id">...</span>
-            </div>
-        </div>
-    </div>
+{% block header_title %}تعميد شريك نجاح جديد{% endblock %}
 
+{% block content %}
+<div class="container-fluid">
     <div id="alert-container"></div>
 
-    <form id="addSupplierForm" method="POST" enctype="multipart/form-data" action="{{ url_for('add_supplier.add_supplier_submit') }}">
+    <form id="addSupplierForm" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="sovereign_id" id="hidden-sovereign-id">
         <input type="hidden" name="wallet_code" id="hidden-wallet-code">
 
         <div class="row g-4">
-            <!-- العمود الأول: الوثائق -->
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm p-4 h-100">
-                    <h5 class="fw-bold mb-4"><i class="fas fa-shield-alt" style="color: var(--royal-purple);"></i> بيانات الوصول</h5>
+                    <h5 class="fw-bold mb-4"><i class="fas fa-shield-alt text-primary"></i> بيانات الوصول</h5>
                     
                     <div class="mb-3">
-                        <label class="form-label text-muted small">اسم المستخدم (Login)</label>
-                        <div class="input-group">
-                            <input type="text" name="username" id="input-username" class="form-control" required>
-                            <span class="input-group-text bg-white" id="status-username"><i class="fas fa-minus text-muted"></i></span>
-                        </div>
+                        <label class="form-label text-muted small">اسم المستخدم</label>
+                        <input type="text" name="username" id="input-username" class="form-control" required onblur="checkField('username', this.value)">
                         <div class="feedback-msg small mt-1" id="msg-username"></div>
                     </div>
 
@@ -50,54 +30,37 @@
 
                     <div class="mb-3">
                         <label class="form-label text-muted small">نوع الوثيقة</label>
-                        <select name="identity_type" class="form-select" required>
+                        <select name="identity_type" class="form-select">
                             <option value="بطاقة شخصية">بطاقة شخصية</option>
                             <option value="سجل تجاري">سجل تجاري</option>
                         </select>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">رقم الوثيقة</label>
-                        <div class="input-group">
-                            <input type="text" name="identity_number" id="input-identity-number" class="form-control" required>
-                            <span class="input-group-text bg-white" id="status-identity-number"><i class="fas fa-minus text-muted"></i></span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            <!-- العمود الثاني: الهوية والنشاط (تم إضافة ميزة الفئة) -->
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm p-4 h-100">
-                    <h5 class="fw-bold mb-4"><i class="fas fa-user" style="color: var(--royal-purple);"></i> الهوية والنشاط</h5>
+                    <h5 class="fw-bold mb-4"><i class="fas fa-user text-primary"></i> الهوية والنشاط</h5>
                     
                     <div class="mb-3">
                         <label class="form-label text-muted small">الاسم الكامل للمالك</label>
                         <input type="text" name="owner_name" class="form-control" required>
                     </div>
 
-                    <!-- التحديث الجديد: الفئة مع زر الإضافة -->
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">فئة النشاط (تصنيف المورد)</label>
+                        <label class="form-label text-muted small">فئة النشاط</label>
                         <div class="input-group">
-                            <select name="category" id="categorySelect" class="form-select" required>
+                            <select name="category" id="categorySelect" class="form-select">
                                 <option value="ملابس">ملابس</option>
                                 <option value="إلكترونيات">إلكترونيات</option>
-                                <option value="مواد غذائية">مواد غذائية</option>
                             </select>
                             <button type="button" class="btn btn-outline-secondary" onclick="addNewCategory()">+</button>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small">هاتف المالك</label>
-                        <input type="tel" name="owner_phone" class="form-control" required>
-                    </div>
-                    
-                    <div class="mb-3">
                         <label class="form-label text-muted small">المحافظة</label>
-                        <select name="province" id="provinceSelect" class="form-select" required>
-                            <option value="">اختر المحافظة...</option>
+                        <select name="province" class="form-select">
                             <option value="الحديدة">الحديدة</option>
                             <option value="عدن">عدن</option>
                         </select>
@@ -105,29 +68,16 @@
                 </div>
             </div>
 
-            <!-- العمود الثالث: الربط المالي -->
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm p-4 h-100">
-                    <h5 class="fw-bold mb-4"><i class="fas fa-wallet" style="color: var(--royal-purple);"></i> الربط المالي</h5>
+                    <h5 class="fw-bold mb-4"><i class="fas fa-wallet text-primary"></i> الربط المالي</h5>
                     
                     <div class="mb-3">
-                        <label class="form-label text-muted small">نوع الحساب المالي</label>
-                        <select name="fin_type" id="finTypeSelect" class="form-select" required>
-                            <option value="">اختر...</option>
-                            <option value="بنوك">بنوك</option>
-                            <option value="شركات صرافة">شركات صرافة</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-4">
                         <label class="form-label text-muted small">رقم الحساب (IBAN)</label>
-                        <div class="input-group">
-                            <input type="text" name="bank_acc" id="input-bank-acc" class="form-control" required>
-                            <span class="input-group-text bg-white" id="status-bank-acc"><i class="fas fa-minus text-muted"></i></span>
-                        </div>
+                        <input type="text" name="bank_acc" class="form-control" required>
                     </div>
 
-                    <button type="submit" id="submitBtn" class="btn btn-lg w-100 text-white mt-auto" style="background: var(--royal-purple);">اعتماد المورد الآن</button>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 mt-auto">اعتماد المورد</button>
                 </div>
             </div>
         </div>
@@ -135,22 +85,45 @@
 </div>
 
 <script>
-    // دالة إضافة فئة جديدة ديناميكياً
+    // جلب المعرفات التلقائية عند التحميل
+    window.onload = function() {
+        fetch("{{ url_for('add_supplier.check_duplicate') }}?type=get_next_sequence")
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('hidden-sovereign-id').value = data.next_sequence;
+            document.getElementById('hidden-wallet-code').value = data.next_wallet;
+        });
+    };
+
     function addNewCategory() {
         const newCat = prompt("أدخل اسم الفئة الجديدة:");
-        if (newCat && newCat.trim() !== "") {
+        if (newCat) {
             const select = document.getElementById('categorySelect');
             const option = document.createElement('option');
             option.value = newCat;
             option.textContent = newCat;
-            option.selected = true;
             select.appendChild(option);
-            
-            // هنا يمكنك إضافة كود fetch لإرسال الفئة الجديدة للسيرفر لحفظها في قاعدة البيانات (اختياري)
         }
     }
 
-    // التحقق اللحظي (نفس المنطق السابق مع إضافة التوسعة)
-    // ... (باقي كود الجافاسكريبت الخاص بالتحقق والربط المالي يعمل كما هو)
+    // معالجة الإرسال عبر AJAX لمنع إعادة تحميل الصفحة
+    document.getElementById('addSupplierForm').onsubmit = function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch("{{ url_for('add_supplier.add_supplier_submit') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert("خطأ: " + data.message);
+            }
+        });
+    };
 </script>
 {% endblock %}
