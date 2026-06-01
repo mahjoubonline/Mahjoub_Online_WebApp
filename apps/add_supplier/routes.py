@@ -1,66 +1,84 @@
 # coding: utf-8
-from flask import Blueprint, request, jsonify, render_template
-from apps.extensions import db
-from apps.models.supplier import Supplier
-from apps.utils.security import AESCipher
 import os
+from apps.extensions import db
+from datetime import datetime
+from apps.utils.security import AESCipher
 
-# تعريف الـ Blueprint
-add_supplier = Blueprint('add_supplier', __name__)
-
-# تهيئة المشفر بنفس المفتاح الموجود في الموديل
+# تهيئة مشفر البيانات
 cipher = AESCipher(os.getenv('ENCRYPTION_KEY', 'your-32-byte-key-here-must-be-secure'))
 
-@add_supplier.route('/add', methods=['GET', 'POST'])
-def add_supplier_submit():
-    if request.method == 'GET':
-        return render_template('add_supplier.html')
+class Supplier(db.Model):
+    __tablename__ = 'suppliers'
+    
+    # الأعمدة الأساسية
+    id = db.Column(db.Integer, primary_key=True)
+    sovereign_id = db.Column('sovereign_id', db.String(50), unique=True, nullable=False, index=True) 
+    wallet_code = db.Column('wallet_code', db.String(50), unique=True, nullable=False)
+    
+    # الحقول المشفرة (مربوطة بالأسماء الحقيقية في قاعدة البيانات)
+    owner_name_enc = db.Column('owner_name', db.String(255), nullable=False)
+    owner_phone_enc = db.Column('owner_phone', db.String(255), nullable=False)
+    trade_name_enc = db.Column('trade_name', db.String(255), nullable=False)
+    shop_phone_enc = db.Column('shop_phone', db.String(255), nullable=False)
+    bank_acc_enc = db.Column('bank_acc', db.String(255), nullable=False)
+    
+    # حقول إضافية
+    category = db.Column('category', db.String(50), default='عام') 
+    behavior_score = db.Column('behavior_score', db.Float, default=100.0)
+    total_transactions = db.Column('total_transactions', db.Integer, default=0)
+    
+    # الحقول الإدارية
+    username = db.Column('username', db.String(80), unique=True, nullable=False)
+    password_hash = db.Column('password_hash', db.String(255), nullable=False)
+    identity_type = db.Column('identity_type', db.String(50), nullable=False)   
+    identity_number = db.Column('identity_number', db.String(50), unique=True, nullable=False)  
+    identity_image = db.Column('identity_image', db.String(255))   
+    activity_type = db.Column('activity_type', db.String(50))      
+    province = db.Column('province', db.String(50))
+    district = db.Column('district', db.String(50))
+    address_detail = db.Column('address_detail', db.Text) 
+    fin_type = db.Column('fin_type', db.String(20))         
+    bank_name = db.Column('bank_name', db.String(100))        
+    status = db.Column('status', db.String(20), nullable=False, default='pending') 
+    rank_grade = db.Column('rank_grade', db.String(20), nullable=False, default='ريادي') 
+    registration_source = db.Column('registration_source', db.String(30), nullable=False, default='الموقع الخارجي') 
+    created_at = db.Column('created_at', db.DateTime, default=datetime.utcnow) 
+    updated_at = db.Column('updated_at', db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # استقبال البيانات المشفرة بصيغة JSON
-    data = request.get_json()
+    # --- خصائص التشفير ---
+    @property
+    def owner_name(self): return cipher.decrypt(self.owner_name_enc)
+    @owner_name.setter
+    def owner_name(self, value): self.owner_name_enc = cipher.encrypt(str(value))
 
-    try:
-        # إنشاء المورد الجديد
-        # الموديل سيقوم بفك التشفير عند الاسترجاع (Properties) 
-        # وإعادة التشفير عند الحفظ (Setters) تلقائياً
-        new_supplier = Supplier(
-            sovereign_id = f"SUP-MHA_{os.urandom(4).hex()}", # توليد معرف فريد
-            wallet_code = os.urandom(8).hex(),
-            owner_name = data['owner_name'],
-            owner_phone = data['phone'],
-            trade_name = data['trade_name'],
-            shop_phone = data['phone'], # نفترض مطابقة الهاتف للآن
-            bank_acc = data['bank_acc'],
-            username = data['username'],
-            password_hash = data['password'], # يفضل عمل Hashing هنا
-            identity_type = 'بطاقة شخصية',
-            identity_number = data['identity_number'],
-            activity_type = data['activity_type'],
-            bank_name = data['bank_name'],
-            province = data.get('province'),
-            district = data.get('district'),
-            address_detail = data.get('address_detail')
-        )
-        
-        db.session.add(new_supplier)
+    @property
+    def owner_phone(self): return cipher.decrypt(self.owner_phone_enc)
+    @owner_phone.setter
+    def owner_phone(self, value): self.owner_phone_enc = cipher.encrypt(str(value))
+
+    @property
+    def trade_name(self): return cipher.decrypt(self.trade_name_enc)
+    @trade_name.setter
+    def trade_name(self, value): self.trade_name_enc = cipher.encrypt(str(value))
+
+    @property
+    def shop_phone(self): return cipher.decrypt(self.shop_phone_enc)
+    @shop_phone.setter
+    def shop_phone(self, value): self.shop_phone_enc = cipher.encrypt(str(value))
+
+    @property
+    def bank_acc(self): return cipher.decrypt(self.bank_acc_enc)
+    @bank_acc.setter
+    def bank_acc(self, value): self.bank_acc_enc = cipher.encrypt(str(value))
+
+    # الدوال المساعدة
+    def learn_from_interaction(self, is_positive):
+        self.behavior_score += (0.5 if is_positive else -2.0)
+        self.total_transactions += 1
         db.session.commit()
-        
-        return jsonify({"status": "success", "message": "تمت أرشفة المورد بنجاح في سجلات محجوب أونلاين"})
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 400
-
-# مسار الاستدعاء اللحظي للتحقق من عدم تكرار البيانات
-@add_supplier.route('/api/check_unique', methods=['GET'])
-def check_unique():
-    field = request.args.get('field')
-    value = request.args.get('value')
-    
-    if not field or not value:
-        return jsonify({"exists": False})
-
-    # التحقق في قاعدة البيانات
-    exists = Supplier.query.filter(getattr(Supplier, field) == value).first() is not None
-    
-    return jsonify({"exists": exists})
+    @property
+    def balance(self):
+        from apps.models.statement_db import SupplierStatement
+        last = SupplierStatement.query.filter_by(supplier_id=self.id).order_by(SupplierStatement.created_at.desc()).first()
+        return last.running_balance if last else 0.0
