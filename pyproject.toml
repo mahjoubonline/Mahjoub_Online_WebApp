@@ -1,8 +1,11 @@
 [project]
 name = "mahjoub-online"
 version = "0.1.0"
-description = "Mahjoub Online Web Application"
 dependencies = []
 
 [tool.vercel]
-entrypoint = "run.py"
+entrypoint = "api/index.py"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
