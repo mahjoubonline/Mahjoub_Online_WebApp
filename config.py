@@ -21,6 +21,14 @@ class Config:
     # إيقاف تتبع التعديلات لرفع الأداء
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # 🌐 إعدادات النطاقات الفرعية (Subdomains) للمنصة
-    # نقوم بجلب النطاق الرئيسي من متغيرات البيئة في Vercel أو استخدام النطاق الافتراضي
-    SERVER_NAME = os.environ.get('SERVER_NAME', 'mahjoub.online')
+    # 🌐 هندسة النطاقات الذكية لمنع تعارض الـ 404 على سيرفرات Vercel
+    # إذا كان التطبيق يعمل على سيرفر Vercel الفعلي، نقوم بضبط SERVER_NAME
+    # ولكن إذا طلب المستخدم رابط الفحص الافتراضي لـ Vercel، يتم تصفير الإعداد تلقائياً لتفادي الانهيار
+    VERCEL_URL = os.environ.get('VERCEL_URL', '')
+    
+    if VERCEL_URL and not VERCEL_URL.startswith('mahjoub.online'):
+        # إذا كان الرابط هو الرابط الافتراضي لـ Vercel المخصص للفحص، نلغي قيود الحظر ليعمل معك فوراً
+        SERVER_NAME = None
+    else:
+        # عند الدخول من النطاق الرسمي المستقل لـ "سوقك الذكي"
+        SERVER_NAME = os.environ.get('SERVER_NAME', 'mahjoub.online')
