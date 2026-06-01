@@ -16,19 +16,4 @@ class Config:
         db_url = db_url.replace("postgres://", "postgresql://", 1)
         
     # 3. إسناد الرابط المصحح
-    SQLALCHEMY_DATABASE_URI = db_url or 'sqlite:///mahjoub_fallback.db'
-    
-    # إيقاف تتبع التعديلات لرفع الأداء
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
-    # 🌐 هندسة النطاقات الذكية لمنع تعارض الـ 404 على سيرفرات Vercel
-    # إذا كان التطبيق يعمل على سيرفر Vercel الفعلي، نقوم بضبط SERVER_NAME
-    # ولكن إذا طلب المستخدم رابط الفحص الافتراضي لـ Vercel، يتم تصفير الإعداد تلقائياً لتفادي الانهيار
-    VERCEL_URL = os.environ.get('VERCEL_URL', '')
-    
-    if VERCEL_URL and not VERCEL_URL.startswith('mahjoub.online'):
-        # إذا كان الرابط هو الرابط الافتراضي لـ Vercel المخصص للفحص، نلغي قيود الحظر ليعمل معك فوراً
-        SERVER_NAME = None
-    else:
-        # عند الدخول من النطاق الرسمي المستقل لـ "سوقك الذكي"
-        SERVER_NAME = os.environ.get('SERVER_NAME', 'mahjoub.online')
+    SQLALCHEMY_DATABASE_URI = db_url or 'sqlite:///mahjoub_
