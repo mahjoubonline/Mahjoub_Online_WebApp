@@ -10,7 +10,7 @@ def create_app():
     # 🛡️ إعداد ProxyFix (ضروري للعمل خلف بروكسي Render)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
-    # استيراد db و login_manager داخل الدالة لحل مشاكل التداخل
+    # استيراد db و login_manager داخل الدالة
     from apps.extensions import db, login_manager
     
     # تهيئة الإضافات
@@ -19,16 +19,17 @@ def create_app():
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # استيراد النماذج (Models) لضمان تسجيلها في SQLAlchemy
-        from apps.models.admin_db import AdminUser
-        from apps.models.supplier_db import Supplier
-        from apps.models.wallet_db import SupplierWallet, WalletTransaction
-        from apps.models.settlements_db import AdminSettlement
-        from apps.models.statement_db import SupplierStatement 
+        # ✅ التعديل هنا: استيراد النماذج من حزمة models التي تجمعهم جميعاً
+        from apps.models import (
+            AdminUser, 
+            Supplier, 
+            Wallet, 
+            WalletTransaction, 
+            AdminSettlement, 
+            SupplierStatement
+        )
         
-        # ⚡ ملاحظة: تم إيقاف db.create_all() التلقائي لتجنب مشاكل الـ Timeout
-        # الاعتماد الآن سيكون على أمر flask db upgrade في Render
-        print("⚡ التطبيق جاهز للعمل مع Flask-Migrate")
+        print("⚡ تم تحميل النماذج بنجاح من apps.models")
 
         @login_manager.user_loader
         def load_user(user_id):
