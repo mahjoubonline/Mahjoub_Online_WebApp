@@ -2,13 +2,17 @@
 # 📂 apps/models/wallet_db.py
 import os
 from apps.extensions import db
-from apps.utils import AESCipher  # ✅ تم التعديل للاستيراد من المجلد مباشرة
+from apps.utils import AESCipher  # ✅ تم تعديل هذا السطر ليتوافق مع الحزمة الرئيسية
 
-# جلب المفتاح من البيئة
-encryption_key = os.getenv('ENCRYPTION_KEY', '00000000000000000000000000000000')
+# جلب المفتاح من البيئة (تأكد من إضافته في إعدادات Render)
+encryption_key = os.getenv('ENCRYPTION_KEY')
+
+if not encryption_key:
+    print("⚠️ تحذير: لم يتم العثور على ENCRYPTION_KEY في البيئة! تم استخدام مفتاح افتراضي.")
+    encryption_key = '00000000000000000000000000000000'
+
 cipher = AESCipher(encryption_key)
 
-# بقية الكود كما هو...
 class Wallet(db.Model):
     __tablename__ = 'supplier_wallets'
     __table_args__ = {'extend_existing': True}
@@ -17,7 +21,7 @@ class Wallet(db.Model):
     supplier_id = db.Column(db.String(50), db.ForeignKey('suppliers.sovereign_id'), nullable=False, unique=True)
     wallet_code = db.Column(db.String(50), nullable=False, unique=True)
     
-    # حقول مشفرة - تم ضبط الـ default ليعتمد على التشفير مباشرة
+    # حقول مشفرة
     _yer_total = db.Column(db.String(255), default=lambda: cipher.encrypt("0.0"))
     _sar_total = db.Column(db.String(255), default=lambda: cipher.encrypt("0.0"))
     _usd_total = db.Column(db.String(255), default=lambda: cipher.encrypt("0.0"))
