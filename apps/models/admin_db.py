@@ -1,13 +1,8 @@
 # coding: utf-8
 # 📂 apps/models/admin_db.py
-import os
 from apps.extensions import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from apps.utils import AESCipher
-
-encryption_key = os.getenv('ENCRYPTION_KEY', '00000000000000000000000000000000')
-cipher = AESCipher(encryption_key)
 
 class AdminUser(db.Model, UserMixin):
     __tablename__ = 'admin_users'
