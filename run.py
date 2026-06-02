@@ -1,8 +1,10 @@
+# run.py
+import os
 from apps import create_app
 
-# هذا هو المتغير 'app' الذي يبحث عنه Vercel
+# إنشاء التطبيق باستخدام المصنع (Factory Pattern)
 app = create_app()
 
 if __name__ == "__main__":
-    # تشغيل التطبيق محلياً
-    app.run(debug=True)
+    # تشغيل التطبيق (في الإنتاج Gunicorn يتجاهل هذا الجزء)
+    app.run()
