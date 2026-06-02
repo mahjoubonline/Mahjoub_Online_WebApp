@@ -10,7 +10,7 @@ def create_app():
     # 🛡️ إعداد ProxyFix
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
-    # استيراد db هنا لضمان رؤيته داخل الدالة
+    # استيراد db و login_manager داخل الدالة مباشرة لحل مشكلة UnboundLocalError
     from apps.extensions import db, login_manager
     
     # تهيئة الإضافات
@@ -19,18 +19,18 @@ def create_app():
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # استيراد النماذج (Models)
+        # استيراد النماذج (Models) لضمان تسجيلها في SQLAlchemy
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
         from apps.models.settlements_db import AdminSettlement
         from apps.models.statement_db import SupplierStatement 
         
-        # إنشاء الجداول
+        # ⚡ إنشاء الجداول (سياق آمن)
         try:
             db.create_all()
         except Exception as e:
-            print(f"⚠️ خطأ في إنشاء قاعدة البيانات: {e}")
+            print(f"⚠️ خطأ في تهيئة قاعدة البيانات: {e}")
 
         @login_manager.user_loader
         def load_user(user_id):
@@ -43,6 +43,7 @@ def create_app():
             except Exception as e:
                 print(f"⚠️ فشل تسجيل {blueprint.name}: {e}")
 
+        # تسجيل المسارات
         from apps.auth_portal.routes import auth_blueprint
         safe_register(auth_blueprint, url_prefix='')
 
