@@ -2,7 +2,7 @@
 import os
 from apps.extensions import db
 
-# 1️⃣ نضع الكلاسات في الأعلى تماماً ليتعرف عليها بايثون فوراً في الذاكرة بمجرد دخول الملف
+# 🟢 الكلاسات في الأعلى تماماً ليتعرف عليها بايثون فوراً
 class Wallet(db.Model):
     __tablename__ = 'supplier_wallets'
     __table_args__ = {'extend_existing': True}
@@ -11,7 +11,6 @@ class Wallet(db.Model):
     supplier_id = db.Column(db.String(50), db.ForeignKey('suppliers.sovereign_id'), nullable=False, unique=True)
     wallet_code = db.Column(db.String(50), nullable=False, unique=True)
     
-    # حقول مشفرة (ستبحث عن cipher في نطاق الملف عند استدعائها لاحقاً)
     _yer_total = db.Column(db.String(255), default=lambda: cipher.encrypt("0.0"))
     _sar_total = db.Column(db.String(255), default=lambda: cipher.encrypt("0.0"))
     _usd_total = db.Column(db.String(255), default=lambda: cipher.encrypt("0.0"))
@@ -94,7 +93,7 @@ class WalletTransaction(db.Model):
     def notes(self, val): self._notes = cipher.encrypt(str(val))
 
 
-# 2️⃣ نضع الاستيراد وإنشاء كائن التشفير في أسفل الملف تماماً بعد أن يكون كلاس Wallet قد تم بناؤه بنجاح!
+# 🔵 الاستيراد وإنشاء الكائن ننزلهما في أسفل الملف تماماً
 from apps.utils import AESCipher
 
 encryption_key = os.getenv('ENCRYPTION_KEY')
