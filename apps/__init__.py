@@ -1,4 +1,6 @@
+# coding: utf-8
 # 🏗️ مصنع التطبيق المركزي (Application Factory) - منصة محجوب أونلاين 2026
+
 from flask import Flask, redirect
 from config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -14,7 +16,9 @@ def create_app():
     # تهيئة الإضافات والمكتبات المركزية
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'auth_blueprint.login' 
+    
+    # ⚡ تم الإصلاح أمنياً: ربط مسار الحماية بالمسمى النصي الحقيقي للبلوبرينت 'auth_portal' لمنع الـ BuildError
+    login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
         # دالة تسجيل آمنة لضمان استقرار المحرك وعدم انهيار السيرفر بالكامل
@@ -26,7 +30,7 @@ def create_app():
                 print(f"⚠️ تحذير: فشل تسجيل {blueprint.name}: {e}")
 
         try:
-            # 1. استيراد موديلات قاعدة البيانات لتهيئة الهيكل
+            # 1. استيراد موديلات قاعدة البيانات لتهيئة الهيكل حركياً
             from apps.models.admin_db import AdminUser
             from apps.models.supplier_db import Supplier
             from apps.models.wallet_db import SupplierWallet, WalletTransaction
@@ -45,7 +49,9 @@ def create_app():
 
             # 2. تسجيل الـ Blueprints والوحدات الوظيفية للنظام
             from apps.auth_portal.routes import auth_blueprint
-            safe_register(auth_blueprint, url_prefix='/auth')
+            
+            # ⚡ تم التعديل السيادي: جعل البادئة فارغة ليعمل رابط تسجيل الدخول مباشرة على النطاق الفرعي /login
+            safe_register(auth_blueprint, url_prefix='')
 
             from apps.add_supplier.routes import add_supplier as add_supplier_bp
             safe_register(add_supplier_bp, url_prefix='/suppliers')
@@ -62,10 +68,10 @@ def create_app():
             
             print("🚀 محرك المنصة المركزي يعمل بكفاءة واستقرار عالي.")
 
-            # 🔄 التوجيه الديناميكي الرئيسي (تحويل الزوار تلقائياً لبوابة تسجيل الدخول)
+            # 🔄 التوجيه الديناميكي الرئيسي المباشر لتغطية جذر النطاق الفرعي وتحويله فوراً لصفحة الدخول
             @app.route('/')
             def root_redirect():
-                return redirect('/auth/login')
+                return redirect('/login')
 
         except Exception as e:
             print(f"❌ خطأ جسيم في تهيئة وهندسة التطبيق: {e}")
