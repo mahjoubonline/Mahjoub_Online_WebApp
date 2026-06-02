@@ -1,5 +1,33 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع الرئيسي للتطبيق (Application Factory)
+# 📂 apps/__init__.py - المصنع الرئيسي للتطبيق (Application Factory) مع كود الغرس المؤقت
+
+# 🚨 [بدء كود الغرس المؤقت] لتنظيف الكاش وإجبار السيرفر على التحديث
+import os
+import shutil
+
+print("🧹 [Factory - Clean] جاري تنظيف ملفات الـ Cache الدائرية لمنع الـ ImportError القديم...")
+for root, dirs, files in os.walk('.'):
+    for d in dirs:
+        if d == '__pycache__':
+            path = os.path.join(root, d)
+            try:
+                shutil.rmtree(path)
+                print(f"✅ تم سحق الكاش بنجاح في المسار: {path}")
+            except Exception as e:
+                print(f"❌ تعذر حذف كاش {path}: {e}")
+
+print("🔍 [Factory - Inspect] التحقق من ترتيب أسطر ملف المحفظة الفعلي في السيرفر:")
+try:
+    with open("apps/models/wallet_db.py", "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        print("============== بداية محتوى ملف wallet_db.py حالياً ==============")
+        for line in lines[:12]:  # طباعة أول 12 سطر للتأكد من موقع الكلاس
+            print(line.rstrip())
+        print("================================================================")
+except Exception as e:
+    print(f"❌ فشل فحص ملف المحفظة: {e}")
+# 🚨 [نهاية كود الغرس المؤقت]
+# ----------------------------------------------------------------------------------
 
 from flask import Flask, redirect
 from config import Config
@@ -22,7 +50,6 @@ def create_app():
 
     with app.app_context():
         # ✅ استيراد النماذج (Models) بالأسماء الصحيحة والمطابقة للحزمة
-        # تأكد أن apps/models/__init__.py يحتوي على هذه الأسماء في __all__
         from apps.models import (
             AdminUser, 
             Supplier, 
