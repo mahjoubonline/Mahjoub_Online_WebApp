@@ -7,10 +7,10 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # 🛡️ إعداد ProxyFix
+    # 🛡️ إعداد ProxyFix (ضروري للعمل خلف بروكسي Render)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
-    # استيراد db و login_manager داخل الدالة مباشرة لحل مشكلة UnboundLocalError
+    # استيراد db و login_manager داخل الدالة لحل مشاكل التداخل
     from apps.extensions import db, login_manager
     
     # تهيئة الإضافات
@@ -26,11 +26,9 @@ def create_app():
         from apps.models.settlements_db import AdminSettlement
         from apps.models.statement_db import SupplierStatement 
         
-        # ⚡ إنشاء الجداول (سياق آمن)
-        try:
-            db.create_all()
-        except Exception as e:
-            print(f"⚠️ خطأ في تهيئة قاعدة البيانات: {e}")
+        # ⚡ ملاحظة: تم إيقاف db.create_all() التلقائي لتجنب مشاكل الـ Timeout
+        # الاعتماد الآن سيكون على أمر flask db upgrade في Render
+        print("⚡ التطبيق جاهز للعمل مع Flask-Migrate")
 
         @login_manager.user_loader
         def load_user(user_id):
