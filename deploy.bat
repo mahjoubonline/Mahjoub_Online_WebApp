@@ -1,7 +1,3 @@
-@echo off
-cd /d "%~dp0"
-git add .
-git commit -m "تحديث ملفات المنصة"
+git add requirements.txt
+git commit -m "Fix: Add psycopg2 to requirements"
 git push
-echo تم الرفع بنجاح!
-pause
