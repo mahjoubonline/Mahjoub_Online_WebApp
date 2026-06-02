@@ -18,8 +18,8 @@ dependencies = [
 ]
 
 [tool.vercel]
-# نقطة دخول Vercel: توجه إلى ملف run.py وتحديداً كائن التطبيق 'app'
-entrypoint = "run.py:app"
+# 🔑 تم التعديل السيادي: إزالة امتداد .py ليتوافق الملف مع آلية الاستدعاء كموديول (Module Import) في سيرفرات Vercel
+entrypoint = "run:app"
 
 [tool.setuptools]
 # حزمة التطبيق الرئيسية التي تحتوي على المنطق البرمجي
