@@ -22,9 +22,9 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # 5. 💎 حوكمة وإدارة الاتصالات لبيئة Render المستقرة
-    # تم ضبطها للعمل كخادم دائم وليس كـ Serverless Function
+    # تم ضبطها للعمل كخادم دائم لضمان استمرارية الاتصال بالقاعدة
     SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 15,             # زيادة الحجم لدعم العمليات المتزامنة للمصنع
+        "pool_size": 15,             # دعم العمليات المتزامنة
         "pool_timeout": 30,          # انتظار أطول قبل فشل الاتصال
         "pool_recycle": 1800,        # إعادة تدوير الاتصال كل 30 دقيقة
         "pool_pre_ping": True        # فحص سلامة الاتصال قبل الاستعلام
