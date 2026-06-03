@@ -2,7 +2,7 @@
 # 📊 لوحة التحكم الإدارية - منصة محجوب أونلاين 2026
 
 from flask import Blueprint, render_template
-from flask_login import login_required
+from flask_login import login_required, current_user
 from apps.extensions import db 
 from sqlalchemy import func
 
@@ -11,7 +11,7 @@ admin_dashboard = Blueprint(
     'admin_dashboard', 
     __name__, 
     template_folder='templates',
-    url_prefix='/admin' # إضافة بادئة للمسارات لزيادة التنظيم
+    url_prefix='/admin'
 )
 
 @admin_dashboard.route('/dashboard', methods=['GET'])
