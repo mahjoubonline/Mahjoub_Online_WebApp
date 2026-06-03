@@ -18,11 +18,11 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     
-    # تصحيح الاسم: يجب أن يطابق الاسم المعرف داخل Blueprint في auth_portal
+    # تصحيح مسار الدخول الإداري
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # 1. تهيئة قاعدة البيانات
+        # 1. تهيئة قاعدة البيانات مع معالجة الأخطاء
         try:
             from apps.models.admin_db import AdminUser
             from apps.models.supplier_db import Supplier
@@ -30,14 +30,16 @@ def create_app():
             from apps.models.settlements_db import AdminSettlement
             from apps.models.statement_db import SupplierStatement
             db.create_all()
-            print("⚡ [Database] تم بناء ومزامنة الجداول بنجاح.")
         except Exception as e:
             print(f"❌ [Database Error] فشل تهيئة قاعدة البيانات: {e}")
 
         # 2. تهيئة لودر المستخدم
         @login_manager.user_loader
         def load_user(user_id):
-            return AdminUser.query.get(int(user_id)) if user_id else None
+            try:
+                return AdminUser.query.get(int(user_id))
+            except:
+                return None
 
         # 3. تسجيل المسارات (Blueprints)
         blueprints = [
@@ -54,20 +56,19 @@ def create_app():
                 module = __import__(module_path, fromlist=[bp_name])
                 blueprint = getattr(module, bp_name)
                 app.register_blueprint(blueprint, url_prefix=prefix)
-                print(f"✅ تم تسجيل {bp_name} بنجاح.")
             except Exception as e:
                 print(f"⚠️ [Warning] فشل تسجيل {bp_name}: {e}")
         
-        # 4. توجيه المسارات الأمنية
+        # 4. توجيه المسارات الأمنية (إعادة توجيه الجذر للمسار السري)
         @app.route('/')
         def root_redirect():
-            return redirect(url_for('auth_portal.login'))
+            # سحب المسار السري من المتغيرات البيئية أو استخدام الافتراضي
+            secret_path = os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x')
+            return redirect(secret_path)
 
         @app.route('/robots.txt')
         def robots_txt():
-            response = app.make_response("User-agent: *\nDisallow: /")
-            response.headers["Content-Type"] = "text/plain"
-            return response
+            return "User-agent: *\nDisallow: /", 200, {'Content-Type': 'text/plain'}
 
         # 🛡️ جدار الحماية (Security Headers)
         @app.after_request
@@ -76,21 +77,13 @@ def create_app():
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
-            
-            response.headers['Content-Security-Policy'] = (
-                "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
-                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
-                "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
-                "img-src 'self' data: https:; "
-                "connect-src 'self' https://api.qumra.cloud https://graph.facebook.com;"
-            )
             return response
 
     return app
 
-# تحديد المنفذ لـ Render
+# نقطة التشغيل
+app = create_app()
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    app = create_app()
     app.run(host="0.0.0.0", port=port)
