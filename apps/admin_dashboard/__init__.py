@@ -1,3 +1,7 @@
-# مجلد حزمة لوحة التحكم المركزية
-from apps.admin_dashboard.routes import admin_dashboard
-# لا تضف استيرادات إضافية هنا إلا للضرورة القصوى
+# coding: utf-8
+# 🛡️ الحارس الأمني لمجلد الداشبورد
+
+from .routes import admin_dashboard
+
+# ملاحظة: يتم استيراد admin_dashboard من ملف routes.py
+# ليكون جاهزاً للاستخدام عند تسجيله في التطبيق الرئيسي
