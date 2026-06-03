@@ -14,7 +14,7 @@ from apps.models.admin_db import AdminUser
 SECRET_LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x')
 
 # -------------------------------------------------------------------------
-# 1. المسار السري (الدخول المباشر) - مع معالجة استثنائية لمنع الانهيار
+# 1. المسار السري (الدخول المباشر)
 # -------------------------------------------------------------------------
 @auth_portal.route(SECRET_LOGIN_PATH, methods=['GET', 'POST'])
 def login():
@@ -25,17 +25,16 @@ def login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         
-        # 🛡️ تأخير زمني لمنع القوة الغاشمة
+        # 🛡️ تأخير زمني لمنع القوة الغاشمة (Brute Force)
         time.sleep(random.uniform(0.8, 1.5))
         
         error_msg = 'بيانات الدخول غير صحيحة.'
         
         try:
-            # التحقق الآمن من المستخدم
             user = AdminUser.query.filter_by(username=username).first()
             
             if user:
-                # 🛡️ نظام القفل
+                # 🛡️ التحقق من القفل
                 if hasattr(user, 'is_locked') and user.is_locked():
                     flash('الحساب مقفل مؤقتاً.', 'danger')
                 
@@ -45,24 +44,24 @@ def login():
                         login_user(user)
                         if hasattr(user, 'reset_failed_attempts'):
                             user.reset_failed_attempts()
-                            db.session.commit() # حفظ التغييرات
+                            db.session.commit()
                         return redirect(url_for('admin_dashboard.dashboard'))
                     else:
                         flash(error_msg, 'danger')
                 else:
-                    # تسجيل فشل
+                    # تسجيل فشل المحاولة
                     if hasattr(user, 'increment_failed_attempts'):
                         user.increment_failed_attempts()
-                        db.session.commit() # حفظ التغييرات
+                        db.session.commit()
                     flash(error_msg, 'danger')
             else:
                 flash(error_msg, 'danger')
                 
         except Exception as e:
-            # هذا الجزء يحمي السيرفر من الانهيار إذا تعطلت قاعدة البيانات
             print(f"🚨 خطأ فني في بوابة الدخول: {e}")
             flash('عذراً، النظام غير متاح حالياً. يرجى المحاولة لاحقاً.', 'warning')
     
+    # تأكد أن المجلد هو 'auth' داخل مجلد templates الخاص بالـ Blueprint
     return render_template('auth/login.html')
 
 # -------------------------------------------------------------------------
@@ -70,7 +69,6 @@ def login():
 # -------------------------------------------------------------------------
 @auth_portal.route('/login', methods=['GET', 'POST'])
 def decoy_login():
-    # 🛡️ إغلاق المسار التقليدي فوراً لمنع الاستكشاف
     abort(403)
 
 # -------------------------------------------------------------------------
