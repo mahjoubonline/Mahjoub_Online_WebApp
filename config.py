@@ -36,10 +36,12 @@ class Config:
     QUMRA_API_KEY = os.environ.get('QUMRA_API_KEY')
     QUMRA_API_URL = os.environ.get('QUMRA_API_URL')
 
-    # 7. إعدادات WhatsApp Cloud API (تحديث للمعرف التجريبي المعتمد)
+    # 7. إعدادات WhatsApp Cloud API (بيانات الربط الفعلية من لوحة التحكم)
     WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '1190456080809834')
-    # ملاحظة: تأكد من تحديث هذا الرمز برمزك الخاص عند الانتقال للإنتاج
-    WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN', 'EAAMcZAOecIhEBRoG7TsbeexoZAbZANZARhKEmIiom76iUwoUz6SAEy74Jd8ZBWJFvNZClJIi7JcfLeYHggzGpMVZA1yvNiegEVZASz6r0lgJWPM9JGk1zyHHqUECx6chagEOzeH6W4HxUThr0IT7zeFOybDzpuuD2VL3N14LRBPCUmBfbllJpDEizeNB8mgXczac9OXGadUu0zVaZBBEugHbVD0ZCQRIKzUstpT7BpSPjvmkffxmcG4AfJgBOcaOd8MUUuJTEVagPXKlwVDUqAqlZAAZA0iR2nsZD')
+    
+    # تم إدراج رمز الوصول الدائم الذي زودتني به لضمان الاستمرارية
+    WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN', 'EAAMcZAOecIhEBRsQYN0b4K9tumryxfm0thi25Xb0v1n7sEF6ZAQk8zAWBZAtLMh8T8U03PPQbZAm17hUChh2qhIDPxOOsL0ZAYuZBKy7esEp5yPZC9rc6Yp3AZBbDefmntxixSmHOxSA9DVlzD2kCvWjZCpiZCogYw29llYyACoMUXY6jawwGW1dz7BfWTBFTekw1wSe4KfhCCJkJnSnY0sB9SwG4k7UeBY8TZASI2R2Jig67eBgbCNZB85Wnazqs9HuZBZAW3wfpwlqNY0bwsZA2rAByGOAmsFJLUZD')
+    
     WHATSAPP_VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'Mahjoub_WhatsApp_Secure_2026')
 
     # 8. الحفاظ على ترميز ونقاء النصوص والبيانات باللغة العربية
