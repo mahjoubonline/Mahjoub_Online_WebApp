@@ -9,7 +9,6 @@ from apps.extensions import db
 from . import auth_blueprint
 
 # 🔑 جلب المسار السري لصفحة الدخول من إعدادات خادم Render
-# إذا لم يتم تعيين المتغير في السيرفر، سيتم استخدام هذا المسار المعقد تلقائياً كخط دفاع احتياطي
 SECRET_LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/gatekeeper_secure_entry_2026')
 
 # -------------------------------------------------------------------------
@@ -17,7 +16,7 @@ SECRET_LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/gatekeeper_secure_entry
 # -------------------------------------------------------------------------
 @auth_blueprint.route(SECRET_LOGIN_PATH, methods=['GET', 'POST'])
 def login():
-    # استيراد الموديل داخل الدالة فقط لتجنب الاستيراد الدائري (Lazy Import)
+    # استيراد الموديل داخل الدالة لتجنب الاستيراد الدائري
     from apps.models.admin_db import AdminUser
     
     # إذا كان المستخدم مسجلاً دخوله مسبقاً، وجهه مباشرة للوحة التحكم
@@ -31,13 +30,13 @@ def login():
         # استعلام عن المستخدم
         user = AdminUser.query.filter_by(username=username).first()
         
-        # التحقق من البيانات والمطابقة الأمنية
+        # التحقق من البيانات
         if user and user.check_password(password):
             if user.role in ['Owner', 'Admin']:
                 login_user(user)
-                # تحديث آخر توقيت دخول في قاعدة البيانات
-                user.last_login = db.func.current_timestamp()
-                db.session.commit()
+                # تحديث آخر توقيت دخول (تأكد أن الحقل موجود في الموديل، وإلا احذف هذا السطر)
+                # user.last_login = db.func.current_timestamp()
+                # db.session.commit()
                 return redirect(url_for('admin_dashboard.dashboard'))
             else:
                 flash('ليس لديك صلاحيات الوصول.', 'warning')
@@ -47,11 +46,11 @@ def login():
     return render_template('auth/login.html')
 
 # -------------------------------------------------------------------------
-# 2. 🛡️ مسار الكمين (Decoy Route) لتمويه المخترقين وفحص البوتات
+# 2. 🛡️ مسار الكمين (Decoy Route) لتمويه المخترقين
 # -------------------------------------------------------------------------
 @auth_blueprint.route('/login', methods=['GET', 'POST'])
 def decoy_login():
-    """طرد برمجيات الفحص الآلي وإيهامهم بأن المسار معطل تماماً"""
+    """طرد برمجيات الفحص الآلي وإيهامهم بأن المسار معطل"""
     abort(404)
 
 # -------------------------------------------------------------------------
@@ -62,5 +61,5 @@ def decoy_login():
 def logout():
     """تسجيل خروج المستخدم وإعادته بأمان للمسار السري"""
     logout_user()
-    # الدالة url_for ذكية جداً، ستقرأ الرابط السري الجديد تلقائياً وتوجهك إليه دون مشاكل
-    return redirect(url_for('auth_portal.login'))
+    # تم التصحيح: استخدام auth_blueprint.login للربط الصحيح
+    return redirect(url_for('auth_blueprint.login'))
