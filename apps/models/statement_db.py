@@ -1,6 +1,8 @@
 # coding: utf-8
+# 📂 apps/models/statement_db.py - نموذج القيود المحاسبية (مُحصن)
+
 from apps.extensions import db
-from apps.utils.security import AESCipher # استيراد الكلاس مباشرة
+from apps.utils.security import AESCipher 
 
 class SupplierStatement(db.Model):
     """
@@ -9,8 +11,12 @@ class SupplierStatement(db.Model):
     __tablename__ = 'supplier_statements'
     
     id = db.Column(db.Integer, primary_key=True)
+    # ربط القيد بالمورد لضمان سلامة البيانات
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp(), nullable=False)
+    
+    # علاقة الربط لضمان سهولة الوصول للبيانات في الداشبورد
+    supplier = db.relationship('Supplier', backref=db.backref('statements', lazy='dynamic'))
     
     # حقول التخزين المشفر للقيم الحساسة
     _description = db.Column(db.String(500), nullable=True) 
@@ -20,7 +26,7 @@ class SupplierStatement(db.Model):
     
     currency = db.Column(db.String(10), default='USD', nullable=False)
 
-    # --- بوابات التشفير وفك التشفير (تستخدم AESCipher مباشرة) ---
+    # --- بوابات التشفير وفك التشفير ---
 
     @property
     def description(self): 
