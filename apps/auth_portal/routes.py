@@ -10,6 +10,7 @@ from apps.extensions import db
 from . import auth_blueprint
 from apps.models.admin_db import AdminUser
 
+# مسار الدخول السري (يُجلب من إعدادات البيئة)
 SECRET_LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/gatekeeper_secure_entry_2026')
 
 # -------------------------------------------------------------------------
@@ -24,7 +25,7 @@ def login():
         username = str(request.form.get('username', '')).strip()
         password = request.form.get('password', '')
         
-        # محرك أمني: تأخير زمني وهمي لمنع هجمات التخمين الآلية (Brute-force)
+        # محرك أمني: تأخير زمني وهمي لمنع هجمات التخمين الآلية
         time.sleep(random.uniform(0.6, 1.2))
         
         user = AdminUser.query.filter_by(username=username).first()
@@ -35,7 +36,7 @@ def login():
                 flash('الحساب مقفل مؤقتاً. يرجى الانتظار.', 'danger')
             elif user.role in ['Owner', 'Admin']:
                 session['pending_user_id'] = user.id
-                return redirect(url_for('auth_portal.verify_otp'))
+                return redirect(url_for('auth_blueprint.verify_otp'))
             else:
                 flash(error_msg, 'danger')
         else:
@@ -52,7 +53,7 @@ def login():
 def verify_otp():
     user_id = session.get('pending_user_id')
     if not user_id:
-        return redirect(url_for('auth_portal.login'))
+        return redirect(url_for('auth_blueprint.login'))
     
     user = AdminUser.query.get(user_id)
     
@@ -80,9 +81,9 @@ def verify_otp():
 def resend_otp():
     user_id = session.get('pending_user_id')
     if user_id:
-        # هنا سيتم لاحقاً استدعاء خدمة الواتساب السيادية
+        # استدعاء خدمة الواتساب السيادية لاحقاً
         flash('تم إرسال كود جديد عبر واتساب.', 'info')
-    return redirect(url_for('auth_portal.verify_otp'))
+    return redirect(url_for('auth_blueprint.verify_otp'))
 
 @auth_blueprint.route('/upload-identity', methods=['GET', 'POST'])
 def upload_identity():
@@ -99,4 +100,4 @@ def decoy_login():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('auth_portal.login'))
+    return redirect(url_for('auth_blueprint.login'))
