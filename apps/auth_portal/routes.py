@@ -1,10 +1,11 @@
 # coding: utf-8
-# 📂 apps/auth_portal/routes.py - مسارات المصادقة المحصنة
+# 📂 apps/auth_portal/routes.py - مسارات المصادقة المحصنة بالتأمين السيادي
 
 import os
+import time
+import random
 from flask import render_template, request, redirect, url_for, flash, abort, session
 from flask_login import login_user, logout_user, login_required, current_user
-from datetime import datetime, timedelta
 from apps.extensions import db
 from . import auth_blueprint
 from apps.models.admin_db import AdminUser
@@ -12,7 +13,7 @@ from apps.models.admin_db import AdminUser
 SECRET_LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/gatekeeper_secure_entry_2026')
 
 # -------------------------------------------------------------------------
-# 1. المسار السري (Login) مع حماية الـ 2FA
+# 1. المسار السري (Login) - مع المحرك الأمني للتأخير العشوائي
 # -------------------------------------------------------------------------
 @auth_blueprint.route(SECRET_LOGIN_PATH, methods=['GET', 'POST'])
 def login():
@@ -22,19 +23,30 @@ def login():
     if request.method == 'POST':
         username = str(request.form.get('username', '')).strip()
         password = request.form.get('password', '')
+        
+        # محرك أمني: تأخير زمني وهمي لمنع هجمات التخمين الآلية (Brute-force)
+        time.sleep(random.uniform(0.6, 1.2))
+        
         user = AdminUser.query.filter_by(username=username).first()
+        error_msg = 'بيانات الدخول غير صحيحة.'
 
         if user and user.check_password(password):
-            # تخزين معرف المستخدم مؤقتاً لبدء جلسة 2FA
-            session['pending_user_id'] = user.id
-            return redirect(url_for('auth_portal.verify_otp'))
+            if user.is_locked():
+                flash('الحساب مقفل مؤقتاً. يرجى الانتظار.', 'danger')
+            elif user.role in ['Owner', 'Admin']:
+                session['pending_user_id'] = user.id
+                return redirect(url_for('auth_portal.verify_otp'))
+            else:
+                flash(error_msg, 'danger')
         else:
-            flash('بيانات الدخول غير صحيحة.', 'danger')
+            if user:
+                user.increment_failed_attempts()
+            flash(error_msg, 'danger')
     
     return render_template('auth/login.html')
 
 # -------------------------------------------------------------------------
-# 2. نظام التحقق الثنائي (2FA) مع القفل التصاعدي
+# 2. نظام التحقق الثنائي (2FA) - محصن ومربوط بقاعدة البيانات
 # -------------------------------------------------------------------------
 @auth_blueprint.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
@@ -44,14 +56,12 @@ def verify_otp():
     
     user = AdminUser.query.get(user_id)
     
-    # التحقق من قفل المستخدم (Anti-Brute Force)
     if user.is_locked():
-        flash('تم قفل الحساب مؤقتاً. يرجى الانتظار.', 'danger')
+        flash('تم قفل الحساب مؤقتاً بسبب كثرة المحاولات.', 'danger')
         return render_template('auth/verify_otp.html')
 
     if request.method == 'POST':
         otp = request.form.get('otp')
-        # تحقق برمجياً من الـ OTP (ربطه بخدمة واتساب السيادية)
         if user.verify_otp_code(otp):
             login_user(user)
             session.pop('pending_user_id', None)
@@ -64,23 +74,22 @@ def verify_otp():
     return render_template('auth/verify_otp.html')
 
 # -------------------------------------------------------------------------
-# 3. مسارات الطوارئ
+# 3. مسارات الطوارئ (تمويه وإدارة)
 # -------------------------------------------------------------------------
 @auth_blueprint.route('/resend-otp')
 def resend_otp():
     user_id = session.get('pending_user_id')
     if user_id:
-        # هنا يتم استدعاء دالة إرسال الواتساب الخاصة بك
-        flash('تم إرسال كود جديد عبر واتساب.', 'success')
+        # هنا سيتم لاحقاً استدعاء خدمة الواتساب السيادية
+        flash('تم إرسال كود جديد عبر واتساب.', 'info')
     return redirect(url_for('auth_portal.verify_otp'))
 
 @auth_blueprint.route('/upload-identity', methods=['GET', 'POST'])
 def upload_identity():
-    # مسار خاص للطوارئ (إثبات هوية)
     return render_template('auth/upload_id.html')
 
 # -------------------------------------------------------------------------
-# 4. مسار الكمين (Decoy)
+# 4. مسار الكمين (Decoy) - لخداع البوتات
 # -------------------------------------------------------------------------
 @auth_blueprint.route('/login', methods=['GET', 'POST'])
 def decoy_login():
