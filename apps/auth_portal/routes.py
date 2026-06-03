@@ -31,17 +31,20 @@ def login():
         user = AdminUser.query.filter_by(username=username).first()
         error_msg = 'بيانات الدخول غير صحيحة.'
 
-        if user and user.check_password(password):
+        if user:
             if user.is_locked():
                 flash('الحساب مقفل مؤقتاً. يرجى الانتظار.', 'danger')
-            elif user.role in ['Owner', 'Admin']:
-                session['pending_user_id'] = user.id
-                return redirect(url_for('auth_blueprint.verify_otp'))
+            elif user.check_password(password):
+                if user.role in ['Owner', 'Admin']:
+                    session['pending_user_id'] = user.id
+                    return redirect(url_for('auth_blueprint.verify_otp'))
+                else:
+                    flash(error_msg, 'danger')
             else:
+                user.increment_failed_attempts()
+                db.session.commit() # تأمين الحفظ لمنع الانهيار
                 flash(error_msg, 'danger')
         else:
-            if user:
-                user.increment_failed_attempts()
             flash(error_msg, 'danger')
     
     return render_template('auth/login.html')
@@ -56,6 +59,9 @@ def verify_otp():
         return redirect(url_for('auth_blueprint.login'))
     
     user = AdminUser.query.get(user_id)
+    if not user:
+        session.pop('pending_user_id', None)
+        return redirect(url_for('auth_blueprint.login'))
     
     if user.is_locked():
         flash('تم قفل الحساب مؤقتاً بسبب كثرة المحاولات.', 'danger')
@@ -67,9 +73,11 @@ def verify_otp():
             login_user(user)
             session.pop('pending_user_id', None)
             user.reset_failed_attempts()
+            db.session.commit() # تأمين الحفظ
             return redirect(url_for('admin_dashboard.dashboard'))
         else:
             user.increment_failed_attempts()
+            db.session.commit() # تأمين الحفظ
             flash('كود التحقق غير صحيح.', 'danger')
 
     return render_template('auth/verify_otp.html')
@@ -81,7 +89,6 @@ def verify_otp():
 def resend_otp():
     user_id = session.get('pending_user_id')
     if user_id:
-        # استدعاء خدمة الواتساب السيادية لاحقاً
         flash('تم إرسال كود جديد عبر واتساب.', 'info')
     return redirect(url_for('auth_blueprint.verify_otp'))
 
