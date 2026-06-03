@@ -1,7 +1,9 @@
 # coding: utf-8
+# 📂 apps/models/settlements_db.py - سجل التسويات المالية للموردين (مُحصن)
+
 import hashlib
 from apps.extensions import db
-from apps.utils.security import AESCipher # استيراد الكلاس مباشرة
+from apps.utils.security import AESCipher 
 
 class AdminSettlement(db.Model):
     """ نموذج تسجيل عمليات التسوية المالية للموردين """
@@ -11,12 +13,15 @@ class AdminSettlement(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, index=True)
     
+    # علاقة الربط لضمان سهولة الاستعلام عن تسويات المورد
+    supplier = db.relationship('Supplier', backref=db.backref('settlements', lazy='dynamic'))
+    
     # حقول التخزين المشفرة
     _amount = db.Column('amount_enc', db.String(255), nullable=False)
     _reference_number = db.Column('reference_number_enc', db.String(255), nullable=True)
     _notes = db.Column('notes_enc', db.Text, nullable=True)
     
-    # الفهرس الأعمى للبحث
+    # الفهرس الأعمى للبحث (Blind Index)
     reference_hash = db.Column('reference_hash', db.String(64), unique=True, nullable=True, index=True)
     
     currency = db.Column(db.String(10), default='USD', nullable=False)
