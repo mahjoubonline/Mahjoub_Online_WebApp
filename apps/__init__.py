@@ -1,6 +1,7 @@
 # coding: utf-8
 # 📂 apps/__init__.py - المصنع الرئيسي المحمي والمحصن للتطبيق
 
+import os
 from flask import Flask, redirect, url_for
 from config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -17,8 +18,8 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     
-    # تم التصحيح: استخدام الاسم المسجل في الـ blueprints
-    login_manager.login_view = 'auth_blueprint.login' 
+    # تصحيح الاسم: يجب أن يطابق الاسم المعرف داخل Blueprint في auth_portal
+    login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
         # 1. تهيئة قاعدة البيانات
@@ -40,7 +41,7 @@ def create_app():
 
         # 3. تسجيل المسارات (Blueprints)
         blueprints = [
-            ('apps.auth_portal.routes', 'auth_blueprint', ''),
+            ('apps.auth_portal.routes', 'auth_portal', ''), 
             ('apps.add_supplier.routes', 'add_supplier', '/suppliers'),
             ('apps.financial_ops.routes', 'financial_blueprint', '/financial_ops'),
             ('apps.statement.routes', 'statement_blueprint', '/statement'),
@@ -57,11 +58,10 @@ def create_app():
             except Exception as e:
                 print(f"⚠️ [Warning] فشل تسجيل {bp_name}: {e}")
         
-        # 4. توجيه المسارات الأمنية (تم التصحيح ليتوافق مع auth_blueprint)
+        # 4. توجيه المسارات الأمنية
         @app.route('/')
         def root_redirect():
-            # التوجيه الآن يستخدم الاسم الصحيح المسجل في القائمة أعلاه
-            return redirect(url_for('auth_blueprint.login'))
+            return redirect(url_for('auth_portal.login'))
 
         @app.route('/robots.txt')
         def robots_txt():
@@ -85,10 +85,12 @@ def create_app():
                 "img-src 'self' data: https:; "
                 "connect-src 'self' https://api.qumra.cloud https://graph.facebook.com;"
             )
-            
-            response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-            response.headers['Permissions-Policy'] = 'geolocation=(), camera=(), microphone=(), payment=()'
-            
             return response
 
     return app
+
+# تحديد المنفذ لـ Render
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app = create_app()
+    app.run(host="0.0.0.0", port=port)
