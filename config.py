@@ -5,15 +5,18 @@ import os
 
 class Config:
     # 🛡️ مفتاح الأمان السيادي للمنصة (يُجلب من متغيرات البيئة في Render)
-    # ملاحظة: في الإنتاج، تأكد من ضبط SECRET_KEY قوي في إعدادات Render لضمان أمن الجلسات
     SECRET_KEY = os.environ.get('SECRET_KEY', 'SOVEREIGN_KEY_2026')
     
-    # 1. جلب رابط قاعدة البيانات السحابية (Supabase / Postgres)
+    # 1. جلب رابط قاعدة البيانات السحابية (Neon / Postgres)
     _db_url = os.environ.get('DATABASE_URL')
     
-    # 2. ⚡ إصلاح بادئة الرابط تلقائياً لتتوافق مع معايير SQLAlchemy الحديثة في Render
-    if _db_url and _db_url.startswith("postgres://"):
-        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+    # 2. ⚡ إصلاح بادئة الرابط تلقائياً لتتوافق مع معايير SQLAlchemy الحديثة ومحرك Psycopg2
+    # هذا التعديل يضمن قبول الرابط سواءً بدأ بـ postgres أو postgresql وتحويله للمحرك الآمن فوراً
+    if _db_url:
+        if _db_url.startswith("postgres://"):
+            _db_url = _db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif _db_url.startswith("postgresql://"):
+            _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
         
     # 3. إسناد الرابط المصحح أو الاعتماد على SQLite كخيار احتياطي للمطور محلياً
     SQLALCHEMY_DATABASE_URI = _db_url or 'sqlite:///mahjoub_online.db'
@@ -22,7 +25,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # 5. 💎 حوكمة وإدارة الاتصالات لبيئة Render المستقرة
-    # تم ضبط الخواص لضمان استمرارية الاتصال وتفادي أخطاء المهلة (Timeouts)
+    # تم ضبط الخواص لضمان استمرارية الاتصال وتفادي أخطاء المهلة (Timeouts) مع الـ Pooling في Neon
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": 15,             # الحد الأقصى للاتصالات المتزامنة المفتوحة
         "max_overflow": 10,          # اتصالات إضافية مؤقتة عند الضغط العالي
