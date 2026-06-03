@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع المحصن ضد انهيار المسارات
+# 📂 apps/__init__.py - المصنع المحصن والمحمي (نسخة الاستمرارية)
 
 import os
 from flask import Flask, redirect
@@ -11,14 +11,16 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
+    # إعداد الـ Proxy للعمل على Render بسلاسة
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
     db.init_app(app)
     login_manager.init_app(app)
+    # ربط البوابة بالمسار المعتمد
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # تهيئة قاعدة البيانات
+        # تهيئة قاعدة البيانات بأمان
         try:
             from apps.models.admin_db import AdminUser
             db.create_all()
@@ -31,7 +33,8 @@ def create_app():
             try: return AdminUser.query.get(int(user_id))
             except: return None
 
-        # 🛡️ التسجيل الدفاعي: تسجيل كل بلوبرنت في "فقاعة" حماية خاصة
+        # 🛡️ التسجيل الدفاعي (Defensive Registration)
+        # هذا الجزء يضمن بقاء السيرفر حياً حتى لو فشل تحميل أي وحدة
         blueprints_map = [
             ('apps.auth_portal.routes', 'auth_portal', ''),
             ('apps.add_supplier.routes', 'add_supplier', '/suppliers'),
@@ -43,23 +46,23 @@ def create_app():
 
         for module_path, bp_name, prefix in blueprints_map:
             try:
-                # الاستيراد داخل الحلقة لضمان عدم توقف السيرفر إذا فشل ملف واحد
                 module = __import__(module_path, fromlist=[bp_name])
                 app.register_blueprint(getattr(module, bp_name), url_prefix=prefix)
                 print(f"✅ تم تسجيل {bp_name} بنجاح.")
             except Exception as e:
-                # هنا السر: السيرفر سيستمر في العمل حتى لو فشل تحميل صفحة معينة
                 print(f"⚠️ تحذير: فشل تسجيل {bp_name}، السيرفر سيستمر بالعمل. الخطأ: {e}")
 
-        # 4. توجيه المسارات الأمنية
+        # 4. توجيه المسارات الأمنية (الخداع الاستراتيجي)
         @app.route('/')
         def root_redirect():
-            return redirect(os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x'))
+            # تحويل الزائر للجذر إلى مسار الكمين
+            return redirect('/login')
 
         @app.route('/robots.txt')
         def robots_txt():
             return "User-agent: *\nDisallow: /", 200, {'Content-Type': 'text/plain'}
 
+        # 🛡️ الحماية من الفهرسة والتطفل
         @app.after_request
         def add_security_headers(response):
             response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet, noimageindex"
