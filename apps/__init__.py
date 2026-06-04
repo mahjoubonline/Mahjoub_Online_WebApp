@@ -1,8 +1,8 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع المحصن والمحمي (نسخة A+ Security النهائية)
+# 📂 apps/__init__.py - المصنع المحصن والمحمي (Security Hardened)
 
 import os
-from flask import Flask, redirect
+from flask import Flask, redirect, abort
 from config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
 from apps.extensions import db, login_manager
@@ -11,7 +11,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # إعداد الـ Proxy للعمل على Render بسلاسة
+    # 🛡️ الحماية من التزييف (ProxyFix لضمان صحة عناوين الـ IP)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
     db.init_app(app)
@@ -19,18 +19,16 @@ def create_app():
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # 🛡️ بناء قاعدة البيانات
+        # 🛡️ إعدادات قاعدة البيانات الدفاعية
         try:
             from apps.models.admin_db import AdminUser
             from apps.models.supplier_db import Supplier
             from apps.models.wallet_db import SupplierWallet, WalletTransaction
             from apps.models.statement_db import SupplierStatement
             from apps.models.settlements_db import AdminSettlement
-            
             db.create_all() 
-            print("✅ تم بناء/تحديث جداول قاعدة البيانات بنجاح.")
         except Exception as e:
-            print(f"❌ [Database Error]: {e}")
+            print(f"❌ [Security DB Error]: {e}")
 
         @login_manager.user_loader
         def load_user(user_id):
@@ -38,8 +36,7 @@ def create_app():
             try: return AdminUser.query.get(int(user_id))
             except: return None
 
-        # 🛡️ التسجيل الدفاعي (Defensive Registration)
-        # ملاحظة: تأكد أن اسم الـ Blueprint في الملفات هو نفس الاسم المسجل هنا
+        # 🛡️ تسجيل دفاعي صارم
         blueprints_map = [
             ('apps.auth_portal.routes', 'auth_portal', ''),
             ('apps.add_supplier.routes', 'add_supplier', '/suppliers'),
@@ -53,35 +50,56 @@ def create_app():
             try:
                 module = __import__(module_path, fromlist=[bp_name])
                 app.register_blueprint(getattr(module, bp_name), url_prefix=prefix)
-                print(f"✅ تم تسجيل {bp_name} بنجاح.")
             except Exception as e:
-                print(f"⚠️ تحذير: فشل تسجيل {bp_name}، الخطأ: {e}")
+                print(f"⚠️ Security Alert: Failed to register {bp_name}")
 
-        # 4. توجيه المسارات الأمنية
-        @app.route('/')
-        def root_redirect():
-            return redirect('/login')
-
+        # 🛡️ حظر الزحف والأرشفة جذرياً
         @app.route('/robots.txt')
         def robots_txt():
             return "User-agent: *\nDisallow: /", 200, {'Content-Type': 'text/plain'}
 
-        # 🛡️ الحماية الأمنية المتقدمة (Security Headers)
+        # 🛡️ منع الوصول المباشر للروابط الجذرية المجهولة
+        @app.route('/')
+        def root_redirect():
+            # تحويل أي شخص يصل للجذر إلى المسار السري أو حظر الوصول
+            return redirect('/m7jb_sovereign_hq_v2_99x')
+
+        # 🛡️ الحماية المتقدمة (Security Headers - الحصن المنيع)
         @app.after_request
         def add_security_headers(response):
+            # إجبار المتصفح على استخدام HTTPS (HSTS)
             response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
-            response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; img-src 'self' https://cdn.qumra.cloud;"
-            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-            response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-            response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet, noimageindex"
-            response.headers["X-Frame-Options"] = "DENY"
+            
+            # سياسة صارمة جداً تمنع أي مصدر خارجي غير موثوق
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+                "font-src 'self' https://fonts.gstatic.com; "
+                "img-src 'self' https://cdn.qumra.cloud; "
+                "frame-ancestors 'none';" # منع الهجمات من نوع Clickjacking
+            )
+            
+            # منع المتصفح من تخمين أنواع المحتوى (MIME Sniffing)
             response.headers["X-Content-Type-Options"] = "nosniff"
+            
+            # منع الموقع من الظهور داخل IFrame
+            response.headers["X-Frame-Options"] = "DENY"
+            
+            # إيقاف الأرشفة والزحف نهائياً عبر الأكواد
+            response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet, noimageindex"
+            
+            # تقليل المعلومات المسربة في الـ Referrer
+            response.headers["Referrer-Policy"] = "no-referrer"
+            
+            # تعطيل ميزات المتصفح الحساسة
+            response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=()"
+            
+            # إزالة رؤوس التعريف بالخادم (Server Fingerprinting)
+            response.headers.pop("Server", None)
+            
             return response
 
     return app
 
 app = create_app()
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
