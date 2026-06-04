@@ -3,6 +3,7 @@
 
 from apps.extensions import db
 from apps.utils.security import AESCipher
+from apps.config.constants import RANKS, STATUSES, BANKS, FINANCIAL_COMPANIES
 from datetime import datetime
 
 class Supplier(db.Model):
@@ -21,20 +22,20 @@ class Supplier(db.Model):
     # حقول البيانات المشفرة
     trade_name_enc = db.Column(db.String(255), nullable=False)
     owner_name_enc = db.Column(db.String(255), nullable=False)
-    id_type_enc = db.Column(db.String(255)) # نوع الهوية
-    supply_category_enc = db.Column(db.String(255)) # فئة التوريد
+    id_type_enc = db.Column(db.String(255))
+    supply_category_enc = db.Column(db.String(255))
     owner_phone_enc = db.Column(db.String(255), nullable=False)
     shop_phone_enc = db.Column(db.String(255), nullable=False)
     province_enc = db.Column(db.String(255))
     district_enc = db.Column(db.String(255))
     address_detail_enc = db.Column(db.Text)
-    financial_company_enc = db.Column(db.String(255)) 
+    financial_company_enc = db.Column(db.String(255))
     bank_name_enc = db.Column(db.String(255))
     bank_acc_enc = db.Column(db.String(255))
     
-    # الحالات والرتب (نصوص للمنطق البرمجي)
-    status = db.Column(db.String(20), default='قيد المراجعة')
-    rank_grade = db.Column(db.String(20), default='ريادي')
+    # الحالات والرتب (مرتبطة بالثوابت)
+    status = db.Column(db.String(20), default=STATUSES[0])
+    rank_grade = db.Column(db.String(20), default=RANKS[1])
     status_reason = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -107,21 +108,22 @@ class Supplier(db.Model):
     # --- مصفوفة الصلاحيات السيادية ---
     def can_access(self, action):
         """التحقق من صلاحية الوصول بناءً على الحالة والرتبة"""
-        if self.status in ['محظور', 'مرفوض']: 
+        # استخدام الثوابت للتحقق
+        if self.status in [STATUSES[3], STATUSES[4]]: # مرفوض أو محظور
             return False
         
-        if self.status == 'قيد المراجعة': 
+        if self.status == STATUSES[0]: # قيد المراجعة
             return action == 'استعلام'
             
-        if self.status == 'معلق': 
+        if self.status == STATUSES[2]: # معلق
             return action in ['قراءة فقط', 'سجل العمليات']
             
-        if self.status == 'نشط':
-            if self.rank_grade == 'سيادي': 
+        if self.status == STATUSES[1]: # نشط
+            if self.rank_grade == RANKS[0]: # سيادي
                 return True
-            if self.rank_grade == 'ملكي': 
+            if self.rank_grade == RANKS[2]: # ملكي
                 return action in ['وصول كامل', 'حجم تجاري كبير', 'قياسي', 'قراءة فقط', 'سجل العمليات']
-            if self.rank_grade == 'ريادي': 
+            if self.rank_grade == RANKS[1]: # ريادي
                 return action in ['قياسي', 'قراءة فقط', 'سجل العمليات']
         
         return False
