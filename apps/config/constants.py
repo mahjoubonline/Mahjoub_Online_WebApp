@@ -1,4 +1,5 @@
-# apps/config/constants.py
+# coding: utf-8
+# 📂 apps/config/constants.py - الثوابت السيادية للمنصة
 
 # 1. أنواع الهوية الرسمية
 IDENTITY_TYPES = [
@@ -51,7 +52,7 @@ PROVINCES_DISTRICTS = {
     "المحويت": ["الرجم"]
 }
 
-# 6. البيانات المالية
+# 6. البيانات المالية (مركزية)
 FINANCE = {
     "banks": [
         "بنك القطيبي", "بنك بن دول", "بنك البسيري", 
