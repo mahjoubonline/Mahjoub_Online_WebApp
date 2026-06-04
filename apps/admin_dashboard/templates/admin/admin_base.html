@@ -5,193 +5,155 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}القيادة المركزية | محجوب أونلاين{% endblock %}</title>
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
-    
+
     <style>
         :root {
             --royal-purple: #1a0b2e;
             --deep-black: #08020d;
             --mahjoub-gold: #D4AF37;
             --sidebar-width: 280px;
-            --sidebar-mini: 85px;
             --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        body { 
-            font-family: 'Cairo', sans-serif; 
-            background: #f8f9fa; 
-            margin: 0; display: flex; direction: rtl; min-height: 100vh;
-            overflow-x: hidden;
-        }
+        body { font-family: 'Cairo', sans-serif; background-color: #f4f7f6; margin: 0; }
 
+        /* الشريط الجانبي - السيادة */
         .sidebar {
             width: var(--sidebar-width);
             background: linear-gradient(180deg, var(--royal-purple) 0%, var(--deep-black) 100%);
-            height: 100vh; position: fixed; right: 0; top: 0;
-            z-index: 1100; display: flex; flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            right: 0;
+            top: 0;
+            z-index: 1000;
             transition: var(--transition);
-            box-shadow: -5px 0 20px rgba(0,0,0,0.3);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
         }
 
-        .sidebar-header { padding: 2rem 1rem; text-align: center; border-bottom: 1px solid rgba(212, 175, 55, 0.1); }
-        .logo-img { width: 65px; height: auto; filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)); margin-bottom: 15px; }
-        .sidebar-header h2 { color: white; font-size: 1.1rem; margin: 0; font-weight: 800; letter-spacing: 1px; }
-        .platform-desc { color: var(--mahjoub-gold); font-size: 0.7rem; font-weight: 600; margin-top: 5px; opacity: 0.8; }
+        .logo-container { padding: 30px 10px; text-align: center; border-bottom: 1px solid rgba(212, 175, 55, 0.2); }
+        .sidebar-logo { width: 70px; filter: brightness(0) invert(1); transition: var(--transition); }
 
-        .nav-menu { padding: 1.5rem 0.8rem; flex-grow: 1; overflow-y: auto; }
+        .nav-menu { padding: 20px 15px; }
+        .nav-item-wrapper { margin-bottom: 5px; }
+        
         .nav-link {
-            display: flex; align-items: center; padding: 12px 15px;
-            color: rgba(255, 255, 255, 0.7); text-decoration: none;
-            border-radius: 12px; margin-bottom: 8px; transition: var(--transition);
-            cursor: pointer; white-space: nowrap;
+            display: flex;
+            align-items: center;
+            padding: 14px 15px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--mahjoub-gold);
+            transform: translateX(-5px);
+        }
+        
+        .dropdown-content {
+            display: none;
+            list-style: none;
+            padding: 0 35px 0 0;
+            border-right: 2px solid var(--mahjoub-gold);
+            margin: 5px 0;
+        }
+        .dropdown-content a { color: #aaa; text-decoration: none; padding: 8px 0; display: block; font-size: 0.9rem; }
+        .dropdown-content a:hover { color: var(--mahjoub-gold); }
+
+        /* منطقة المحتوى */
+        .main-wrapper { margin-right: var(--sidebar-width); transition: var(--transition); }
+        
+        .top-navbar {
+            background: #fff;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
-        .nav-link i { min-width: 35px; font-size: 1.1rem; text-align: center; }
-        .nav-link:hover, .nav-link.active { background: rgba(212, 175, 55, 0.12); color: var(--mahjoub-gold); transform: translateX(-5px); }
+        .content-body { padding: 30px; }
 
-        .dropdown-content { display: none; list-style: none; padding: 0; margin-right: 2.5rem; border-right: 1px solid rgba(212, 175, 55, 0.3); margin-bottom: 10px; }
-        .dropdown-content li a { padding: 8px 15px; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 10px; text-decoration: none; font-size: 0.85rem; transition: 0.3s; }
-        .dropdown-content li a:hover { color: var(--mahjoub-gold); padding-right: 20px; }
-
-        .main-wrapper { margin-right: var(--sidebar-width); width: 100%; transition: var(--transition); display: flex; flex-direction: column; min-width: 0; }
-        .top-bar { background: white; height: 75px; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03); position: sticky; top: 0; z-index: 1000; }
-        .admin-badge { background: rgba(212, 175, 55, 0.1); padding: 8px 20px; border-radius: 50px; border: 1px solid var(--mahjoub-gold); display: flex; align-items: center; gap: 10px; }
-        .user-profile { display: flex; align-items: center; gap: 12px; }
-        .user-avatar { width: 42px; height: 42px; background: var(--royal-purple); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--mahjoub-gold); box-shadow: 0 4px 10px rgba(26, 11, 46, 0.2); }
-        .content-area { padding: 2rem; min-height: calc(100vh - 75px); }
-
+        /* التجاوب مع الجوالات */
         @media (max-width: 992px) {
-            .sidebar { width: var(--sidebar-mini); }
-            .sidebar-header h2, .platform-desc, .nav-link span, .chevron, .dropdown-content { display: none !important; }
-            .main-wrapper { margin-right: var(--sidebar-mini); }
-            .logo-img { width: 40px; }
+            .sidebar { width: 80px; }
+            .sidebar .nav-link span, .sidebar .sidebar-title, .sidebar .dropdown-content { display: none !important; }
+            .main-wrapper { margin-right: 80px; }
+            .sidebar-logo { width: 40px; }
         }
     </style>
 </head>
 <body>
 
-    <aside class="sidebar shadow">
-        <div class="sidebar-header">
-            <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" class="logo-img" alt="Mahjoub Online">
-            <h2>الإدارة المركزية</h2>
-            <div class="platform-desc">نظام حوكمة سوقك الذكي</div>
+    <aside class="sidebar">
+        <div class="logo-container">
+            <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" class="sidebar-logo">
+            <h6 class="sidebar-title text-white mt-3">الإدارة المركزية</h6>
         </div>
 
         <nav class="nav-menu">
-            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="nav-link {% if request.endpoint == 'admin_dashboard.dashboard' %}active{% endif %}">
-                <i class="fas fa-chart-line"></i>
-                <span>الإحصائيات العامة</span>
-            </a>
+            <div class="nav-item-wrapper">
+                <a href="#" class="nav-link"><i class="fas fa-chart-line me-3"></i> <span>الإحصائيات</span></a>
+            </div>
 
-            <!-- المنتجات -->
-            <div class="nav-item">
-                <div class="nav-link" onclick="toggleDropdown(this)">
-                    <i class="fas fa-box-open"></i>
-                    <span>المنتجات</span>
-                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.3s;"></i>
-                </div>
+            <div class="nav-item-wrapper">
+                <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-box-open me-3"></i> <span>المنتجات</span> <i class="fas fa-chevron-down ms-auto"></i></div>
                 <ul class="dropdown-content">
-                    <li><a href="#"><i class="fas fa-plus-circle"></i> إضافة منتج</a></li>
-                    <li><a href="#"><i class="fas fa-check-double"></i> مراجعة منتج</a></li>
+                    <li><a href="#">إضافة منتج</a></li>
+                    <li><a href="#">مراجعة المنتجات</a></li>
                 </ul>
             </div>
 
-            <!-- الطلبات -->
-            <a href="#" class="nav-link">
-                <i class="fas fa-shopping-cart"></i>
-                <span>الطلبات</span>
-            </a>
-
-            <!-- إدارة الموردين -->
-            <div class="nav-item">
-                <div class="nav-link" onclick="toggleDropdown(this)">
-                    <i class="fas fa-handshake"></i>
-                    <span>إدارة الموردين</span>
-                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.3s;"></i>
-                </div>
+            <div class="nav-item-wrapper">
+                <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-handshake me-3"></i> <span>إدارة الموردين</span> <i class="fas fa-chevron-down ms-auto"></i></div>
                 <ul class="dropdown-content">
-                    <li><a href="#"><i class="fas fa-user-plus"></i> إضافة مورد</a></li>
-                    <li><a href="#"><i class="fas fa-users-gear"></i> جميع الموردين</a></li>
-                    <li><a href="#"><i class="fas fa-user-clock"></i> طلبات الانضمام</a></li>
+                    <li><a href="#">إضافة مورد</a></li>
+                    <li><a href="#">قائمة الموردين</a></li>
                 </ul>
             </div>
 
-            <!-- الرقابة المالية -->
-            <div class="nav-item">
-                <div class="nav-link" onclick="toggleDropdown(this)">
-                    <i class="fas fa-monument"></i>
-                    <span>الرقابة المالية</span>
-                    <i class="fas fa-chevron-down chevron ms-auto" style="font-size: 0.7rem; transition: 0.3s;"></i>
-                </div>
+            <div class="nav-item-wrapper">
+                <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-wallet me-3"></i> <span>الرقابة المالية</span> <i class="fas fa-chevron-down ms-auto"></i></div>
                 <ul class="dropdown-content">
-                    <li><a href="#"><i class="fas fa-vault"></i> خزينة المنصة المركزية</a></li>
-                    <li><a href="#"><i class="fas fa-file-invoice-dollar"></i> تسويات الموردين</a></li>
-                    <li><a href="#"><i class="fas fa-wallet"></i> الأرباح المركزية</a></li>
-                    <li><a href="#"><i class="fas fa-hand-holding-usd"></i> طلبات التسوية</a></li>
+                    <li><a href="#">الخزينة المركزية</a></li>
+                    <li><a href="#">الأرباح</a></li>
                 </ul>
             </div>
 
-            <!-- الإعدادات -->
-            <a href="#" class="nav-link">
-                <i class="fas fa-cog"></i>
-                <span>الإعدادات</span>
-            </a>
+            <hr class="text-white my-3">
 
-            <a href="{{ url_for('auth_portal.logout') }}" class="nav-link mt-auto" style="color: #ff7675; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
-                <i class="fas fa-door-open"></i>
-                <span>خروج آمن</span>
-            </a>
+            <a href="#" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-3"></i> <span>خروج آمن</span></a>
         </nav>
     </aside>
 
     <main class="main-wrapper">
-        <header class="top-bar">
-            <div class="user-profile">
-                <div class="user-avatar">
-                    <i class="fas fa-user-tie"></i>
-                </div>
-                <div>
-                    <div style="font-weight: 800; color: var(--royal-purple); line-height: 1.2;">
-                        {{ current_user.name if current_user.is_authenticated else 'زائر' }}
-                    </div>
-                    <small style="color: #aaa; font-size: 0.75rem;">المسؤول الأعلى للنظام</small>
-                </div>
+        <header class="top-navbar">
+            <div class="user-info">
+                <strong>{{ current_user.name if current_user.is_authenticated else 'المسؤول' }}</strong>
             </div>
-            <div class="admin-badge d-none d-md-flex">
-                <i class="fas fa-vial-circle-check" style="color: var(--mahjoub-gold);"></i>
-                <strong style="color: var(--royal-purple); font-size: 0.9rem;">بيئة التحكم السيادية</strong>
-            </div>
+            <div class="badge bg-warning text-dark p-2 px-3">بيئة التحكم السيادية</div>
         </header>
 
-        <div class="content-area">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                {% for category, message in messages %}
-                  <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show shadow-sm border-0 mb-4">
-                      <i class="fas fa-shield-halved me-2"></i> {{ message }}
-                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                  </div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
-
-            {% block content %}{% endblock %}
-        </div>
+        <section class="content-body">
+            {% block content %}
+            <div class="card p-5 text-center border-0 shadow-sm">
+                <h3>مرحباً بك في لوحة تحكم محجوب أونلاين</h3>
+                <p>اختر قسماً من القائمة الجانبية للبدء بالإدارة.</p>
+            </div>
+            {% endblock %}
+        </section>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleDropdown(element) {
-            const content = element.nextElementSibling;
-            const chevron = element.querySelector('.chevron');
-            document.querySelectorAll('.dropdown-content').forEach(el => { if (el !== content) el.style.display = 'none'; });
-            document.querySelectorAll('.chevron').forEach(ch => { if (ch !== chevron) ch.style.transform = "rotate(0deg)"; });
-            const isOpen = content.style.display === "block";
-            content.style.display = isOpen ? "none" : "block";
-            if(chevron) chevron.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+        function toggleSub(el) {
+            let drop = el.nextElementSibling;
+            drop.style.display = (drop.style.display === "block") ? "none" : "block";
+            el.querySelector('.fa-chevron-down').style.transform = (drop.style.display === "block") ? "rotate(180deg)" : "rotate(0deg)";
         }
     </script>
 </body>
