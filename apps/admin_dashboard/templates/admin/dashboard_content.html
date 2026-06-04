@@ -3,7 +3,7 @@
 {% block title %}القيادة المركزية | لوحة التحكم{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="fw-bold" style="color: var(--royal-purple);">لوحة تحكم النظام</h3>
@@ -69,7 +69,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted">لا توجد عمليات مسجلة حالياً</td>
+                                <td colspan="4" class="text-center text-muted py-3">لا توجد عمليات مسجلة حالياً</td>
                             </tr>
                             {% endfor %}
                         </tbody>
