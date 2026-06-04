@@ -63,7 +63,6 @@
         .top-navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .content-body { padding: 30px; }
 
-        /* تنسيق بيانات المستخدم */
         .user-identity { text-align: right; }
         .user-name { font-weight: 800; color: var(--royal-purple); font-size: 1.2rem; display: flex; align-items: center; }
 
@@ -95,9 +94,13 @@
             </div>
 
             <div class="nav-item-wrapper">
-                <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-handshake me-3"></i> <span>إدارة الموردين</span> <i class="fas fa-chevron-down ms-auto"></i></div>
+                <div class="nav-link" onclick="toggleSub(this)">
+                    <i class="fas fa-handshake me-3"></i> 
+                    <span>إدارة الموردين</span> 
+                    <i class="fas fa-chevron-down ms-auto"></i>
+                </div>
                 <ul class="dropdown-content">
-                    <li><a href="#">إضافة مورد</a></li>
+                    <li><a href="{{ url_for('add_supplier.add_supplier') }}">إضافة مورد</a></li>
                     <li><a href="#">قائمة الموردين</a></li>
                 </ul>
             </div>
