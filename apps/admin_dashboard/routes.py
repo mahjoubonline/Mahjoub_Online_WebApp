@@ -1,11 +1,15 @@
 # coding: utf-8
-# 📂 apps/admin_dashboard/routes.py - لوحة التحكم السيادية (مُصحح)
+# 📂 apps/admin_dashboard/routes.py - لوحة التحكم السيادية (مكتمل)
 
 from flask import Blueprint, render_template, abort, session
 from flask_login import login_required, current_user
 from apps.extensions import db
 from sqlalchemy import func
 from datetime import datetime
+
+# استيراد النماذج (Models)
+from apps.models.supplier_db import Supplier
+from apps.models.wallet_db import SupplierWallet, WalletTransaction
 
 admin_dashboard = Blueprint(
     'admin_dashboard', 
@@ -16,36 +20,44 @@ admin_dashboard = Blueprint(
 @admin_dashboard.before_request
 @login_required
 def make_session_permanent():
-    # تفعيل خمول الجلسة (15 دقيقة)
+    # تفعيل خمول الجلسة (15 دقيقة) لضمان الأمن السيادي
     session.permanent = True
     session.modified = True 
 
 @admin_dashboard.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
-    # 🛡️ حماية سيادية
+    # 🛡️ حماية سيادية: لا يسمح بالدخول إلا لـ Owner أو Admin
     if current_user.role not in ['Owner', 'Admin']:
         abort(403)
 
-    from apps.models.supplier_db import Supplier
-    from apps.models.wallet_db import SupplierWallet, WalletTransaction
-
     try:
-        # استخراج الإحصائيات باستخدام الأعمدة الصحيحة من SupplierWallet
+        # استخراج الإحصائيات المالية
+        # نستخدم .scalar() للتأكد من إرجاع قيمة رقمية
         total_sar = db.session.query(func.sum(SupplierWallet.sar_total)).scalar() or 0
         total_yer = db.session.query(func.sum(SupplierWallet.yer_total)).scalar() or 0
         
-        stats = {
+        # تجميع البيانات للوحة التحكم
+        context = {
             'total_suppliers': Supplier.query.count(),
-            'total_balance_sar': total_sar,
-            'total_balance_yer': total_yer,
-            'recent_transactions': WalletTransaction.query.order_by(WalletTransaction.id.desc()).limit(5).all(),
+            'total_balance_sar': float(total_sar),
+            'total_balance_yer': float(total_yer),
+            'recent_transactions': WalletTransaction.query.order_by(WalletTransaction.id.desc()).limit(10).all(),
             'now': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        # تقديم القالب
-        return render_template('admin/dashboard_content.html', **stats)
+        # تقديم القالب (تأكد من مطابقة اسم الملف في مجلد templates)
+        return render_template('admin/dashboard_content.html', **context)
         
     except Exception as e:
-        # 🔐 إظهار تفاصيل الخطأ مؤقتاً للتصحيح، ويمكنك إخفاؤها لاحقاً
-        return f"🚨 خطأ تقني في قاعدة البيانات: {str(e)}", 500
+        # 🔐 حماية عند حدوث خطأ: سجل الخطأ واعرض رسالة عامة للمستخدم
+        # لغرض التطوير نتركها كما هي، وفي الإنتاج يفضل استخدام logger
+        return f"🚨 خطأ تقني في استدعاء قاعدة البيانات: {str(e)}", 500
+
+# إضافات مستقبلية للتحكم السيادي
+@admin_dashboard.route('/system_logs', methods=['GET'])
+@login_required
+def system_logs():
+    if current_user.role != 'Owner': # صلاحية خاصة للمالك فقط
+        abort(403)
+    return "سجل الأحداث السيادي - قيد التطوير"
