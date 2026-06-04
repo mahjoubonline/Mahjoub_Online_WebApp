@@ -1,11 +1,12 @@
-# 📂 apps/admin_dashboard/routes.py (النسخة المصححة)
+# coding: utf-8
+# 📂 apps/admin_dashboard/routes.py - لوحة التحكم السيادية
 
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, abort
 from flask_login import login_required, current_user
-from apps.extensions import db 
+from apps.extensions import db
 from sqlalchemy import func
 
-# ✅ التصحيح: إزالة url_prefix من هنا لأنك قمت بتعريفه في __init__.py
+# ✅ تعريف الـ Blueprint: يتم ربطه بـ '/admin' في __init__.py
 admin_dashboard = Blueprint(
     'admin_dashboard', 
     __name__, 
@@ -15,9 +16,25 @@ admin_dashboard = Blueprint(
 @admin_dashboard.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
-    # ... (بقية الكود الخاص بك كما هو) ...
+    # التحقق من صلاحية الوصول (Owner أو Admin فقط)
+    if current_user.role not in ['Owner', 'Admin']:
+        abort(403)
+
     from apps.models.supplier_db import Supplier
     from apps.models.wallet_db import SupplierWallet, WalletTransaction
-    
-    # ... (الكود المتبقي) ...
-    return render_template('admin/dashboard_content.html', **stats)
+    from apps.models.statement_db import SupplierStatement
+
+    try:
+        # 📊 استخراج إحصائيات النظام (مثال)
+        stats = {
+            'total_suppliers': Supplier.query.count(),
+            'total_balance': db.session.query(func.sum(SupplierWallet.balance)).scalar() or 0,
+            'recent_transactions': WalletTransaction.query.order_by(WalletTransaction.id.desc()).limit(5).all()
+        }
+        
+        # تقديم القالب: يبحث داخل apps/admin_dashboard/templates/admin/dashboard_content.html
+        return render_template('admin/dashboard_content.html', **stats)
+        
+    except Exception as e:
+        print(f"🚨 خطأ في تحميل الداشبورد: {e}")
+        return "حدث خطأ فني في لوحة التحكم.", 500
