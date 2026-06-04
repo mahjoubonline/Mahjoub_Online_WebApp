@@ -45,10 +45,10 @@ def create_app():
             except: return None
 
         # 🛡️ تسجيل دفاعي صارم
-        # تأكد أن bp_name هو نفس الاسم الذي عرفته في Blueprint() داخل كل module
+        # تم تحديث الاسم هنا ليكون add_supplier_bp بدلاً من add_supplier
         blueprints_map = [
             ('apps.auth_portal.routes', 'auth_portal', ''),
-            ('apps.add_supplier.routes', 'add_supplier', '/suppliers'),
+            ('apps.add_supplier.routes', 'add_supplier_bp', '/suppliers'),
             ('apps.financial_ops.routes', 'financial_blueprint', '/financial_ops'),
             ('apps.statement.routes', 'statement_blueprint', '/statement'),
             ('apps.admin_dashboard.routes', 'admin_dashboard', '/admin'),
@@ -58,7 +58,9 @@ def create_app():
         for module_path, bp_name, prefix in blueprints_map:
             try:
                 module = __import__(module_path, fromlist=[bp_name])
-                app.register_blueprint(getattr(module, bp_name), url_prefix=prefix)
+                # يتم جلب الكائن المسجل في الـ routes
+                blueprint = getattr(module, bp_name)
+                app.register_blueprint(blueprint, url_prefix=prefix)
             except Exception as e:
                 print(f"⚠️ Security Alert: Failed to register {bp_name} - Error: {e}")
 
