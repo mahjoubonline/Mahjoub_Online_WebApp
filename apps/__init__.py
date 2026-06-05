@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع المحصن والمحمي (Security Hardened & Session Secured)
+# 📂 apps/__init__.py - المصنع المحصن والمحمي (نسخة التصحيح الذاتي)
 
 import os
 from datetime import timedelta
@@ -7,6 +7,7 @@ from flask import Flask, redirect
 from config import Config
 from werkzeug.middleware.proxy_fix import ProxyFix
 from apps.extensions import db, login_manager
+from sqlalchemy import text
 
 def create_app():
     app = Flask(__name__)
@@ -18,7 +19,7 @@ def create_app():
     app.config['SESSION_COOKIE_SECURE'] = True    
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     
-    # 🛡️ الحماية من التزييف (ProxyFix)
+    # 🛡️ الحماية من التزييف
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
     db.init_app(app)
@@ -26,26 +27,36 @@ def create_app():
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # 🛡️ إعدادات قاعدة البيانات الدفاعية
+        # 🛡️ استيراد النماذج لضمان تسجيل الجداول في db
+        from apps.models.admin_db import AdminUser
+        from apps.models.supplier_db import Supplier
+        from apps.models.wallet_db import SupplierWallet, WalletTransaction
+        from apps.models.statement_db import SupplierStatement
+        from apps.models.settlements_db import AdminSettlement
+        
+        # 🛡️ مرحلة التزامن والتصحيح الذاتي للهيكل
         try:
-            # استيراد النماذج لضمان تسجيل الجداول في db
-            from apps.models.admin_db import AdminUser
-            from apps.models.supplier_db import Supplier
-            from apps.models.wallet_db import SupplierWallet, WalletTransaction
-            from apps.models.statement_db import SupplierStatement
-            from apps.models.settlements_db import AdminSettlement
-            
-            # هذا الأمر سيقوم بإنشاء أي أعمدة جديدة (مثل _enc) في الجداول الموجودة
             db.create_all() 
-            print("✅ [Database]: Schema synchronized successfully.")
+            
+            # آلية إضافة الأعمدة المشفرة يدوياً إذا لم تكن موجودة (حل الـ UndefinedColumn)
+            cols_to_add = [
+                'sovereign_id_enc', 'trade_name_enc', 'owner_name_enc', 
+                'id_type_enc', 'supply_category_enc', 'owner_phone_enc',
+                'shop_phone_enc', 'province_enc', 'district_enc',
+                'address_detail_enc', 'financial_company_enc', 'bank_name_enc', 'bank_acc_enc'
+            ]
+            for col in cols_to_add:
+                db.session.execute(text(f'ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS {col} VARCHAR(255);'))
+            db.session.commit()
+            print("✅ [Database]: Schema synchronized and repaired successfully.")
+            
         except Exception as e:
             print(f"❌ [Security DB Error]: {e}")
 
+        # 🛡️ إدارة المستخدم
         @login_manager.user_loader
         def load_user(user_id):
-            from apps.models.admin_db import AdminUser
-            try: return AdminUser.query.get(int(user_id))
-            except: return None
+            return AdminUser.query.get(int(user_id))
 
         # 🛡️ تسجيل دفاعي صارم للمسارات
         blueprints_map = [
@@ -95,5 +106,4 @@ def create_app():
 
     return app
 
-# نقطة التشغيل الرئيسية
 app = create_app()
