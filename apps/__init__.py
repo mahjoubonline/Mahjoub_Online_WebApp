@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع الاحترافي والمحصن (نسخة المزامنة التلقائية)
+# 📂 apps/__init__.py - المصنع الاحترافي والمحصن (نسخة نهائية متوافقة)
 
 import os
 from datetime import timedelta
@@ -26,8 +26,7 @@ def create_app():
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # 🚀 المزامنة التلقائية للجداول (بديلة عن upgrade المفقود)
-        # يقوم هذا الأمر بمقارنة الموديلات في الكود مع الجداول في قاعدة البيانات وتحديثها
+        # 🚀 المزامنة التلقائية للجداول
         try:
             print("🔄 Synchronizing database tables...")
             db.create_all()  
