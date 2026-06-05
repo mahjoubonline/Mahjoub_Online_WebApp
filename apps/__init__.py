@@ -12,13 +12,13 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # 🛡️ إعدادات الأمان للجلسات (Session Security)
+    # 🛡️ إعدادات الأمان للجلسات
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=15)
     app.config['SESSION_COOKIE_HTTPONLY'] = True  
     app.config['SESSION_COOKIE_SECURE'] = True    
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     
-    # 🛡️ الحماية من التزييف (ProxyFix لضمان صحة عناوين الـ IP)
+    # 🛡️ الحماية من التزييف (ProxyFix)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
     db.init_app(app)
@@ -34,7 +34,10 @@ def create_app():
             from apps.models.wallet_db import SupplierWallet, WalletTransaction
             from apps.models.statement_db import SupplierStatement
             from apps.models.settlements_db import AdminSettlement
+            
+            # هذا الأمر سيقوم بإنشاء أي أعمدة جديدة (مثل _enc) في الجداول الموجودة
             db.create_all() 
+            print("✅ [Database]: Schema synchronized successfully.")
         except Exception as e:
             print(f"❌ [Security DB Error]: {e}")
 
@@ -44,8 +47,7 @@ def create_app():
             try: return AdminUser.query.get(int(user_id))
             except: return None
 
-        # 🛡️ تسجيل دفاعي صارم
-        # تم تحديث الاسم هنا ليكون add_supplier_bp بدلاً من add_supplier
+        # 🛡️ تسجيل دفاعي صارم للمسارات
         blueprints_map = [
             ('apps.auth_portal.routes', 'auth_portal', ''),
             ('apps.add_supplier.routes', 'add_supplier_bp', '/suppliers'),
@@ -58,13 +60,11 @@ def create_app():
         for module_path, bp_name, prefix in blueprints_map:
             try:
                 module = __import__(module_path, fromlist=[bp_name])
-                # يتم جلب الكائن المسجل في الـ routes
                 blueprint = getattr(module, bp_name)
                 app.register_blueprint(blueprint, url_prefix=prefix)
             except Exception as e:
                 print(f"⚠️ Security Alert: Failed to register {bp_name} - Error: {e}")
 
-        # 🛡️ حظر الزحف والأرشفة جذرياً
         @app.route('/robots.txt')
         def robots_txt():
             return "User-agent: *\nDisallow: /", 200, {'Content-Type': 'text/plain'}
@@ -95,4 +95,5 @@ def create_app():
 
     return app
 
+# نقطة التشغيل الرئيسية
 app = create_app()
