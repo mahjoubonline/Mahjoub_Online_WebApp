@@ -13,7 +13,8 @@ wallet_app = Blueprint('wallet_app', __name__)
 @login_required
 def index():
     """
-    صفحة البحث الرئيسية للمحافظ (تظهر البطاقات العلوية وحقل البحث)
+    صفحة البحث الرئيسية للمحافظ:
+    تقوم بجلب إجمالي أرصدة النظام لجميع الموردين وعرضها في البطاقات العلوية.
     """
     totals = db.session.query(
         func.sum(SupplierWallet.balance_sar),
@@ -30,14 +31,16 @@ def index():
 @login_required
 def view_wallet(supplier_id):
     """
-    عرض تفاصيل المحفظة الخاصة بمورد معين
+    عرض تفاصيل المحفظة الخاصة بمورد معين:
+    يتم استدعاؤها عبر AJAX من صفحة البحث لعرض النتائج داخل نفس الصفحة.
     """
     supplier = Supplier.query.get_or_404(supplier_id)
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
     
     if not wallet:
-        return "هذا المورد لا يمتلك محفظة حالياً.", 404
+        return "<div class='alert alert-warning text-center'>هذا المورد لا يمتلك محفظة حالياً.</div>", 404
 
+    # نظام الترقيم (Pagination) لعمليات المحفظة
     page = request.args.get('page', 1, type=int)
     
     pagination = WalletTransaction.query.filter_by(wallet_id=wallet.id)\
@@ -54,7 +57,8 @@ def view_wallet(supplier_id):
 @login_required
 def get_stats():
     """
-    إرجاع إحصائيات النظام المالية العامة بصيغة JSON
+    API لإرجاع إحصائيات النظام المالية العامة بصيغة JSON.
+    مفيدة لتحديث لوحات التحكم (Dashboards) لحظياً.
     """
     totals = db.session.query(
         func.sum(SupplierWallet.balance_sar),
