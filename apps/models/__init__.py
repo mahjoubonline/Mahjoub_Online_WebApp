@@ -1,11 +1,10 @@
 # coding: utf-8
-# 📂 apps/models/__init__.py - مجمع النماذج المحصنة
+# 📂 apps/models/__init__.py - مجمع النماذج المحصنة (النسخة المستقرة)
 
-from .supplier_db import Supplier
-from .wallet_db import SupplierWallet, WalletTransaction
-from .statement_db import SupplierStatement
-from .settlements_db import AdminSettlement
 from .admin_db import AdminUser
+from .supplier_db import Supplier
 
-# هذا الملف يجعل من السهل استيراد أي نموذج من أي مكان في التطبيق
-# مثلاً يمكنك كتابة: from apps.models import Supplier
+# ملاحظة: تم إزالة استيراد الموديلات المحذوفة لتفادي أخطاء التشغيل.
+# سنقوم بإضافتها تباعاً عند الانتهاء من تجهيز أكوادها البرمجية الجديدة.
+
+# هذا الملف يضمن استيراد النماذج الأساسية فقط لضمان عمل السيرفر.
