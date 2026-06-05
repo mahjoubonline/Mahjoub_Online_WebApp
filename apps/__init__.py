@@ -27,14 +27,15 @@ def create_app():
 
     with app.app_context():
         # 🚀 المزامنة التلقائية للجداول (بديلة عن upgrade المفقود)
+        # يقوم هذا الأمر بمقارنة الموديلات في الكود مع الجداول في قاعدة البيانات وتحديثها
         try:
             print("🔄 Synchronizing database tables...")
-            db.create_all()  # يضيف أي أعمدة ناقصة تلقائياً
+            db.create_all()  
             print("✅ Database tables synchronized successfully!")
         except Exception as e:
             print(f"⚠️ Synchronization issue: {e}")
 
-        # 🛡️ استيراد النماذج
+        # 🛡️ استيراد النماذج (Models)
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
@@ -44,7 +45,7 @@ def create_app():
         def load_user(user_id):
             return AdminUser.query.get(int(user_id))
 
-        # 🛡️ تسجيل دفاعي للمسارات
+        # 🛡️ تسجيل دفاعي للمسارات (Blueprints)
         def safe_register(module_path, attr_name, prefix):
             try:
                 module = __import__(module_path, fromlist=[attr_name])
@@ -53,6 +54,7 @@ def create_app():
             except Exception as e:
                 print(f"⚠️ Security Alert: Failed to register {attr_name} - Error: {e}")
 
+        # تسجيل جميع مسارات التطبيق
         safe_register('apps.auth_portal.routes', 'auth_portal', '')
         safe_register('apps.add_supplier.routes', 'add_supplier_bp', '/suppliers')
         safe_register('apps.financial_ops.routes', 'financial_blueprint', '/financial_ops')
