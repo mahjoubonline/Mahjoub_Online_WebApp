@@ -5,25 +5,32 @@ from apps.extensions import db
 from apps.models.admin_db import AdminUser
 from sqlalchemy import text
 
+# 1. تهيئة التطبيق
 app = create_app()
 
 def auto_repair_db():
     """
-    يقوم هذا النظام بالتأكد من وجود أعمدة البحث 
-    وإضافتها تلقائياً إذا كانت مفقودة عند كل تشغيل.
+    نظام الإصلاح التلقائي: يقوم بتحديث هيكل قاعدة البيانات 
+    بشكل آمن عند كل عملية تشغيل (Deployment).
     """
     with app.app_context():
         try:
-            # 1. إنشاء الجداول إذا كانت غير موجودة
+            # إنشاء الجداول الأساسية
             db.create_all()
             
-            # 2. فحص وإصلاح الأعمدة (إضافة أعمدة البحث إذا لم تكن موجودة)
+            # إصلاح أعمدة جدول الموردين (Suppliers)
             db.session.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS search_name VARCHAR(150);"))
             db.session.execute(text("ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS search_phone VARCHAR(20);"))
-            db.session.commit()
-            print("✅ نظام الإصلاح الذاتي: قاعدة البيانات محدثة وجاهزة.")
             
-            # 3. زرع الهوية السيادية
+            # إصلاح أعمدة جدول المحفظة (Supplier_Wallets) - لإيقاف خطأ UndefinedColumn
+            db.session.execute(text("ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS balance_sar FLOAT DEFAULT 0;"))
+            db.session.execute(text("ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS balance_yer FLOAT DEFAULT 0;"))
+            db.session.execute(text("ALTER TABLE supplier_wallets ADD COLUMN IF NOT EXISTS balance_usd FLOAT DEFAULT 0;"))
+            
+            db.session.commit()
+            print("✅ نظام الإصلاح الذاتي: تم مزامنة هيكل الجداول مع المحرك البرمجي.")
+            
+            # زرع الهوية السيادية
             u, p = "محجوب", "123"
             if not AdminUser.query.filter_by(username=u).first():
                 new_admin = AdminUser(username=u, phone_number="0000000000", role='Owner')
@@ -40,5 +47,6 @@ def auto_repair_db():
 auto_repair_db()
 
 if __name__ == "__main__":
+    # تشغيل السيرفر بالمنفذ المخصص أو الافتراضي
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
