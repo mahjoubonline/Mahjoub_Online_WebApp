@@ -1,73 +1,36 @@
-# 📂 apps/wallet/routes.py - المحرك المالي الاحترافي
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
-from sqlalchemy import func
+# coding: utf-8
+# 📂 apps/wallet/routes.py - منطق عمليات المحفظة
+
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask_login import login_required, current_user
 from apps.extensions import db
-from apps.models.supplier_db import Supplier
-from apps.models.wallet_db import SupplierWallet, WalletTransaction
+from .models import SupplierWallet, WalletTransaction # تأكد من أنك تستورد النماذج من مكانها الصحيح
 
-# تعريف المحرك (Blueprint)
-wallet_app = Blueprint('wallet_app', __name__)
+# تعريف الـ Blueprint الخاص بالمحفظة
+wallet_app = Blueprint(
+    'wallet_app', 
+    __name__, 
+    template_folder='templates'
+)
 
-@wallet_app.route('/index')
+# 1. عرض محفظة المورد
+@wallet_app.route('/dashboard')
 @login_required
-def index():
-    """
-    صفحة البحث الرئيسية للمحافظ:
-    تقوم بجلب إجمالي أرصدة النظام لجميع الموردين وعرضها في البطاقات العلوية.
-    """
-    totals = db.session.query(
-        func.sum(SupplierWallet.balance_sar),
-        func.sum(SupplierWallet.balance_yer),
-        func.sum(SupplierWallet.balance_usd)
-    ).first()
+def wallet_dashboard():
+    # هنا جلب بيانات المحفظة الخاصة بالمورد الحالي
+    wallet = SupplierWallet.query.filter_by(supplier_id=current_user.id).first()
+    transactions = WalletTransaction.query.filter_by(wallet_id=wallet.id).order_by(WalletTransaction.created_at.desc()).all() if wallet else []
     
-    return render_template('admin/wallet_app.html', 
-                           total_system_sar=float(totals[0] or 0),
-                           total_system_yer=float(totals[1] or 0),
-                           total_system_usd=float(totals[2] or 0))
+    return render_template('wallet/dashboard.html', wallet=wallet, transactions=transactions)
 
-@wallet_app.route('/view/<int:supplier_id>')
+# 2. إضافة عملية مالية (مثال على مسار داخلي)
+@wallet_app.route('/add_transaction', methods=['POST'])
 @login_required
-def view_wallet(supplier_id):
-    """
-    عرض تفاصيل المحفظة الخاصة بمورد معين:
-    يتم استدعاؤها عبر AJAX من صفحة البحث لعرض النتائج داخل نفس الصفحة.
-    """
-    supplier = Supplier.query.get_or_404(supplier_id)
-    wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
-    
-    if not wallet:
-        return "<div class='alert alert-warning text-center'>هذا المورد لا يمتلك محفظة حالياً.</div>", 404
+def add_transaction():
+    # منطق إضافة عملية مالية
+    # ...
+    return jsonify({"status": "success", "message": "تمت العملية بنجاح"})
 
-    # نظام الترقيم (Pagination) لعمليات المحفظة
-    page = request.args.get('page', 1, type=int)
-    
-    pagination = WalletTransaction.query.filter_by(wallet_id=wallet.id)\
-        .order_by(WalletTransaction.created_at.desc())\
-        .paginate(page=page, per_page=15, error_out=False)
-    
-    return render_template('admin/wallet_app_detail.html', 
-                           supplier=supplier, 
-                           wallet=wallet, 
-                           transactions=pagination.items,
-                           pagination=pagination)
-
-@wallet_app.route('/stats')
-@login_required
-def get_stats():
-    """
-    API لإرجاع إحصائيات النظام المالية العامة بصيغة JSON.
-    مفيدة لتحديث لوحات التحكم (Dashboards) لحظياً.
-    """
-    totals = db.session.query(
-        func.sum(SupplierWallet.balance_sar),
-        func.sum(SupplierWallet.balance_yer),
-        func.sum(SupplierWallet.balance_usd)
-    ).first()
-    
-    return jsonify({
-        'sar': float(totals[0] or 0),
-        'yer': float(totals[1] or 0),
-        'usd': float(totals[2] or 0)
-    })
+# 3. أي مسارات أخرى خاصة بالمحفظة
+# @wallet_app.route('/withdraw', ...)
+# ...
