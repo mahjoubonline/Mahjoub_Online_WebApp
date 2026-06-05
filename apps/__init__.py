@@ -50,10 +50,11 @@ def create_app():
                 module = __import__(module_path, fromlist=[attr_name])
                 blueprint = getattr(module, attr_name)
                 app.register_blueprint(blueprint, url_prefix=prefix)
+                print(f"✅ Registered: {module_path}")
             except Exception as e:
                 print(f"⚠️ Security Alert: Failed to register {attr_name} - Error: {e}")
 
-        # تسجيل جميع مسارات التطبيق
+        # تسجيل جميع مسارات التطبيق - مطابقة تماماً للمتغيرات في ملفات الـ routes
         safe_register('apps.auth_portal.routes', 'auth_portal', '')
         safe_register('apps.add_supplier.routes', 'add_supplier_bp', '/suppliers')
         safe_register('apps.financial_ops.routes', 'financial_blueprint', '/financial_ops')
