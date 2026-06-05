@@ -6,30 +6,34 @@ from apps.extensions import db
 from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 
-# تعريف المحرك
+# تعريف المحرك (Blueprint)
 wallet_app = Blueprint('wallet_app', __name__)
 
 @wallet_app.route('/view/<int:supplier_id>')
 @login_required
 def view_wallet(supplier_id):
+    """
+    عرض تفاصيل المحفظة الخاصة بمورد معين مع نظام ترقيم للعمليات
+    """
     # 1. جلب بيانات المورد والمحفظة
     supplier = Supplier.query.get_or_404(supplier_id)
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
     
+    # التحقق من وجود محفظة للمورد
     if not wallet:
         return "هذا المورد لا يمتلك محفظة حالياً.", 404
 
-    # 2. الترقيم (Pagination): عرض 10 إلى 20 عملية حسب اختيارك
+    # 2. الترقيم (Pagination): عرض 15 عملية لكل صفحة
     page = request.args.get('page', 1, type=int)
     
-    # جلب العمليات مع الترقيم
+    # جلب العمليات مع الترقيم مرتبة من الأحدث إلى الأقدم
     pagination = WalletTransaction.query.filter_by(wallet_id=wallet.id)\
         .order_by(WalletTransaction.created_at.desc())\
-        .paginate(page=page, per_page=15, error_out=False) # تم ضبطه على 15 عملية
+        .paginate(page=page, per_page=15, error_out=False)
     
     transactions = pagination.items
     
-    # 3. إرسال البيانات
+    # 3. إرسال البيانات إلى القالب
     return render_template('admin/wallet_app_detail.html', 
                            supplier=supplier, 
                            wallet=wallet, 
@@ -39,13 +43,18 @@ def view_wallet(supplier_id):
 @wallet_app.route('/stats')
 @login_required
 def get_stats():
-    # حساب إجمالي أرصدة النظام
+    """
+    إرجاع إحصائيات النظام المالية العامة بصيغة JSON
+    تستخدم هذه الدالة لتحديث لوحات التحكم (Dashboards) لحظياً
+    """
+    # حساب إجمالي أرصدة النظام بجميع العملات
     totals = db.session.query(
         func.sum(SupplierWallet.balance_sar),
         func.sum(SupplierWallet.balance_yer),
         func.sum(SupplierWallet.balance_usd)
     ).first()
     
+    # إرجاع النتائج مع معالجة القيم الفارغة (None) بتحويلها إلى 0
     return jsonify({
         'sar': float(totals[0] or 0),
         'yer': float(totals[1] or 0),
