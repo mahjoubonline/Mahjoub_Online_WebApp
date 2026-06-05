@@ -28,10 +28,11 @@ def create_app():
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # 🛡️ استيراد النماذج الموجودة فعلياً
+        # 🛡️ استيراد النماذج (كاملة)
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
+        from apps.models.vault_db import AdminVault, VaultTransaction
         
         # 🛡️ إدارة المستخدم
         @login_manager.user_loader
