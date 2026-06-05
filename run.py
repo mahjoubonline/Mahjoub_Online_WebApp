@@ -29,9 +29,11 @@ def auto_repair_db():
             
             # إصلاح أعمدة جدول معاملات المحفظة (Wallet_Transactions)
             db.session.execute(text("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'YER';"))
+            db.session.execute(text("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS description TEXT;"))
+            db.session.execute(text("ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'completed';"))
             
             db.session.commit()
-            print("✅ نظام الإصلاح الذاتي: تم مزامنة هيكل الجداول مع المحرك البرمجي بنجاح.")
+            print("✅ نظام الإصلاح الذاتي: تم مزامنة هيكل الجداول بالكامل بنجاح.")
             
             # زرع الهوية السيادية
             u, p = "محجوب", "123"
