@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع الاحترافي الشامل (حل مشكلة استيراد الكوفينج نهائياً)
+# 📂 apps/__init__.py - المصنع الاحترافي المحصن بالكامل (حل مشكلة استيراد الكوفينج في جيت هوب)
 
 import os
 import sys
@@ -7,7 +7,11 @@ import traceback
 from datetime import timedelta
 from flask import Flask, redirect
 
-# تهيئة الإضافات في النطاق العام (بدون استيراد Config هنا لضمان سلامة الرفع والـ Build)
+# جعل مجلد الجذر مرئياً لبايثون في كافة بيئات التشغيل
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
+
 from apps.extensions import db, login_manager, migrate
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -24,35 +28,37 @@ def safe_register(app_instance, module_path, attr_name, prefix):
 def create_app():
     app = Flask(__name__)
     
-    # --- الحل السحري: إضافة مسار الجذر واستيراد الكوفينج داخل الدالة لتجنب أخطاء بيئات GitHub و Render ---
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if base_dir not in sys.path:
-        sys.path.insert(0, base_dir)
-    
+    # --- درع حماية استيراد الإعدادات لمنع أخطاء GitHub و Render ---
     try:
         from config import Config
         app.config.from_object(Config)
-        print("✅ Config loaded safely inside create_app.")
-    except ImportError:
-        print("⚠️ Warning: Config file not found, applying env variables directly.")
-        # حماية احتياطية للسيرفر إذا تم قراءته في بيئة اختبارية أو سحابية بدون ملف
-        app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-emergency-key')
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///emergency.db')
+        print("✅ Primary config.py loaded successfully.")
+    except (ImportError, ModuleNotFoundError):
+        print("⚠️ config.py not found in this environment (GitHub/CI). Building fallback configuration...")
+        
+        # حوكمة إعدادات الطوارئ والبيئة لضمان عدم انهيار السيرفر أو الفحص الآلي
+        app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'SOVEREIGN_KEY_2026')
+        
+        _db_url = os.environ.get('DATABASE_URL')
+        if _db_url:
+            if _db_url.startswith("postgres://"):
+                _db_url = _db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+            elif _db_url.startswith("postgresql://"):
+                _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        
+        app.config['SQLALCHEMY_DATABASE_URI'] = _db_url or 'sqlite:///mahjoub_online.db'
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        app.config['JSON_AS_ASCII'] = False
+        
+        # إدارة الاتصالات الاحتياطية لـ Render
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            "pool_size": 15,
+            "max_overflow": 10,
+            "pool_timeout": 30,
+            "pool_recycle": 1800,
+            "pool_pre_ping": True
+        }
 
-    # إعدادات الأمان الصارمة للجلسات
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
-    app.config['SESSION_COOKIE_HTTPONLY'] = True  
-    app.config['SESSION_COOKIE_SECURE'] = True    
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    
-    # إعدادات الاتصال لقاعدة البيانات لمنع الانقطاع المفاجئ (Database Connection Pool)
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_size': 10,
-        'pool_recycle': 3600,
-        'pool_pre_ping': True
-    }
-    
     # التوافق الكامل مع خوادم معالجة البروكسي والـ SSL في Render
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
@@ -103,10 +109,4 @@ def create_app():
 
         @app.after_request
         def add_security_headers(response):
-            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
-            response.headers["X-Content-Type-Options"] = "nosniff"
-            response.headers["X-Frame-Options"] = "DENY"
-            response.headers.pop("Server", None)
-            return response
-
-    return app
+            response.headers
