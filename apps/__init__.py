@@ -1,28 +1,22 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع الاحترافي المحصن ضد الانهيار
-
 import os
 import sys
-import traceback
 from datetime import timedelta
 from flask import Flask, redirect
 
-# الحل الجذري والنهائي لخطأ الكوفينج: إجبار بايثون على تقديم المجلد الجذر في قائمة البحث
-base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if base_dir not in sys.path:
-    sys.path.insert(0, base_dir)
+# إضافة المجلد الجذر إلى مسار النظام لضمان العثور على config
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from config import Config  # الآن سيجد الملف في الجذر بالتأكيد وينتهي الخطأ
+from config import Config  # الآن سيجد الملف في الجذر بالتأكيد
 from werkzeug.middleware.proxy_fix import ProxyFix
 from apps.extensions import db, login_manager, migrate
 
 def safe_register(app_instance, module_path, attr_name, prefix):
-    """تسجيل المسارات (Blueprints) مع معالجة الأخطاء الذكية."""
+    """تسجيل المسارات (Blueprints) مع معالجة الأخطاء."""
     try:
         module = __import__(module_path, fromlist=[attr_name])
         blueprint = getattr(module, attr_name)
         app_instance.register_blueprint(blueprint, url_prefix=prefix)
-        print(f"✅ Registered: {module_path}")
     except Exception as e:
         print(f"⚠️ Security Alert: Failed to register {attr_name} - Error: {e}")
 
@@ -30,30 +24,28 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # إعدادات الأمان الصارمة للجلسات
+    # إعدادات الأمان
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
     app.config['SESSION_COOKIE_HTTPONLY'] = True  
     app.config['SESSION_COOKIE_SECURE'] = True    
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     
-    # إعدادات الاتصال (مهم جداً لاستقرار قاعدة البيانات ومنع الانقطاع المفاجئ)
+    # إعدادات الاتصال (مهم جداً للاستقرار)
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_size': 10,
         'pool_recycle': 3600,
         'pool_pre_ping': True
     }
     
-    # التوافق الكامل مع خوادم معالجة البروكسي في Render
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
-    # تهيئة الإضافات الأساسية
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # استيراد النماذج (Models) لضمان تسجيلها داخل النظام
+        # استيراد النماذج
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
@@ -63,25 +55,13 @@ def create_app():
         def load_user(user_id):
             return AdminUser.query.get(int(user_id))
 
-        # تسجيل المسارات (Blueprints)
+        # تسجيل المسارات
         safe_register(app, 'apps.auth_portal.routes', 'auth_portal', '')
         safe_register(app, 'apps.add_supplier.routes', 'add_supplier_bp', '/suppliers')
         safe_register(app, 'apps.financial_ops.routes', 'financial_blueprint', '/financial_ops')
         safe_register(app, 'apps.admin_dashboard.routes', 'admin_dashboard', '/admin')
         safe_register(app, 'apps.api.search', 'api_search', '/api')
         safe_register(app, 'apps.wallet.routes', 'wallet_app', '/wallet')
-
-        # --- حماية السيرفر من الانهيار الكلي عند الأخطاء المفاجئة ---
-        @app.errorhandler(Exception)
-        def handle_global_error(e):
-            print("🚨 التقط درع الأمان خطأ غير متوقع - السيرفر لم ينهار ولن يفصل:")
-            print(traceback.format_exc())  # طباعة تفاصيل الخطأ في الـ Logs لإصلاحه لاحقاً
-            return "عذراً، حدث خطأ مؤقت في هذا الجزء. النظام لا يزال يعمل ومستقر تماماً.", 500
-
-        # --- مسار النبض لمنع Render من تحويل السيرفر لحالة السبات (Spin-down) ---
-        @app.route('/health')
-        def health_check():
-            return "System Status: Online and Active", 200
 
         @app.route('/robots.txt')
         def robots_txt():
