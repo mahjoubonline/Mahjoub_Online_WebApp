@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/models/supplier_db.py - النموذج السيادي المحدث (المحرك السريع)
+# 📂 apps/models/supplier_db.py - النموذج السيادي (نسخة مرنة للزرع)
 
 from apps.extensions import db
 from apps.utils.security import AESCipher
@@ -16,21 +16,20 @@ class Supplier(db.Model):
     search_name = db.Column(db.String(150), index=True, nullable=True)
     search_phone = db.Column(db.String(20), index=True, nullable=True)
 
-    # --- حقول التشفير والبيانات ---
+    # --- حقول البيانات ---
     sovereign_id = db.Column(db.String(100), nullable=True) 
     wallet_code = db.Column(db.String(50), nullable=True)
-    
-    # الحقول الفريدة والمهمة للتوثيق
     sovereign_id_enc = db.Column(db.String(255), unique=True, nullable=True)
+    
+    # حقول إجبارية للمنطق (لا نغيرها)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     
-    # الحقول المشفرة (تم ضبطها بالكامل لـ nullable=True لضمان نجاح أي عملية إدخال)
+    # --- الحقول المشفرة (تم جعلها nullable=True بالكامل لتجاوز خطأ الـ NullViolation) ---
     trade_name_enc = db.Column(db.String(255), nullable=True) 
     owner_name_enc = db.Column(db.String(255), nullable=True)
     owner_phone_enc = db.Column(db.String(255), nullable=True)
     shop_phone_enc = db.Column(db.String(255), nullable=True)
-
     id_type_enc = db.Column(db.String(255), nullable=True)
     supply_category_enc = db.Column(db.String(255), nullable=True)
     province_enc = db.Column(db.String(255), nullable=True)
@@ -40,12 +39,12 @@ class Supplier(db.Model):
     bank_name_enc = db.Column(db.String(255), nullable=True)
     bank_acc_enc = db.Column(db.String(255), nullable=True)
     
-    status = db.Column(db.String(20), default=STATUSES[0])
-    rank_grade = db.Column(db.String(20), default=RANKS[1])
+    status = db.Column(db.String(20), default=STATUSES[0], nullable=True)
+    rank_grade = db.Column(db.String(20), default=RANKS[1], nullable=True)
     status_reason = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
 
-    # --- بوابات التشفير والبحث ---
+    # --- بوابات التشفير ---
     def _decrypt(self, value): return AESCipher.decrypt(value) if value else None
 
     @property
