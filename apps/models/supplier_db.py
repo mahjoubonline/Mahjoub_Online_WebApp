@@ -17,6 +17,7 @@ class Supplier(db.Model):
     search_phone = db.Column(db.String(20), index=True, nullable=False)
 
     # --- حقول التشفير السيادي ---
+    sovereign_id = db.Column(db.String(100), nullable=True) # تم إضافته ليتوافق مع كود الزراعة
     sovereign_id_enc = db.Column(db.String(255), unique=True, nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -42,35 +43,31 @@ class Supplier(db.Model):
     # --- بوابات التشفير والبحث ---
     def _decrypt(self, value): return AESCipher.decrypt(value) if value else None
 
-    # 1. الاسم التجاري
+    # [باقي الدوال تبقى كما هي بدون تغيير...]
     @property
     def trade_name(self): return self._decrypt(self.trade_name_enc)
     @trade_name.setter
     def trade_name(self, value): 
         self.trade_name_enc = AESCipher.encrypt(str(value))
-        self.search_name = str(value)[:150] # تحديث فهرس البحث
+        self.search_name = str(value)[:150]
 
-    # 2. هاتف المالك
     @property
     def owner_phone(self): return self._decrypt(self.owner_phone_enc)
     @owner_phone.setter
     def owner_phone(self, value): 
         self.owner_phone_enc = AESCipher.encrypt(str(value))
-        self.search_phone = str(value)[:20] # تحديث فهرس البحث
+        self.search_phone = str(value)[:20]
 
-    # 3. هاتف المحل
     @property
     def shop_phone(self): return self._decrypt(self.shop_phone_enc)
     @shop_phone.setter
     def shop_phone(self, value): self.shop_phone_enc = AESCipher.encrypt(str(value))
 
-    # 4. المالك
     @property
     def owner_name(self): return self._decrypt(self.owner_name_enc)
     @owner_name.setter
     def owner_name(self, value): self.owner_name_enc = AESCipher.encrypt(str(value))
 
-    # 5. البيانات البنكية والمالية
     @property
     def bank_acc(self): return self._decrypt(self.bank_acc_enc)
     @bank_acc.setter
