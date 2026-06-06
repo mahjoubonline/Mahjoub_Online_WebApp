@@ -36,8 +36,9 @@
                     <div class="ms-3"><h6 class="text-muted mb-0">الأرصدة المركزية</h6></div>
                 </div>
                 {% if total_balance_sar is defined %}
-                    <h5 class="fw-bold mb-0">{{ "%.2f"|format(total_balance_sar) }} <small>ر.س</small></h5>
-                    <h5 class="fw-bold mb-0">{{ "%.2f"|format(total_balance_yer) }} <small>ر.ي</small></h5>
+                    <h5 class="fw-bold mb-1">{{ "%.2f"|format(total_balance_sar) }} <small>ر.س</small></h5>
+                    <h5 class="fw-bold mb-1">{{ "%.2f"|format(total_balance_yer) }} <small>ر.ي</small></h5>
+                    <h5 class="fw-bold mb-0" style="color: #2c3e50;">{{ "%.2f"|format(total_balance_usd) }} <small>د.أ</small></h5>
                 {% else %}
                     <h6 class="text-muted">نظام المحفظة قيد التحديث...</h6>
                 {% endif %}
