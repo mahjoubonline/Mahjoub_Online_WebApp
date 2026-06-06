@@ -1,11 +1,13 @@
-# 📂 run.py - النسخة الأكثر استقراراً
-from apps import create_app
+# 📂 run.py
 import os
+from apps import create_app
 
-# تهيئة التطبيق
 app = create_app()
 
-if __name__ == "__main__":
-    # هذا التشغيل المحلي فقط
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+def auto_repair_db():
+    # التحقق من وجود المتغير الأساسي لقاعدة البيانات
+    if not os.environ.get("DATABASE_URL"):
+        print("⚠️ GitHub Test Environment Detected: Skipping DB Repair.")
+        return
+    
+    # ... باقي كود الإصلاح الخاص بك ...
