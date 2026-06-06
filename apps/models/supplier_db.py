@@ -13,18 +13,19 @@ class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # --- حقول البحث السريع ---
-    search_name = db.Column(db.String(150), index=True, nullable=False)
-    search_phone = db.Column(db.String(20), index=True, nullable=False)
+    search_name = db.Column(db.String(150), index=True, nullable=True) # تم التعديل لـ True
+    search_phone = db.Column(db.String(20), index=True, nullable=True) # تم التعديل لـ True
 
-    # --- حقول التشفير والبيانات (تم ضبط nullable=True للسماح بعملية الزراعة) ---
+    # --- حقول التشفير والبيانات ---
     sovereign_id = db.Column(db.String(100), nullable=True) 
     wallet_code = db.Column(db.String(50), nullable=True)
     
-    sovereign_id_enc = db.Column(db.String(255), unique=True, nullable=False)
+    # الحقول الفريدة والمهمة للتوثيق
+    sovereign_id_enc = db.Column(db.String(255), unique=True, nullable=True) # تم التعديل لـ True للزراعة
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     
-    # هذه الحقول تم ضبطها لـ True لأن سجل الخطأ أظهر أنها تسبب NotNullViolation
+    # الحقول المشفرة (تم ضبطها بالكامل لـ nullable=True لضمان نجاح أي عملية إدخال)
     trade_name_enc = db.Column(db.String(255), nullable=True) 
     owner_name_enc = db.Column(db.String(255), nullable=True)
     owner_phone_enc = db.Column(db.String(255), nullable=True)
