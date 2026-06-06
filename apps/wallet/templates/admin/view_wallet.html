@@ -1,1 +1,82 @@
+{% if wallet %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="mahjoub-card text-center border-bottom border-4 border-primary">
+            <small class="text-muted">رصيد (SAR)</small>
+            <h4 class="fw-bold text-primary">{{ "{:,.2f}".format(wallet.balance_sar) }}</h4>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mahjoub-card text-center border-bottom border-4 border-success">
+            <small class="text-muted">رصيد (YER)</small>
+            <h4 class="fw-bold text-success">{{ "{:,.2f}".format(wallet.balance_yer) }}</h4>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mahjoub-card text-center border-bottom border-4 border-warning">
+            <small class="text-muted">رصيد (USD)</small>
+            <h4 class="fw-bold text-warning">{{ "{:,.2f}".format(wallet.balance_usd) }}</h4>
+        </div>
+    </div>
+</div>
 
+<div class="mahjoub-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="m-0"><i class="fas fa-list-ul me-2"></i> سجل العمليات المالية</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>التاريخ</th>
+                    <th>النوع</th>
+                    <th>المبلغ</th>
+                    <th>العملة</th>
+                    <th>البيان</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td>{{ tx.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <span class="badge {{ 'bg-success' if tx.transaction_type == 'credit' else 'bg-danger' }}">
+                            {{ 'إيداع' if tx.transaction_type == 'credit' else 'سحب' }}
+                        </span>
+                    </td>
+                    <td class="fw-bold">{{ "{:,.2f}".format(tx.amount) }}</td>
+                    <td><span class="badge bg-secondary">{{ tx.currency }}</span></td>
+                    <td>{{ tx.description or '---' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">لا توجد عمليات مالية مسجلة لهذا المورد.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination and pagination.pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center mt-3 border-top pt-3">
+        <small class="text-muted">صفحة {{ pagination.page }} من {{ pagination.pages }}</small>
+        <nav>
+            <ul class="pagination pagination-sm m-0">
+                <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                    <button class="page-link" onclick="loadWallet({{ pagination.prev_num }})" 
+                            {% if not pagination.has_prev %}disabled{% endif %}>السابق</button>
+                </li>
+                <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                    <button class="page-link" onclick="loadWallet({{ pagination.next_num }})" 
+                            {% if not pagination.has_next %}disabled{% endif %}>التالي</button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="alert alert-warning text-center">
+    <i class="fas fa-exclamation-circle"></i> لم يتم العثور على محفظة لهذا المورد.
+</div>
+{% endif %}
