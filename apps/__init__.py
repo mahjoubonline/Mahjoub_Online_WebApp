@@ -59,7 +59,9 @@ def create_app():
                             status="قيد المراجعة",
                             rank_grade="ريادي"
                         )
+                        # إضافة الحقول الاختيارية بعد الإنشاء
                         s.sovereign_id = f"SID-{i:03d}"
+                        s.wallet_code = f"WC-{i:03d}" 
                         
                         db.session.add(s)
                         db.session.flush() 
