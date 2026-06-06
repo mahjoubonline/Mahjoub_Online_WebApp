@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع الاحترافي (نظيف بدون عمليات زرع تلقائية)
+# 📂 apps/__init__.py - المصنع الاحترافي المحصن
 
 import os
 from datetime import timedelta
@@ -28,6 +28,13 @@ def create_app():
     app.config['SESSION_COOKIE_SECURE'] = True    
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     
+    # إعدادات الاتصال بقاعدة البيانات لضمان الثبات على السيرفر
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_size': 10,
+        'pool_recycle': 3600,
+        'pool_pre_ping': True
+    }
+    
     # إعدادات الـ Proxy للتوافق مع Render
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
@@ -38,8 +45,7 @@ def create_app():
     login_manager.login_view = 'auth_portal.login' 
 
     with app.app_context():
-        # تمت إزالة auto_repair_db() من هنا ليكون المصنع نقياً
-        
+        # استيراد النماذج (Models) لضمان تسجيلها في SQLAlchemy
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
@@ -49,7 +55,7 @@ def create_app():
         def load_user(user_id):
             return AdminUser.query.get(int(user_id))
 
-        # تسجيل المسارات
+        # تسجيل المسارات (Blueprints)
         safe_register(app, 'apps.auth_portal.routes', 'auth_portal', '')
         safe_register(app, 'apps.add_supplier.routes', 'add_supplier_bp', '/suppliers')
         safe_register(app, 'apps.financial_ops.routes', 'financial_blueprint', '/financial_ops')
