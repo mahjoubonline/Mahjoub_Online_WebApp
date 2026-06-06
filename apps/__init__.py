@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 📂 apps/__init__.py - المصنع الاحترافي والمحصن
+# 📂 apps/__init__.py - المصنع الاحترافي والمحصن (نسخة التلقيم التلقائي)
 
 import os
 from datetime import timedelta
@@ -45,9 +45,29 @@ def create_app():
         from apps.models.wallet_db import SupplierWallet, WalletTransaction
         from apps.models.vault_db import AdminVault, VaultTransaction
         
-        # 6. المزامنة التلقائية للجداول
+        # 6. المزامنة والزراعة التلقائية للبيانات
         try:
             db.create_all()  
+            
+            # --- بداية التلقيم التلقائي للبيانات الوهمية ---
+            if Supplier.query.count() == 0:
+                print("⚠️ النظام: قاعدة البيانات فارغة، جاري زراعة 21 مورد تجريبي...")
+                for i in range(1, 22):
+                    s = Supplier(name=f"مورد تجريبي {i:02d}", phone=f"05000000{i:02d}")
+                    db.session.add(s)
+                    db.session.flush() # للحصول على الـ ID قبل الـ commit
+                    
+                    w = SupplierWallet(
+                        supplier_id=s.id, 
+                        balance_sar=100.0 * i, 
+                        balance_yer=5000.0 * i, 
+                        balance_usd=10.0 * i
+                    )
+                    db.session.add(w)
+                db.session.commit()
+                print("✅ تم بنجاح زراعة 21 مورداً تجريبياً.")
+            # --- نهاية التلقيم التلقائي ---
+            
         except Exception as e:
             print(f"⚠️ Synchronization issue: {e}")
 
