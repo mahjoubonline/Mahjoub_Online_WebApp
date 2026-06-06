@@ -41,8 +41,7 @@ def create_app():
         from apps.models.vault_db import AdminVault, VaultTransaction
         
         try:
-            # ملاحظة: سنعتمد على أنك قمت بتنفيذ أمر SQL (ALTER TABLE) لرفع قيد الـ NOT NULL
-            # لضمان عدم حدوث خطأ أثناء الإدخال.
+            # تم ضبط قاعدة البيانات مسبقاً لتكون مرنة عبر أمر SQL
             if Supplier.query.count() == 0:
                 print("⚠️ النظام: قاعدة البيانات فارغة، جاري زراعة 21 مورد تجريبي...")
                 for i in range(1, 22):
