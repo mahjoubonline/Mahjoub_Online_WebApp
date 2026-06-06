@@ -1,14 +1,12 @@
 # coding: utf-8
-# 📂 apps/wallet/routes.py - النسخة النهائية والمصححة
+# 📂 apps/wallet/routes.py - النسخة المعتمدة للإنتاج
 
 from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
-# استيراد db من المجلد الرئيسي كما هو متعارف عليه في نمط الـ Factory
 from apps import db 
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 
 # تعريف الـ Blueprint
-# الاسم 'wallet_app' سيُستخدم في الـ templates عبر url_for('wallet_app.اسم_الدالة')
 wallet_app = Blueprint(
     'wallet_app', 
     __name__, 
@@ -21,12 +19,11 @@ wallet_app = Blueprint(
 def wallet_dashboard():
     # حساب إجماليات النظام مع معالجة استباقية لأي خطأ في قاعدة البيانات
     try:
-        # التأكد من استخدام .scalar() للحصول على قيمة واحدة
         total_sar = db.session.query(db.func.sum(SupplierWallet.balance_sar)).scalar()
         total_yer = db.session.query(db.func.sum(SupplierWallet.balance_yer)).scalar()
         total_usd = db.session.query(db.func.sum(SupplierWallet.balance_usd)).scalar()
         
-        # تعيين قيمة افتراضية 0 إذا كانت النتيجة None
+        # تعيين قيمة افتراضية 0.0 إذا كانت النتيجة None
         total_system_sar = float(total_sar) if total_sar else 0.0
         total_system_yer = float(total_yer) if total_yer else 0.0
         total_system_usd = float(total_usd) if total_usd else 0.0
@@ -42,7 +39,7 @@ def wallet_dashboard():
         total_system_usd=total_system_usd
     )
 
-# 2. عرض محفظة مورد محدد (يتم استدعاؤه عبر AJAX)
+# 2. عرض محفظة مورد محدد
 @wallet_app.route('/view/<int:supplier_id>')
 @login_required
 def view_wallet(supplier_id):
@@ -52,7 +49,6 @@ def view_wallet(supplier_id):
         transactions = WalletTransaction.query.filter_by(wallet_id=wallet.id)\
             .order_by(WalletTransaction.created_at.desc()).all()
     
-    # القالب يجب أن يكون في: apps/wallet/templates/wallet/view_wallet.html
     return render_template('wallet/view_wallet.html', wallet=wallet, transactions=transactions)
 
 # 3. إضافة عملية مالية (API)
