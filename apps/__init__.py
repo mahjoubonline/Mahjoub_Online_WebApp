@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع النهائي المحصن (تم ربط كل مورد بمحفظة)
+# 📂 apps/__init__.py - النسخة النهائية المتكاملة والمصححة
 
 import os
 import sys
@@ -13,7 +13,7 @@ if base_dir not in sys.path: sys.path.insert(0, base_dir)
 from apps.extensions import db, login_manager, migrate
 from apps.models.admin_db import AdminUser
 from apps.models.supplier_db import Supplier
-from apps.models.wallet_db import SupplierWallet
+from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from werkzeug.security import generate_password_hash
 
 def create_app():
@@ -23,7 +23,7 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     db.init_app(app)
-    migrate.init_app(app, db) # تفعيل الميجريشن
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = 'auth_portal.login'
 
@@ -33,8 +33,8 @@ def create_app():
 
     with app.app_context():
         try:
-            # ⚠️ تنظيف الجداول لضمان النظافة (احذف هذا السطر بعد أول تشغيل ناجح)
-            db.session.execute(db.text("TRUNCATE TABLE suppliers, admin_users, supplier_wallets RESTART IDENTITY CASCADE;"))
+            # ⚠️ تنظيف شامل للجداول (الترتيب مهم لتجنب تعارض المفاتيح الخارجية)
+            db.session.execute(db.text("TRUNCATE TABLE wallet_transactions, supplier_wallets, suppliers, admin_users RESTART IDENTITY CASCADE;"))
             
             # 1. المالك
             admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
@@ -57,14 +57,14 @@ def create_app():
                 result = db.session.execute(sql, params)
                 sup_id = result.fetchone()[0]
                 
-                # إدخال المحفظة المرتبطة فوراً
+                # إدخال المحفظة المرتبطة
                 db.session.execute(
                     db.text("INSERT INTO supplier_wallets (supplier_id, balance_sar, balance_yer, balance_usd) VALUES (:id, 0, 0, 0)"), 
                     {'id': sup_id}
                 )
             
             db.session.commit()
-            print("✅ تم زرع 21 مورداً مع 21 محفظة بنجاح.")
+            print("✅ تم زرع البيانات بنجاح: 21 مورداً + 21 محفظة.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء الزرع: {e}")
