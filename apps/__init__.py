@@ -1,16 +1,16 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع النهائي المحصن (تم التحويل للـ SQL الخام لتجاوز القيود)
-
 import os
 import sys
 from flask import Flask, redirect
+from flask_login import login_user
 
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if base_dir not in sys.path:
-    sys.path.insert(0, base_dir)
+if base_dir not in sys.path: sys.path.insert(0, base_dir)
 
 from apps.extensions import db, login_manager, migrate
-from werkzeug.middleware.proxy_fix import ProxyFix
+from apps.models.admin_db import AdminUser
+from apps.models.supplier_db import Supplier
+from apps.models.wallet_db import SupplierWallet
 from werkzeug.security import generate_password_hash
 
 def create_app():
@@ -20,45 +20,44 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     db.init_app(app)
-    migrate.init_app(app, db)
     login_manager.init_app(app)
+    login_manager.login_view = 'auth_portal.login'
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return AdminUser.query.get(int(user_id))
 
     with app.app_context():
-        from apps.models.admin_db import AdminUser
-        
         try:
-            # 1. تنظيف شامل
+            # تنظيف وإعادة زرع (سيتم إيقافه لاحقاً)
             db.session.execute(db.text("TRUNCATE TABLE suppliers, admin_users, supplier_wallets RESTART IDENTITY CASCADE;"))
-            db.session.commit()
-
-            # 2. إضافة المالك (باستخدام الموديل)
+            
+            # 1. المالك
             admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
             admin.set_password('123')
             db.session.add(admin)
             db.session.commit()
 
-            # 3. زرع الموردين باستخدام SQL خام لتجاوز قيود NotNull
+            # 2. الموردين (إضافة حقل owner_phone المفقود)
             for i in range(1, 22):
                 sql = db.text("""
-                    INSERT INTO suppliers (username, password_hash, status, rank_grade, trade_name, owner_name, wallet_code) 
-                    VALUES (:u, :p, :s, :r, :t, :o, :w) RETURNING id
+                    INSERT INTO suppliers (username, password_hash, status, rank_grade, trade_name, owner_name, wallet_code, owner_phone) 
+                    VALUES (:u, :p, :s, :r, :t, :o, :w, :ph) RETURNING id
                 """)
                 params = {
                     'u': f'sup_{i}', 'p': generate_password_hash('sup_pass_123'),
                     's': 'قيد المراجعة', 'r': 'ريادي', 't': f'مؤسسة المورد {i}',
-                    'o': f'المالك {i}', 'w': f'W-{i}-2026'
+                    'o': f'المالك {i}', 'w': f'W-{i}-2026', 'ph': f'7700000{i:02d}'
                 }
                 result = db.session.execute(sql, params)
                 sup_id = result.fetchone()[0]
-
-                # إدخال المحفظة
                 db.session.execute(db.text("INSERT INTO supplier_wallets (supplier_id, balance_sar, balance_yer, balance_usd) VALUES (:id, 0, 0, 0)"), {'id': sup_id})
             
             db.session.commit()
-            print("✅ تم الزرع بنجاح عبر SQL الخام.")
+            print("✅ تم الزرع بنجاح!")
         except Exception as e:
             db.session.rollback()
-            print(f"⚠️ خطأ: {e}")
+            print(f"⚠️ خطأ في الزرع: {e}")
 
         # تسجيل الـ Blueprints
         from apps.auth_portal.routes import auth_portal
