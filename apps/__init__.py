@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع النهائي المحصن (تعديل مباشر لتجاوز الـ NotNull)
+# 📂 apps/__init__.py - المصنع النهائي المحصن (تم التعريب وتفعيل التنظيف الإجباري)
 
 import os
 import sys
@@ -39,44 +39,47 @@ def create_app():
         
         # --- الزرع الذكي المحمي بـ Try-Except ---
         try:
-            # التحقق من وجود المالك أولاً
-            if not AdminUser.query.filter_by(username='ali_mahjoub').first():
-                print("🌱 بدء زرع المالك والموردين...")
-                
-                # 1. إضافة المالك
-                admin = AdminUser(username='ali_mahjoub', role='Owner', phone_number='0000000000')
-                admin.set_password('123')
-                db.session.add(admin)
-                db.session.flush()
+            # ⚠️ تنظيف إجباري لمرة واحدة: مسح البيانات القديمة لضمان نجاح الزرع
+            db.session.execute(db.text("TRUNCATE TABLE suppliers, admin_users, supplier_wallets RESTART IDENTITY CASCADE;"))
+            db.session.commit()
+            print("🧹 تم تنظيف قاعدة البيانات للبدء من جديد.")
 
-                # 2. إضافة 21 مورداً
-                for i in range(1, 22):
-                    # نملأ البيانات الأساسية و المشفرة مباشرة لتجاوز قيود قاعدة البيانات
-                    sup = Supplier(
-                        username=f'sup_{i}',
-                        password_hash=generate_password_hash('sup_pass_123'),
-                        status='قيد المراجعة',
-                        rank_grade='ريادي'
-                    )
-                    
-                    # نستخدم الخصائص (Setters) لتشفير البيانات تلقائياً وتحديث حقول البحث
-                    sup.trade_name = f'مؤسسة المورد {i}'
-                    sup.owner_name = f'المالك {i}'
-                    sup.owner_phone = f'7700000{i:02d}'
-                    sup.wallet_code = f'W-{i}-2026'
-                    
-                    db.session.add(sup)
-                    db.session.flush() # الحصول على الـ ID بعد الإضافة
-                    
-                    # 3. إنشاء المحفظة
-                    wallet = SupplierWallet(supplier_id=sup.id, balance_sar=0.0, balance_yer=0.0, balance_usd=0.0)
-                    db.session.add(wallet)
+            print("🌱 بدء زرع المالك والموردين...")
+            
+            # 1. إضافة المالك (بالعربي كما طلبت)
+            admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
+            admin.set_password('123')
+            db.session.add(admin)
+            db.session.flush()
+
+            # 2. إضافة 21 مورداً
+            for i in range(1, 22):
+                sup = Supplier(
+                    username=f'sup_{i}',
+                    password_hash=generate_password_hash('sup_pass_123'),
+                    status='قيد المراجعة',
+                    rank_grade='ريادي'
+                )
                 
-                db.session.commit()
-                print("✅ تم زرع المالك والموردين بنجاح.")
-        except Exception:
+                # استخدام الخصائص (Setters) للتشفير
+                sup.trade_name = f'مؤسسة المورد {i}'
+                sup.owner_name = f'المالك {i}'
+                sup.owner_phone = f'7700000{i:02d}'
+                sup.wallet_code = f'W-{i}-2026'
+                
+                db.session.add(sup)
+                db.session.flush()
+                
+                # 3. إنشاء المحفظة
+                wallet = SupplierWallet(supplier_id=sup.id, balance_sar=0.0, balance_yer=0.0, balance_usd=0.0)
+                db.session.add(wallet)
+            
+            db.session.commit()
+            print("✅ تم زرع المالك (علي_محجوب) والموردين بنجاح.")
+
+        except Exception as e:
             db.session.rollback()
-            print("⚠️ تم تجاهل الزرع بسبب وجود بيانات سابقة أو خطأ في القاعدة.")
+            print(f"⚠️ حدث خطأ أثناء الزرع: {e}")
 
         @login_manager.user_loader
         def load_user(user_id):
