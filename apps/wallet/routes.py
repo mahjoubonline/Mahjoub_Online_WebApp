@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required
 from apps.extensions import db
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
-from apps.models.supplier_db import Supplier # تم الاستيراد لتفعيل البحث
+from apps.models.supplier_db import Supplier
 
 # تعريف الـ Blueprint
 wallet_app = Blueprint(
@@ -38,7 +38,7 @@ def wallet_dashboard():
         total_system_usd=total_system_usd
     )
 
-# 2. عرض محفظة مورد محدد (يتم استدعاؤها عبر AJAX/Fetch)
+# 2. عرض محفظة مورد محدد
 @wallet_app.route('/view/<int:supplier_id>')
 @login_required
 def view_wallet(supplier_id):
@@ -77,12 +77,13 @@ def search_suppliers():
     if not query:
         return jsonify({"results": []})
     
-    # البحث باستخدام حقول البحث السريع في نموذج المورد
+    # البحث في حقول البحث السريع (تم تفعيلها في نموذج المورد)
     suppliers = Supplier.query.filter(
         (Supplier.search_name.ilike(f'%{query}%')) | 
         (Supplier.search_phone.ilike(f'%{query}%'))
     ).limit(10).all()
     
+    # تنسيق النتائج ليقبلها Select2 (id, text)
     results = [
         {
             "id": s.id, 
@@ -110,9 +111,9 @@ def add_transaction():
         new_tx = WalletTransaction(
             wallet_id=wallet.id,
             amount=amount,
-            transaction_type=tx_type, # تم التعديل ليتوافق مع اسم الحقل في القالب
+            transaction_type=tx_type,
             description=description,
-            currency='SAR' # يمكن توسيع هذا مستقبلاً
+            currency='SAR'
         )
         db.session.add(new_tx)
         db.session.commit()
