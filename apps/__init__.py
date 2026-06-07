@@ -1,4 +1,4 @@
-# 📂 apps/__init__.py - النسخة النهائية المستقرة
+# 📂 apps/__init__.py - النسخة النهائية المستقرة (بعد التنظيف)
 import os
 import sys
 from flask import Flask
@@ -31,22 +31,20 @@ def create_app():
     def load_user(user_id):
         return AdminUser.query.get(int(user_id))
 
-    # تسجيل الـ Blueprints (التسجيل الصحيح والآمن)
+    # تسجيل الـ Blueprints (تم إزالة api.search)
     from apps.auth_portal.routes import auth_portal
     from apps.add_supplier.routes import add_supplier_bp
     from apps.financial_ops.routes import financial_blueprint
     from apps.admin_dashboard.routes import admin_dashboard
-    from apps.api.search import api_search
     from apps.wallet.routes import wallet_app
 
     app.register_blueprint(auth_portal, url_prefix='')
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
     app.register_blueprint(financial_blueprint, url_prefix='/financial_ops')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
-    app.register_blueprint(api_search, url_prefix='/api')
     app.register_blueprint(wallet_app, url_prefix='/wallet')
 
-    # تهيئة قاعدة البيانات والبيانات التأسيسية
+    # تهيئة قاعدة البيانات
     with app.app_context():
         db.create_all()
         
@@ -57,7 +55,6 @@ def create_app():
                 db.session.add(admin)
                 db.session.commit()
 
-                # زرع موردين تجريبيين للتأكد من عمل النظام
                 for i in range(1, 22):
                     new_sup = Supplier(
                         username=f'sup_{i}', 
@@ -67,7 +64,7 @@ def create_app():
                         wallet_code=f'W-{i}-2026', owner_phone=f'7700000{i:02d}'
                     )
                     db.session.add(new_sup)
-                    db.session.flush() # لحجز الـ ID قبل الـ commit
+                    db.session.flush() 
                     new_wallet = SupplierWallet(supplier_id=new_sup.id, balance_sar=0, balance_yer=0, balance_usd=0)
                     db.session.add(new_wallet)
                 db.session.commit()
