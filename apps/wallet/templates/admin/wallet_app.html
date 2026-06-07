@@ -37,7 +37,6 @@
 
 <script>
     $(document).ready(function() {
-        // تهيئة Select2 مع التأكد من وجود المكتبة
         if ($.fn.select2) {
             $('#supplierSearch').select2({
                 placeholder: "ابحث عن المورد بالاسم أو رقم الهاتف...",
@@ -45,7 +44,8 @@
                 theme: "bootstrap-5",
                 minimumInputLength: 1,
                 ajax: {
-                    url: '/api/search', 
+                    // تم تحديث الرابط ليكون تابعاً لـ wallet_app مباشرة
+                    url: '/wallet/search_suppliers', 
                     dataType: 'json',
                     delay: 250,
                     data: params => ({ q: params.term }),
@@ -57,37 +57,28 @@
         loadSuppliers(1);
     });
 
-    // جلب قائمة الموردين مع معالجة الأخطاء
     function loadSuppliers(page) {
         const tableDiv = $('#suppliersTable');
         fetch(`/wallet/get_suppliers_list?page=${page}`)
-            .then(r => {
-                if (!r.ok) throw new Error('خطأ في الاتصال بالخادم');
-                return r.text();
-            })
+            .then(r => r.text())
             .then(html => tableDiv.html(html))
             .catch(err => {
-                tableDiv.html(`<div class="alert alert-danger text-center">حدث خطأ أثناء التحميل: ${err.message}</div>`);
+                tableDiv.html(`<div class="alert alert-danger text-center">خطأ في تحميل القائمة</div>`);
             });
     }
 
-    // عرض المحفظة
     function loadWallet(page = 1) {
         let supplierId = $('#supplierSearch').val();
         if (!supplierId) {
             Swal.fire('تنبيه', 'يرجى اختيار مورد أولاً', 'warning');
             return;
         }
-        
         const displayArea = $('#walletDisplayArea');
         displayArea.html('<div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري تحميل الكشف...</div>');
         
         fetch(`/wallet/view/${supplierId}?page=${page}`)
             .then(r => r.text())
-            .then(html => displayArea.html(html))
-            .catch(err => {
-                displayArea.html('<div class="alert alert-danger">تعذر تحميل المحفظة.</div>');
-            });
+            .then(html => displayArea.html(html));
     }
 </script>
 {% endblock %}
