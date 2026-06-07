@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع النهائي المحصن (الزرع الذكي مدمج)
+# 📂 apps/__init__.py - المصنع النهائي المحصن (Render-Ready & Gunicorn-Compatible)
 
 import os
 import sys
@@ -47,24 +47,31 @@ def create_app():
             db.session.add(admin)
             db.session.flush()
 
-            # 2. إضافة 21 مورداً ومحافظهم
+            # 2. إضافة 21 مورداً
             for i in range(1, 22):
+                # ننشئ المورد بالبيانات الأساسية التي لا تتطلب تشفيراً فورياً في الـ Init
                 sup = Supplier(
                     username=f'sup_{i}',
                     password_hash=generate_password_hash('sup_pass_123'),
-                    trade_name=f'مؤسسة المورد {i}',
-                    owner_name=f'المالك {i}',
-                    owner_phone=f'7700000{i:02d}',
-                    wallet_code=f'W-{i}-2026'
+                    status='قيد المراجعة',
+                    rank_grade='ريادي'
                 )
-                db.session.add(sup)
-                db.session.flush()
                 
+                # استخدام الخصائص (Setters) لتفعيل التشفير التلقائي
+                sup.trade_name = f'مؤسسة المورد {i}'
+                sup.owner_name = f'المالك {i}'
+                sup.owner_phone = f'7700000{i:02d}'
+                sup.wallet_code = f'W-{i}-2026'
+                
+                db.session.add(sup)
+                db.session.flush() # الحصول على الـ ID
+                
+                # 3. إنشاء المحفظة
                 wallet = SupplierWallet(supplier_id=sup.id, balance_sar=0.0, balance_yer=0.0, balance_usd=0.0)
                 db.session.add(wallet)
             
             db.session.commit()
-            print("✅ تم زرع البيانات بنجاح.")
+            print("✅ تم زرع المالك علي محجوب والـ 21 مورداً بنجاح.")
 
         @login_manager.user_loader
         def load_user(user_id):
