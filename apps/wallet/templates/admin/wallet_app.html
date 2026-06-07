@@ -9,16 +9,18 @@
         --mahjoub-orange: #e67e22;
     }
 
+    /* تنسيق الإحصائيات */
     .stat-box { border-radius: 20px; padding: 25px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.15); transition: 0.3s; margin-bottom: 20px; }
     .bg-purple { background-color: var(--mahjoub-purple); }
     .bg-green { background-color: var(--mahjoub-green); }
     .bg-orange { background-color: var(--mahjoub-orange); }
-    .stat-box h3 { color: var(--mahjoub-gold); margin: 0; }
+    .stat-box h3 { color: var(--mahjoub-gold); margin: 0; font-weight: bold; }
 
+    /* تنسيق الكارد والبحث */
     .mahjoub-card { border-radius: 20px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); background: #fff; padding: 20px; }
-    .btn-mahjoub { background-color: var(--mahjoub-purple) !important; color: white !important; }
+    .btn-mahjoub { background-color: var(--mahjoub-purple) !important; color: white !important; font-weight: bold; }
     
-    /* إصلاح حقل Select2 ليظهر بوضوح فوق العناصر الأخرى */
+    /* إصلاح Select2 */
     .select2-container { width: 100% !important; z-index: 9999 !important; }
     .select2-container--bootstrap-5 .select2-selection {
         height: 50px !important;
@@ -52,14 +54,14 @@
 
 <script>
     $(document).ready(function() {
-        // تأكد من تحميل select2 بعد jQuery مباشرة في admin_base.html
+        // تهيئة Select2
         $('#supplierSearch').select2({
             placeholder: "ابحث عن المورد بالاسم أو رقم الهاتف...",
             allowClear: true,
             theme: "bootstrap-5",
             minimumInputLength: 1, 
             ajax: { 
-                url: '/wallet/api/search_suppliers',
+                url: '/wallet/api/search_suppliers', // المسار المعتمد في routes.py
                 dataType: 'json', 
                 delay: 250, 
                 data: function(params) { return { q: params.term }; }, 
@@ -70,6 +72,7 @@
         });
     });
 
+    // دالة جلب المحفظة مع دعم التصفح (Pagination)
     function loadWallet(page = 1) {
         let supplierId = $('#supplierSearch').val();
         
@@ -78,7 +81,7 @@
             return;
         }
         
-        document.getElementById('walletDisplayArea').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري تحميل المحفظة...</div>';
+        $('#walletDisplayArea').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري تحميل كشف الحساب...</div>');
         
         fetch(`/wallet/view/${supplierId}?page=${page}`)
         .then(response => {
@@ -86,10 +89,11 @@
             return response.text();
         })
         .then(html => { 
-            document.getElementById('walletDisplayArea').innerHTML = html; 
+            // استبدال المحتوى بالكامل (الجدول + أزرار التصفح)
+            $('#walletDisplayArea').html(html); 
         })
         .catch(err => {
-            document.getElementById('walletDisplayArea').innerHTML = `<div class="alert alert-danger">خطأ: ${err.message}</div>`;
+            $('#walletDisplayArea').html(`<div class="alert alert-danger">خطأ: ${err.message}</div>`);
         });
     }
 </script>
