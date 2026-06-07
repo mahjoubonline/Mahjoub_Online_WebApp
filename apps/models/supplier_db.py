@@ -21,11 +21,11 @@ class Supplier(db.Model):
     wallet_code = db.Column(db.String(50), nullable=True)
     sovereign_id_enc = db.Column(db.String(255), unique=True, nullable=True)
     
-    # حقول إجبارية للمنطق (لا نغيرها)
+    # حقول إجبارية للمنطق
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     
-    # --- الحقول المشفرة (تم جعلها nullable=True بالكامل لتجاوز خطأ الـ NullViolation) ---
+    # --- الحقول المشفرة ---
     trade_name_enc = db.Column(db.String(255), nullable=True) 
     owner_name_enc = db.Column(db.String(255), nullable=True)
     owner_phone_enc = db.Column(db.String(255), nullable=True)
