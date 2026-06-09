@@ -1,76 +1,84 @@
-{% extends 'admin/base.html' %}
+{% extends 'admin_base.html' %}
+
+{% block title %}إدارة محافظ الموردين | محجوب أونلاين{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <h2 class="mb-4">إدارة محافظ الموردين</h2>
 
-    <!-- 1. البطاقات الإحصائية -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white text-center p-3">
+            <div class="card bg-primary text-white text-center p-3 shadow-sm">
                 <h5>إجمالي المحافظ</h5>
                 <h3>{{ wallets|length }}</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white text-center p-3">
+            <div class="card bg-success text-white text-center p-3 shadow-sm">
                 <h5>إجمالي SAR</h5>
                 <h3>{{ wallets|sum(attribute='balance_sar')|round(2) }}</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-dark text-center p-3">
+            <div class="card bg-warning text-dark text-center p-3 shadow-sm">
                 <h5>إجمالي YER</h5>
                 <h3>{{ wallets|sum(attribute='balance_yer')|round(2) }}</h3>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-info text-white text-center p-3">
+            <div class="card bg-info text-white text-center p-3 shadow-sm">
                 <h5>إجمالي USD</h5>
                 <h3>{{ wallets|sum(attribute='balance_usd')|round(2) }}</h3>
             </div>
         </div>
     </div>
 
-    <!-- 2. نموذج البحث -->
-    <div class="card mb-4 p-3">
-        <form method="GET" action="{{ url_for('wallet.wallet_dashboard') }}" class="row g-3">
+    <div class="card mb-4 p-3 shadow-sm">
+        <form method="GET" action="{{ url_for('wallet_app.dashboard') }}" class="row g-3">
             <div class="col-md-10">
-                <input type="text" name="search" class="form-control" placeholder="ابحث بالاسم، المعرف، اسم المتجر، أو رقم الهاتف..." value="{{ request.args.get('search', '') }}">
+                <input type="text" name="search" class="form-control" placeholder="ابحث بالاسم، المعرف، أو رقم الهاتف..." value="{{ request.args.get('search', '') }}">
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">بحث</button>
+                <button type="submit" class="btn btn-dark w-100">بحث</button>
             </div>
         </form>
     </div>
 
-    <!-- 3. الجدول -->
-    <div class="card p-3">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>المعرف</th>
-                    <th>اسم المورد / المتجر</th>
-                    <th>SAR</th>
-                    <th>YER</th>
-                    <th>USD</th>
-                    <th>إجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for wallet in wallets %}
-                <tr>
-                    <td>{{ wallet.id }}</td>
-                    <td>{{ wallet.supplier.name if wallet.supplier else 'غير معروف' }}</td>
-                    <td>{{ wallet.balance_sar }}</td>
-                    <td>{{ wallet.balance_yer }}</td>
-                    <td>{{ wallet.balance_usd }}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary">إدارة</button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="card p-3 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>المعرف</th>
+                        <th>اسم المورد / المتجر</th>
+                        <th>SAR</th>
+                        <th>YER</th>
+                        <th>USD</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for wallet in wallets %}
+                    <tr>
+                        <td>{{ wallet.id }}</td>
+                        <td>{{ wallet.supplier.trade_name if wallet.supplier else 'غير معروف' }}</td>
+                        <td>{{ wallet.balance_sar }}</td>
+                        <td>{{ wallet.balance_yer }}</td>
+                        <td>{{ wallet.balance_usd }}</td>
+                        <td>
+                            <a href="{{ url_for('wallet_app.view_wallet', supplier_id=wallet.supplier_id) }}" class="btn btn-sm btn-outline-warning">
+                                <i class="fas fa-eye"></i> إدارة
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">لا توجد محافظ لعرضها.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
