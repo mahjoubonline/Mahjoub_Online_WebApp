@@ -6,6 +6,7 @@
     .stat-card { border-radius: 20px; padding: 20px; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
     .mahjoub-card { border-radius: 20px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); background: #fff; padding: 20px; margin-bottom: 20px; }
     .btn-mahjoub { background-color: var(--mahjoub-purple) !important; color: white !important; font-weight: bold; }
+    .select2-container--bootstrap-5 .select2-selection { height: 50px !important; padding: 10px !important; }
 </style>
 
 <div class="container-fluid py-4">
@@ -20,7 +21,7 @@
         <h5><i class="fas fa-search"></i> بحث ذكي في الموردين</h5>
         <div class="input-group input-group-lg">
             <select id="supplierSearch" class="form-control" style="width: 100%;"></select>
-            <button class="btn btn-mahjoub" onclick="loadWallet()">عرض كشف المحفظة</button>
+            <button class="btn btn-mahjoub px-4" onclick="loadWallet()">عرض كشف المحفظة</button>
         </div>
     </div>
 
@@ -36,6 +37,7 @@
 
 <script>
     $(document).ready(function() {
+        // تهيئة البحث الذكي
         $('#supplierSearch').select2({
             placeholder: "ابحث عن المورد بالاسم أو الهاتف...",
             allowClear: true,
@@ -46,28 +48,33 @@
                 dataType: 'json',
                 delay: 250,
                 data: function(p) { return { q: p.term }; },
-                processResults: function(data) { return { results: data.results }; }
+                processResults: function(data) { return { results: data.results || [] }; }
             }
         });
+
+        // التحميل الأولي لقائمة الموردين
         loadSuppliers(1);
     });
 
-    // جلب قائمة الموردين مع التصفح
+    // جلب قائمة الموردين (يتم استدعاؤها في الـ HTML الخاص بالجدول)
     function loadSuppliers(page) {
         fetch(`/wallet/get_suppliers_list?page=${page}`)
             .then(r => r.text())
-            .then(html => $('#suppliersTable').html(html));
+            .then(html => $('#suppliersTable').html(html))
+            .catch(err => $('#suppliersTable').html('<div class="alert alert-danger">خطأ في الاتصال</div>'));
     }
 
-    // جلب محفظة مورد (مع حماية القيمة)
+    // جلب كشف حساب مورد معين
     function loadWallet(page = 1) {
         let id = $('#supplierSearch').val();
-        if (!id) { Swal.fire('تنبيه', 'يرجى اختيار مورد أولاً', 'warning'); return; }
+        if (!id) { Swal.fire('تنبيه', 'يرجى اختيار مورد من البحث أولاً', 'warning'); return; }
         
-        $('#walletDisplayArea').html('<div class="text-center py-5">جاري التحقق من المحفظة...</div>');
+        $('#walletDisplayArea').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري جلب كشف الحساب...</div>');
+        
         fetch(`/wallet/view/${id}?page=${page}`)
             .then(r => r.text())
-            .then(html => $('#walletDisplayArea').html(html));
+            .then(html => $('#walletDisplayArea').html(html))
+            .catch(err => $('#walletDisplayArea').html('<div class="alert alert-danger">تعذر تحميل الكشف</div>'));
     }
 </script>
 {% endblock %}
