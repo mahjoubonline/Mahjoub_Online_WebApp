@@ -17,7 +17,7 @@ def wallet_dashboard():
         "yer": db.session.query(func.sum(Wallet.balance_yer)).scalar() or 0,
         "count": Wallet.query.count()
     }
-    # الموردون يُجلبون الآن ديناميكياً في مسار get_suppliers_list
+    # الجدول يتم استدعاؤه ديناميكياً بواسطة JS، لذا لا نحتاج لجلب الموردين هنا
     return render_template('admin/wallet_app.html', stats=stats)
 
 # 2. مسار جلب قائمة الموردين مع الترقيم (السابق والتالي)
