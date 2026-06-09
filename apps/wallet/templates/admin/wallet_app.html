@@ -9,43 +9,50 @@
         <div class="col-md-3"><div class="stat-card" style="background: #3498db; color: white; border-radius: 20px; padding: 20px; text-align: center;"><small>المحافظ النشطة</small><h4>{{ stats.count }}</h4></div></div>
     </div>
 
-    <div class="mahjoub-card mt-4">
-        <h5><i class="fas fa-search"></i> بحث ذكي في الموردين</h5>
+    <div class="mahjoub-card mt-4 p-3" style="background: #fff; border-radius: 20px;">
+        <h5><i class="fas fa-search"></i> بحث سريع</h5>
         <div class="input-group input-group-lg">
             <select id="supplierSearch" class="form-control" style="width: 100%;"></select>
-            <button class="btn btn-primary" onclick="loadWallet()">عرض كشف المحفظة</button>
+            <button class="btn btn-primary" onclick="loadWallet()">عرض الحركة التفصيلية</button>
         </div>
     </div>
 
-    <div class="mahjoub-card mt-4" id="suppliersTable">
-        <div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري تحميل قائمة الموردين...</div>
+    <div class="mahjoub-card mt-4 p-4" style="background: #fff; border-radius: 20px;">
+        <h5 class="mb-3">قائمة الموردين والأرصدة</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr><th>المعرف</th><th>اسم المتجر</th><th>الرصيد ($)</th><th>الرصيد (SAR)</th><th>الإجراء</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in suppliers %}
+                    <tr>
+                        <td>#{{ s.id }}</td>
+                        <td class="fw-bold">{{ s.trade_name }}</td>
+                        <td class="text-primary">${{ "{:,.2f}".format(s.wallet.balance_usd if s.wallet else 0) }}</td>
+                        <td class="text-success">SAR {{ "{:,.2f}".format(s.wallet.balance_sar if s.wallet else 0) }}</td>
+                        <td><button class="btn btn-sm btn-outline-primary" onclick="loadWalletFromTable({{ s.id }})">استعراض</button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
     
     <div id="walletDisplayArea"></div>
 </div>
 
 <script>
-    $(document).ready(function() {
-        $('#supplierSearch').select2({
-            placeholder: "ابحث بالاسم أو الهاتف...",
-            ajax: { url: '/wallet/search_suppliers', dataType: 'json', delay: 250, processResults: data => ({ results: data.results }) }
-        });
-        loadSuppliers(1);
-    });
-
-    // المحرك: جلب قائمة الموردين
-    function loadSuppliers(page) {
-        fetch(`/wallet/get_suppliers_list?page=${page}`)
-            .then(r => r.text())
-            .then(html => $('#suppliersTable').html(html));
+    function loadWalletFromTable(id) {
+        $('#supplierSearch').val(id).trigger('change');
+        loadWallet();
     }
 
-    // المحرك: جلب كشف حساب
-    function loadWallet(page = 1) {
+    function loadWallet() {
         let id = $('#supplierSearch').val();
         if(!id) return;
-        $('#walletDisplayArea').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري التحميل...</div>');
-        fetch(`/wallet/view/${id}?page=${page}`)
+        $('#walletDisplayArea').html('<div class="text-center py-3"><div class="spinner-border"></div></div>');
+        fetch(`/wallet/view/${id}`)
             .then(r => r.text())
             .then(html => $('#walletDisplayArea').html(html));
     }
