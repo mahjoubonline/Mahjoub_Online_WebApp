@@ -1,94 +1,76 @@
-{% extends "admin/admin_base.html" %}
-
+{% extends 'admin/base.html' %}
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- شريط الإحصائيات (يُحدث عند تحميل الصفحة) -->
-    <div class="row">
-        {% for label, val, color, unit in [('إجمالي الدولار', stats.usd, '#2d1b4e', '$'), ('إجمالي الريال السعودي', stats.sar, '#27ae60', 'SAR'), ('إجمالي الريال اليمني', stats.yer, '#c5a059', 'YER'), ('المحافظ النشطة', stats.count, '#3498db', '')] %}
+<div class="container-fluid">
+    <h2 class="mb-4">إدارة محافظ الموردين</h2>
+
+    <!-- 1. البطاقات الإحصائية -->
+    <div class="row mb-4">
         <div class="col-md-3">
-            <div class="stat-card" style="background: {{ color }}; color: white; border-radius: 20px; padding: 20px; text-align: center;">
-                <small>{{ label }}</small>
-                <h4>{{ unit }} {{ "{:,.2f}".format(val) if unit != '' else val }}</h4>
+            <div class="card bg-primary text-white text-center p-3">
+                <h5>إجمالي المحافظ</h5>
+                <h3>{{ wallets|length }}</h3>
             </div>
         </div>
-        {% endfor %}
-    </div>
-
-    <!-- البحث الذكي -->
-    <div class="mahjoub-card mt-4 p-3" style="background: #fff; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <h5><i class="fas fa-search"></i> بحث سريع في الموردين</h5>
-        <div class="input-group input-group-lg">
-            <select id="supplierSearch" class="form-control" style="width: 80%;"></select>
-            <button class="btn btn-primary px-4" onclick="loadWallet()">عرض كشف المحفظة</button>
+        <div class="col-md-3">
+            <div class="card bg-success text-white text-center p-3">
+                <h5>إجمالي SAR</h5>
+                <h3>{{ wallets|sum(attribute='balance_sar')|round(2) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark text-center p-3">
+                <h5>إجمالي YER</h5>
+                <h3>{{ wallets|sum(attribute='balance_yer')|round(2) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white text-center p-3">
+                <h5>إجمالي USD</h5>
+                <h3>{{ wallets|sum(attribute='balance_usd')|round(2) }}</h3>
+            </div>
         </div>
     </div>
 
-    <!-- الجدول الديناميكي -->
-    <div class="mahjoub-card mt-4 p-4" style="background: #fff; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div id="tableContent">
-            <!-- سيتم تحميل الجدول هنا -->
-        </div>
+    <!-- 2. نموذج البحث -->
+    <div class="card mb-4 p-3">
+        <form method="GET" action="{{ url_for('wallet.wallet_dashboard') }}" class="row g-3">
+            <div class="col-md-10">
+                <input type="text" name="search" class="form-control" placeholder="ابحث بالاسم، المعرف، اسم المتجر، أو رقم الهاتف..." value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">بحث</button>
+            </div>
+        </form>
     </div>
-    
-    <!-- عرض تفاصيل المحفظة -->
-    <div id="walletDisplayArea" class="mt-4"></div>
+
+    <!-- 3. الجدول -->
+    <div class="card p-3">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>المعرف</th>
+                    <th>اسم المورد / المتجر</th>
+                    <th>SAR</th>
+                    <th>YER</th>
+                    <th>USD</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wallet in wallets %}
+                <tr>
+                    <td>{{ wallet.id }}</td>
+                    <td>{{ wallet.supplier.name if wallet.supplier else 'غير معروف' }}</td>
+                    <td>{{ wallet.balance_sar }}</td>
+                    <td>{{ wallet.balance_yer }}</td>
+                    <td>{{ wallet.balance_usd }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary">إدارة</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
-
-<script>
-    $(document).ready(function() {
-        // 1. تفعيل Select2 مع البحث في السيرفر
-        $('#supplierSearch').select2({
-            placeholder: "بحث باسم المورد أو الهاتف...",
-            allowClear: true,
-            ajax: { 
-                url: '/wallet/search_suppliers', 
-                dataType: 'json', 
-                delay: 250, 
-                data: function(params) { return { q: params.term }; },
-                processResults: function(data) {
-                    return { results: data.results.map(item => ({ id: item.id, text: item.text })) };
-                }
-            }
-        });
-        
-        // 2. تحميل الجدول الأول عند التشغيل
-        loadSuppliersTable(1);
-    });
-
-    // جلب الجدول ديناميكياً
-    function loadSuppliersTable(page) {
-        $('#tableContent').html('<div class="text-center py-3"><div class="spinner-border text-primary"></div> جاري تحديث القائمة...</div>');
-        fetch(`/wallet/get_suppliers_list?page=${page}`)
-            .then(r => r.text())
-            .then(html => $('#tableContent').html(html))
-            .catch(() => $('#tableContent').html('<div class="alert alert-danger">حدث خطأ في تحميل البيانات</div>'));
-    }
-
-    // عرض المحفظة عند اختيار مورد
-    function loadWallet() {
-        let id = $('#supplierSearch').val();
-        if(!id) {
-            alert('يرجى اختيار مورد أولاً');
-            return;
-        }
-        
-        $('#walletDisplayArea').html('<div class="text-center py-5"><div class="spinner-grow text-success"></div> جاري جلب تفاصيل المحفظة...</div>');
-        
-        fetch(`/wallet/view/${id}`)
-            .then(r => r.text())
-            .then(html => {
-                $('#walletDisplayArea').html(html);
-                // تمرير الشاشة للأسفل تلقائياً
-                document.getElementById('walletDisplayArea').scrollIntoView({ behavior: 'smooth' });
-            })
-            .catch(() => $('#walletDisplayArea').html('<div class="alert alert-danger">تعذر تحميل المحفظة</div>'));
-    }
-
-    // هذه الدالة تستدعى من داخل جدول الموردين (صفحة suppliers_list.html)
-    function loadWalletFromTable(id) {
-        // تحديث البحث برمجياً
-        $('#supplierSearch').val(id).trigger('change');
-        loadWallet();
-    }
-</script>
 {% endblock %}
