@@ -1,5 +1,4 @@
-# coding: utf-8
-# 📂 apps/models/supplier_db.py - النموذج السيادي (نسخة مرنة للزرع)
+# 📂 apps/models/supplier_db.py - (النسخة المحدثة لربط المحفظة)
 
 from apps.extensions import db
 from apps.utils.security import AESCipher
@@ -43,6 +42,9 @@ class Supplier(db.Model):
     rank_grade = db.Column(db.String(20), default=RANKS[1], nullable=True)
     status_reason = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
+
+    # 🔗 الربط مع المحفظة (الذي تحتاجه لعرض الأرصدة في الجدول)
+    wallet = db.relationship('SupplierWallet', backref='supplier', uselist=False)
 
     # --- بوابات التشفير ---
     def _decrypt(self, value): return AESCipher.decrypt(value) if value else None
