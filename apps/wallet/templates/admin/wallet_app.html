@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="row">
+    <div class="row" id="statsRow">
         <div class="col-md-3"><div class="stat-card" style="background: #2d1b4e; color: white; border-radius: 20px; padding: 20px; text-align: center;"><small>إجمالي الدولار</small><h4>${{ "{:,.2f}".format(stats.usd) }}</h4></div></div>
         <div class="col-md-3"><div class="stat-card" style="background: #27ae60; color: white; border-radius: 20px; padding: 20px; text-align: center;"><small>إجمالي الريال السعودي</small><h4>SAR {{ "{:,.2f}".format(stats.sar) }}</h4></div></div>
         <div class="col-md-3"><div class="stat-card" style="background: #c5a059; color: white; border-radius: 20px; padding: 20px; text-align: center;"><small>إجمالي الريال اليمني</small><h4>YER {{ "{:,.2f}".format(stats.yer) }}</h4></div></div>
@@ -10,51 +10,48 @@
     </div>
 
     <div class="mahjoub-card mt-4 p-3" style="background: #fff; border-radius: 20px;">
-        <h5><i class="fas fa-search"></i> بحث سريع</h5>
+        <h5><i class="fas fa-search"></i> بحث ذكي ومقارنة بقاعدة البيانات</h5>
         <div class="input-group input-group-lg">
             <select id="supplierSearch" class="form-control" style="width: 100%;"></select>
-            <button class="btn btn-primary" onclick="loadWallet()">عرض الحركة التفصيلية</button>
+            <button class="btn btn-primary" onclick="loadWallet()">عرض كشف الحساب</button>
         </div>
     </div>
 
-    <div class="mahjoub-card mt-4 p-4" style="background: #fff; border-radius: 20px;">
-        <h5 class="mb-3">قائمة الموردين والأرصدة</h5>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr><th>المعرف</th><th>اسم المتجر</th><th>الرصيد ($)</th><th>الرصيد (SAR)</th><th>الإجراء</th></tr>
-                </thead>
-                <tbody>
-                    {% for s in suppliers %}
-                    <tr>
-                        <td>#{{ s.id }}</td>
-                        <td class="fw-bold">{{ s.trade_name }}</td>
-                        <td class="text-primary">${{ "{:,.2f}".format(s.wallet.balance_usd if s.wallet else 0) }}</td>
-                        <td class="text-success">SAR {{ "{:,.2f}".format(s.wallet.balance_sar if s.wallet else 0) }}</td>
-                        <td><button class="btn btn-sm btn-outline-primary" onclick="loadWalletFromTable({{ s.id }})">استعراض</button></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="mahjoub-card mt-4 p-4" style="background: #fff; border-radius: 20px;" id="suppliersTableContainer">
+        <div id="tableContent">
+            </div>
     </div>
     
     <div id="walletDisplayArea"></div>
 </div>
 
 <script>
-    function loadWalletFromTable(id) {
-        $('#supplierSearch').val(id).trigger('change');
-        loadWallet();
+    $(document).ready(function() {
+        $('#supplierSearch').select2({
+            placeholder: "ابحث بالاسم أو الهاتف...",
+            ajax: { url: '/wallet/search_suppliers', dataType: 'json', delay: 250, processResults: data => ({ results: data.results }) }
+        });
+        loadSuppliersTable(1);
+    });
+
+    // جلب الجدول مع الترقيم
+    function loadSuppliersTable(page) {
+        $('#tableContent').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري جلب البيانات...</div>');
+        fetch(`/wallet/get_suppliers_list?page=${page}`)
+            .then(r => r.text())
+            .then(html => $('#tableContent').html(html));
     }
 
     function loadWallet() {
         let id = $('#supplierSearch').val();
         if(!id) return;
-        $('#walletDisplayArea').html('<div class="text-center py-3"><div class="spinner-border"></div></div>');
-        fetch(`/wallet/view/${id}`)
-            .then(r => r.text())
-            .then(html => $('#walletDisplayArea').html(html));
+        $('#walletDisplayArea').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري التحميل...</div>');
+        fetch(`/wallet/view/${id}`).then(r => r.text()).then(html => $('#walletDisplayArea').html(html));
+    }
+
+    function loadWalletFromTable(id) {
+        $('#supplierSearch').val(id).trigger('change');
+        loadWallet();
     }
 </script>
 {% endblock %}
