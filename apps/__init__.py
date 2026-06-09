@@ -17,7 +17,7 @@ from werkzeug.security import generate_password_hash
 def create_app():
     app = Flask(__name__, template_folder='templates')
     
-    # الإعدادات
+    # الإعدادات الأساسية
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-sovereign-key-2026')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///mahjoub_online.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -47,10 +47,11 @@ def create_app():
 
     # تهيئة قاعدة البيانات والبيانات التأسيسية
     with app.app_context():
-        # ملاحظة: إذا كنت تستخدم الترحيلات (Migrate)، لا حاجة لاستدعاء db.create_all() دائماً
+        # إنشاء الجداول (تأكد من استخدام Migrations للإنتاج لاحقاً)
         db.create_all()
         
         try:
+            # زرع المستخدم الإداري الأول
             if AdminUser.query.first() is None:
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
@@ -67,13 +68,14 @@ def create_app():
                         wallet_code=f'W-{i}-2026', owner_phone=f'7700000{i:02d}'
                     )
                     db.session.add(new_sup)
-                    db.session.flush() # لحجز الـ ID قبل الـ commit
+                    db.session.flush() # لحجز الـ ID للمورد قبل ربط المحفظة
                     
+                    # إنشاء محفظة لكل مورد تم زرعه
                     new_wallet = SupplierWallet(supplier_id=new_sup.id, balance_sar=0, balance_yer=0, balance_usd=0)
                     db.session.add(new_wallet)
                 
                 db.session.commit()
-                print("✅ تم إنشاء البيانات التأسيسية بنجاح.")
+                print("✅ تم بناء المصنع بنجاح وتم زرع البيانات التأسيسية.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء تهيئة قاعدة البيانات: {e}")
