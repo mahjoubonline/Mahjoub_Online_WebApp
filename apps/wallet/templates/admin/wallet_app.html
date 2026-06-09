@@ -18,48 +18,36 @@
     </div>
 
     <div id="suppliersTable" class="mahjoub-card" style="background: #fff; padding: 20px; border-radius: 20px;">
-        <div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري تحميل البيانات...</div>
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري تحميل قائمة الموردين...</div>
     </div>
     
     <div id="walletDisplayArea" class="mt-4"></div>
 </div>
 
 <script>
-    // المحرك: تهيئة البحث الذكي وتحديث البيانات
     $(document).ready(function() {
         $('#supplierSearch').select2({
             placeholder: "ابحث بالاسم أو الهاتف...",
-            ajax: {
-                url: '/wallet/search_suppliers',
-                dataType: 'json',
-                delay: 250,
-                processResults: data => ({ results: data.results })
-            }
+            ajax: { url: '/wallet/search_suppliers', dataType: 'json', delay: 250, processResults: data => ({ results: data.results }) }
         });
         loadSuppliers(1);
     });
 
-    // المحرك: جلب قائمة الموردين وتحديث الجدول
     function loadSuppliers(page) {
         fetch(`/wallet/get_suppliers_list?page=${page}`)
             .then(r => r.text())
-            .then(html => $('#suppliersTable').html(html))
-            .catch(err => $('#suppliersTable').html('<div class="alert alert-danger">خطأ في الاتصال</div>'));
+            .then(html => $('#suppliersTable').html(html));
     }
 
-    // المحرك: جلب كشف حساب مورد وعرضه
     function loadWallet(page = 1) {
         let id = $('#supplierSearch').val();
-        if(!id) {
-            Swal.fire('تنبيه', 'يرجى اختيار مورد من البحث', 'warning');
-            return;
-        }
-        $('#walletDisplayArea').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري جلب كشف الحساب...</div>');
+        if(!id) { Swal.fire('تنبيه', 'يرجى اختيار مورد من البحث', 'warning'); return; }
+        
+        $('#walletDisplayArea').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري تحميل الكشف...</div>');
         
         fetch(`/wallet/view/${id}?page=${page}`)
             .then(r => r.text())
-            .then(html => $('#walletDisplayArea').html(html))
-            .catch(err => $('#walletDisplayArea').html('<div class="alert alert-danger">تعذر تحميل الكشف المالي</div>'));
+            .then(html => $('#walletDisplayArea').html(html));
     }
 </script>
 {% endblock %}
