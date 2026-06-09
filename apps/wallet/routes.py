@@ -5,7 +5,7 @@ from apps.models.wallet_db import SupplierWallet
 from apps.models.supplier_db import Supplier
 
 # تعريف الـ Blueprint مع تحديد مجلد القوالب المحلي
-# template_folder='templates' يخبر Flask بأن يبحث داخل apps/wallet/templates
+# Flask يبحث هنا داخل: apps/wallet/templates
 wallet_app = Blueprint('wallet_app', __name__, template_folder='templates')
 
 @wallet_app.route('/dashboard', methods=['GET'])
@@ -31,7 +31,7 @@ def dashboard():
     # تنفيذ الاستعلام
     wallets = query.all()
     
-    # Flask سيبحث هنا في: apps/wallet/templates/admin/wallet_app.html
+    # سيبحث Flask في: apps/wallet/templates/admin/wallet_app.html
     return render_template('admin/wallet_app.html', wallets=wallets)
 
 @wallet_app.route('/view/<int:supplier_id>', methods=['GET'])
@@ -43,5 +43,5 @@ def view_wallet(supplier_id):
     # جلب المحفظة المحددة أو إظهار خطأ 404 إذا لم توجد
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
     
-    # Flask سيبحث هنا في: apps/wallet/templates/admin/view_wallet.html
+    # سيبحث Flask في: apps/wallet/templates/admin/view_wallet.html
     return render_template('admin/view_wallet.html', wallet=wallet)
