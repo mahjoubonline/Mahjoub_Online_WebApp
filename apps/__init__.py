@@ -15,6 +15,7 @@ from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from werkzeug.security import generate_password_hash
 
 def create_app():
+    # استخدام المجلد الرئيسي 'templates' كمصدر وحيد لجميع القوالب لمنع تعارض المسارات
     app = Flask(__name__, template_folder='templates')
     
     # الإعدادات
@@ -43,11 +44,11 @@ def create_app():
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
     app.register_blueprint(financial_blueprint, url_prefix='/financial_ops')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
+    # تسجيل الـ wallet_app مع تحديد المسار (Prefix)
     app.register_blueprint(wallet_app, url_prefix='/wallet')
 
     # تهيئة قاعدة البيانات والبيانات التأسيسية
     with app.app_context():
-        # ملاحظة: إذا كنت تستخدم الترحيلات (Migrate)، لا حاجة لاستدعاء db.create_all() دائماً
         db.create_all()
         
         try:
@@ -67,7 +68,7 @@ def create_app():
                         wallet_code=f'W-{i}-2026', owner_phone=f'7700000{i:02d}'
                     )
                     db.session.add(new_sup)
-                    db.session.flush() # لحجز الـ ID قبل الـ commit
+                    db.session.flush() 
                     
                     new_wallet = SupplierWallet(supplier_id=new_sup.id, balance_sar=0, balance_yer=0, balance_usd=0)
                     db.session.add(new_wallet)
