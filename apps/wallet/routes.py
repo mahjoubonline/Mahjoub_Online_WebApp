@@ -7,7 +7,7 @@ from apps.models.wallet_db import SupplierWallet as Wallet, WalletTransaction as
 from apps.models.supplier_db import Supplier
 from apps.wallet import wallet_app
 
-# 1. مسار الداشبورد الرئيسي
+# 1. مسار الداشبورد الرئيسي: يعرض القالب الأساسي مع الإحصائيات
 @wallet_app.route('/wallet_dashboard')
 @login_required
 def wallet_dashboard():
@@ -19,7 +19,7 @@ def wallet_dashboard():
     }
     return render_template('admin/wallet_app.html', stats=stats)
 
-# 2. مسار البحث الذكي (مدمج ليخدم Select2)
+# 2. مسار البحث الذكي (يخدم Select2 في القالب)
 @wallet_app.route('/search_suppliers')
 @login_required
 def search_suppliers():
@@ -34,16 +34,16 @@ def search_suppliers():
     results = [{"id": s.id, "text": f"{s.trade_name} - {s.owner_phone}"} for s in suppliers]
     return jsonify({"results": results})
 
-# 3. محرك جلب الموردين (يغذي الجدول)
+# 3. محرك جلب قائمة الموردين (يغذي الجدول داخل القالب)
 @wallet_app.route('/get_suppliers_list')
 @login_required
 def get_suppliers_list():
     page = request.args.get('page', 1, type=int)
     suppliers = Supplier.query.paginate(page=page, per_page=10, error_out=False)
-    # ملاحظة: تأكد أن ملف suppliers_list.html لا يحتوي على {% extends %}
+    # ملاحظة: suppliers_list.html يجب أن يحتوي على كود الجدول فقط (بدون extends)
     return render_template('admin/suppliers_list.html', suppliers=suppliers)
 
-# 4. محرك عرض المحفظة (يغذي منطقة العرض)
+# 4. محرك عرض كشف المحفظة (يغذي منطقة العرض عند اختيار مورد)
 @wallet_app.route('/view/<int:supplier_id>')
 @login_required
 def view_wallet(supplier_id):
@@ -51,5 +51,5 @@ def view_wallet(supplier_id):
     transactions = Transaction.query.filter_by(wallet_id=wallet.id)\
         .order_by(Transaction.created_at.desc())\
         .paginate(page=1, per_page=10, error_out=False)
-    # ملاحظة: تأكد أن ملف view_wallet.html لا يحتوي على {% extends %}
+    # ملاحظة: view_wallet.html يجب أن يحتوي على محتوى الكشف فقط (بدون extends)
     return render_template('admin/view_wallet.html', wallet=wallet, transactions=transactions)
