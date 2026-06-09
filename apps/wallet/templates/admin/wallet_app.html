@@ -6,7 +6,6 @@
     .stat-card { border-radius: 20px; padding: 20px; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
     .mahjoub-card { border-radius: 20px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); background: #fff; padding: 20px; margin-bottom: 20px; }
     .btn-mahjoub { background-color: var(--mahjoub-purple) !important; color: white !important; font-weight: bold; }
-    .select2-container--bootstrap-5 .select2-selection { height: 50px !important; padding: 10px !important; }
 </style>
 
 <div class="container-fluid py-4">
@@ -14,21 +13,21 @@
         <div class="col-md-3"><div class="stat-card" style="background: var(--mahjoub-purple);"><small>إجمالي الدولار</small><h4>${{ "{:,.2f}".format(stats.usd) }}</h4></div></div>
         <div class="col-md-3"><div class="stat-card" style="background: var(--mahjoub-green);"><small>إجمالي الريال السعودي</small><h4>SAR {{ "{:,.2f}".format(stats.sar) }}</h4></div></div>
         <div class="col-md-3"><div class="stat-card" style="background: var(--mahjoub-gold);"><small>إجمالي الريال اليمني</small><h4>YER {{ "{:,.2f}".format(stats.yer) }}</h4></div></div>
-        <div class="col-md-3"><div class="stat-card" style="background: var(--mahjoub-blue);"><small>عدد المحافظ النشطة</small><h4>{{ stats.count }}</h4></div></div>
+        <div class="col-md-3"><div class="stat-card" style="background: var(--mahjoub-blue);"><small>المحافظ النشطة</small><h4>{{ stats.count }}</h4></div></div>
     </div>
 
     <div class="mahjoub-card">
-        <h5 class="mb-3"><i class="fas fa-search"></i> بحث ذكي في الموردين</h5>
+        <h5><i class="fas fa-search"></i> بحث ذكي في الموردين</h5>
         <div class="input-group input-group-lg">
             <select id="supplierSearch" class="form-control" style="width: 100%;"></select>
-            <button class="btn btn-mahjoub px-4" onclick="loadWallet()">عرض المحفظة</button>
+            <button class="btn btn-mahjoub" onclick="loadWallet()">عرض كشف المحفظة</button>
         </div>
     </div>
 
-    <div class="mahjoub-card">
+    <div class="mahjoub-card" id="suppliersListArea">
         <h5 class="mb-3">قائمة الموردين</h5>
         <div id="suppliersTable">
-            <div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري تحميل البيانات...</div>
+            <div class="text-center py-5"><div class="spinner-border text-primary"></div> جاري تحميل الموردين...</div>
         </div>
     </div>
 
@@ -37,7 +36,6 @@
 
 <script>
     $(document).ready(function() {
-        // تهيئة Select2
         $('#supplierSearch').select2({
             placeholder: "ابحث عن المورد بالاسم أو الهاتف...",
             allowClear: true,
@@ -47,30 +45,27 @@
                 url: '/wallet/search_suppliers',
                 dataType: 'json',
                 delay: 250,
-                data: function (params) { return { q: params.term }; },
-                processResults: function (data) { return { results: data.results || [] }; },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.error("خطأ في البحث:", textStatus, errorThrown);
-                }
+                data: function(p) { return { q: p.term }; },
+                processResults: function(data) { return { results: data.results }; }
             }
         });
-
         loadSuppliers(1);
     });
 
+    // جلب قائمة الموردين مع التصفح
     function loadSuppliers(page) {
-        fetch('/wallet/get_suppliers_list?page=' + page)
+        fetch(`/wallet/get_suppliers_list?page=${page}`)
             .then(r => r.text())
-            .then(html => $('#suppliersTable').html(html))
-            .catch(err => $('#suppliersTable').html('<div class="alert alert-danger">فشل تحميل القائمة</div>'));
+            .then(html => $('#suppliersTable').html(html));
     }
 
+    // جلب محفظة مورد (مع حماية القيمة)
     function loadWallet(page = 1) {
-        let supplierId = $('#supplierSearch').val();
-        if (!supplierId) { alert('يرجى اختيار مورد أولاً'); return; }
+        let id = $('#supplierSearch').val();
+        if (!id) { Swal.fire('تنبيه', 'يرجى اختيار مورد أولاً', 'warning'); return; }
         
-        $('#walletDisplayArea').html('<div class="text-center py-3">جاري جلب الكشف...</div>');
-        fetch('/wallet/view/' + supplierId + '?page=' + page)
+        $('#walletDisplayArea').html('<div class="text-center py-5">جاري التحقق من المحفظة...</div>');
+        fetch(`/wallet/view/${id}?page=${page}`)
             .then(r => r.text())
             .then(html => $('#walletDisplayArea').html(html));
     }
