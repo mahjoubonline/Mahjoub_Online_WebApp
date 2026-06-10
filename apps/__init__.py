@@ -2,6 +2,7 @@
 import os
 import sys
 from flask import Flask
+from flask_migrate import Migrate
 
 # إعداد المسارات لضمان رؤية المجلدات
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -15,8 +16,9 @@ from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from werkzeug.security import generate_password_hash
 
 def create_app():
-    # استخدام المجلد الرئيسي 'templates' كمصدر وحيد لجميع القوالب لمنع تعارض المسارات
-    app = Flask(__name__, template_folder='templates')
+    # تعديل: إزالة template_folder المعرف يدوياً إذا كانت قوالبك موزعة داخل Blueprints
+    # Flask سيبحث تلقائياً في مجلد 'templates' في الجذر وفي مجلدات الـ Blueprints
+    app = Flask(__name__)
     
     # الإعدادات
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-sovereign-key-2026')
@@ -44,34 +46,34 @@ def create_app():
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
     app.register_blueprint(financial_blueprint, url_prefix='/financial_ops')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
-    # تسجيل الـ wallet_app مع تحديد المسار (Prefix)
     app.register_blueprint(wallet_app, url_prefix='/wallet')
 
     # تهيئة قاعدة البيانات والبيانات التأسيسية
     with app.app_context():
+        # بدلاً من create_all دائماً، يفضل الاعتماد على Migrate
         db.create_all()
         
         try:
-            if AdminUser.query.first() is None:
+            if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
                 db.session.add(admin)
-                db.session.commit()
-
-                # زرع موردين تجريبيين للتأكد من عمل النظام
-                for i in range(1, 22):
-                    new_sup = Supplier(
-                        username=f'sup_{i}', 
-                        password_hash=generate_password_hash('sup_pass_123'),
-                        status='قيد المراجعة', rank_grade='ريادي', 
-                        trade_name=f'مؤسسة المورد {i}', owner_name=f'المالك {i}', 
-                        wallet_code=f'W-{i}-2026', owner_phone=f'7700000{i:02d}'
-                    )
-                    db.session.add(new_sup)
-                    db.session.flush() 
-                    
-                    new_wallet = SupplierWallet(supplier_id=new_sup.id, balance_sar=0, balance_yer=0, balance_usd=0)
-                    db.session.add(new_wallet)
+                
+                # زرع موردين تجريبيين (فقط إذا كانت قاعدة البيانات فارغة)
+                if not Supplier.query.first():
+                    for i in range(1, 22):
+                        new_sup = Supplier(
+                            username=f'sup_{i}', 
+                            password_hash=generate_password_hash('sup_pass_123'),
+                            status='قيد المراجعة', rank_grade='ريادي', 
+                            trade_name=f'مؤسسة المورد {i}', owner_name=f'المالك {i}', 
+                            wallet_code=f'W-{i}-2026', owner_phone=f'7700000{i:02d}'
+                        )
+                        db.session.add(new_sup)
+                        db.session.flush() 
+                        
+                        new_wallet = SupplierWallet(supplier_id=new_sup.id, balance_sar=0, balance_yer=0, balance_usd=0)
+                        db.session.add(new_wallet)
                 
                 db.session.commit()
                 print("✅ تم إنشاء البيانات التأسيسية بنجاح.")
