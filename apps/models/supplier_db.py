@@ -1,4 +1,4 @@
-# 📂 apps/models/supplier_db.py - (النسخة المحدثة لربط المحفظة)
+# 📂 apps/models/supplier_db.py - (النسخة المحدثة لربط المحفظة بشكل صريح)
 
 from apps.extensions import db
 from apps.utils.security import AESCipher
@@ -43,8 +43,8 @@ class Supplier(db.Model):
     status_reason = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
 
-    # 🔗 الربط مع المحفظة (الذي تحتاجه لعرض الأرصدة في الجدول)
-    wallet = db.relationship('SupplierWallet', backref='supplier', uselist=False)
+    # 🔗 الربط المحدث: نستخدم back_populates لربط صريح مع SupplierWallet
+    wallet = db.relationship('SupplierWallet', back_populates='supplier', uselist=False)
 
     # --- بوابات التشفير ---
     def _decrypt(self, value): return AESCipher.decrypt(value) if value else None
