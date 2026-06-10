@@ -7,46 +7,19 @@
     <h2 class="mb-4">إدارة محافظ الموردين</h2>
 
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white text-center p-3 shadow-sm border-0">
-                <h5>إجمالي المحافظ</h5>
-                <h3 class="mt-2">{{ wallets|length }}</h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white text-center p-3 shadow-sm border-0">
-                <h5>إجمالي SAR</h5>
-                <h3 class="mt-2">{{ wallets|sum(attribute='balance_sar')|float|round(2) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark text-center p-3 shadow-sm border-0">
-                <h5>إجمالي YER</h5>
-                <h3 class="mt-2">{{ wallets|sum(attribute='balance_yer')|float|round(2) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white text-center p-3 shadow-sm border-0">
-                <h5>إجمالي USD</h5>
-                <h3 class="mt-2">{{ wallets|sum(attribute='balance_usd')|float|round(2) }}</h3>
-            </div>
-        </div>
+        <div class="col-md-3"><div class="card bg-primary text-white text-center p-3 shadow-sm border-0"><h5>إجمالي المحافظ</h5><h3 class="mt-2">{{ wallets|length }}</h3></div></div>
+        <div class="col-md-3"><div class="card bg-success text-white text-center p-3 shadow-sm border-0"><h5>إجمالي SAR</h5><h3 class="mt-2">{{ wallets|sum(attribute='balance_sar')|float|round(2) }}</h3></div></div>
+        <div class="col-md-3"><div class="card bg-warning text-dark text-center p-3 shadow-sm border-0"><h5>إجمالي YER</h5><h3 class="mt-2">{{ wallets|sum(attribute='balance_yer')|float|round(2) }}</h3></div></div>
+        <div class="col-md-3"><div class="card bg-info text-white text-center p-3 shadow-sm border-0"><h5>إجمالي USD</h5><h3 class="mt-2">{{ wallets|sum(attribute='balance_usd')|float|round(2) }}</h3></div></div>
     </div>
 
     <div class="card mb-4 p-3 shadow-sm border-0">
-        <form method="GET" action="{{ url_for('wallet_app.dashboard') }}" class="row g-3 align-items-center">
-            <div class="col-md-10">
-                <input type="text" name="search" class="form-control" placeholder="ابحث باسم المورد أو الهاتف..." value="{{ request.args.get('search', '') }}">
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-dark w-100">بحث</button>
-            </div>
-        </form>
+        <input type="text" id="liveSearch" class="form-control" placeholder="🔍 ابدأ الكتابة للبحث لحظياً عن المورد...">
     </div>
 
-    <div class="card p-3 shadow-sm border-0">
+    <div class="card p-3 shadow-sm border-0" id="tableContainer">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0" id="walletTable">
                 <thead class="table-light">
                     <tr>
                         <th>المعرف</th>
@@ -72,12 +45,13 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center py-4 text-muted">لا توجد محافظ لعرضها.</td>
-                    </tr>
+                    <tr><td colspan="6" class="text-center py-4 text-muted">لا توجد نتائج مطابقة.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+        <div class="d-flex justify-content-center mt-4" id="paginationLinks">
+            {{ pagination.links }}
         </div>
     </div>
 </div>
@@ -86,4 +60,27 @@
     .card { border-radius: 12px; }
     .font-monospace { font-family: 'Courier New', Courier, monospace; }
 </style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    let timer;
+    $('#liveSearch').on('keyup', function() {
+        clearTimeout(timer);
+        let query = $(this).val();
+        
+        timer = setTimeout(function() {
+            $.ajax({
+                url: "{{ url_for('wallet_app.dashboard') }}",
+                data: { 'search': query },
+                success: function(response) {
+                    // تحديث الجدول والترقيم بناءً على الاستجابة
+                    $('#walletTable tbody').html($(response).find('#walletTable tbody').html());
+                    $('#paginationLinks').html($(response).find('#paginationLinks').html());
+                }
+            });
+        }, 300);
+    });
+});
+</script>
 {% endblock %}
