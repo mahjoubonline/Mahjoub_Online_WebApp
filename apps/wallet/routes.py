@@ -32,13 +32,19 @@ def dashboard():
     # 4. تهيئة الترقيم
     pagination = Pagination(page=page, total=total, per_page=per_page, css_framework='bootstrap5')
     
-    # 5. التحديث الذكي: إذا كان الطلب AJAX نعيد صفحة HTML المحدثة فقط
-    # تأكد من استخدام اسم القالب الصحيح في مجلد الـ templates
+    # 5. التحديث الذكي: 
+    # إذا كان الطلب قادماً عبر AJAX (من JavaScript)، نعيد فقط الجزء المحدث من الجدول
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render_template('admin/partials/wallet_table_body.html', 
+                               wallets=wallets, 
+                               pagination=pagination)
+    
+    # إذا كان الطلب عادياً، نعيد الصفحة كاملة
     return render_template('admin/wallet_app.html', 
                            wallets=wallets, 
                            pagination=pagination)
 
-# باقي المسارات (البحث الذكي، إدارة المحفظة، إلخ)
+# باقي المسارات
 @wallet_app.route('/wallet/search_suppliers')
 def search_suppliers():
     term = request.args.get('term', '')
