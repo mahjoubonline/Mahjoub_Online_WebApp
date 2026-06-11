@@ -7,10 +7,11 @@ class Config:
     # 🛡️ مفتاح الأمان السيادي للمنصة
     SECRET_KEY = os.environ.get('SECRET_KEY', 'SOVEREIGN_KEY_2026')
     
-    # 🔐 مفتاح التشفير المركزي (لـ AES-256)
-    ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
+    # 🔐 مفتاح التشفير المركزي (لـ AES-256) 
+    # تم إسناد المفتاح الطويل الذي ولدناه لضمان العمل التلقائي
+    ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
     
-    # 🔒 إعدادات الحماية الأمنية للـ Cookies (لرفع تقييم الأمان)
+    # 🔒 إعدادات الحماية الأمنية للـ Cookies
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
@@ -19,7 +20,7 @@ class Config:
     # 1. جلب رابط قاعدة البيانات السحابية
     _db_url = os.environ.get('DATABASE_URL')
     
-    # 2. ⚡ إصلاح بادئة الرابط تلقائياً
+    # 2. ⚡ إصلاح بادئة الرابط تلقائياً ليتوافق مع SQLAlchemy
     if _db_url:
         if _db_url.startswith("postgres://"):
             _db_url = _db_url.replace("postgres://", "postgresql+psycopg2://", 1)
@@ -47,10 +48,7 @@ class Config:
 
     # 7. إعدادات WhatsApp Cloud API
     WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '1190456080809834')
-    
-    # تم تحديث التوكن ليعتمد على البيئة فقط (الأمان أولاً)
     WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN', None)
-    
     WHATSAPP_VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'Mahjoub_WhatsApp_Secure_2026')
 
     # 8. الحفاظ على ترميز ونقاء النصوص والبيانات باللغة العربية
