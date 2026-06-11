@@ -1,11 +1,13 @@
 # coding: utf-8
-# 📂 apps/models/admin_db.py - نظام الهوية المحصن (مُحدث لدعم التشفير)
+# 📂 apps/models/admin_db.py - نظام الهوية المحصن (معدل للمسار الصحيح)
 
 from apps.extensions import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
-from apps.utils.security import AESCipher # استيراد بوابة التشفير
+
+# تأكد أن هذا هو المسار الوحيد الذي تستورد منه التشفير
+from apps.utils.security import AESCipher 
 
 class AdminUser(db.Model, UserMixin):
     __tablename__ = 'admin_users'
@@ -26,6 +28,7 @@ class AdminUser(db.Model, UserMixin):
     # 🛡️ بوابة التشفير لرقم الهاتف
     @property
     def phone_number(self): 
+        # AESCipher الآن يتم استدعاؤه من security.py
         return AESCipher.decrypt(self._phone_number_enc)
     
     @phone_number.setter
@@ -39,7 +42,6 @@ class AdminUser(db.Model, UserMixin):
             self.password_hash = "INVALID_HASH"
 
     def check_password(self, password):
-        """التحقق المحصن: يمنع الانهيار حتى لو فسدت البيانات"""
         try:
             if not self.password_hash or self.password_hash == "INVALID_HASH":
                 return False
@@ -57,7 +59,6 @@ class AdminUser(db.Model, UserMixin):
         return False
 
     def increment_failed_attempts(self):
-        """زيادة العداد بأمان"""
         try:
             self.failed_attempts = (self.failed_attempts or 0) + 1
             delay = (self.failed_attempts // 5) + 1 
