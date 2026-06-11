@@ -1,26 +1,18 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع المحصن (معدل للإنتاج)
+# 📂 apps/__init__.py - المصنع المحصن (معدل للإنتاج المستقر)
 
 import os
-import sys
-
-# 💡 حل مشكلة الاستيراد: إضافة المجلد الحالي للمسارات
-sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
-
 from flask import Flask
-from flask_migrate import Migrate
 from flask_talisman import Talisman
-from werkzeug.security import generate_password_hash
 
-# استيراد الإعدادات (تأكد أن الملف باسم config.py داخل مجلد apps)
-from apps.config import Config
-
-from apps.extensions import db, login_manager, migrate
-from apps.models.admin_db import AdminUser
-from apps.models.supplier_db import Supplier
-from apps.models.wallet_db import SupplierWallet
-from apps.models.financial_db import ExchangeRate
-from apps.models.vault_db import AdminVault
+# استخدام الاستيراد النسبي لتجنب مشاكل مسارات Render
+from .config import Config
+from .extensions import db, login_manager, migrate
+from .models.admin_db import AdminUser
+from .models.supplier_db import Supplier
+from .models.wallet_db import SupplierWallet
+from .models.financial_db import ExchangeRate
+from .models.vault_db import AdminVault
 
 def create_app():
     app = Flask(__name__)
@@ -38,12 +30,12 @@ def create_app():
     def load_user(user_id):
         return AdminUser.query.get(int(user_id))
 
-    # تسجيل الـ Blueprints
-    from apps.auth_portal.routes import auth_portal
-    from apps.add_supplier.routes import add_supplier_bp
-    from apps.admin_dashboard.routes import admin_dashboard
-    from apps.wallet.routes import wallet_app
-    from apps.vault.routes import vault_bp
+    # تسجيل الـ Blueprints مع استيراد محلي داخل الدالة لتقليل مخاطر التداخل
+    from .auth_portal.routes import auth_portal
+    from .add_supplier.routes import add_supplier_bp
+    from .admin_dashboard.routes import admin_dashboard
+    from .wallet.routes import wallet_app
+    from .vault.routes import vault_bp
 
     app.register_blueprint(auth_portal, url_prefix='')
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
@@ -53,9 +45,9 @@ def create_app():
 
     # تهيئة قاعدة البيانات الذكية
     with app.app_context():
-        db.create_all() 
-        
         try:
+            db.create_all() 
+            
             if not AdminUser.query.first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
