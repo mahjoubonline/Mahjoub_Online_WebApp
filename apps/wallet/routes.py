@@ -1,6 +1,6 @@
 # coding: utf-8
 from flask import Blueprint, render_template, request, jsonify, abort
-from apps.models.wallet_db import SupplierWallet
+from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.models.supplier_db import Supplier
 from sqlalchemy import or_, cast, String, func
 from flask_paginate import Pagination, get_page_parameter
@@ -37,7 +37,6 @@ def dashboard():
     wallets = query.offset((page - 1) * per_page).limit(per_page).all()
     
     # 4. حساب الإحصائيات (Stats) للنتائج المفلترة
-    # نقوم بعمل استعلام خاص للإحصائيات بناءً على نفس فلتر البحث
     stats_query = query.with_entities(
         func.sum(SupplierWallet.balance_sar).label('total_sar'),
         func.sum(SupplierWallet.balance_yer).label('total_yer'),
@@ -67,7 +66,6 @@ def dashboard():
                            pagination=pagination,
                            stats=stats)
 
-# باقي المسارات
 @wallet_app.route('/wallet/search_suppliers')
 def search_suppliers():
     term = request.args.get('term', '')
@@ -77,7 +75,25 @@ def search_suppliers():
     results = [{'id': s.id, 'text': f"{s.trade_name} - {s.owner_phone}"} for s in suppliers]
     return jsonify({'results': results})
 
-@wallet_app.route('/wallet/manage/<int:supplier_id>')
+@wallet_app.route('/wallet/manage/<int:supplier_id>', methods=['GET'])
 def manage_wallet(supplier_id):
+    # جلب المحفظة
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
-    return render_template('admin/view_wallet.html', wallet=wallet)
+    
+    # التقاط فلاتر التواريخ (من - إلى)
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    # جلب الحركات الخاصة بهذه المحفظة مع الفلترة الزمنية
+    query = WalletTransaction.query.filter_by(wallet_id=wallet.id)
+    
+    if start_date:
+        query = query.filter(WalletTransaction.created_at >= start_date)
+    if end_date:
+        query = query.filter(WalletTransaction.created_at <= end_date)
+    
+    transactions = query.order_by(WalletTransaction.created_at.desc()).all()
+    
+    return render_template('admin/view_wallet.html', 
+                           wallet=wallet, 
+                           transactions=transactions)
