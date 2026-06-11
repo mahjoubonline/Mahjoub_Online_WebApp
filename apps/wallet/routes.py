@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, request, jsonify, abort
 from apps.models.wallet_db import SupplierWallet
 from apps.models.supplier_db import Supplier
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from flask_paginate import Pagination, get_page_parameter
 
 # تعريف الـ Blueprint
@@ -24,11 +24,11 @@ def dashboard():
     query = SupplierWallet.query.join(Supplier)
     
     if search:
-        # البحث في الحقول المفهرسة
+        # تم استخدام cast لتحويل الـ id (الرقمي) إلى String ليتوافق مع PostgreSQL
         query = query.filter(or_(
             Supplier.search_name.contains(search),
             Supplier.search_phone.contains(search),
-            SupplierWallet.id.contains(search)
+            cast(SupplierWallet.id, String).contains(search)
         ))
     
     # 3. حساب الإجمالي وجلب البيانات
