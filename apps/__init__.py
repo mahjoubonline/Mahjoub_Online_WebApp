@@ -1,4 +1,5 @@
-# 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية المحدثة)
+# coding: utf-8
+# 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية المستقرة)
 import os
 import sys
 from flask import Flask
@@ -63,29 +64,28 @@ def create_app():
 
     # تهيئة قاعدة البيانات والبيانات التأسيسية
     with app.app_context():
-        # إنشاء الجداول الأساسية
+        # إنشاء الجداول إذا لم تكن موجودة
         db.create_all()
         
         try:
-            # إعادة تهيئة جداول الخزينة فقط
-            AdminVault.__table__.drop(db.engine, checkfirst=True)
-            VaultTransaction.__table__.drop(db.engine, checkfirst=True)
-            db.create_all()
-            
             # 1. إنشاء المدير
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
                 db.session.add(admin)
+                db.session.commit()
             
             # 2. إنشاء الخزينة المركزية
             if not AdminVault.query.first():
-                db.session.add(AdminVault(balance_sar=0, balance_yer=0, balance_usd=0))
+                vault = AdminVault(balance_sar=0, balance_yer=0, balance_usd=0)
+                db.session.add(vault)
+                db.session.commit()
             
             # 3. زرع أسعار الصرف
             if not ExchangeRate.query.first():
                 db.session.add(ExchangeRate(currency_code='USD', rate_to_sar=3.75))
                 db.session.add(ExchangeRate(currency_code='YER', rate_to_sar=0.004))
+                db.session.commit()
                 
             # 4. زرع الموردين
             if not Supplier.query.first():
@@ -100,9 +100,9 @@ def create_app():
                     db.session.add(new_sup)
                     db.session.flush() 
                     db.session.add(SupplierWallet(supplier_id=new_sup.id, balance_sar=0, balance_yer=0, balance_usd=0))
+                db.session.commit()
                 
-            db.session.commit()
-            print("✅ تم تحديث المصنع وإعادة تهيئة الخزينة بنجاح.")
+            print("✅ تم تجهيز المصنع والبيانات التأسيسية بنجاح.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء التأسيس: {e}")
