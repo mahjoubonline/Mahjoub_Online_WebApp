@@ -1,11 +1,13 @@
 # coding: utf-8
 # 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية المستقرة)
+
 import os
 import sys
 from flask import Flask
 from flask_migrate import Migrate
 from flask_talisman import Talisman
 from werkzeug.security import generate_password_hash
+from apps.config import Config  # استيراد الإعدادات المركزية
 
 # إعداد المسارات
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -22,12 +24,10 @@ from apps.models.vault_db import AdminVault, VaultTransaction
 def create_app():
     app = Flask(__name__)
     
-    # الإعدادات
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-sovereign-key-2026')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///mahjoub_online.db')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # تحميل الإعدادات من كلاس Config المركزي
+    app.config.from_object(Config)
     
-    # 🛡️ تحصين التطبيق
+    # 🛡️ تحصين التطبيق (CSP & Talisman)
     csp = {
         'default-src': ["'self'"],
         'script-src': ["'self'", "https://code.jquery.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "'unsafe-inline'"],
@@ -64,7 +64,6 @@ def create_app():
 
     # تهيئة قاعدة البيانات والبيانات التأسيسية
     with app.app_context():
-        # إنشاء الجداول إذا لم تكن موجودة
         db.create_all()
         
         try:
