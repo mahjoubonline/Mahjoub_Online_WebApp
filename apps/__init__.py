@@ -1,18 +1,16 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية للإنتاج - مُصححة)
+# 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية - مع بيانات وهمية مكثفة)
 
 import os
 import sys
+import random
 
-# التأكد من رؤية المجلد الرئيسي
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask
 from flask_talisman import Talisman
 from config import Config
 from apps.extensions import db, login_manager, migrate
-
-# استيراد النماذج
 from apps.models.admin_db import AdminUser
 from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
@@ -20,14 +18,9 @@ from apps.models.financial_db import ExchangeRate
 from apps.models.vault_db import AdminVault, VaultTransaction
 
 def create_app():
-    # 1. تعريف مسارات المجلدات بشكل صريح
-    app = Flask(__name__, 
-                template_folder='templates', 
-                static_folder='static')
-    
+    app = Flask(__name__, template_folder='templates', static_folder='static')
     app.config.from_object(Config)
 
-    # 🛡️ تحصين التطبيق مع تصحيح المعامل ليقبل السياسة (content_security_policy)
     csp_policy = {
         'default-src': ["'self'"],
         'style-src': ["'self'", "'unsafe-inline'"],
@@ -35,13 +28,9 @@ def create_app():
         'img-src': ["'self'", "data:"]
     }
     
-    Talisman(app, 
-             force_https=True, 
-             content_security_policy=csp_policy,
-             frame_options='SAMEORIGIN', 
-             referrer_policy='strict-origin-when-cross-origin')
+    Talisman(app, force_https=True, content_security_policy=csp_policy,
+             frame_options='SAMEORIGIN', referrer_policy='strict-origin-when-cross-origin')
 
-    # تهيئة الإضافات
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -51,7 +40,6 @@ def create_app():
     def load_user(user_id):
         return AdminUser.query.get(int(user_id))
 
-    # تسجيل الـ Blueprints
     from apps.auth_portal.routes import auth_portal
     from apps.add_supplier.routes import add_supplier_bp
     from apps.admin_dashboard.routes import admin_dashboard
@@ -64,24 +52,45 @@ def create_app():
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
 
-    # تهيئة قاعدة البيانات
     with app.app_context():
         try:
             db.create_all() 
             
+            # 1. إنشاء المدير
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
                 db.session.add(admin)
+                db.session.commit()
             
+            # 2. زرع 21 متجر وهمي
+            if not Supplier.query.first():
+                for i in range(1, 22):
+                    s = Supplier(username=f'supplier_{i}', trade_name=f'متجر رقم {i}', owner_name=f'المالك {i}')
+                    s.password_hash = 'pbkdf2:sha256:...' # كلمة مرور وهمية
+                    db.session.add(s)
+                    db.session.commit()
+                    
+                    # إنشاء محفظة لكل متجر
+                    w = SupplierWallet(supplier_id=s.id)
+                    w.balance_sar = random.uniform(100, 5000)
+                    db.session.add(w)
+                    db.session.commit()
+                    
+                    # إنشاء حركة مالية لكل محفظة
+                    w.add_transaction(amount=random.uniform(10, 500), currency='SAR', 
+                                      transaction_type='credit', description='إيداع افتتاحي')
+            
+            # 3. الخزينة وأسعار الصرف
             if not AdminVault.query.first():
-                db.session.add(AdminVault(name="الخزنة المركزية", balance_sar=0, balance_yer=0, balance_usd=0))
+                db.session.add(AdminVault(name="الخزنة المركزية", balance_sar=10000, balance_yer=0, balance_usd=0))
             
             if not ExchangeRate.query.first():
                 db.session.add(ExchangeRate(currency_code='USD', rate_to_sar=3.75))
                 db.session.add(ExchangeRate(currency_code='YER', rate_to_sar=0.004))
             
             db.session.commit()
+            print("✅ تم زرع 21 متجر بنجاح.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء التأسيس: {e}")
