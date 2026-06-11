@@ -1,8 +1,9 @@
-# 📂 apps/__init__.py
+# 📂 apps/__init__.py - المصنع المحصن
 import os
 import sys
 from flask import Flask
 from flask_migrate import Migrate
+from flask_talisman import Talisman
 
 # إعداد المسارات لضمان رؤية المجلدات
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -16,14 +17,30 @@ from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from werkzeug.security import generate_password_hash
 
 def create_app():
-    # تعديل: إزالة template_folder المعرف يدوياً إذا كانت قوالبك موزعة داخل Blueprints
-    # Flask سيبحث تلقائياً في مجلد 'templates' في الجذر وفي مجلدات الـ Blueprints
     app = Flask(__name__)
     
     # الإعدادات
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-sovereign-key-2026')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///mahjoub_online.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    # 🛡️ تحصين التطبيق ضد الهجمات (Talisman)
+    # هذه الإعدادات ترفع تصنيف الأمان إلى A في SecurityHeaders
+    csp = {
+        'default-src': ["'self'"],
+        'script-src': ["'self'", "https://code.jquery.com", "https://cdn.jsdelivr.net"],
+        'style-src': ["'self'", "https://cdnjs.cloudflare.com", "'unsafe-inline'"],
+        'font-src': ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
+        'img-src': ["'self'", "data:"],
+        'connect-src': ["'self'"]
+    }
+    
+    Talisman(app, 
+             content_security_policy=csp,
+             force_https=True,              # فرض HTTPS (Strict-Transport-Security)
+             frame_options='DENY',          # منع Clickjacking
+             referrer_policy='no-referrer'  # حماية خصوصية المسارات
+    )
     
     # تهيئة الإضافات
     db.init_app(app)
@@ -50,7 +67,6 @@ def create_app():
 
     # تهيئة قاعدة البيانات والبيانات التأسيسية
     with app.app_context():
-        # بدلاً من create_all دائماً، يفضل الاعتماد على Migrate
         db.create_all()
         
         try:
@@ -59,7 +75,6 @@ def create_app():
                 admin.set_password('123')
                 db.session.add(admin)
                 
-                # زرع موردين تجريبيين (فقط إذا كانت قاعدة البيانات فارغة)
                 if not Supplier.query.first():
                     for i in range(1, 22):
                         new_sup = Supplier(
@@ -76,7 +91,7 @@ def create_app():
                         db.session.add(new_wallet)
                 
                 db.session.commit()
-                print("✅ تم إنشاء البيانات التأسيسية بنجاح.")
+                print("✅ تم تحصين التطبيق وإنشاء البيانات بنجاح.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء تهيئة قاعدة البيانات: {e}")
