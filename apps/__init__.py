@@ -70,9 +70,9 @@ def create_app():
                     s = Supplier(username=f'supplier_{i}', trade_name=f'متجر رقم {i}', owner_name=f'المالك {i}')
                     s.password_hash = generate_password_hash('123')
                     db.session.add(s)
-                    db.session.flush() # استخدام flush للحصول على ID المتجر قبل الالتزام
+                    db.session.flush() 
                     
-                    # استخدام قيم مشفرة أولية
+                    # استخدام قيم مشفرة أولية للمحفظة
                     w = SupplierWallet(
                         supplier_id=s.id,
                         _balance_sar=AESCipher.encrypt("500.0"),
@@ -84,8 +84,12 @@ def create_app():
             
             # 3. الخزينة وأسعار الصرف
             if not AdminVault.query.first():
-                # تأكد أن AdminVault لديه حقول مشفرة إذا كان مصمماً كذلك
-                db.session.add(AdminVault(name="الخزنة المركزية", balance_sar=10000, balance_yer=0, balance_usd=0))
+                # إنشاء الخزينة بقيم مشفرة
+                vault = AdminVault(name="الخزنة المركزية")
+                vault.balance_sar = 10000
+                vault.balance_yer = 0
+                vault.balance_usd = 0
+                db.session.add(vault)
             
             if not ExchangeRate.query.first():
                 db.session.add(ExchangeRate(currency_code='USD', rate_to_sar=3.75))
