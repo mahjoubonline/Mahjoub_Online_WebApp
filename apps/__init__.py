@@ -18,13 +18,24 @@ def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.config.from_object(Config)
 
-    # 🛡️ سياسة أمان المحتوى (CSP)
+    # 🛡️ سياسة أمان المحتوى (CSP) - تم تحديثها للسماح بالموارد الخارجية الضرورية
     csp_policy = {
         'default-src': ["'self'"],
-        'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
-        'script-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-        'font-src': ["'self'", "https://fonts.gstatic.com"],
-        'img-src': ["'self'", "data:"]
+        'style-src': [
+            "'self'", 
+            "'unsafe-inline'", 
+            "https://cdnjs.cloudflare.com", 
+            "https://fonts.googleapis.com",
+            "https://cdn.jsdelivr.net"
+        ],
+        'script-src': [
+            "'self'", 
+            "'unsafe-inline'", 
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net"
+        ],
+        'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+        'img-src': ["'self'", "data:", "https://*"]
     }
     
     Talisman(app, force_https=True, content_security_policy=csp_policy,
@@ -84,7 +95,6 @@ def create_app():
             
             # 3. الخزينة وأسعار الصرف
             if not AdminVault.query.first():
-                # إنشاء الخزينة بقيم مشفرة
                 vault = AdminVault(name="الخزنة المركزية")
                 vault.balance_sar = 10000
                 vault.balance_yer = 0
