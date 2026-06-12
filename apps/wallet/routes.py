@@ -2,13 +2,14 @@
 from flask import Blueprint, render_template, request, jsonify, abort
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.models.supplier_db import Supplier
-from sqlalchemy import or_, cast, String, func
+from sqlalchemy import or_, cast, String
 from flask_paginate import Pagination, get_page_parameter
 
 # تعريف الـ Blueprint
+# تم ضبط المسار ليكون جذرياً للـ Blueprint ليعمل مع url_prefix='/wallet' في init
 wallet_app = Blueprint('wallet_app', __name__, template_folder='templates')
 
-@wallet_app.route('/wallet', methods=['GET'])
+@wallet_app.route('/', methods=['GET'])
 def dashboard():
     # حماية: التأكد أن الطلبات القادمة عبر AJAX هي من موقعك فقط
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -36,18 +37,14 @@ def dashboard():
     # جلب البيانات الخاصة بالصفحة الحالية فقط
     wallets = query.offset((page - 1) * per_page).limit(per_page).all()
     
-    # 4. حساب الإحصائيات (Stats) للنتائج المفلترة
-    stats_query = query.with_entities(
-        func.sum(SupplierWallet.balance_sar).label('total_sar'),
-        func.sum(SupplierWallet.balance_yer).label('total_yer'),
-        func.sum(SupplierWallet.balance_usd).label('total_usd')
-    ).first()
-    
+    # 4. حساب الإحصائيات (Stats) برمجياً لتجنب خطأ الـ SQLAlchemy مع الـ Properties
+    # نجلب كافة النتائج المفلترة لحساب الإجمالي
+    all_filtered = query.all()
     stats = {
         'count': total,
-        'sar': stats_query[0] or 0,
-        'yer': stats_query[1] or 0,
-        'usd': stats_query[2] or 0
+        'sar': sum(w.balance_sar for w in all_filtered),
+        'yer': sum(w.balance_yer for w in all_filtered),
+        'usd': sum(w.balance_usd for w in all_filtered)
     }
     
     # 5. تهيئة الترقيم
@@ -66,7 +63,7 @@ def dashboard():
                            pagination=pagination,
                            stats=stats)
 
-@wallet_app.route('/wallet/search_suppliers')
+@wallet_app.route('/search_suppliers')
 def search_suppliers():
     term = request.args.get('term', '')
     suppliers = Supplier.query.filter(
@@ -75,7 +72,7 @@ def search_suppliers():
     results = [{'id': s.id, 'text': f"{s.trade_name} - {s.owner_phone}"} for s in suppliers]
     return jsonify({'results': results})
 
-@wallet_app.route('/wallet/manage/<int:supplier_id>', methods=['GET'])
+@wallet_app.route('/manage/<int:supplier_id>', methods=['GET'])
 def manage_wallet(supplier_id):
     # جلب المحفظة
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
