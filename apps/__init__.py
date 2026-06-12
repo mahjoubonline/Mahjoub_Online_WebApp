@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع المحصن (نسخة التشفير والسياسات الآمنة)
+# 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية - مع دعم التشفير والسياسات الأمنية)
 
 import os
 import sys
@@ -14,13 +14,13 @@ from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.models.financial_db import ExchangeRate
 from apps.models.vault_db import AdminVault
-from apps.utils.security import AESCipher # استيراد مشفر البيانات
+from apps.utils.security import AESCipher # استيراد أداة التشفير
 
 def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.config.from_object(Config)
 
-    # تحديث سياسة الأمان للسماح بملفات التنسيق (CSS/JS) من مصادر موثوقة
+    # 🛡️ تحديث سياسة أمان المحتوى (CSP) للسماح بملفات التنسيق (CSS) والخطوط من المصادر الموثوقة
     csp_policy = {
         'default-src': ["'self'"],
         'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
@@ -41,6 +41,7 @@ def create_app():
     def load_user(user_id):
         return AdminUser.query.get(int(user_id))
 
+    # تسجيل المسارات (Blueprints)
     from apps.auth_portal.routes import auth_portal
     from apps.add_supplier.routes import add_supplier_bp
     from apps.admin_dashboard.routes import admin_dashboard
@@ -53,6 +54,7 @@ def create_app():
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
 
+    # إعداد البيانات التأسيسية
     with app.app_context():
         try:
             db.create_all() 
@@ -64,7 +66,7 @@ def create_app():
                 db.session.add(admin)
                 db.session.commit()
             
-            # 2. زرع المتاجر والمحافظ مع التشفير
+            # 2. زرع 21 متجر وهمي مع محافظ مشفرة
             if not Supplier.query.first():
                 for i in range(1, 22):
                     s = Supplier(username=f'supplier_{i}', trade_name=f'متجر رقم {i}', owner_name=f'المالك {i}')
@@ -72,7 +74,7 @@ def create_app():
                     db.session.add(s)
                     db.session.commit()
                     
-                    # إنشاء محفظة مشفرة
+                    # إنشاء محفظة مشفرة لضمان التوافق مع نموذج التشفير
                     w = SupplierWallet(
                         supplier_id=s.id,
                         _balance_sar=AESCipher.encrypt("500.0"),
@@ -82,8 +84,9 @@ def create_app():
                     db.session.add(w)
                 db.session.commit()
             
-            # 3. الخزينة وأسعار الصرف
+            # 3. تهيئة الخزينة وأسعار الصرف
             if not AdminVault.query.first():
+                # ملاحظة: تأكد أن AdminVault يدعم الحقول المشفرة إذا لزم الأمر
                 db.session.add(AdminVault(name="الخزنة المركزية", balance_sar=10000, balance_yer=0, balance_usd=0))
             
             if not ExchangeRate.query.first():
@@ -91,7 +94,7 @@ def create_app():
                 db.session.add(ExchangeRate(currency_code='YER', rate_to_sar=0.004))
             
             db.session.commit()
-            print("✅ تم زرع البيانات التأسيسية (المدير + 21 متجر) بنجاح.")
+            print("✅ تم زرع البيانات التأسيسية بنجاح.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء التأسيس: {e}")
