@@ -6,7 +6,7 @@ from sqlalchemy import or_, cast, String
 from flask_paginate import Pagination, get_page_parameter
 
 # تعريف الـ Blueprint
-# تم ضبط المسار ليكون جذرياً للـ Blueprint ليعمل مع url_prefix='/wallet' في init
+# المسارات هنا تبدأ من بعد الـ url_prefix المعرف في __init__.py وهو /wallet
 wallet_app = Blueprint('wallet_app', __name__, template_folder='templates')
 
 @wallet_app.route('/', methods=['GET'])
@@ -37,20 +37,19 @@ def dashboard():
     # جلب البيانات الخاصة بالصفحة الحالية فقط
     wallets = query.offset((page - 1) * per_page).limit(per_page).all()
     
-    # 4. حساب الإحصائيات (Stats) برمجياً لتجنب خطأ الـ SQLAlchemy مع الـ Properties
-    # نجلب كافة النتائج المفلترة لحساب الإجمالي
+    # 4. حساب الإحصائيات (Stats) برمجياً - تجنب func.sum بسبب التشفير
     all_filtered = query.all()
     stats = {
         'count': total,
-        'sar': sum(w.balance_sar for w in all_filtered),
-        'yer': sum(w.balance_yer for w in all_filtered),
-        'usd': sum(w.balance_usd for w in all_filtered)
+        'sar': sum(float(w.balance_sar) for w in all_filtered),
+        'yer': sum(float(w.balance_yer) for w in all_filtered),
+        'usd': sum(float(w.balance_usd) for w in all_filtered)
     }
     
     # 5. تهيئة الترقيم
     pagination = Pagination(page=page, total=total, per_page=per_page, css_framework='bootstrap5')
     
-    # 6. التحديث الذكي: إذا كان الطلب AJAX نعيد فقط الـ Partial المدمج
+    # 6. إذا كان الطلب AJAX نعيد فقط الـ Partial
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('admin/partials/wallet_table_body.html', 
                                wallets=wallets, 
@@ -63,7 +62,7 @@ def dashboard():
                            pagination=pagination,
                            stats=stats)
 
-@wallet_app.route('/search_suppliers')
+@wallet_app.route('/search_suppliers', methods=['GET'])
 def search_suppliers():
     term = request.args.get('term', '')
     suppliers = Supplier.query.filter(
@@ -77,11 +76,11 @@ def manage_wallet(supplier_id):
     # جلب المحفظة
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
     
-    # التقاط فلاتر التواريخ (من - إلى)
+    # التقاط فلاتر التواريخ
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     
-    # جلب الحركات الخاصة بهذه المحفظة مع الفلترة الزمنية
+    # جلب الحركات الخاصة بهذه المحفظة
     query = WalletTransaction.query.filter_by(wallet_id=wallet.id)
     
     if start_date:
