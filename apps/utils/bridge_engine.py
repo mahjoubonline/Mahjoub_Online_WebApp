@@ -20,7 +20,8 @@ class QumraBridgeEngine:
             return response.json()
         except Exception as e:
             print(f"⚠️ Bridge Engine Error: {e}")
-            return None # نرجع None بدلاً من القاموس ليتمكن الـ routes من التعامل معه
+            # التعديل الجوهري: نرجع قاموساً فارغاً بدلاً من None لمنع الانهيار في routes
+            return {} 
 
     def fetch_latest_products(self, limit=10, page=1):
         query = """
@@ -39,9 +40,11 @@ class QumraBridgeEngine:
         variables = {"limit": limit, "page": page}
         result = self.execute_query(query, variables)
         
-        # حماية إضافية للبيانات القادمة
+        # حماية إضافية للبيانات القادمة لضمان إرجاع قائمة دائماً
         if result and isinstance(result, dict) and 'data' in result:
             find_all = result['data'].get('findAllProducts')
             if find_all and isinstance(find_all, dict):
-                return find_all.get('data', [])
+                data = find_all.get('data')
+                return data if isinstance(data, list) else []
+        
         return []
