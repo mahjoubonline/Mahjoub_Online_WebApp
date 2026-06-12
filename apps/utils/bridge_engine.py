@@ -1,16 +1,14 @@
 # coding: utf-8
-# 📂 apps/utils/bridge_engine.py - محرك الربط المحدث (Mahjoub Bridge Engine)
-
 import requests
 from config import Config
 
 class QumraBridgeEngine:
     def __init__(self):
         self.endpoint = "https://mahjoub.online/admin/graphql"
-        # تم تحديث الـ Header ليتوافق مع الممارسات الشائعة في GraphQL
-        # إذا استمر خطأ 403، جرب استبدال 'x-api-key' بـ 'Authorization'
+        # حماية ضد القيمة الفارغة (None)
+        api_key = getattr(Config, 'QUMRA_API_KEY', '') or ""
         self.headers = {
-            "x-api-key": Config.QUMRA_API_KEY.strip(), 
+            "x-api-key": str(api_key).strip(), 
             "Content-Type": "application/json"
         }
 
@@ -20,12 +18,11 @@ class QumraBridgeEngine:
             response = requests.post(self.endpoint, json=payload, headers=self.headers, timeout=15)
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             print(f"⚠️ Bridge Engine Error: {e}")
-            return {"errors": str(e)}
+            return None # نرجع None بدلاً من القاموس ليتمكن الـ routes من التعامل معه
 
     def fetch_latest_products(self, limit=10, page=1):
-        """تحديث الاستعلام ليطابق الهيكلية المكتشفة في الـ Sandbox"""
         query = """
         query GetProducts($limit: Int, $page: Int) {
             findAllProducts(input: { limit: $limit, page: $page }) {
@@ -42,9 +39,9 @@ class QumraBridgeEngine:
         variables = {"limit": limit, "page": page}
         result = self.execute_query(query, variables)
         
-        # استخراج البيانات بناءً على الهيكلية الجديدة
-        if result and 'data' in result:
-            return result['data'].get('findAllProducts', {}).get('data', [])
+        # حماية إضافية للبيانات القادمة
+        if result and isinstance(result, dict) and 'data' in result:
+            find_all = result['data'].get('findAllProducts')
+            if find_all and isinstance(find_all, dict):
+                return find_all.get('data', [])
         return []
-
-    # دالة map_product_to_qumra ستحتاج لتحديث لاحقاً بعد التأكد من عمل الاستعلام (Fetch)
