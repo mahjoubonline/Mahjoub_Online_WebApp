@@ -12,33 +12,28 @@ from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.models.financial_db import ExchangeRate
 from apps.models.vault_db import AdminVault
+from apps.models.bridge_db import Product  # تم استيراد موديلات الجسر الجديدة
 from apps.utils.security import AESCipher
 
 def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.config.from_object(Config)
 
-    # 🛡️ سياسة أمان المحتوى (CSP) - تم تحديثها للسماح بالموارد الخارجية الضرورية لتجنب مشكلة الـ CSS
+    # 🛡️ سياسة أمان المحتوى (CSP)
     csp_policy = {
         'default-src': ["'self'"],
         'style-src': [
-            "'self'", 
-            "'unsafe-inline'", 
-            "https://cdnjs.cloudflare.com", 
-            "https://fonts.googleapis.com",
-            "https://cdn.jsdelivr.net"
+            "'self'", "'unsafe-inline'", 
+            "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"
         ],
         'script-src': [
-            "'self'", 
-            "'unsafe-inline'", 
-            "https://cdnjs.cloudflare.com",
-            "https://cdn.jsdelivr.net"
+            "'self'", "'unsafe-inline'", 
+            "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"
         ],
         'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
         'img-src': ["'self'", "data:", "https://*"]
     }
     
-    # تفعيل Talisman مع السياسات المحدثة
     Talisman(app, force_https=True, content_security_policy=csp_policy,
              frame_options='SAMEORIGIN', referrer_policy='strict-origin-when-cross-origin')
 
@@ -57,12 +52,14 @@ def create_app():
     from apps.admin_dashboard.routes import admin_dashboard
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
+    from apps.mahjoub_bridge.routes import bridge_bp # تسجيل مسارات الجسر
 
     app.register_blueprint(auth_portal, url_prefix='/')
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
+    app.register_blueprint(bridge_bp, url_prefix='/bridge') # تسجيل البلوبرنت
 
     # إعداد البيانات التأسيسية
     with app.app_context():
@@ -74,7 +71,6 @@ def create_app():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
                 db.session.add(admin)
-                db.session.commit()
             
             # 2. زرع 21 متجر ومحفظة مشفرة
             if not Supplier.query.first():
@@ -84,7 +80,6 @@ def create_app():
                     db.session.add(s)
                     db.session.flush() 
                     
-                    # استخدام قيم مشفرة أولية للمحفظة
                     w = SupplierWallet(
                         supplier_id=s.id,
                         _balance_sar=AESCipher.encrypt("500.0"),
@@ -92,14 +87,11 @@ def create_app():
                         _balance_usd=AESCipher.encrypt("0.0")
                     )
                     db.session.add(w)
-                db.session.commit()
             
             # 3. الخزينة وأسعار الصرف
             if not AdminVault.query.first():
                 vault = AdminVault(name="الخزنة المركزية")
                 vault.balance_sar = 10000
-                vault.balance_yer = 0
-                vault.balance_usd = 0
                 db.session.add(vault)
             
             if not ExchangeRate.query.first():
@@ -107,7 +99,7 @@ def create_app():
                 db.session.add(ExchangeRate(currency_code='YER', rate_to_sar=0.004))
             
             db.session.commit()
-            print("✅ تم زرع البيانات التأسيسية بنجاح.")
+            print("✅ تم تأسيس النظام والجسر بنجاح.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء التأسيس: {e}")
