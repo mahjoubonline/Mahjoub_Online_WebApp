@@ -36,15 +36,19 @@ def dashboard():
         # 2. الحل السيادي: جلب المحافظ وتجميع الأرصدة برمجياً لتجاوز قيود التشفير
         all_wallets = SupplierWallet.query.all()
         
-        total_sar = 0
-        total_yer = 0
-        total_usd = 0
+        total_sar = 0.0
+        total_yer = 0.0
+        total_usd = 0.0
         
         for w in all_wallets:
-            # استخدام الـ property التي تفك التشفير تلقائياً
-            total_sar += float(w.balance_sar or 0)
-            total_yer += float(w.balance_yer or 0)
-            total_usd += float(w.balance_usd or 0)
+            # التأكد من فك التشفير برمجياً وتحويل القيم إلى float مع معالجة None
+            val_sar = w.balance_sar
+            val_yer = w.balance_yer
+            val_usd = w.balance_usd
+            
+            total_sar += float(val_sar) if val_sar is not None else 0.0
+            total_yer += float(val_yer) if val_yer is not None else 0.0
+            total_usd += float(val_usd) if val_usd is not None else 0.0
 
         # 3. جلب آخر 10 عمليات مالية حدثت في النظام للرقابة الفورية
         recent_transactions = WalletTransaction.query\
