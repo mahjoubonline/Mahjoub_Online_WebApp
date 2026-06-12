@@ -12,7 +12,7 @@ from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.models.financial_db import ExchangeRate
 from apps.models.vault_db import AdminVault
-from apps.models.bridge_db import Product  # تم استيراد موديلات الجسر الجديدة
+from apps.models.bridge_db import Product, ProductVariant # تم استيراد موديلات الجسر
 from apps.utils.security import AESCipher
 
 def create_app():
@@ -52,18 +52,19 @@ def create_app():
     from apps.admin_dashboard.routes import admin_dashboard
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
-    from apps.mahjoub_bridge.routes import bridge_bp # تسجيل مسارات الجسر
+    from apps.mahjoub_bridge.routes import bridge_bp # استيراد مسارات الجسر
 
     app.register_blueprint(auth_portal, url_prefix='/')
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
-    app.register_blueprint(bridge_bp, url_prefix='/bridge') # تسجيل البلوبرنت
+    app.register_blueprint(bridge_bp, url_prefix='/bridge')
 
     # إعداد البيانات التأسيسية
     with app.app_context():
         try:
+            # التأكد من إنشاء الجداول المحدثة
             db.create_all() 
             
             # 1. إنشاء المدير
