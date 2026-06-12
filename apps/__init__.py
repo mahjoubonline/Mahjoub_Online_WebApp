@@ -18,7 +18,7 @@ def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.config.from_object(Config)
 
-    # 🛡️ سياسة أمان المحتوى (CSP) - تم تحديثها للسماح بالموارد الخارجية الضرورية
+    # 🛡️ سياسة أمان المحتوى (CSP) - تم تحديثها لتشمل كامل الموارد الضرورية
     csp_policy = {
         'default-src': ["'self'"],
         'style-src': [
