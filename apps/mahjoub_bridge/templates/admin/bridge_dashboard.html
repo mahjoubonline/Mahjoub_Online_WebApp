@@ -42,4 +42,32 @@
         <div class="col-12 text-center py-5">
             <div class="alert alert-info">لا توجد منتجات حالياً. يرجى الضغط على "مزامنة" لجلب البيانات.</div>
         </div>
-        {% endfor
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+// بحث لحظي
+document.getElementById('liveSearch').addEventListener('keyup', function() {
+    let filter = this.value.toLowerCase();
+    document.querySelectorAll('.product-card').forEach(card => {
+        let title = card.querySelector('.card-title').innerText.toLowerCase();
+        card.style.display = title.includes(filter) ? "" : "none";
+    });
+});
+
+// دالة المزامنة
+function syncNow() {
+    Swal.fire({ title: 'جاري التحديث...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    fetch('{{ url_for("mahjoub_bridge.sync_now") }}', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+        if(d.status === 'success') {
+            Swal.fire('تم بنجاح!', d.message, 'success').then(() => location.reload());
+        } else {
+            Swal.fire('تنبيه!', d.message, 'warning');
+        }
+    });
+}
+</script>
+{% endblock %}
