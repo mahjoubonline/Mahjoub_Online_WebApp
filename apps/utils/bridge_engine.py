@@ -35,8 +35,8 @@ class QumraBridgeEngine:
             return {}
 
     def fetch_latest_products(self, limit=10, page=1, search_term=None):
-        # تم تعديل الاستعلام بإزالة الحقول التي تسببت في خطأ 400
-        # تم الاعتماد على الهيكل الأساسي الذي يضمن استجابة السيرفر
+        # ملاحظة: في كود الـ routes الحالي، حاولت استخراج 'url' من الصور
+        # بينما في هذا الاستعلام الحقل هو 'src'
         query = """
         query GetProducts($limit: Int, $page: Int) {
             findAllProducts(input: { limit: $limit, page: $page }) {
@@ -53,7 +53,6 @@ class QumraBridgeEngine:
             }
         }
         """
-        # تم إزالة search من المتغيرات لأن السيرفر رفض تعريفها في الـ Input
         variables = {"limit": limit, "page": page}
         data = self.execute_query(query, variables)
         
