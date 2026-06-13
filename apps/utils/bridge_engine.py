@@ -1,4 +1,6 @@
 # coding: utf-8
+# 📂 apps/utils/bridge_engine.py
+
 import requests
 import os
 
@@ -12,26 +14,17 @@ class QumraBridgeEngine:
             "Accept": "application/json"
         }
 
-    def execute_query(self, query):
+    def execute_query(self, query, variables=None):
+        payload = {"query": query, "variables": variables or {}}
         try:
-            response = requests.post(self.endpoint, json={"query": query}, headers=self.headers, timeout=15)
+            response = requests.post(self.endpoint, json=payload, headers=self.headers, timeout=15)
             return response.json()
         except Exception as e:
-            return {"errors": [{"message": str(e)}]}
+            print(f"⚠️ Connection Error: {e}")
+            return {}
 
     def fetch_latest_products(self):
-        # استعلام كشف حقول ImageProduct
-        introspection_query = """
-        query {
-            __type(name: "ImageProduct") {
-                fields { name }
-            }
-        }
-        """
-        debug_data = self.execute_query(introspection_query)
-        print(f"DEBUG: ImageProduct Fields Discovery: {debug_data}")
-
-        # استعلام لجلب المنتجات بدون الحقل المسبب للخطأ لنتمكن من رؤية البيانات المتاحة
+        # الاستعلام الصحيح الآن باستخدام الحقل المكتشف: fileUrl
         query = """
         query {
             findAllProducts {
@@ -41,13 +34,33 @@ class QumraBridgeEngine:
                     quantity
                     status
                     images { 
-                        # سنعرف الاسم الصحيح من الـ Logs بناءً على نتيجة الاستعلام أعلاه
-                        url 
-                    } 
+                        fileUrl 
+                    }
                 }
             }
         }
         """
-        data = self.execute_query(query)
-        print(f"DEBUG: Products Query Result: {data}")
-        return []
+        result = self.execute_query(query)
+        
+        # استخراج البيانات
+        products = result.get('data', {}).get('findAllProducts', {}).get('data', [])
+        
+        processed_products = []
+        for p in products:
+            pricing = p.get('pricing') or {}
+            images = p.get('images') or []
+            
+            # استخراج الرابط الصحيح باستخدام الحقل المكتشف fileUrl
+            img_url = None
+            if isinstance(images, list) and len(images) > 0:
+                img_url = images[0].get('fileUrl')
+            
+            processed_products.append({
+                'title': p.get('title'),
+                'price': pricing.get('price', 0),
+                'quantity': p.get('quantity', 0),
+                'status': p.get('status'),
+                'image_url': img_url
+            })
+                
+        return processed_products
