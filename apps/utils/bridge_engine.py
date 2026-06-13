@@ -1,6 +1,4 @@
 # coding: utf-8
-# 📂 apps/utils/bridge_engine.py
-
 import requests
 import os
 
@@ -14,31 +12,26 @@ class QumraBridgeEngine:
             "Accept": "application/json"
         }
 
-    def execute_query(self, query, variables=None):
-        payload = {"query": query, "variables": variables or {}}
+    def execute_query(self, query):
         try:
-            response = requests.post(self.endpoint, json=payload, headers=self.headers, timeout=15)
-            result = response.json()
-            return result
+            response = requests.post(self.endpoint, json={"query": query}, headers=self.headers, timeout=15)
+            return response.json()
         except Exception as e:
-            print(f"⚠️ Connection Error: {e}")
-            return {}
+            return {"errors": [{"message": str(e)}]}
 
     def fetch_latest_products(self):
-        # استعلام لكشف الحقول المتاحة في ImageProduct
+        # استعلام كشف حقول ImageProduct
         introspection_query = """
         query {
             __type(name: "ImageProduct") {
-                fields {
-                    name
-                }
+                fields { name }
             }
         }
         """
-        debug_response = self.execute_query(introspection_query)
-        print(f"DEBUG: Schema Discovery Result: {debug_response}")
+        debug_data = self.execute_query(introspection_query)
+        print(f"DEBUG: ImageProduct Fields Discovery: {debug_data}")
 
-        # استعلام تجريبي لجلب المنتجات بدون الحقول الفرعية المسببة للخطأ
+        # استعلام لجلب المنتجات بدون الحقل المسبب للخطأ لنتمكن من رؤية البيانات المتاحة
         query = """
         query {
             findAllProducts {
@@ -47,12 +40,14 @@ class QumraBridgeEngine:
                     pricing { price }
                     quantity
                     status
-                    images { url } 
+                    images { 
+                        # سنعرف الاسم الصحيح من الـ Logs بناءً على نتيجة الاستعلام أعلاه
+                        url 
+                    } 
                 }
             }
         }
         """
-        data_response = self.execute_query(query)
-        print(f"DEBUG: Products Query Result: {data_response}")
-        
+        data = self.execute_query(query)
+        print(f"DEBUG: Products Query Result: {data}")
         return []
