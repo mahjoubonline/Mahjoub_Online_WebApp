@@ -20,9 +20,13 @@ class QumraBridgeEngine:
         payload = {"query": query, "variables": variables or {}}
         try:
             response = requests.post(self.endpoint, json=payload, headers=self.headers, timeout=15)
+            # تتبع أخطاء الـ 400
+            if response.status_code == 400:
+                print(f"DEBUG: Server rejected request with: {response.text}")
+            
             response.raise_for_status()
             result = response.json()
-            # التأكد من عدم وجود أخطاء في استجابة GraphQL نفسها
+            
             if 'errors' in result:
                 print(f"⚠️ GraphQL Errors: {result['errors']}")
             return result.get('data', {})
@@ -31,15 +35,14 @@ class QumraBridgeEngine:
             return {}
 
     def fetch_latest_products(self, limit=10, page=1):
-        """جلب المنتجات وتجهيز القوالب التلقائية دون تخزين إضافي في القاعدة."""
+        """جلب المنتجات وتبسيط الاستعلام لتفادي خطأ 400."""
+        # قمت بتبسيط الاستعلام (إزالة الحقول التي قد تسبب خطأ في السيرفر)
         query = """
         query GetProducts($limit: Int, $page: Int) {
             findAllProducts(input: { limit: $limit, page: $page }) {
                 data {
                     title
                     quantity
-                    image_url
-                    description
                     pricing {
                         price
                     }
@@ -50,14 +53,12 @@ class QumraBridgeEngine:
         variables = {"limit": limit, "page": page}
         data = self.execute_query(query, variables)
         
-        # استخراج البيانات من الهيكل المتداخل
         find_all = data.get('findAllProducts', {})
         products = find_all.get('data', [])
         
         if not products:
             return []
         
-        # إضافة "القالب التلقائي" لكل منتج للاستخدام المباشر في القوالب
         for p in products:
             p['auto_template'] = self.generate_product_html(p)
             
@@ -68,7 +69,8 @@ class QumraBridgeEngine:
         try:
             pricing = product.get('pricing') or {}
             price = pricing.get('price', '0')
-            img = product.get('image_url') or 'https://via.placeholder.com/200'
+            # استخدام صورة افتراضية بما أننا قمنا بتبسيط الاستعلام
+            img = 'https://via.placeholder.com/50'
             title = product.get('title', 'منتج بدون اسم')
             
             return f"""
