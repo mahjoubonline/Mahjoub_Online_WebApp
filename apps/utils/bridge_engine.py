@@ -19,25 +19,34 @@ class QumraBridgeEngine:
         payload = {"query": query, "variables": variables or {}}
         try:
             response = requests.post(self.endpoint, json=payload, headers=self.headers, timeout=15)
-            
             if response.status_code != 200:
                 print(f"❌ DEBUG: Status {response.status_code} | Body: {response.text}")
                 return {}
             
             result = response.json()
-            
             if 'errors' in result:
                 print(f"❌ GraphQL Errors: {result['errors']}")
                 return {}
-                
             return result.get('data', {})
-            
         except Exception as e:
             print(f"⚠️ Connection Error: {e}")
             return {}
 
     def fetch_latest_products(self):
-        # الاستعلام المصحح مع طلب الحقول الفرعية المطلوبة
+        # 1. استعلام الفحص لكشف الحقول الصحيحة لـ ImageProduct
+        introspection_query = """
+        query {
+            __type(name: "ImageProduct") {
+                fields {
+                    name
+                }
+            }
+        }
+        """
+        debug_data = self.execute_query(introspection_query)
+        print(f"DEBUG: ImageProduct Fields Discovery: {debug_data}")
+
+        # 2. استعلام جلب المنتجات (بدون حقل src المسبب للخطأ مؤقتاً)
         query = """
         query {
             findAllProducts {
@@ -49,27 +58,24 @@ class QumraBridgeEngine:
                     quantity
                     status
                     images {
-                        src
+                        url
                     }
                 }
             }
         }
         """
         data = self.execute_query(query)
-        
-        # استخراج البيانات من المسار المكتشف
         products = data.get('findAllProducts', {}).get('data', [])
         
-        # تحويل البيانات لتناسب توقعات القالب (Template)
+        # 3. معالجة البيانات
         for p in products:
-            # استخراج السعر من كائن pricing
             pricing = p.get('pricing')
             p['price'] = pricing.get('price') if isinstance(pricing, dict) else 0
             
-            # استخراج رابط الصورة الأول من قائمة images
+            # جربنا هنا 'url' بدلاً من 'src' كاحتمال، وإذا لم تظهر الصورة سنعرف من الـ Logs
             images = p.get('images')
             if isinstance(images, list) and len(images) > 0:
-                p['image_url'] = images[0].get('src')
+                p['image_url'] = images[0].get('url') or images[0].get('src')
             else:
                 p['image_url'] = None
                 
