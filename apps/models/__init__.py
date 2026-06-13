@@ -6,7 +6,7 @@ from .supplier_db import Supplier
 from .wallet_db import SupplierWallet, WalletTransaction
 from .vault_db import AdminVault, VaultTransaction
 from .financial_db import ExchangeRate, FinancialLog
-from .bridge_db import Product, ProductVariant  # <--- إضافة النماذج الجديدة هنا
+# (تم حذف سطر استيراد bridge_db)
 
 __all__ = [
     'AdminUser', 
@@ -16,7 +16,6 @@ __all__ = [
     'AdminVault', 
     'VaultTransaction',
     'ExchangeRate',
-    'FinancialLog',
-    'Product',        # <--- إضافة النماذج الجديدة هنا
-    'ProductVariant'  # <--- إضافة النماذج الجديدة هنا
+    'FinancialLog'
+    # (تم حذف Product و ProductVariant من هنا)
 ]
