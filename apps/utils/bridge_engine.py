@@ -5,7 +5,6 @@ from config import Config
 class QumraBridgeEngine:
     def __init__(self):
         self.endpoint = "https://mahjoub.online/admin/graphql"
-        # حماية ضد القيمة الفارغة (None)
         api_key = getattr(Config, 'QUMRA_API_KEY', '') or ""
         self.headers = {
             "x-api-key": str(api_key).strip(), 
@@ -17,11 +16,12 @@ class QumraBridgeEngine:
         try:
             response = requests.post(self.endpoint, json=payload, headers=self.headers, timeout=15)
             response.raise_for_status()
-            return response.json()
+            # التأكد من أن النتيجة قاموس دائماً
+            data = response.json()
+            return data if isinstance(data, dict) else {}
         except Exception as e:
             print(f"⚠️ Bridge Engine Error: {e}")
-            # التعديل الجوهري: نرجع قاموساً فارغاً بدلاً من None لمنع الانهيار في routes
-            return {} 
+            return {}
 
     def fetch_latest_products(self, limit=10, page=1):
         query = """
@@ -40,11 +40,19 @@ class QumraBridgeEngine:
         variables = {"limit": limit, "page": page}
         result = self.execute_query(query, variables)
         
-        # حماية إضافية للبيانات القادمة لضمان إرجاع قائمة دائماً
-        if result and isinstance(result, dict) and 'data' in result:
-            find_all = result['data'].get('findAllProducts')
-            if find_all and isinstance(find_all, dict):
-                data = find_all.get('data')
-                return data if isinstance(data, list) else []
+        # استخدام .get() بأمان تام في كل خطوة
+        # 1. نصل لـ 'data' من النتيجة الرئيسية
+        data_wrapper = result.get('data')
+        if not isinstance(data_wrapper, dict):
+            return []
+            
+        # 2. نصل لـ 'findAllProducts' من داخل data
+        find_all = data_wrapper.get('findAllProducts')
+        if not isinstance(find_all, dict):
+            return []
+            
+        # 3. نصل لـ 'data' (القائمة) من داخل findAllProducts
+        products = find_all.get('data')
         
-        return []
+        # إرجاع القائمة إذا كانت موجودة وصحيحة، وإلا قائمة فارغة
+        return products if isinstance(products, list) else []
