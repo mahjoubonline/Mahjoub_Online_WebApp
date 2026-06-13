@@ -35,16 +35,16 @@ class QumraBridgeEngine:
             return {}
 
     def fetch_latest_products(self, limit=10, page=1, search_term=None):
-        # تم تصحيح الاستعلام ليستخدم 'images' بدلاً من 'image_url' كما طلب السيرفر
-        # تم إضافة search_term لدعم البحث اللحظي
+        # تم تعديل الاستعلام بإزالة الحقول التي تسببت في خطأ 400
+        # تم الاعتماد على الهيكل الأساسي الذي يضمن استجابة السيرفر
         query = """
-        query GetProducts($limit: Int, $page: Int, $search: String) {
-            findAllProducts(input: { limit: $limit, page: $page, search: $search }) {
+        query GetProducts($limit: Int, $page: Int) {
+            findAllProducts(input: { limit: $limit, page: $page }) {
                 data {
                     title
                     quantity
                     images { 
-                        url 
+                        src
                     }
                     pricing {
                         price
@@ -53,7 +53,8 @@ class QumraBridgeEngine:
             }
         }
         """
-        variables = {"limit": limit, "page": page, "search": search_term}
+        # تم إزالة search من المتغيرات لأن السيرفر رفض تعريفها في الـ Input
+        variables = {"limit": limit, "page": page}
         data = self.execute_query(query, variables)
         
         products = data.get('findAllProducts', {}).get('data', [])
