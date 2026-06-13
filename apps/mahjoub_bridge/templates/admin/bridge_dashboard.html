@@ -3,24 +3,15 @@
 {% block title %}إدارة الجسر | محجوب أونلاين{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-        <div class="d-flex align-items-center">
-            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="btn btn-outline-secondary me-3" title="الرجوع للوحة التحكم">
-                <i class="fas fa-arrow-right"></i>
-            </a>
-            <h4 class="font-weight-bold text-dark m-0">
-                <i class="fas fa-network-wired text-warning me-2"></i>إدارة المنتجات (الجسر السيادي)
-            </h4>
-        </div>
-        
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="font-weight-bold text-dark">
+            <i class="fas fa-network-wired text-warning me-2"></i>إدارة المنتجات (الجسر السيادي)
+        </h4>
         <div class="d-flex gap-2">
-            <input type="text" id="liveSearch" class="form-control" placeholder="بحث لحظي..." style="width: 250px; border-radius: 20px;">
-            <a href="{{ url_for('mahjoub_bridge.add_product_page') }}" class="btn btn-dark text-warning">
-                <i class="fas fa-plus"></i> إضافة منتج
-            </a>
+            <input type="text" id="liveSearch" class="form-control" placeholder="بحث عن منتج..." style="border-radius: 20px;">
             <button class="btn btn-success" onclick="syncNow()">
-                <i class="fas fa-sync"></i> مزامنة
+                <i class="fas fa-sync"></i> مزامنة الآن
             </button>
         </div>
     </div>
@@ -28,89 +19,27 @@
     <div class="row" id="product-cards-container">
         {% for p in products %}
         <div class="col-lg-3 col-md-4 col-sm-6 mb-4 product-card">
-            <div class="card h-100 shadow-sm border-0 transition-all hover-shadow">
-                <div class="p-3 text-center" style="height: 180px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                    {% if p.auto_template %}
+            <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden">
+                <div class="p-2 text-center bg-light" style="height: 160px; display: flex; align-items: center; justify-content: center;">
+                    {% if p.image_url %}
+                        <img src="{{ p.image_url }}" class="img-fluid" style="max-height: 140px; border-radius: 5px;">
+                    {% elif p.auto_template %}
                         {{ p.auto_template | safe }}
                     {% else %}
-                        <img src="https://via.placeholder.com/200" class="img-fluid" style="max-height: 150px;">
+                        <i class="fas fa-box-open fa-3x text-muted"></i>
                     {% endif %}
                 </div>
-                
-                <div class="card-body">
-                    <h6 class="card-title font-weight-bold text-truncate" title="{{ p.title }}">{{ p.title }}</h6>
-                    <p class="text-muted small mb-2"><i class="fas fa-store me-1"></i> {{ p.supplier_id or 'QUMRA_SYNC' }}</p>
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <span class="text-dark font-weight-bold">{{ p.price }} ر.س</span>
-                        <span class="badge bg-light text-success border">مُزامَن</span>
+                <div class="card-body p-3">
+                    <h6 class="card-title text-truncate" title="{{ p.title }}">{{ p.title }}</h6>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span class="text-primary font-weight-bold">{{ p.price }} ر.س</span>
+                        <small class="text-muted">الكمية: {{ p.quantity }}</small>
                     </div>
                 </div>
             </div>
         </div>
         {% else %}
         <div class="col-12 text-center py-5">
-            <h5 class="text-muted">لا توجد منتجات حالياً. اضغط على "مزامنة" للبدء.</h5>
+            <div class="alert alert-info">لا توجد منتجات حالياً. يرجى الضغط على "مزامنة" لجلب البيانات.</div>
         </div>
-        {% endfor %}
-    </div>
-
-    <div class="row mt-4">
-        <div class="col-12 d-flex justify-content-center">
-            <nav>
-                <ul class="pagination">
-                    <li class="page-item {% if pagination.page <= 1 %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('mahjoub_bridge.dashboard', page=pagination.page-1) }}">السابق</a>
-                    </li>
-                    <li class="page-item active">
-                        <span class="page-link bg-warning border-0 text-dark">صفحة {{ pagination.page }}</span>
-                    </li>
-                    <li class="page-item {% if pagination.page >= pagination.pages %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('mahjoub_bridge.dashboard', page=pagination.page+1) }}">التالي</a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-    </div>
-</div>
-
-<style>
-    .transition-all { transition: all 0.3s ease; }
-    .hover-shadow:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
-    .product-snippet img { max-width: 100%; height: auto !important; }
-</style>
-
-<script>
-// تفعيل البحث اللحظي
-document.getElementById('liveSearch').addEventListener('keyup', function() {
-    let filter = this.value.toUpperCase();
-    let cards = document.getElementsByClassName('product-card');
-    
-    for (let card of cards) {
-        let title = card.querySelector('.card-title').textContent.toUpperCase();
-        card.style.display = title.includes(filter) ? "" : "none";
-    }
-});
-
-// دالة المزامنة
-function syncNow() {
-    Swal.fire({ 
-        title: 'جاري جلب البيانات...', 
-        text: 'يرجى عدم إغلاق الصفحة.', 
-        icon: 'info', 
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading() 
-    });
-
-    fetch('{{ url_for("mahjoub_bridge.sync_now") }}', { method: 'POST' })
-    .then(response => response.json())
-    .then(data => {
-        if(data.status === 'success') {
-            Swal.fire('تم بنجاح!', data.message, 'success').then(() => location.reload());
-        } else {
-            Swal.fire('تنبيه!', data.message, 'warning');
-        }
-    })
-    .catch(err => Swal.fire('خطأ!', 'فشل الاتصال بالسيرفر.', 'error'));
-}
-</script>
-{% endblock %}
+        {% endfor
