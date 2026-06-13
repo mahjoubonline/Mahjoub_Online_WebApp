@@ -22,11 +22,11 @@
     <div class="row" id="product-cards-container">
         {% for p in products %}
         <div class="col-lg-3 col-md-4 col-sm-6 mb-4 product-card">
-            <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden">
+            <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden transition-all hover-shadow">
                 <div class="position-relative">
                     <div class="p-2 text-center bg-light" style="height: 160px; display: flex; align-items: center; justify-content: center;">
                         {% if p.image_url %}
-                            <img src="{{ p.image_url }}" class="img-fluid" style="max-height: 140px; border-radius: 5px;">
+                            <img src="{{ p.image_url }}" class="img-fluid" style="max-height: 140px; border-radius: 5px; object-fit: contain;">
                         {% else %}
                             <i class="fas fa-box-open fa-3x text-muted"></i>
                         {% endif %}
@@ -39,15 +39,19 @@
                 <div class="card-body p-3">
                     <h6 class="card-title text-truncate" title="{{ p.title }}">{{ p.title }}</h6>
                     <div class="d-flex justify-content-between align-items-center mt-2">
-                        <span class="text-primary font-weight-bold">{{ p.price or '0' }} ر.س</span>
-                        <small class="text-muted">الكمية: {{ p.quantity or '0' }}</small>
+                        <span class="text-primary fw-bold">{{ p.price or '0' }} ر.س</span>
+                        <small class="text-muted"><i class="fas fa-boxes me-1"></i>{{ p.quantity or '0' }}</small>
                     </div>
                 </div>
             </div>
         </div>
         {% else %}
         <div class="col-12 text-center py-5">
-            <div class="alert alert-info">لا توجد منتجات حالياً. يرجى الضغط على "مزامنة الآن" لجلب البيانات.</div>
+            <div class="alert alert-light border shadow-sm">
+                <i class="fas fa-info-circle text-primary fa-2x mb-3"></i>
+                <h5>لا توجد منتجات حالياً</h5>
+                <p class="text-muted">يرجى الضغط على "مزامنة الآن" لجلب أحدث المنتجات من النظام السيادي.</p>
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -78,7 +82,7 @@
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title">تصفية المنتجات</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <select class="form-select mb-3" onchange="window.location.href='?status='+this.value">
+                <select class="form-select" onchange="window.location.href='?status='+this.value">
                     <option value="">كل الحالات</option>
                     <option value="published">منشور</option>
                     <option value="draft">مسودة</option>
@@ -98,20 +102,26 @@ document.getElementById('liveSearch').addEventListener('keyup', function() {
     });
 });
 
-// دالة المزامنة مع واجهة المستخدم
+// دالة المزامنة مع تحسين تجربة المستخدم
 function syncNow() {
-    Swal.fire({ title: 'جاري المزامنة مع المحرك...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({ 
+        title: 'جاري الاتصال بالجسر...', 
+        text: 'يرجى الانتظار، قد تستغرق العملية بضع ثوانٍ',
+        allowOutsideClick: false, 
+        didOpen: () => Swal.showLoading() 
+    });
+    
     fetch('{{ url_for("mahjoub_bridge.sync_now") }}', { method: 'POST' })
     .then(r => r.json())
     .then(d => {
         if(d.status === 'success') {
-            Swal.fire('تم بنجاح!', d.message, 'success').then(() => location.reload());
+            Swal.fire('تمت العملية!', d.message, 'success').then(() => location.reload());
         } else {
-            Swal.fire('تنبيه!', d.message, 'warning');
+            Swal.fire('خطأ في المزامنة', d.message, 'error');
         }
     })
     .catch(() => {
-        Swal.fire('خطأ', 'فشل الاتصال بالمحرك، تأكد من إعدادات الـ API', 'error');
+        Swal.fire('خطأ تقني', 'فشل الاتصال بمحرك الجسر، يرجى مراجعة Logs السيرفر', 'error');
     });
 }
 </script>
