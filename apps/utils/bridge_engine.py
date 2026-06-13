@@ -1,28 +1,31 @@
 # coding: utf-8
-# 📂 apps/utils/bridge_engine.py - محرك المزامنة السيادي
+# 📂 apps/utils/bridge_engine.py - محرك المزامنة السيادي (معدل للمصادقة)
 
 import requests
 from config import Config
 
 class QumraBridgeEngine:
     def __init__(self):
-        self.endpoint = "https://mahjoub.online/admin/graphql"
-        # استرجاع الـ API Key من إعدادات البيئة
-        api_token = getattr(Config, 'QUMRA_API_KEY', '') or ""
+        # الاحتمال الأكبر للخطأ 400 هو المسار. جرب إزالة /admin إذا كان الـ API عاماً
+        self.endpoint = "https://mahjoub.online/graphql" 
+        
+        api_token = getattr(Config, 'QUMRA_API_KEY', '').strip()
+        
+        # تحسين الـ Headers لتكون أكثر توافقاً مع سيرفرات Apollo/GraphQL
         self.headers = {
-            "Authorization": f"Bearer {api_token.strip()}",
+            "Authorization": f"Bearer {api_token}",
             "Content-Type": "application/json",
-            "apollo-require-preflight": "true" 
+            "Accept": "application/json"
         }
 
     def execute_query(self, query, variables=None):
-        """تنفيذ استعلام GraphQL وإرجاع البيانات بشكل آمن."""
         payload = {"query": query, "variables": variables or {}}
         try:
             response = requests.post(self.endpoint, json=payload, headers=self.headers, timeout=15)
-            # تتبع أخطاء الـ 400
-            if response.status_code == 400:
-                print(f"DEBUG: Server rejected request with: {response.text}")
+            
+            # إذا استمر الخطأ 400، سيطبع لنا السيرفر السبب الحقيقي هنا
+            if response.status_code != 200:
+                print(f"DEBUG: Server rejected with Status {response.status_code}: {response.text}")
             
             response.raise_for_status()
             result = response.json()
@@ -35,17 +38,13 @@ class QumraBridgeEngine:
             return {}
 
     def fetch_latest_products(self, limit=10, page=1):
-        """جلب المنتجات وتبسيط الاستعلام لتفادي خطأ 400."""
-        # قمت بتبسيط الاستعلام (إزالة الحقول التي قد تسبب خطأ في السيرفر)
+        # استعلام مبسط جداً للاتصال
         query = """
         query GetProducts($limit: Int, $page: Int) {
             findAllProducts(input: { limit: $limit, page: $page }) {
                 data {
                     title
                     quantity
-                    pricing {
-                        price
-                    }
                 }
             }
         }
@@ -53,11 +52,7 @@ class QumraBridgeEngine:
         variables = {"limit": limit, "page": page}
         data = self.execute_query(query, variables)
         
-        find_all = data.get('findAllProducts', {})
-        products = find_all.get('data', [])
-        
-        if not products:
-            return []
+        products = data.get('findAllProducts', {}).get('data', [])
         
         for p in products:
             p['auto_template'] = self.generate_product_html(p)
@@ -65,22 +60,8 @@ class QumraBridgeEngine:
         return products if isinstance(products, list) else []
 
     def generate_product_html(self, product):
-        """توليد قالب HTML مصغر للعرض اللحظي."""
-        try:
-            pricing = product.get('pricing') or {}
-            price = pricing.get('price', '0')
-            # استخدام صورة افتراضية بما أننا قمنا بتبسيط الاستعلام
-            img = 'https://via.placeholder.com/50'
-            title = product.get('title', 'منتج بدون اسم')
-            
-            return f"""
-            <div class="product-snippet" style="display:flex; align-items:center; gap:10px;">
-                <img src="{img}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
-                <div style="font-size: 0.8rem;">
-                    <strong>{title}</strong><br>
-                    <span>{price} ر.س</span>
-                </div>
-            </div>
-            """
-        except Exception:
-            return '<div class="product-snippet">بيانات المنتج غير مكتملة</div>'
+        return f"""
+        <div class="product-snippet">
+            <strong>{product.get('title', 'منتج')}</strong>
+        </div>
+        """
