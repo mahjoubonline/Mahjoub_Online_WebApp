@@ -9,6 +9,10 @@
             <i class="fas fa-network-wired text-warning me-2"></i>إدارة المنتجات (الجسر السيادي)
         </h4>
         <div class="d-flex gap-2">
+            <!-- زر إضافة منتج جديد -->
+            <a href="{{ url_for('mahjoub_bridge.add_product') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> إضافة منتج
+            </a>
             <input type="text" id="liveSearch" class="form-control" placeholder="بحث عن منتج..." style="border-radius: 20px;">
             <button class="btn btn-success" onclick="syncNow()">
                 <i class="fas fa-sync"></i> مزامنة الآن
@@ -44,6 +48,27 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- منطقة الترقيم (Pagination) -->
+    {% if pagination %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ pagination.prev_num }}">السابق</a>
+            </li>
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ pagination.next_num }}">التالي</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 
 <script>
