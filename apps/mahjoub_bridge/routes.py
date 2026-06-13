@@ -39,28 +39,37 @@ def add_product():
 
 @bridge_bp.route('/sync-now', methods=['POST'])
 def sync_now():
-    """المزامنة اللحظية مع المحرك."""
+    """المزامنة اللحظية مع المحرك وحفظ البيانات مع تصحيح هيكل الصور والأسعار."""
     try:
         engine = QumraBridgeEngine()
+        # جلب البيانات من المحرك (الاستعلام المحدث في bridge_engine.py)
         raw_products = engine.fetch_latest_products(limit=50)
         
         if not raw_products:
-            return jsonify({"status": "error", "message": "لم يتم العثور على منتجات"})
+            return jsonify({"status": "error", "message": "لم يتم العثور على منتجات في السيرفر"})
 
         count = 0
         for item in raw_products:
+            # 1. العنوان
             title = str(item.get('title') or "منتج بدون اسم").strip()
             if Product.query.filter_by(title=title).first():
                 continue
             
-            # معالجة البيانات مع ضبط الحالة الافتراضية
+            # 2. تصحيح استخراج السعر (من داخل كائن pricing)
             pricing = item.get('pricing') or {}
+            price = str(pricing.get('price') or "0")
+            
+            # 3. تصحيح استخراج الصورة (من داخل قائمة images)
+            images = item.get('images') or []
+            img_url = images[0].get('url') if images and isinstance(images, list) else ""
+            
+            # إنشاء المنتج
             new_product = Product(
                 title=title,
-                price=str(pricing.get('price') or "0"),
+                price=price,
                 quantity=int(item.get('quantity') or 0),
-                image_url=item.get('image_url') or "",
-                status='draft',  # الحالة الافتراضية عند الجلب الجديد
+                image_url=img_url,
+                status='draft',  # الحالة الافتراضية
                 supplier_id="QUMRA_SYNC"
             )
             
@@ -72,4 +81,6 @@ def sync_now():
         
     except Exception:
         db.session.rollback()
-        return jsonify({"status": "error", "message": "خطأ أثناء المزامنة"}), 500
+        # طباعة الخطأ للسجل لتسهيل التصحيح
+        print(traceback.format_exc())
+        return jsonify({"status": "error", "message": "خطأ تقني أثناء معالجة بيانات المزامنة"}), 500
