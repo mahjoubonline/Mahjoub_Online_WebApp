@@ -4,33 +4,40 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- شريط البحث والفلاتر -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="font-weight-bold text-dark"><i class="fas fa-network-wired text-warning me-2"></i>إدارة المنتجات (الجسر السيادي)</h4>
+        <h4 class="font-weight-bold text-dark">
+            <i class="fas fa-network-wired text-warning me-2"></i>إدارة المنتجات (الجسر السيادي)
+        </h4>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#filterModal"><i class="fas fa-filter"></i> فلتر</button>
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="fas fa-filter"></i> فلتر
+            </button>
             <input type="text" id="liveSearch" class="form-control" placeholder="بحث عن منتج...">
-            <button class="btn btn-success" onclick="syncNow()"><i class="fas fa-sync"></i> مزامنة</button>
+            <button class="btn btn-success" onclick="syncNow()">
+                <i class="fas fa-sync"></i> مزامنة الآن
+            </button>
         </div>
     </div>
 
-    <!-- شبكة المنتجات -->
     <div class="row" id="product-cards-container">
         {% for p in products %}
         <div class="col-lg-3 col-md-4 col-sm-6 mb-4 product-card">
-            <div class="card h-100 shadow-sm border-0 rounded-3">
+            <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden">
                 <div class="position-relative">
                     <div class="p-2 text-center bg-light" style="height: 160px; display: flex; align-items: center; justify-content: center;">
-                        {% if p.image_url %}<img src="{{ p.image_url }}" class="img-fluid" style="max-height: 140px;">{% else %}<i class="fas fa-box-open fa-3x text-muted"></i>{% endif %}
+                        {% if p.image_url %}
+                            <img src="{{ p.image_url }}" class="img-fluid" style="max-height: 140px; border-radius: 5px;">
+                        {% else %}
+                            <i class="fas fa-box-open fa-3x text-muted"></i>
+                        {% endif %}
                     </div>
-                    <!-- حالة المنتج -->
                     <span class="position-absolute top-0 start-0 m-2 badge 
                         {% if p.status == 'published' %}bg-success{% elif p.status == 'draft' %}bg-warning{% else %}bg-secondary{% endif %}">
-                        {{ p.status_label or 'منشور' }}
+                        {{ p.status | title }}
                     </span>
                 </div>
                 <div class="card-body p-3">
-                    <h6 class="card-title text-truncate">{{ p.title }}</h6>
+                    <h6 class="card-title text-truncate" title="{{ p.title }}">{{ p.title }}</h6>
                     <div class="d-flex justify-content-between align-items-center mt-2">
                         <span class="text-primary font-weight-bold">{{ p.price }} ر.س</span>
                         <small class="text-muted">الكمية: {{ p.quantity }}</small>
@@ -38,31 +45,52 @@
                 </div>
             </div>
         </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <div class="alert alert-info">لا توجد منتجات حالياً. يرجى الضغط على "مزامنة الآن" لجلب البيانات.</div>
+        </div>
         {% endfor %}
     </div>
+
+    {% if pagination %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ pagination.prev_num }}">السابق</a>
+            </li>
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ pagination.next_num }}">التالي</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 
-<!-- Modal الفلاتر -->
 <div class="modal fade" id="filterModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">تصفية حسب</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header"><h5 class="modal-title">تصفية المنتجات</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <select class="form-select mb-3"><option>الفئة</option></select>
-                <select class="form-select mb-3">
-                    <option value="">حالة المنتج</option>
+                <select class="form-select mb-3" onchange="window.location.href='?status='+this.value">
+                    <option value="">كل الحالات</option>
                     <option value="published">منشور</option>
                     <option value="draft">مسودة</option>
                     <option value="unpublished">غير منشور</option>
                 </select>
-                <select class="form-select"><option>السعر</option></select>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// تفعيل البحث اللحظي
+// تفعيل البحث اللحظي (في قاعدة البيانات المحلية الحالية)
 document.getElementById('liveSearch').addEventListener('keyup', function() {
     let filter = this.value.toLowerCase();
     document.querySelectorAll('.product-card').forEach(card => {
@@ -71,12 +99,17 @@ document.getElementById('liveSearch').addEventListener('keyup', function() {
     });
 });
 
+// دالة المزامنة
 function syncNow() {
-    Swal.fire({ title: 'جاري المزامنة...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({ title: 'جاري المزامنة مع قمرة...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     fetch('{{ url_for("mahjoub_bridge.sync_now") }}', { method: 'POST' })
-    .then(r => r.json()).then(d => {
-        if(d.status === 'success') Swal.fire('تم!', d.message, 'success').then(() => location.reload());
-        else Swal.fire('تنبيه!', d.message, 'warning');
+    .then(r => r.json())
+    .then(d => {
+        if(d.status === 'success') {
+            Swal.fire('تم بنجاح!', d.message, 'success').then(() => location.reload());
+        } else {
+            Swal.fire('تنبيه!', d.message, 'warning');
+        }
     });
 }
 </script>
