@@ -9,18 +9,23 @@ bridge_bp = Blueprint('mahjoub_bridge', __name__, template_folder='templates')
 
 @bridge_bp.route('/dashboard', methods=['GET'])
 def dashboard():
-    """عرض لوحة التحكم مع نظام الترقيم (Pagination) لتخفيف الحمل على السيرفر."""
+    """عرض لوحة التحكم مع نظام الترقيم (Pagination) وتمرير العناوين للبحث الشامل."""
     try:
         page = request.args.get('page', 1, type=int)
         per_page = 16
-        # تحميل المنتجات بترقيم صفحات لضمان عدم انهيار الذاكرة
+        
+        # 1. جلب المنتجات المحددة للصفحة الحالية (Pagination)
         pagination = Product.query.order_by(Product.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
         products = pagination.items
+        
+        # 2. جلب قائمة بجميع العناوين (بدون بيانات ثقيلة) لتمكين البحث الشامل في المتصفح
+        all_titles = [p.title for p in Product.query.with_entities(Product.title).all()]
         
         return render_template('admin/bridge_dashboard.html', 
                                products=products, 
                                pagination=pagination, 
-                               page=page)
+                               page=page,
+                               all_titles=all_titles) # تمرير العناوين للقالب
                                
     except Exception as e:
         print(f"Error in bridge dashboard: {str(e)}")
@@ -64,7 +69,7 @@ def sync_now():
     try:
         engine = QumraBridgeEngine()
         # جلب أحدث المنتجات من المحرك
-        raw_products = engine.fetch_latest_products(limit=20)
+        raw_products = engine.fetch_latest_products(limit=100) # تم رفع الليميت لجلب دفعة أكبر
         
         if not raw_products or not isinstance(raw_products, list):
             return jsonify({"status": "error", "message": "فشل الاتصال بمحرك المزامنة أو لا توجد بيانات"})
