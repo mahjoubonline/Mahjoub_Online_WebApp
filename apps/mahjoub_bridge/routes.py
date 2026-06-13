@@ -23,6 +23,12 @@ def dashboard():
                            products=products, 
                            pagination=pagination)
 
+@bridge_bp.route('/add', methods=['GET', 'POST'])
+def add_product():
+    """مسار إضافة منتج يدوي (تم إضافته ليعمل الزر في القالب)."""
+    # هنا ستضع منطق معالجة النموذج (Form) الخاص بإضافة المنتج
+    return render_template('admin/add_product.html')
+
 @bridge_bp.route('/sync-now', methods=['POST'])
 def sync_now():
     """المزامنة اللحظية مع المحرك وحفظ البيانات."""
