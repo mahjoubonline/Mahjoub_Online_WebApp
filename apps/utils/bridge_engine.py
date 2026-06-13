@@ -18,16 +18,15 @@ class QumraBridgeEngine:
         payload = {"query": query, "variables": variables or {}}
         try:
             response = requests.post(self.endpoint, json=payload, headers=self.headers, timeout=20)
-            return response.json()
+            json_data = response.json()
+            # 🔍 هذا السطر هو الأهم لكشف البنية
+            print(f"DEBUG: RAW RESPONSE: {json_data}")
+            return json_data
         except Exception as e:
             print(f"⚠️ Connection Error: {e}")
             return {}
 
     def fetch_products(self, search_term="", page=1):
-        """
-        محرك بحث لحظي: يرسل نص البحث مباشرة إلى قمرة.
-        """
-        # الاستعلام يدعم المتغيرات للبحث والترقيم
         query = """
         query($q: String, $page: Int) {
             findAllProducts(search: $q, page: $page) {
@@ -36,26 +35,23 @@ class QumraBridgeEngine:
                     pricing { price }
                     quantity
                     status
-                    images { 
-                        fileUrl 
-                    }
+                    images { fileUrl }
                 }
             }
         }
         """
-        variables = {"q": search_term, "page": page}
+        variables = {"q": str(search_term), "page": int(page)}
         result = self.execute_query(query, variables=variables)
         
-        products = result.get('data', {}).get('findAllProducts', {}).get('data', [])
+        # محاولة استخراج البيانات بمرونة
+        root = result.get('data', {}).get('findAllProducts', {})
+        products = root.get('data', []) if isinstance(root, dict) else []
         
         processed_products = []
         for p in products:
             pricing = p.get('pricing') or {}
             images = p.get('images') or []
-            
-            img_url = None
-            if isinstance(images, list) and len(images) > 0:
-                img_url = images[0].get('fileUrl')
+            img_url = images[0].get('fileUrl') if images and isinstance(images, list) else None
             
             processed_products.append({
                 'title': p.get('title'),
@@ -64,5 +60,4 @@ class QumraBridgeEngine:
                 'status': p.get('status'),
                 'image_url': img_url
             })
-                
         return processed_products
