@@ -54,7 +54,7 @@ def sync_now():
             # 1. العنوان
             title = str(item.get('title') or "منتج بدون اسم").strip()
             
-            # منع التكرار (يمكنك تطويره لاحقاً بالتحديث بدلاً من الإهمال)
+            # منع التكرار
             if Product.query.filter_by(title=title).first():
                 continue
             
@@ -75,7 +75,7 @@ def sync_now():
                 supplier_id="QUMRA_SYNC"
             )
             
-            # التحقق من وجود حقل status في الموديل
+            # التحقق من وجود حقل status في الموديل وتعيين حالة مسودة افتراضياً
             if hasattr(new_product, 'status'):
                 new_product.status = 'draft'
             
