@@ -1,7 +1,9 @@
 # coding: utf-8
+# 📂 apps/mahjoub_bridge/routes.py
+
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from apps import db
-from apps.models.bridge_db import Product, ProductVariant
+from apps.models.bridge_db import Product
 from apps.utils.bridge_engine import QumraBridgeEngine
 import traceback
 
@@ -18,7 +20,7 @@ def dashboard():
         pagination = Product.query.order_by(Product.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
         products = pagination.items
         
-        # 2. جلب قائمة بجميع العناوين للبحث
+        # 2. جلب قائمة العناوين للبحث في المتصفح
         all_titles = [p.title for p in Product.query.with_entities(Product.title).all()]
         
         return render_template('admin/bridge_dashboard.html', 
@@ -29,21 +31,26 @@ def dashboard():
                                
     except Exception as e:
         print(f"Error in bridge dashboard: {str(e)}")
-        flash(f"حدث خطأ: {str(e)}", "danger")
+        flash("حدث خطأ أثناء تحميل لوحة التحكم", "danger")
         return redirect(url_for('admin_dashboard.dashboard'))
 
 @bridge_bp.route('/add-product', methods=['GET', 'POST'])
 def add_product_page():
+    """إضافة منتج يدوي."""
     if request.method == 'POST':
         try:
             title = request.form.get('title')
-            # ... (بقية كود إضافة المنتج كما هو)
+            if not title:
+                flash('عنوان المنتج مطلوب!', 'warning')
+                return redirect(url_for('mahjoub_bridge.add_product_page'))
+            
+            # ملاحظة: إذا قمت بحذف image_url من الموديل، احذفه من هنا أيضاً
             new_product = Product(
                 title=title,
                 description=request.form.get('description', ''),
                 quantity=int(request.form.get('quantity', 0)),
                 supplier_id=request.form.get('supplier_id'),
-                image_url=request.form.get('image_url') # إضافة رابط الصورة
+                image_url=request.form.get('image_url') 
             )
             new_product.price = str(request.form.get('price', '0'))
             db.session.add(new_product)
@@ -57,45 +64,51 @@ def add_product_page():
 
 @bridge_bp.route('/sync-now', methods=['POST'])
 def sync_now():
-    """المزامنة مع جلب بيانات الصورة."""
+    """المزامنة اللحظية مع المحرك."""
     try:
         engine = QumraBridgeEngine()
         raw_products = engine.fetch_latest_products(limit=100)
         
         if not raw_products or not isinstance(raw_products, list):
-            return jsonify({"status": "error", "message": "فشل الاتصال بمحرك المزامنة"})
+            return jsonify({"status": "error", "message": "فشل الاتصال بمحرك المزامنة - تأكد من API Key"})
 
         count = 0
         for item in raw_products:
             if not isinstance(item, dict): continue
             
             title = str(item.get('title') or "").strip()
+            # منع التكرار (فحص ذكي)
             if not title or Product.query.filter_by(title=title).first():
                 continue
             
-            # استخراج البيانات
             pricing = item.get('pricing')
             raw_price = str(pricing.get('price') if isinstance(pricing, dict) else "0")
             raw_qty = item.get('quantity')
             safe_qty = int(raw_qty) if str(raw_qty or "").isdigit() else 0
             
-            # استخراج رابط الصورة (تأكد من المفتاح الصحيح، قد يكون 'image' أو 'image_url')
-            image_url = item.get('image_url') or item.get('image') or ""
+            # استخراج الصورة من المحرك
+            img_url = item.get('image_url') or item.get('image') or ""
             
             new_product = Product(
                 title=title,
                 description="تمت المزامنة تلقائياً",
                 quantity=safe_qty,
                 supplier_id="QUMRA_SYNC",
-                image_url=image_url # حفظ رابط الصورة هنا
+                image_url=img_url
             )
             new_product.price = raw_price
+            
+            # توليد قالب HTML مصغر ليتم عرضه في الواجهة
+            # (هذا سيجعل صفحة الـ Dashboard سريعة جداً ولا تحتاج لطلب الصور من السيرفرات الخارجية عند البحث)
+            new_product.auto_template = f'<img src="{img_url}" style="max-width:50px; border-radius:5px;">'
+            
             db.session.add(new_product)
             count += 1
         
         db.session.commit()
-        return jsonify({"status": "success", "message": f"تمت المزامنة وجلب {count} منتج"})
+        return jsonify({"status": "success", "message": f"تمت المزامنة وجلب {count} منتج جديد"})
         
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return jsonify({"status": "error", "message": "حدث خطأ تقني"}), 500
+        print(traceback.format_exc()) # للطباعة في Logs الـ Render
+        return jsonify({"status": "error", "message": "حدث خطأ تقني أثناء المزامنة"}), 500
