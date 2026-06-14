@@ -4,7 +4,6 @@ from config import Config
 
 class QumraBridgeEngine:
     def __init__(self):
-        # الاعتماد على الإعدادات المركزية لضمان الأمان والمرونة
         self.endpoint = Config.QUMRA_API_URL
         self.headers = {
             "Authorization": f"Bearer {Config.QUMRA_API_KEY}",
@@ -12,15 +11,18 @@ class QumraBridgeEngine:
             "apollo-require-preflight": "true"
         }
 
-    def fetch_products_from_qumra(self, search_term=""):
+    def fetch_products_from_qumra(self, search_term="", page=1):
         """
-        جلب البيانات مباشرة من قمرة حسب البحث (On-Demand).
-        لا يتم تخزين 10 آلاف منتج في الذاكرة لتجنب استهلاك الموارد.
+        جلب البيانات من قمرة مع دعم البحث والترقيم (Pagination).
         """
-        # استعلام GraphQL مرن يقبل متغير البحث
+        # نحدد عدد العناصر في كل صفحة (مثلاً 20 منتج)
+        limit = 20
+        offset = (page - 1) * limit
+
+        # استعلام GraphQL مع دعم الترقيم والفلترة
         query = """
-        query($q: String) {
-            findAllProducts(filter: { title: $q }) {
+        query($q: String, $limit: Int, $offset: Int) {
+            findAllProducts(filter: { title: $q }, limit: $limit, offset: $offset) {
                 data {
                     title
                     pricing { price }
@@ -33,18 +35,19 @@ class QumraBridgeEngine:
         """
         
         try:
-            # إرسال طلب البحث مباشرة إلى السيرفر السيادي
             response = requests.post(
                 self.endpoint, 
-                json={"query": query, "variables": {"q": search_term}}, 
+                json={
+                    "query": query, 
+                    "variables": {"q": search_term, "limit": limit, "offset": offset}
+                }, 
                 headers=self.headers, 
-                timeout=15 # توقيت استجابة سريع لمنع تعليق النظام
+                timeout=15
             )
             
             if response.status_code == 200:
                 result = response.json().get('data', {}).get('findAllProducts', {}).get('data', [])
                 
-                # معالجة وتنسيق البيانات فور وصولها لتكون جاهزة للعرض
                 formatted_products = []
                 for p in result:
                     img = p.get('images', [])
@@ -66,6 +69,4 @@ class QumraBridgeEngine:
             return []
 
     def sync_all_data(self):
-        """دالة المزامنة الكاملة (إذا احتاج النظام تحديث الذاكرة)"""
-        # يمكن تنفيذ منطق المزامنة هنا إذا كانت هناك حاجة لتحديث قاعدة بيانات محلية
         return True
