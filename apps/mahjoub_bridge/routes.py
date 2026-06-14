@@ -10,33 +10,38 @@ bridge_bp = Blueprint('mahjoub_bridge', __name__, template_folder='templates')
 @bridge_bp.route('/dashboard', methods=['GET'])
 def dashboard():
     """
-    لوحة التحكم:
-    تعتمد على المحرك لجلب البيانات، والترقيم، والبحث.
-    يتم تمرير القاموس 'data' الذي يحتوي على المنتجات ومعلومات الترقيم.
+    لوحة التحكم: تعرض البيانات مع الترقيم.
     """
     search = request.args.get('q', '', type=str)
     page = request.args.get('page', 1, type=int)
     
-    # استدعاء المحرك
     engine = QumraBridgeEngine()
-    
-    # المحرك الآن يرجع قاموساً (dictionary) يحتوي على {products, total, page, total_pages}
-    # بفضل منطق الترقيم الذي أضفناه للمحرك
     data = engine.fetch_products(search_term=search, page=page)
     
     return render_template('admin/bridge_dashboard.html', 
                            data=data, 
                            search=search)
 
+@bridge_bp.route('/api/search', methods=['GET'])
+def api_search():
+    """
+    مسار البحث اللحظي: يُستدعى عبر JavaScript عند الكتابة في مربع البحث.
+    """
+    search = request.args.get('q', '', type=str)
+    page = request.args.get('page', 1, type=int)
+    
+    engine = QumraBridgeEngine()
+    data = engine.fetch_products(search_term=search, page=page)
+    
+    return jsonify(data)
+
 @bridge_bp.route('/sync-now', methods=['POST'])
 def sync_now():
     """
-    المزامنة:
-    تقوم بتحديث الذاكرة المؤقتة (Cache) مباشرة من النظام السيادي.
+    المزامنة: تقوم بتحديث الذاكرة المؤقتة من النظام السيادي.
     """
     try:
         engine = QumraBridgeEngine()
-        # نستخدم دالة التحديث القسري الموجودة في المحرك
         success = engine.sync_all_data()
         
         if success:
