@@ -17,9 +17,9 @@ class QumraBridgeEngine:
             "Content-Type": "application/json"
         }
 
-    def fetch_products(self, search_term="", page=1, per_page=16):
+    def fetch_products(self, search_term="", page=1, per_page=10):
         """
-        جلب المنتجات وتجهيز بيانات الترقيم للواجهة
+        جلب المنتجات وتجهيز بيانات الترقيم للواجهة مع دعم اختيار عدد العناصر
         """
         # 1. تحديث البيانات إذا انتهت صلاحية الكاش أو كان فارغاً
         if not _CACHE["products"] or (time.time() - _CACHE["last_updated"] > CACHE_TIMEOUT):
@@ -42,7 +42,7 @@ class QumraBridgeEngine:
         start = (page - 1) * per_page
         products_subset = all_data[start : start + per_page]
         
-        # إرجاع بيانات متكاملة للقالب (متوافقة مع البحث اللحظي)
+        # إرجاع بيانات متكاملة للقالب
         return {
             "products": products_subset,
             "total": total_items,
