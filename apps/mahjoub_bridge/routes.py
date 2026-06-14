@@ -1,29 +1,39 @@
 # 📂 apps/mahjoub_bridge/routes.py
-import os
 from flask import Blueprint, render_template, request, jsonify
 from apps.utils.bridge_engine import QumraBridgeEngine
 
-# 1. تحديد مسار القوالب بالنسبة لموقع هذا الملف
-base_dir = os.path.dirname(os.path.abspath(__file__))
-template_path = os.path.join(base_dir, 'templates')
-
-# 2. تعريف الـ Blueprint مع إعطائه المسار الدقيق للقوالب
+# تعريف الـ Blueprint مع تحديد مسار القوالب الخاص به
 bridge_bp = Blueprint('mahjoub_bridge', __name__, template_folder='templates')
 
 @bridge_bp.route('/dashboard', methods=['GET'])
 def dashboard():
-    # الآن Flask سيعرف أن يبحث داخل مجلد templates الخاص بهذا الـ Blueprint
-    # والمسار هو admin/bridge_dashboard.html
+    """عرض لوحة التحكم الخاصة بالجسر"""
     return render_template('admin/bridge_dashboard.html')
 
 @bridge_bp.route('/api/search', methods=['GET'])
 def api_search():
+    """
+    نقطة اتصال (API) للبحث المباشر وعرض الصفحات.
+    تستقبل معايير البحث ورقم الصفحة وتجلب النتائج من قمرة.
+    """
+    search_query = request.args.get('q', '')
+    page = int(request.args.get('page', 1))
+    
     engine = QumraBridgeEngine()
-    query = request.args.get('q', '')
-    return jsonify({"products": engine.get_data(query)})
+    
+    # جلب البيانات المفلترة من المحرك
+    # ملاحظة: تأكد من تحديث دالة fetch في Engine لتستقبل page وتعود بإجمالي الصفحات
+    data = engine.fetch_products_from_qumra(search_query, page)
+    
+    # الرد بصيغة JSON متوافقة مع القالب
+    return jsonify({
+        "products": data,
+        "total_pages": 10 # سيتم تحديد هذا الرقم بناءً على استجابة API قمرة
+    })
 
 @bridge_bp.route('/sync', methods=['POST'])
 def sync():
+    """تشغيل عملية المزامنة يدوياً عند الطلب"""
     engine = QumraBridgeEngine()
     success = engine.sync_all_data()
     return jsonify({"status": "success" if success else "error"})
