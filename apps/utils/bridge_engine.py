@@ -11,7 +11,11 @@ class QumraBridgeEngine:
         }
 
     def fetch_products_from_qumra(self, search_term="", page=1):
-        # تم تحديث الاستعلام ليشمل حقولاً إضافية نحتاجها للعرض الاحترافي
+        """
+        جلب المنتجات مباشرة من API قمرة.
+        يدعم البحث النصي وتجهيز البيانات للعرض الاحترافي.
+        """
+        # ملاحظة: إذا كان API قمرة يدعم الفلترة عبر GraphQL، يمكننا تحسين الاستعلام لاحقاً.
         query = """
         query {
             findAllProducts {
@@ -37,12 +41,12 @@ class QumraBridgeEngine:
             if response.status_code == 200:
                 raw_data = response.json().get('data', {}).get('findAllProducts', {}).get('data', [])
                 
-                # معالجة وتجهيز البيانات للعرض
+                # معالجة وتجهيز البيانات للعرض (Mapping)
                 processed_products = []
                 for p in raw_data:
-                    # استخراج رابط الصورة الأولى فقط (إذا وجد)
+                    # استخراج رابط الصورة الأولى أو استخدام صورة بديلة
                     images = p.get('images', [])
-                    image_url = images[0].get('fileUrl') if images and len(images) > 0 else 'static/img/default-product.png'
+                    image_url = images[0].get('fileUrl') if images and len(images) > 0 else 'https://via.placeholder.com/150'
                     
                     product = {
                         "title": p.get('title', 'بدون اسم'),
@@ -53,9 +57,12 @@ class QumraBridgeEngine:
                     }
                     processed_products.append(product)
                 
-                # الفلترة البرمجية
+                # الفلترة البرمجية (لضمان عمل البحث حتى لو جلبنا القائمة كاملة)
                 if search_term:
-                    processed_products = [p for p in processed_products if search_term.lower() in p.get('title', '').lower()]
+                    processed_products = [
+                        p for p in processed_products 
+                        if search_term.lower() in p.get('title', '').lower()
+                    ]
                 
                 return processed_products
             else:
@@ -65,3 +72,11 @@ class QumraBridgeEngine:
         except Exception as e:
             print(f"❌ Exception: {str(e)}")
             return []
+
+    def sync_all_data(self):
+        """
+        دالة المزامنة: يمكنك توسيعها لاحقاً لتخزين البيانات في قاعدة بياناتك المحلية
+        بدلاً من الاعتماد فقط على جلب البيانات لحظياً.
+        """
+        # منطق المزامنة مستقبلاً (في حال أردت تخزين البيانات)
+        return True
