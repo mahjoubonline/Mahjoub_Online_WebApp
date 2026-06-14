@@ -46,59 +46,50 @@ class QumraBridgeEngine:
         }
 
     def sync_all_data(self):
-        """جلب كافة المنتجات من النظام السيادي عبر التكرار مع تتبع الأخطاء"""
+        """جلب كافة المنتجات من النظام السيادي عبر الاستعلام المباشر المتوافق"""
         all_products = []
-        page = 1
-        has_more = True
         
-        # استعلام GraphQL باستخدام المتغيرات لضمان الاستقرار
-        query = """query findAllProducts($page: Int!, $limit: Int!) { 
-            findAllProducts(page: $page, limit: $limit) { 
+        # استعلام مبسط بدون arguments حسب متطلبات الخادم التي ظهرت في سجلات الخطأ
+        query = """query { 
+            findAllProducts { 
                 data { title pricing { price } quantity status images { fileUrl } }
-                meta { totalPages }
             } 
         }"""
         
-        while has_more:
-            variables = {"page": page, "limit": 100}
+        try:
+            response = requests.post(
+                self.endpoint, 
+                json={"query": query}, 
+                headers=self.headers, 
+                timeout=30
+            )
             
-            try:
-                response = requests.post(
-                    self.endpoint, 
-                    json={"query": query, "variables": variables}, 
-                    headers=self.headers, 
-                    timeout=30
-                )
-                
-                # فحص حالة الاستجابة
-                if response.status_code != 200:
-                    print(f"❌ API Error Status {response.status_code}: {response.text}")
-                    return False
-                
-                result = response.json().get('data', {}).get('findAllProducts', {})
-                items = result.get('data', [])
-                
-                if not items: break
-                
-                for p in items:
-                    img = p.get('images', [])
-                    all_products.append({
-                        'title': p.get('title'),
-                        'price': p.get('pricing', {}).get('price', 0),
-                        'quantity': p.get('quantity', 0),
-                        'status': p.get('status'),
-                        'image_url': img[0].get('fileUrl') if img else None
-                    })
-                
-                total_pages = result.get('meta', {}).get('totalPages', 1)
-                if page >= total_pages:
-                    has_more = False
-                else:
-                    page += 1
-                    
-            except Exception as e:
-                print(f"❌ Sync Exception at page {page}: {str(e)}")
+            # فحص حالة الاستجابة
+            if response.status_code != 200:
+                print(f"❌ API Error Status {response.status_code}: {response.text}")
                 return False
+            
+            # استخراج البيانات من الهيكل الصحيح
+            result = response.json().get('data', {}).get('findAllProducts', {})
+            items = result.get('data', [])
+            
+            if not items: 
+                print("⚠️ لا توجد منتجات تم جلبها.")
+                return True
+            
+            for p in items:
+                img = p.get('images', [])
+                all_products.append({
+                    'title': p.get('title'),
+                    'price': p.get('pricing', {}).get('price', 0),
+                    'quantity': p.get('quantity', 0),
+                    'status': p.get('status'),
+                    'image_url': img[0].get('fileUrl') if img else None
+                })
+        
+        except Exception as e:
+            print(f"❌ Sync Exception: {str(e)}")
+            return False
         
         _CACHE["products"] = all_products
         _CACHE["last_updated"] = time.time()
