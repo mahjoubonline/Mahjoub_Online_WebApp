@@ -1,4 +1,6 @@
 # coding: utf-8
+# 📂 apps/utils/bridge_engine.py
+
 import requests
 import os
 import time
@@ -16,6 +18,9 @@ class QumraBridgeEngine:
         }
 
     def fetch_products(self, search_term="", page=1):
+        """
+        جلب المنتجات وتجهيز بيانات الترقيم للواجهة
+        """
         # 1. تحديث البيانات إذا انتهت صلاحية الكاش أو كان فارغاً
         if not _CACHE["products"] or (time.time() - _CACHE["last_updated"] > CACHE_TIMEOUT):
             self.sync_all_data()
@@ -26,9 +31,25 @@ class QumraBridgeEngine:
             s = search_term.lower()
             all_data = [p for p in all_data if s in (p.get('title') or "").lower()]
             
-        # 3. الترقيم (Pagination)
-        start = (page - 1) * 16
-        return all_data[start : start + 16]
+        # 3. حسابات الترقيم (Pagination Logic)
+        total_items = len(all_data)
+        per_page = 16
+        total_pages = (total_items + per_page - 1) // per_page
+        
+        # التأكد من عدم تجاوز رقم الصفحة للمتاح
+        if page < 1: page = 1
+        if page > total_pages and total_pages > 0: page = total_pages
+        
+        start = (page - 1) * per_page
+        products_subset = all_data[start : start + per_page]
+        
+        # إرجاع بيانات متكاملة للقالب
+        return {
+            "products": products_subset,
+            "total": total_items,
+            "page": page,
+            "total_pages": total_pages
+        }
 
     def sync_all_data(self):
         """جلب كامل البيانات من قمرة وتحديث الكاش"""
