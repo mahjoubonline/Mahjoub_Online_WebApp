@@ -13,14 +13,15 @@ def dashboard():
     search = request.args.get('q', '', type=str)
     page = request.args.get('page', 1, type=int)
     
-    # استدعاء المحرك الذي سيستخدم الـ Cache تلقائياً
+    # استدعاء المحرك
     engine = QumraBridgeEngine()
-    products = engine.fetch_products(search_term=search, page=page)
+    
+    # الآن المحرك يرجع قاموساً (dictionary) يحتوي على {products, total, page, total_pages}
+    data = engine.fetch_products(search_term=search, page=page)
     
     return render_template('admin/bridge_dashboard.html', 
-                           products=products, 
-                           search=search,
-                           page=page)
+                           data=data, 
+                           search=search)
 
 @bridge_bp.route('/sync-now', methods=['POST'])
 def sync_now():
