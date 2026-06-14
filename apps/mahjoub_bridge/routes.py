@@ -22,11 +22,11 @@ def api_search():
     3. تعيد النتائج بتنسيق JSON.
     """
     search_query = request.args.get('q', '')
-    # التأكد من استقبال رقم الصفحة وتحويله لعدد صحيح، والافتراضي هو 1
+    # استقبال رقم الصفحة - التغيير هنا أن المحرك هو من سيتعامل مع هذا الرقم داخلياً
     page = int(request.args.get('page', 1))
     
     try:
-        # استدعاء المحرك المطور الذي يدعم الآن المتغيرات (query & page)
+        # استدعاء المحرك المطور
         engine = QumraBridgeEngine()
         data = engine.fetch_products_from_qumra(search_query, page)
         
