@@ -10,7 +10,7 @@
         </h4>
         <div class="d-flex gap-2 align-items-center">
             <a href="#" class="btn btn-primary"><i class="fas fa-plus"></i> إضافة منتج</a>
-            <input type="text" id="liveSearch" class="form-control" placeholder="بحث لحظي..." value="{{ search }}">
+            <input type="text" id="liveSearch" class="form-control" x-ignore placeholder="بحث لحظي..." value="{{ search }}">
             <button class="btn btn-success" onclick="syncNow()"><i class="fas fa-sync"></i> مزامنة</button>
         </div>
     </div>
@@ -65,10 +65,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// دالة عرض البيانات المركزية
 function renderDashboard(data) {
     const container = document.getElementById('productContainer');
-    container.innerHTML = data.products.map(p => `
+    container.innerHTML = data.products.length > 0 ? data.products.map(p => `
         <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
             <div class="card h-100 shadow-sm border-0">
                 <img src="${p.image_url || '/static/default-box.png'}" class="card-img-top" style="height: 160px; object-fit: contain;">
@@ -79,7 +78,7 @@ function renderDashboard(data) {
                 </div>
             </div>
         </div>
-    `).join('');
+    `).join('') : '<p class="text-center w-100">لا توجد نتائج مطابقة</p>';
 
     const pagContainer = document.getElementById('paginationContainer');
     let paginationHTML = `
@@ -99,16 +98,14 @@ function renderDashboard(data) {
     document.getElementById('resultsInfo').innerText = `عرض صفحة ${data.page} من ${data.total_pages} | إجمالي ${data.total} عنصر`;
 }
 
-// دالة جلب البيانات
 function fetchData(page = 1) {
     const query = document.getElementById('liveSearch').value;
     const perPage = document.getElementById('perPageSelect').value;
-    fetch(`/mahjoub_bridge/api/search?q=${query}&per_page=${perPage}&page=${page}`)
+    fetch(`/mahjoub_bridge/api/search?q=${encodeURIComponent(query)}&per_page=${perPage}&page=${page}`)
     .then(r => r.json())
     .then(data => renderDashboard(data));
 }
 
-// إضافة حدث البحث اللحظي
 document.getElementById('liveSearch').addEventListener('input', () => fetchData(1));
 
 function syncNow() {
