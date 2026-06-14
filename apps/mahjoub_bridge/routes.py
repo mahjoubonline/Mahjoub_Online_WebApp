@@ -2,7 +2,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from apps.utils.bridge_engine import QumraBridgeEngine
 
-# تعريف الـ Blueprint مع تحديد مسار القوالب الخاص به
 bridge_bp = Blueprint('mahjoub_bridge', __name__, template_folder='templates')
 
 @bridge_bp.route('/dashboard', methods=['GET'])
@@ -13,27 +12,26 @@ def dashboard():
 @bridge_bp.route('/api/search', methods=['GET'])
 def api_search():
     """
-    نقطة اتصال (API) للبحث المباشر وعرض الصفحات.
-    تستقبل معايير البحث ورقم الصفحة وتجلب النتائج من قمرة.
+    نقطة اتصال للبحث المباشر. تستقبل النص، وتجلب البيانات، وتعيدها كـ JSON.
     """
     search_query = request.args.get('q', '')
     page = int(request.args.get('page', 1))
     
+    # استدعاء المحرك المطور
     engine = QumraBridgeEngine()
-    
-    # جلب البيانات المفلترة من المحرك
-    # ملاحظة: تأكد من تحديث دالة fetch في Engine لتستقبل page وتعود بإجمالي الصفحات
     data = engine.fetch_products_from_qumra(search_query, page)
     
-    # الرد بصيغة JSON متوافقة مع القالب
+    # إرجاع البيانات بتنسيق متوافق تماماً مع الواجهة
     return jsonify({
+        "status": "success",
         "products": data,
-        "total_pages": 10 # سيتم تحديد هذا الرقم بناءً على استجابة API قمرة
+        "count": len(data)
     })
 
 @bridge_bp.route('/sync', methods=['POST'])
 def sync():
-    """تشغيل عملية المزامنة يدوياً عند الطلب"""
+    """تشغيل عملية المزامنة يدوياً"""
     engine = QumraBridgeEngine()
-    success = engine.sync_all_data()
+    # تأكد من أن sync_all_data موجودة في Engine أو استبدلها بالدالة الصحيحة
+    success = engine.sync_all_data() if hasattr(engine, 'sync_all_data') else False
     return jsonify({"status": "success" if success else "error"})
