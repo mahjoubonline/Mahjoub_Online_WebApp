@@ -7,22 +7,15 @@ class QumraBridgeEngine:
         self.endpoint = Config.QUMRA_API_URL
         self.headers = {
             "Authorization": f"Bearer {Config.QUMRA_API_KEY}",
-            "Content-Type": "application/json",
-            "apollo-require-preflight": "true"
+            "Content-Type": "application/json"
         }
 
     def fetch_products_from_qumra(self, search_term="", page=1):
-        """
-        جلب البيانات من قمرة مع دعم البحث والترقيم (Pagination).
-        """
-        # نحدد عدد العناصر في كل صفحة (مثلاً 20 منتج)
-        limit = 20
-        offset = (page - 1) * limit
-
-        # استعلام GraphQL مع دعم الترقيم والفلترة
+        # سنحاول جلب البيانات بدون فلتر معقد في البداية للتأكد من نجاح الاتصال
+        # إذا نجح هذا، سنعرف أن المشكلة كانت في صيغة الفلتر
         query = """
-        query($q: String, $limit: Int, $offset: Int) {
-            findAllProducts(filter: { title: $q }, limit: $limit, offset: $offset) {
+        query {
+            findAllProducts {
                 data {
                     title
                     pricing { price }
@@ -37,36 +30,23 @@ class QumraBridgeEngine:
         try:
             response = requests.post(
                 self.endpoint, 
-                json={
-                    "query": query, 
-                    "variables": {"q": search_term, "limit": limit, "offset": offset}
-                }, 
+                json={"query": query}, 
                 headers=self.headers, 
                 timeout=15
             )
             
             if response.status_code == 200:
-                result = response.json().get('data', {}).get('findAllProducts', {}).get('data', [])
+                data = response.json().get('data', {}).get('findAllProducts', {}).get('data', [])
                 
-                formatted_products = []
-                for p in result:
-                    img = p.get('images', [])
-                    formatted_products.append({
-                        'title': p.get('title', 'بدون عنوان'),
-                        'price': p.get('pricing', {}).get('price', 0),
-                        'quantity': p.get('quantity', 0),
-                        'status': p.get('status', 'N/A'),
-                        'image_url': img[0].get('fileUrl') if img and isinstance(img, list) else None
-                    })
-                return formatted_products
-            
+                # الفلترة الآن تتم برمجياً هنا للتأكد من عمل البحث حتى لو رفض السيرفر الفلتر
+                if search_term:
+                    data = [p for p in data if search_term.lower() in p.get('title', '').lower()]
+                
+                return data
             else:
-                print(f"❌ API Error: {response.status_code}")
+                print(f"❌ API Error: {response.status_code} - {response.text}")
                 return []
                 
         except Exception as e:
-            print(f"❌ Bridge Exception: {str(e)}")
+            print(f"❌ Exception: {str(e)}")
             return []
-
-    def sync_all_data(self):
-        return True
