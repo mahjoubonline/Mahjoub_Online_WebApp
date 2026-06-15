@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 
 class OrdersEngine:
     def __init__(self):
-        # تأكد من أن الرابط في الإعدادات صحيح
-        self.api_url = current_app.config.get('QUMRA_API_URL', "https://mahjoub.online/admin/graphql")
-        self.api_key = current_app.config.get('QUMRA_API_KEY')
+        # تأكد أن الرابط والتوكن في إعدادات Render صحيحة
+        self.api_url = "https://mahjoub.online/admin/graphql"
+        self.api_key = "qmr_e063f7f4-ed44-4c86-b105-8405326b9eb9"
         
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -19,10 +19,10 @@ class OrdersEngine:
         }
 
     def fetch_orders_from_qumra(self):
-        """جلب الطلبات باستخدام الدالة findAllOrders المكتشفة من الـ Sandbox"""
+        """جلب الطلبات باستخدام الدالة findAllOrders"""
         query_name = "findAllOrders"
         
-        # استعلام GraphQL مطابق لهيكلية الـ Sandbox التي أرسلتها
+        # استعلام GraphQL مطابق لهيكلية الـ Sandbox
         payload = {
             "query": f"""
             query {{
@@ -31,9 +31,6 @@ class OrdersEngine:
                         _id
                         total
                         status
-                        customer {{
-                            name
-                        }}
                     }}
                 }}
             }}
@@ -47,7 +44,6 @@ class OrdersEngine:
             # التحقق من وجود البيانات في الرد
             if 'data' in result and result['data'].get(query_name):
                 logger.info(f"✅ نجح الاتصال وجلب البيانات باستخدام {query_name}")
-                # استخراج القائمة الفعلية
                 return result['data'][query_name].get('data', [])
             else:
                 logger.error(f"❌ فشل جلب البيانات. رد السيرفر: {result}")
@@ -67,9 +63,9 @@ class OrdersEngine:
 
         count = 0
         for item in orders:
-            # استخدام _id كمعرف فريد للطلب لمنع التكرار
             order_id = str(item.get('_id'))
             
+            # التحقق من عدم تكرار الطلب في قاعدة البيانات
             if not Order.query.filter_by(order_id=order_id).first():
                 new_order = Order(
                     order_id=order_id,
