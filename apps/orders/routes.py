@@ -6,21 +6,18 @@ from apps.utils.orders_engine import OrdersEngine
 from flask_login import login_required
 import logging
 
-# إعداد الـ Logger لتتبع الأخطاء في سجلات Render
 logger = logging.getLogger(__name__)
 
-# تعريف الـ Blueprint
 orders_bp = Blueprint('orders', __name__, template_folder='templates')
 
 @orders_bp.route('/admin/orders', methods=['GET'])
 @login_required
 def orders_dashboard():
-    """عرض لوحة التحكم الخاصة بالطلبات مع الترقيم"""
+    """عرض لوحة التحكم الخاصة بالطلبات"""
     try:
         page = request.args.get('page', 1, type=int)
         per_page = 10
         
-        # استعلام لجلب الطلبات مرتبة من الأحدث للأقدم
         pagination = Order.query.order_by(Order.created_at.desc()).paginate(
             page=page, 
             per_page=per_page, 
@@ -37,40 +34,40 @@ def orders_dashboard():
     
     except Exception as e:
         logger.error(f"Error in orders_dashboard: {str(e)}")
-        return "حدث خطأ أثناء تحميل الطلبات، يرجى التأكد من اتصال قاعدة البيانات.", 500
+        return "حدث خطأ أثناء تحميل الطلبات.", 500
 
 @orders_bp.route('/admin/orders/sync', methods=['POST'])
 @login_required
 def sync_orders():
-    """مسار لمزامنة الطلبات من قمرة إلى قاعدة البيانات المحلية"""
+    """مزامنة الطلبات من قمرة إلى قاعدة البيانات المحلية"""
     try:
-        # OrdersEngine سيقوم الآن بجلب المفتاح تلقائياً من current_app.config
         engine = OrdersEngine()
+        # نقوم بالاستدعاء مباشرة، Engine مهيأ الآن للتعامل مع findAllOrders
         engine.sync_orders_to_db()
         
         return jsonify({
             'success': True, 
-            'message': 'تمت مزامنة الطلبات بنجاح من منصة قمرة.'
+            'message': 'تمت عملية المزامنة بنجاح.'
         })
     except Exception as e:
+        # تسجيل الخطأ بوضوح في الـ Logs
         logger.error(f"Sync error: {str(e)}")
-        # نرجع نص الخطأ بوضوح للمساعدة في التشخيص
         return jsonify({
             'success': False, 
-            'message': 'فشل الاتصال بمنصة قمرة: ' + str(e)
+            'message': f'فشل الاتصال بمنصة قمرة: {str(e)}'
         }), 500
 
 @orders_bp.route('/admin/orders/update-status', methods=['POST'])
 @login_required
 def update_order_status():
-    """دالة لتحديث حالة الطلب عبر طلب AJAX"""
+    """تحديث حالة الطلب"""
     try:
         data = request.json
         if not data:
             return jsonify({'success': False, 'message': 'بيانات غير صالحة'}), 400
             
         order_id = data.get('orderId')
-        status_type = data.get('type') # 'payment' أو 'shipping'
+        status_type = data.get('type')
         new_value = data.get('value')
         
         order = Order.query.get(order_id)
@@ -88,4 +85,4 @@ def update_order_status():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Update status error: {str(e)}")
-        return jsonify({'success': False, 'message': 'فشل تحديث الحالة في قاعدة البيانات'}), 500
+        return jsonify({'success': False, 'message': 'فشل تحديث الحالة'}), 500
