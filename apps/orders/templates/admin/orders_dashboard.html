@@ -1,98 +1,116 @@
-{% extends "admin/admin_base.html" %}
+{% extends "admin_base.html" %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h5 class="fw-bold text-dark"><i class="fas fa-shopping-cart text-primary me-2"></i> إدارة الطلبات</h5>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb small">
-                    <li class="breadcrumb-item"><a href="#">الرئيسية</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">سجل الطلبات</li>
-                </ol>
-            </nav>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="loadOrders()">
-            <i class="fas fa-sync-alt me-1"></i> تحديث البيانات
-        </button>
-    </div>
-
+<div class="container-fluid">
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4">رقم الطلب</th>
-                            <th>العميل</th>
-                            <th>التاريخ</th>
-                            <th>الحالة</th>
+                            <th class="ps-3"><input type="checkbox"></th>
+                            <th>رقم الطلب</th>
+                            <th>اسم العميل</th>
+                            <th>عنوان الشحن</th>
+                            <th>المورد / المتجر</th>
                             <th>الإجمالي</th>
-                            <th class="text-center">إجراءات</th>
+                            <th>وسيلة الدفع</th>
+                            <th>حالة الدفع</th>
+                            <th>حالة الشحن</th>
+                            <th>تاريخ الإنشاء</th>
+                            <th>المصدر</th>
+                            <th>الاجراءات</th>
                         </tr>
                     </thead>
-                    <tbody id="ordersTableBody">
+                    <tbody>
+                        {% for order in orders %}
                         <tr>
-                            <td colspan="6" class="text-center py-5">
-                                <div class="spinner-border text-primary" role="status"></div>
-                                <p class="text-muted mt-2">جاري جلب الطلبات...</p>
+                            <td class="ps-3"><input type="checkbox"></td>
+                            <td class="fw-bold text-primary">{{ order.order_id_qumra }}</td>
+                            <td>
+                                {{ order.customer_name }}<br>
+                                <small class="text-muted">{{ order.customer_phone }}</small>
+                            </td>
+                            <td>{{ order.shipping_address }}</td>
+                            <td>
+                                <span class="badge bg-info text-dark">
+                                    {{ order.supplier.name if order.supplier else 'غير محدد' }}
+                                </span>
+                            </td>
+                            <td>{{ order.total }} ريال</td>
+                            <td>{{ order.payment_method }}</td>
+                            
+                            <td>
+                                <select class="form-select form-select-sm" onchange="updateStatus(this, '{{ order.id }}', 'payment')">
+                                    <option value="unpaid" {% if order.payment_status == 'unpaid' %}selected{% endif %}>غير مدفوع</option>
+                                    <option value="pending" {% if order.payment_status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
+                                    <option value="paid" {% if order.payment_status == 'paid' %}selected{% endif %}>مدفوع</option>
+                                </select>
+                            </td>
+
+                            <td>
+                                <select class="form-select form-select-sm" onchange="updateStatus(this, '{{ order.id }}', 'shipping')">
+                                    <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>غير مجهز</option>
+                                    <option value="ready" {% if order.status == 'ready' %}selected{% endif %}>تم التجهيز</option>
+                                    <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>تم التوصيل</option>
+                                </select>
+                            </td>
+
+                            <td>{{ order.created_at.strftime('%d %B %Y') }}</td>
+                            
+                            <td>
+                                <span class="badge {{ 'bg-success' if 'متجر' in order.source else 'bg-warning' }}">
+                                    {{ order.source }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>عرض الطلب</a></li>
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-file-invoice me-2"></i>تحميل الفاتورة</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>حذف</a></li>
+                                    </ul>
+                                </div>
                             </td>
                         </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                <div class="text-muted small">عرض 1 إلى 10 من إجمالي 292 عنصر</div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item"><a class="page-link" href="#">السابق</a></li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">...</a></li>
+                        <li class="page-item"><a class="page-link" href="#">30</a></li>
+                        <li class="page-item"><a class="page-link" href="#">التالي</a></li>
+                    </ul>
+                </nav>
+                <div class="d-flex align-items-center">
+                    <select class="form-select form-select-sm me-2" style="width: auto;">
+                        <option>10</option>
+                        <option>25</option>
+                    </select>
+                    <span class="text-muted small">من العناصر</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-async function loadOrders() {
-    const tbody = document.getElementById('ordersTableBody');
-    
-    try {
-        // تأكد أن هذا الرابط يطابق المسار المعرف في ملف routes.py
-        const res = await fetch('/bridge/api/orders');
-        const data = await res.json();
-        
-        if (data.status === 'success' && data.orders.length > 0) {
-            tbody.innerHTML = data.orders.map(o => `
-                <tr>
-                    <td class="ps-4 fw-bold text-primary">#${o.orderId}</td>
-                    <td>
-                        <div class="fw-bold text-dark">${o.customerName}</div>
-                        <small class="text-muted"><i class="fas fa-phone-alt me-1"></i>${o.customerPhone}</small>
-                    </td>
-                    <td>${new Date(o.date).toLocaleDateString('ar-SA')}</td>
-                    <td>
-                        <span class="badge ${getStatusClass(o.status)} rounded-pill">${o.status}</span>
-                    </td>
-                    <td class="fw-bold">${o.total} ر.س</td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-outline-secondary" title="عرض التفاصيل">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        } else {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">لا توجد طلبات لعرضها حالياً.</td></tr>';
-        }
-    } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger">تعذر الاتصال بخادم البيانات.</td></tr>';
+    function updateStatus(selectEl, orderId, type) {
+        // يمكنك هنا استدعاء Fetch API لتحديث الحالة في قاعدة البيانات
+        console.log("Updating " + type + " for order " + orderId + " to: " + selectEl.value);
     }
-}
-
-function getStatusClass(status) {
-    const map = {
-        'paid': 'bg-success',
-        'pending': 'bg-warning text-dark',
-        'cancelled': 'bg-danger',
-        'delivered': 'bg-info'
-    };
-    return map[status] || 'bg-secondary';
-}
-
-// تشغيل التحميل عند فتح الصفحة
-document.addEventListener('DOMContentLoaded', loadOrders);
 </script>
 {% endblock %}
