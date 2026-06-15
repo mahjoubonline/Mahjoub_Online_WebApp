@@ -16,14 +16,18 @@ class OrdersEngine:
         }
 
     def fetch_orders_from_qumra(self):
-        print("DEBUG: محاولة الاتصال بـ API قمرة - جلب معرفات الطلبات...")
-        # طلب _id فقط لتجنب أخطاء حقول التوثيق الصارمة
+        print("DEBUG: بدء عملية استكشاف الـ Schema الحقيقية للحقول...")
+        # هذا الاستعلام يطلب وصف الحقول المتاحة في كائن الطلب (Order)
         payload = {
             "query": """
             query {
-                findAllOrders(input: { limit: 50, page: 1 }) {
-                    data {
-                        _id
+                __type(name: "Order") {
+                    fields {
+                        name
+                        type {
+                            name
+                            kind
+                        }
                     }
                 }
             }
@@ -33,34 +37,17 @@ class OrdersEngine:
             response = requests.post(self.api_url, json=payload, headers=self.headers, timeout=15)
             result = response.json()
             
-            # طباعة الرد الخام لمعرفة الحقول المتوفرة فعلياً في الـ Response
-            print(f"DEBUG: رد السيرفر الخام (استكشاف): {result}")
+            # طباعة خريطة الحقول في الـ Logs - هذا هو المفتاح!
+            print(f"DEBUG: خريطة الحقول المتاحة (الرد الخام): {result}")
             
-            orders = result.get('data', {}).get('findAllOrders', {}).get('data', [])
-            print(f"DEBUG: تم جلب {len(orders)} طلب.")
-            return orders
+            return [] 
         except Exception as e:
-            print(f"DEBUG: خطأ أثناء الاتصال: {str(e)}")
+            print(f"DEBUG: خطأ في الاستكشاف: {str(e)}")
             return []
 
     def sync_orders_to_db(self):
         print("DEBUG: بدء عملية المزامنة...")
-        orders = self.fetch_orders_from_qumra()
+        # نقوم بالاستكشاف فقط حالياً
+        self.fetch_orders_from_qumra()
         
-        count = 0
-        for item in orders:
-            # استخدام _id كمعرف فريد للربط
-            order_id = str(item.get('_id'))
-            if not order_id or order_id == "None": continue
-            
-            # البحث في قاعدة بيانات محجوب أونلاين
-            order = Order.query.filter_by(order_id_qumra=order_id).first() or Order(order_id_qumra=order_id)
-            
-            # بما أننا جلبنا _id فقط، نحفظ كامل الكائن في raw_data للرجوع إليه لاحقاً
-            order.raw_data = item 
-            
-            db.session.add(order)
-            count += 1
-        
-        db.session.commit()
-        print(f"DEBUG: تمت المزامنة بنجاح، عدد الطلبات المعالجة: {count}")
+        print("DEBUG: انتهت مرحلة الاستكشاف. يرجى مراجعة الـ Logs.")
