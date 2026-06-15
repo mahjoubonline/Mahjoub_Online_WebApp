@@ -1,8 +1,6 @@
-# coding: utf-8
 # 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية مع دعم الطلبات)
 
 import os
-from werkzeug.security import generate_password_hash
 from flask import Flask
 from flask_talisman import Talisman
 from config import Config
@@ -13,7 +11,7 @@ from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.models.financial_db import ExchangeRate
 from apps.models.vault_db import AdminVault
 from apps.models.bridge_db import Product, ProductVariant
-from apps.utils.security import AESCipher
+from apps.models.order_db import Order  # استيراد نموذج الطلبات الجديد
 from flask_login import login_required
 
 def create_app():
@@ -35,9 +33,10 @@ def create_app():
         'img-src': ["'self'", "data:", "https://*"]
     }
     
-    Talisman(app, force_https=False, content_security_policy=csp_policy, # ضع True في الإنتاج
+    Talisman(app, force_https=False, content_security_policy=csp_policy, 
              frame_options='SAMEORIGIN', referrer_policy='strict-origin-when-cross-origin')
 
+    # تهيئة الإضافات
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -54,7 +53,7 @@ def create_app():
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
     from apps.mahjoub_bridge.routes import bridge_bp
-    from apps.orders.routes import orders_bp # استيراد الطلبات
+    from apps.orders.routes import orders_bp
 
     app.register_blueprint(auth_portal, url_prefix='/')
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
@@ -62,29 +61,27 @@ def create_app():
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
     app.register_blueprint(bridge_bp, url_prefix='/bridge')
-    
-    # حماية مسارات الطلبات بـ login_required
-    # نقوم بتطبيق الحماية على جميع مسارات الطلبات
+    app.register_blueprint(orders_bp, url_prefix='/orders')
+
+    # حماية جميع مسارات الطلبات بـ login_required
     @orders_bp.before_request
     @login_required
     def require_login():
         pass
-    app.register_blueprint(orders_bp, url_prefix='/orders')
 
     # إعداد البيانات التأسيسية
     with app.app_context():
         try:
             db.create_all() 
             
-            # إنشاء المدير
+            # إنشاء المدير الافتراضي إذا لم يكن موجوداً
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
                 db.session.add(admin)
+                db.session.commit()
             
-            # ... (بقية منطق زرع البيانات ثابت كما هو)
-            db.session.commit()
-            print("✅ تم تأسيس النظام بالكامل مع دعم الطلبات.")
+            print("✅ تم تأسيس النظام بنجاح مع دعم الطلبات.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء التأسيس: {e}")
