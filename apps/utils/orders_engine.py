@@ -14,25 +14,32 @@ class OrdersEngine:
         self.headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
     def fetch_orders_from_qumra(self):
-        # استعلام لجلب البيانات بشكل واسع (بدون حقول محددة قد تسبب خطأ)
+        # استعلام استكشافي: طلب بيانات بسيطة لمعرفة هيكل الرد
         payload = {"query": "{ findAllOrders { data { _id total status customer { name } } } }"}
         try:
             response = requests.post(self.api_url, json=payload, headers=self.headers, timeout=15)
-            return response.json().get('data', {}).get('findAllOrders', {}).get('data', [])
+            result = response.json()
+            
+            # كشف المستور: طباعة الرد الخام في الـ Logs
+            logger.info(f"🔍 رد السيرفر الخام: {result}")
+            
+            return result.get('data', {}).get('findAllOrders', {}).get('data', [])
         except Exception as e:
-            logger.error(f"Error: {str(e)}")
+            logger.error(f"❌ خطأ في الاتصال: {str(e)}")
             return []
 
     def sync_orders_to_db(self):
         orders = self.fetch_orders_from_qumra()
-        logger.info(f"🔍 تم جلب {len(orders)} طلب من قمرة.") # السطر الذي طلبته
+        logger.info(f"🔍 تم جلب {len(orders)} طلب من قمرة.")
         
         count = 0
         for item in orders:
             order_id = str(item.get('_id'))
+            if not order_id or order_id == "None": continue # تأمين إضافي
+            
             order = Order.query.filter_by(order_id_qumra=order_id).first() or Order(order_id_qumra=order_id)
             
-            # تعبئة الأعمدة الأساسية
+            # تعبئة الأعمدة الأساسية بمرونة
             order.total = float(item.get('total', 0))
             order.status = str(item.get('status', 'pending'))
             
@@ -40,7 +47,7 @@ class OrdersEngine:
             if 'customer' in item and item['customer']:
                 order.customer_name = item['customer'].get('name', 'غير معروف')
             
-            # حفظ كامل الـ Object في raw_data (للمرونة الكاملة)
+            # حفظ البيانات الخام (الجوهر في حالة عدم وضوح الهيكل)
             order.raw_data = item 
             
             db.session.add(order)
