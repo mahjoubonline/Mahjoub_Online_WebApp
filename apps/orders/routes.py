@@ -2,6 +2,8 @@
 from flask import Blueprint, render_template, request, jsonify
 from apps.models.order_db import Order
 from apps.extensions import db
+from apps.utils.orders_engine import OrdersEngine
+from flask_login import login_required
 import logging
 
 # إعداد الـ Logger لتتبع الأخطاء في سجلات Render
@@ -14,12 +16,9 @@ orders_bp = Blueprint('orders', __name__, template_folder='templates')
 def orders_dashboard():
     """عرض لوحة التحكم الخاصة بالطلبات مع الترقيم"""
     try:
-        # الحصول على رقم الصفحة من الرابط (الافتراضي 1)
         page = request.args.get('page', 1, type=int)
         per_page = 10
         
-        # جلب الطلبات من قاعدة البيانات مرتبة من الأحدث للأقدم
-        # error_out=False يمنع حدوث خطأ إذا كانت الصفحة فارغة
         pagination = Order.query.order_by(Order.created_at.desc()).paginate(
             page=page, 
             per_page=per_page, 
@@ -38,6 +37,18 @@ def orders_dashboard():
         logger.error(f"Error in orders_dashboard: {str(e)}")
         return "حدث خطأ أثناء تحميل الطلبات، يرجى التأكد من اتصال قاعدة البيانات.", 500
 
+@orders_bp.route('/admin/orders/sync', methods=['POST'])
+@login_required
+def sync_orders():
+    """مسار لمزامنة الطلبات من قمرة إلى قاعدة البيانات المحلية"""
+    try:
+        engine = OrdersEngine()
+        engine.sync_orders_to_db()
+        return jsonify({'success': True, 'message': 'تمت مزامنة الطلبات بنجاح'})
+    except Exception as e:
+        logger.error(f"Sync error: {str(e)}")
+        return jsonify({'success': False, 'message': 'فشل الاتصال بمنصة قمرة: ' + str(e)}), 500
+
 @orders_bp.route('/admin/orders/update-status', methods=['POST'])
 def update_order_status():
     """دالة لتحديث حالة الطلب (الدفع أو الشحن) عبر طلب AJAX"""
@@ -50,12 +61,10 @@ def update_order_status():
         status_type = data.get('type') # المتوقع: 'payment' أو 'shipping'
         new_value = data.get('value')
         
-        # البحث عن الطلب
         order = Order.query.get(order_id)
         if not order:
             return jsonify({'success': False, 'message': 'الطلب غير موجود'}), 404
             
-        # تحديث الحقل المطلوب
         if status_type == 'payment':
             order.payment_status = new_value
         elif status_type == 'shipping':
