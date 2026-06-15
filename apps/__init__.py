@@ -1,11 +1,13 @@
-# 📂 apps/__init__.py 
+# 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية)
+
 import os
 from flask import Flask
 from flask_talisman import Talisman
 from config import Config
 from apps.extensions import db, login_manager, migrate
 from apps.models.admin_db import AdminUser
-# ... (باقي الموديلات)
+from apps.models.order_db import Order
+from flask_login import login_required
 
 def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static', instance_relative_config=True)
@@ -32,14 +34,13 @@ def create_app():
     def load_user(user_id):
         return AdminUser.query.get(int(user_id))
 
-    # استيراد الـ Blueprints (التحديث هنا)
+    # استيراد الـ Blueprints (تم تحديث الاستيرادات لتتوافق مع الهيكل الجديد)
     from apps.auth_portal.routes import auth_portal
     from apps.add_supplier.routes import add_supplier_bp
     from apps.admin_dashboard.routes import admin_dashboard
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
-    # لاحظ تغيير الاستيراد هنا ليتوافق مع ملفاتنا الجديدة
-    from apps.mahjoub_bridge.routes import products_bp 
+    from apps.mahjoub_bridge.routes import products_bp
     from apps.orders.routes import orders_bp
 
     # تسجيل المسارات
@@ -48,7 +49,7 @@ def create_app():
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
-    app.register_blueprint(products_bp, url_prefix='/products') # المسار الجديد للمنتجات
+    app.register_blueprint(products_bp, url_prefix='/products')
     app.register_blueprint(orders_bp, url_prefix='/orders')
 
     # إعداد البيانات التأسيسية
