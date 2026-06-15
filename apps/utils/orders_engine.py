@@ -1,51 +1,46 @@
-# coding: utf-8
-# 📂 apps/utils/bridge_engine.py
-
-import requests
-import os
+# 📂 apps/utils/orders_engine.py
+from apps.utils.bridge_engine import QumraBridgeEngine
+from apps.extensions import db
+from apps.models.order_db import Order
 import logging
 
 logger = logging.getLogger(__name__)
 
-class QumraBridgeEngine:
-    def __init__(self):
-        self.endpoint = "https://mahjoub.online/admin/graphql"
-        api_token = os.environ.get('QUMRA_API_KEY', '').strip()
-        self.headers = {
-            "Authorization": f"Bearer {api_token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        }
-
-    def execute_query(self, query, variables=None):
-        payload = {"query": query, "variables": variables or {}}
+class OrdersEngine(QumraBridgeEngine):
+    def sync_orders_to_db(self):
         try:
-            response = requests.post(self.endpoint, json=payload, headers=self.headers, timeout=15)
-            return response.json()
+            logger.info("بدء جلب الطلبات من قمرة...")
+            orders = self.fetch_latest_orders()
+            
+            if not orders:
+                logger.warning("لم يتم جلب أي طلبات، قد يكون هناك خطأ في الصلاحيات أو لا توجد طلبات.")
+                return 0
+
+            count = 0
+            for item in orders:
+                # التحقق من وجود المعرف
+                order_id = str(item.get('_id') or '')
+                if not order_id: continue
+                
+                order = Order.query.filter_by(order_id_qumra=order_id).first() or Order(order_id_qumra=order_id)
+                
+                # تعيين القيم مع كشف أخطاء البيانات
+                order.total = float(item.get('totalPrice', 0))
+                
+                status_obj = item.get('status')
+                order.status = status_obj.get('name', 'pending') if isinstance(status_obj, dict) else 'pending'
+                
+                account_obj = item.get('account')
+                order.customer_name = account_obj.get('name', 'غير معروف') if isinstance(account_obj, dict) else 'غير معروف'
+                
+                db.session.add(order)
+                count += 1
+            
+            db.session.commit()
+            logger.info(f"تمت المزامنة بنجاح، عدد الطلبات المضافة: {count}")
+            return count
+            
         except Exception as e:
-            logger.error(f"⚠️ Connection Error: {e}")
-            return {}
-
-    # تأكد من وجود هذه الدالة هنا بالضبط:
-    def fetch_latest_orders(self):
-        query = """
-        query {
-            findAllOrders(input: { limit: 20, page: 1 }) {
-                data {
-                    _id
-                    totalPrice
-                    status { name }
-                    account { name }
-                }
-            }
-        }
-        """
-        result = self.execute_query(query)
-        if 'errors' in result:
-            logger.error(f"⚠️ GraphQL Errors: {result['errors']}")
-            return []
-        return result.get('data', {}).get('findAllOrders', {}).get('data', [])
-
-    def fetch_latest_products(self):
-        # ... (بقية كود المنتجات الخاص بك كما هو) ...
-        pass
+            logger.error(f"خطأ في معالجة بيانات الطلبات: {str(e)}")
+            db.session.rollback()
+            raise e
