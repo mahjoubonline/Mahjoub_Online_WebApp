@@ -32,7 +32,7 @@
                                     <td class="{{ 'ps-4' if loop.first }}">
                                         {% if col.key == 'status' %}
                                             <select class="form-select form-select-sm border-0 bg-light w-auto" 
-                                                    onchange="updateStatus(this, '{{ order.id }}', '{{ col.key }}')">
+                                                    onchange="updateStatus(this, '{{ order.id }}')">
                                                 <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
                                                 <option value="paid" {% if order.status == 'paid' %}selected{% endif %}>مدفوع</option>
                                                 <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>تم التوصيل</option>
@@ -67,13 +67,13 @@
 </div>
 
 <script>
+    // دالة مزامنة الطلبات
     async function syncOrders() {
         const btn = document.getElementById('syncBtn');
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري المزامنة...';
         
         try {
-            // نستخدم المسار الكامل بناءً على الـ Blueprint (orders)
             const response = await fetch("{{ url_for('orders.sync_orders') }}", { 
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'}
@@ -88,6 +88,22 @@
             alert('خطأ في المزامنة: ' + e.message);
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-sync me-2"></i> مزامنة الطلبات';
+        }
+    }
+
+    // دالة تحديث الحالة
+    async function updateStatus(selectElement, orderId) {
+        const newStatus = selectElement.value;
+        try {
+            const response = await fetch("{{ url_for('orders.update_order_status') }}", {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ orderId: orderId, value: newStatus })
+            });
+            const result = await response.json();
+            if (!result.success) alert('فشل تحديث الحالة');
+        } catch (e) {
+            alert('خطأ في الاتصال بالسيرفر');
         }
     }
 </script>
