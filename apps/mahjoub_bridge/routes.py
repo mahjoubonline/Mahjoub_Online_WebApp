@@ -5,9 +5,18 @@ from flask_login import login_required
 import logging
 
 logger = logging.getLogger(__name__)
-products_bp = Blueprint('products', __name__, template_folder='templates')
 
-@products_bp.route('/products/sync', methods=['POST'])
+# تم تعديل اسم الـ Blueprint هنا ليكون 'mahjoub_bridge' ليتطابق مع الروابط في admin_base.html
+products_bp = Blueprint('mahjoub_bridge', __name__, template_folder='templates')
+
+@products_bp.route('/dashboard', methods=['GET'])
+@login_required
+def dashboard():
+    """لوحة تحكم الجسر والمنتجات"""
+    # تأكد من وجود ملف bridge_dashboard.html في المجلد الصحيح
+    return render_template('admin/bridge_dashboard.html')
+
+@products_bp.route('/sync', methods=['POST'])
 @login_required
 def sync_products():
     """مزامنة المنتجات من قمرة إلى قاعدة البيانات"""
@@ -19,7 +28,7 @@ def sync_products():
         logger.error(f"Error syncing products: {str(e)}")
         return jsonify({'success': False, 'message': 'فشل مزامنة المنتجات'}), 500
 
-@products_bp.route('/products/list', methods=['GET'])
+@products_bp.route('/list', methods=['GET'])
 @login_required
 def list_products():
     """عرض قائمة المنتجات"""
