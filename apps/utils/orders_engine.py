@@ -1,47 +1,23 @@
-# 📂 apps/utils/orders_engine.py
-from apps.utils.bridge_engine import QumraBridgeEngine
-from apps.extensions import db
-from apps.models.order_db import Order
+# coding: utf-8
+# 📂 apps/utils/__init__.py
+
+import os
 import logging
 
+# إعداد الـ Logger لتشخيص المسارات
 logger = logging.getLogger(__name__)
 
-class OrdersEngine:
-    def __init__(self):
-        # نقوم بإنشاء نسخة من المحرك الموحد داخلياً
-        self.bridge = QumraBridgeEngine()
+# سطر كود تشخيصي للتأكد من المسار الذي يقرأه السيرفر فعلياً (سيظهر في الـ Logs)
+logger.info(f"DEBUG: Loading bridge_engine from: {os.path.abspath(os.path.dirname(__file__))}")
 
-    def sync_orders_to_db(self):
-        try:
-            logger.info("بدء جلب الطلبات من قمرة...")
-            # استخدام النسخة مباشرة
-            orders = self.bridge.fetch_latest_orders()
-            
-            if not orders:
-                logger.warning("لم يتم جلب أي طلبات.")
-                return 0
+# استيراد الأدوات
+from .security import AESCipher
+from .bridge_engine import QumraBridgeEngine
+from .orders_engine import OrdersEngine
 
-            count = 0
-            for item in orders:
-                order_id = str(item.get('_id') or '')
-                if not order_id: continue
-                
-                order = Order.query.filter_by(order_id_qumra=order_id).first() or Order(order_id_qumra=order_id)
-                
-                order.total = float(item.get('totalPrice', 0))
-                status_obj = item.get('status')
-                order.status = status_obj.get('name', 'pending') if isinstance(status_obj, dict) else 'pending'
-                
-                account_obj = item.get('account')
-                order.customer_name = account_obj.get('name', 'غير معروف') if isinstance(account_obj, dict) else 'غير معروف'
-                
-                db.session.add(order)
-                count += 1
-            
-            db.session.commit()
-            return count
-            
-        except Exception as e:
-            logger.error(f"خطأ في معالجة بيانات الطلبات: {str(e)}")
-            db.session.rollback()
-            raise e
+# تصدير الأدوات لتكون متاحة للمشروع
+__all__ = [
+    'AESCipher', 
+    'QumraBridgeEngine',
+    'OrdersEngine'
+]
