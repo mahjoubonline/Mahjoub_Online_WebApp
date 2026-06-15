@@ -30,9 +30,7 @@
                         <tr>
                             <td class="ps-3"><input type="checkbox"></td>
                             <td class="fw-bold text-primary">{{ order.order_id_qumra }}</td>
-                            <td>
-                                {{ order.customer_name }}
-                            </td>
+                            <td>{{ order.customer_name }}</td>
                             <td>{{ order.total }} ريال</td>
                             <td>
                                 <select class="form-select form-select-sm" onchange="updateStatus(this, '{{ order.id }}', 'payment')">
@@ -82,7 +80,7 @@
     // تحديث الحالة برمجياً
     async function updateStatus(selectEl, orderId, type) {
         try {
-            const response = await fetch('/admin/orders/update-status', {
+            const response = await fetch("{{ url_for('orders.update_status') }}", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({orderId: orderId, type: type, value: selectEl.value})
@@ -100,13 +98,22 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري المزامنة...';
         
-        const response = await fetch('/admin/orders/sync', { method: 'POST' });
-        const result = await response.json();
-        
-        if (result.success) {
-            location.reload(); // تحديث الصفحة لرؤية البيانات الجديدة
-        } else {
-            alert(result.message);
+        try {
+            const response = await fetch("{{ url_for('orders.sync_orders') }}", { 
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                location.reload(); 
+            } else {
+                alert(result.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync me-2"></i> مزامنة الطلبات';
+            }
+        } catch (e) {
+            alert('حدث خطأ في الاتصال بالسيرفر');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-sync me-2"></i> مزامنة الطلبات';
         }
