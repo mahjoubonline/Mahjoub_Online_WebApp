@@ -6,32 +6,41 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# اسم الـ Blueprint هنا هو 'orders' ليتطابق مع url_for('orders.orders_dashboard') في الواجهة
+# Blueprint معرّف باسم 'orders' ليتطابق مع url_for('orders.orders_dashboard')
 orders_bp = Blueprint('orders', __name__, template_folder='templates')
 
 @orders_bp.route('/admin/orders', methods=['GET'])
 @login_required
 def orders_dashboard():
-    """لوحة تحكم الطلبات"""
+    """لوحة تحكم الطلبات مع دعم الأعمدة الديناميكية"""
     try:
+        # تعريف هيكلية الجدول (يمكنك التعديل هنا ولن تحتاج للمس الـ HTML)
+        columns = [
+            {'label': 'رقم الطلب', 'key': 'order_id_qumra'},
+            {'label': 'العميل', 'key': 'customer_name'},
+            {'label': 'الإجمالي', 'key': 'total'},
+            {'label': 'حالة الطلب', 'key': 'status'},
+            {'label': 'التاريخ', 'key': 'created_at'}
+        ]
+        
         engine = OrdersEngine()
-        # نفترض أن engine.get_paginated_orders يعيد كائنات Pagination
         page = request.args.get('page', 1, type=int)
         pagination = engine.get_paginated_orders(page=page)
         
         return render_template(
             'admin/orders_dashboard.html', 
             orders=pagination.items, 
-            pagination=pagination
+            pagination=pagination,
+            columns=columns
         )
     except Exception as e:
-        logger.error(f"Error loading orders dashboard: {str(e)}")
-        return "حدث خطأ أثناء تحميل لوحة الطلبات", 500
+        logger.exception("Error loading orders dashboard")
+        return f"حدث خطأ أثناء تحميل لوحة الطلبات: {str(e)}", 500
 
-@orders_bp.route('/api/sync', methods=['POST'])
+@orders_bp.route('/sync', methods=['POST'])
 @login_required
 def sync_orders():
-    """مزامنة الطلبات"""
+    """مزامنة الطلبات من المصدر"""
     try:
         engine = OrdersEngine()
         result = engine.sync_orders_from_source()
@@ -39,3 +48,20 @@ def sync_orders():
     except Exception as e:
         logger.error(f"Error syncing orders: {str(e)}")
         return jsonify({'success': False, 'message': 'فشل المزامنة'}), 500
+
+@orders_bp.route('/update-status', methods=['POST'])
+@login_required
+def update_order_status():
+    """تحديث حالة الطلب"""
+    try:
+        data = request.json
+        order_id = data.get('orderId')
+        new_status = data.get('value')
+        
+        engine = OrdersEngine()
+        engine.update_status(order_id, new_status)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error updating status: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
