@@ -1,17 +1,22 @@
 # 📂 apps/utils/orders_engine.py
+from flask import current_app
 from apps.extensions import db
 from apps.models.order_db import Order
 import logging
-import requests # تأكد من وجود مكتبة requests في requirements.txt
+import requests
 
 logger = logging.getLogger(__name__)
 
 class OrdersEngine:
     def __init__(self):
-        # تأكد من وضع الـ API Token الخاص بك هنا
-        self.api_url = "https://api.qumra.cloud/v1/orders" 
+        # استخدام الرابط والمفتاح من الإعدادات (config.py)
+        # تأكد من أن هذه القيم في Render Environment هي الصحيحة
+        self.api_url = current_app.config.get('QUMRA_API_URL', "https://api.qumra.cloud/v1/orders")
+        self.api_key = current_app.config.get('QUMRA_API_KEY')
+        
+        # التعديل هنا: استخدام المفتاح الحقيقي من الإعدادات
         self.headers = {
-            "Authorization": "Bearer YOUR_API_TOKEN_HERE",
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
 
@@ -20,9 +25,9 @@ class OrdersEngine:
         try:
             response = requests.get(self.api_url, headers=self.headers)
             if response.status_code == 200:
-                return response.json().get('data', []) # نفترض أن البيانات داخل مفتاح 'data'
+                return response.json().get('data', [])
             else:
-                logger.error(f"فشل الاتصال بـ API قمرة: {response.status_code}")
+                logger.error(f"فشل الاتصال بـ API قمرة: {response.status_code} - {response.text}")
                 return []
         except Exception as e:
             logger.error(f"خطأ أثناء جلب الطلبات: {str(e)}")
@@ -37,19 +42,15 @@ class OrdersEngine:
             return
 
         for o in raw_orders:
-            # استخدام الحقول المباشرة (Flat Fields) حسب إفادة شهاب
             q_id = str(o.get('orderId'))
-            
-            # التحقق من وجود الطلب لمنع التكرار
             existing = Order.query.filter_by(order_id_qumra=q_id).first()
             
             if not existing:
-                # إنشاء الطلب الجديد مع مطابقة الحقول المسطحة
                 new_order = Order(
                     order_id_qumra=q_id,
                     customer_name=o.get('customerName', 'غير معروف'),
                     total=float(o.get('totalPriceWithTax', 0)),
-                    status='pending', # الحالة الافتراضية
+                    status='pending',
                     payment_status='unpaid'
                 )
                 db.session.add(new_order)
