@@ -9,8 +9,8 @@ class QumraBridgeEngine:
         self.url = "https://mahjoub.online/admin/graphql"
         self.token = "qmr_e063f7f4-ed44-4c86-b105-8405326b9eb9"
 
-    def execute(self, query):
-        """تنفيذ أي استعلام GraphQL"""
+    def execute_query(self, query):
+        """تنفيذ أي استعلام GraphQL وإرجاع النتيجة كـ JSON"""
         try:
             response = requests.post(
                 self.url,
@@ -20,7 +20,11 @@ class QumraBridgeEngine:
                 },
                 json={"query": query}
             )
-            return response.json() if response.status_code == 200 else {}
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"GraphQL Error: {response.status_code} - {response.text}")
+                return {}
         except Exception as e:
-            logger.error(f"Bridge Error: {str(e)}")
+            logger.error(f"Bridge Engine Connection Error: {str(e)}")
             return {}
