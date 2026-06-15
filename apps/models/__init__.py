@@ -6,7 +6,7 @@ from .supplier_db import Supplier
 from .wallet_db import SupplierWallet, WalletTransaction
 from .vault_db import AdminVault, VaultTransaction
 from .financial_db import ExchangeRate, FinancialLog
-# (تم حذف سطر استيراد bridge_db)
+from .order_db import Order  # 👈 إضافة نموذج الطلبات هنا
 
 __all__ = [
     'AdminUser', 
@@ -16,6 +16,6 @@ __all__ = [
     'AdminVault', 
     'VaultTransaction',
     'ExchangeRate',
-    'FinancialLog'
-    # (تم حذف Product و ProductVariant من هنا)
+    'FinancialLog',
+    'Order'  # 👈 إضافة الطلبات للمصفوفة المصدرة
 ]
