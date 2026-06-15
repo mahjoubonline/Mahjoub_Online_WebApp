@@ -9,26 +9,45 @@ logger = logging.getLogger(__name__)
 
 class OrdersEngine:
     def __init__(self):
-        # استخدام الرابط والمفتاح من الإعدادات (config.py)
-        # تأكد من أن هذه القيم في Render Environment هي الصحيحة
-        self.api_url = current_app.config.get('QUMRA_API_URL', "https://api.qumra.cloud/v1/orders")
+        # جلب الإعدادات من ملف الـ Config
+        self.api_url = current_app.config.get('QUMRA_API_URL', "https://mahjoub.online/admin/graphql")
         self.api_key = current_app.config.get('QUMRA_API_KEY')
         
-        # التعديل هنا: استخدام المفتاح الحقيقي من الإعدادات
+        # الـ Headers اللازمة لاتصال GraphQL
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
 
     def fetch_orders_from_qumra(self):
-        """جلب الطلبات من API منصة قمرة"""
+        """جلب الطلبات من API منصة قمرة باستخدام GraphQL"""
+        
+        # الاستعلام (Query) لجلب الطلبات
+        # تأكد من مطابقة الحقول هنا مع ما توفره منصة قمرة في الـ Schema الخاص بها
+        query = {
+            "query": """
+            query {
+              orders {
+                orderId
+                customerName
+                totalPriceWithTax
+              }
+            }
+            """
+        }
+        
         try:
-            response = requests.get(self.api_url, headers=self.headers)
+            # GraphQL يتطلب إرسال الطلب كـ POST
+            response = requests.post(self.api_url, json=query, headers=self.headers)
+            
             if response.status_code == 200:
-                return response.json().get('data', [])
+                result = response.json()
+                # جلب البيانات من مسار 'data.orders' الخاص بـ GraphQL
+                return result.get('data', {}).get('orders', [])
             else:
                 logger.error(f"فشل الاتصال بـ API قمرة: {response.status_code} - {response.text}")
                 return []
+                
         except Exception as e:
             logger.error(f"خطأ أثناء جلب الطلبات: {str(e)}")
             return []
@@ -42,7 +61,10 @@ class OrdersEngine:
             return
 
         for o in raw_orders:
+            # استخدام الحقول كما يتم استرجاعها من الـ GraphQL Query
             q_id = str(o.get('orderId'))
+            
+            # التحقق من وجود الطلب لمنع التكرار
             existing = Order.query.filter_by(order_id_qumra=q_id).first()
             
             if not existing:
