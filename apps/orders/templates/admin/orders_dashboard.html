@@ -3,52 +3,64 @@
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4>إدارة الطلبات</h4>
-        <button class="btn btn-primary" id="syncBtn" onclick="syncOrders()">
-            <i class="fas fa-sync me-2"></i> مزامنة الطلبات من قمرة
+        <div>
+            <h4 class="mb-0 fw-bold">إدارة الطلبات</h4>
+            <small class="text-muted">مزامنة وإدارة الطلبات الواردة من قمرة</small>
+        </div>
+        <button class="btn btn-primary px-4 shadow-sm" id="syncBtn" onclick="syncOrders()">
+            <i class="fas fa-sync me-2"></i> مزامنة الطلبات
         </button>
     </div>
 
-    <div class="card shadow-sm border-0">
+    <div class="card shadow-sm border-0 rounded-3">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead class="bg-light text-secondary">
                         <tr>
-                            <th class="ps-3"><input type="checkbox"></th>
-                            <th>رقم الطلب</th>
+                            <th class="ps-4">رقم الطلب</th>
+                            <th>العميل</th>
                             <th>الإجمالي</th>
                             <th>حالة الطلب</th>
                             <th>التاريخ</th>
-                            <th>الاجراءات</th>
+                            <th class="text-center">الاجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for order in orders %}
                         <tr>
-                            <td class="ps-3"><input type="checkbox"></td>
-                            <td class="fw-bold text-primary">{{ order.order_id }}</td>
-                            <td>{{ order.total }} ريال</td>
+                            <td class="ps-4 fw-bold text-primary">{{ order.order_id_qumra }}</td>
+                            <td>{{ order.customer_name or 'غير محدد' }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ order.total }} ريال</span></td>
                             <td>
-                                <select class="form-select form-select-sm" onchange="updateStatus(this, '{{ order.id }}', 'shipping')">
+                                <select class="form-select form-select-sm border-0 bg-light w-auto" 
+                                        onchange="updateStatus(this, '{{ order.id }}', 'shipping')">
                                     <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
                                     <option value="paid" {% if order.status == 'paid' %}selected{% endif %}>مدفوع</option>
                                     <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>تم التوصيل</option>
                                 </select>
                             </td>
-                            <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
-                            <td>
-                                <button class="btn btn-sm btn-light"><i class="fas fa-eye"></i></button>
+                            <td class="text-muted small">{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-secondary border-0" title="عرض التفاصيل">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="6" class="text-center py-4 text-muted">لا توجد طلبات لعرضها حالياً. اضغط على زر المزامنة أعلاه.</td></tr>
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-inbox fa-2x mb-3 d-block opacity-50"></i>
+                                لا توجد طلبات لعرضها حالياً.
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
 
-            <nav class="p-3 border-top d-flex justify-content-center">
+            {% if pagination.pages > 1 %}
+            <nav class="p-3 border-top d-flex justify-content-center bg-light">
                 <ul class="pagination pagination-sm mb-0">
                     <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
                         <a class="page-link" href="{{ url_for('orders.orders_dashboard', page=pagination.prev_num) }}">السابق</a>
@@ -63,12 +75,23 @@
                     </li>
                 </ul>
             </nav>
+            {% endif %}
         </div>
     </div>
 </div>
 
+<style>
+    /* تحسينات بصرية إضافية */
+    .table thead th { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-select-sm { font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+    .form-select-sm:hover { background-color: #e2e6ea; }
+</style>
+
 <script>
     async function updateStatus(selectEl, orderId, type) {
+        const originalValue = selectEl.value;
+        selectEl.style.opacity = '0.5';
+        
         try {
             const response = await fetch("{{ url_for('orders.update_order_status') }}", {
                 method: 'POST',
@@ -76,9 +99,11 @@
                 body: JSON.stringify({orderId: orderId, type: type, value: selectEl.value})
             });
             const result = await response.json();
-            if (!result.success) alert('خطأ في التحديث: ' + result.message);
+            if (!result.success) throw new Error(result.message);
+            selectEl.style.opacity = '1';
         } catch (e) {
-            alert('حدث خطأ في الاتصال بالسيرفر');
+            alert('حدث خطأ أثناء تحديث الحالة: ' + e.message);
+            location.reload(); // إعادة تحميل الحالة الأصلية في حال الفشل
         }
     }
 
@@ -88,21 +113,15 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري المزامنة...';
         
         try {
-            const response = await fetch("{{ url_for('orders.sync_orders') }}", { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'}
-            });
+            const response = await fetch("{{ url_for('orders.sync_orders') }}", { method: 'POST' });
             const result = await response.json();
-            
             if (result.success) {
                 location.reload(); 
             } else {
-                alert(result.message);
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sync me-2"></i> مزامنة الطلبات';
+                throw new Error(result.message);
             }
         } catch (e) {
-            alert('حدث خطأ في الاتصال بالسيرفر');
+            alert('خطأ في المزامنة: ' + e.message);
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-sync me-2"></i> مزامنة الطلبات';
         }
