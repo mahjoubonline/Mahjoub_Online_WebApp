@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية الكاملة)
+# 📂 apps/__init__.py - المصنع المحصن (النسخة النهائية الموحدة للمسارات)
 
 from flask import Flask
 from flask_talisman import Talisman
@@ -10,8 +10,8 @@ from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.models.financial_db import ExchangeRate
 from apps.models.vault_db import AdminVault
-from apps.models.product_db import Product  # الموديل الموحد للمنتجات
-from apps.models.order_db import Order      # الموديل الموحد للطلبات
+from apps.models.product_db import Product
+from apps.models.order_db import Order
 from apps.utils.security import AESCipher
 from werkzeug.security import generate_password_hash
 
@@ -46,29 +46,27 @@ def create_app():
     from apps.admin_dashboard.routes import admin_dashboard
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
-    from apps.mahjoub_bridge.routes import products_bp  # مسار المنتجات
-    from apps.orders.routes import orders_bp            # مسار الطلبات
+    from apps.mahjoub_bridge.routes import products_bp
+    from apps.orders.routes import orders_bp
 
+    # التسجيل مع تعريف الـ URL Prefix المناسب
     app.register_blueprint(auth_portal, url_prefix='/')
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
-    app.register_blueprint(products_bp, url_prefix='/products')
+    app.register_blueprint(products_bp, url_prefix='/bridge') # تم التغيير ليتناسب مع طلب الروابط
     app.register_blueprint(orders_bp, url_prefix='/orders')
 
     # إعداد البيانات التأسيسية
     with app.app_context():
         try:
             db.create_all() 
-            
-            # 1. إنشاء المدير
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
                 db.session.add(admin)
             
-            # 2. زرع المتاجر والمحافظ (إذا كانت قاعدة البيانات فارغة)
             if not Supplier.query.first():
                 for i in range(1, 22):
                     s = Supplier(username=f'supplier_{i}', trade_name=f'متجر رقم {i}', owner_name=f'المالك {i}')
@@ -83,7 +81,6 @@ def create_app():
                     )
                     db.session.add(w)
             
-            # 3. الخزينة وأسعار الصرف
             if not AdminVault.query.first():
                 db.session.add(AdminVault(name="الخزنة المركزية", balance_sar=10000))
             
