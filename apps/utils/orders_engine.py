@@ -9,73 +9,68 @@ logger = logging.getLogger(__name__)
 
 class OrdersEngine:
     def __init__(self):
-        # جلب الإعدادات من ملف الـ Config
         self.api_url = current_app.config.get('QUMRA_API_URL', "https://mahjoub.online/admin/graphql")
         self.api_key = current_app.config.get('QUMRA_API_KEY')
         
-        # الـ Headers اللازمة لاتصال GraphQL
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
 
     def fetch_orders_from_qumra(self):
-        """جلب الطلبات من API منصة قمرة باستخدام GraphQL"""
+        """جلب الطلبات باستخدام الاستعلام الصحيح (GraphQL)"""
         
-        # الاستعلام (Query) لجلب الطلبات
-        # تأكد من مطابقة الحقول هنا مع ما توفره منصة قمرة في الـ Schema الخاص بها
-        query = {
+        # وفقاً للصورة التي أرسلتها، يجب أن يكون الهيكل مطابقاً لما هو مكتوب في Sandbox
+        query_payload = {
             "query": """
             query {
               orders {
-                orderId
-                customerName
-                totalPriceWithTax
+                _id
+                customer {
+                  name
+                }
+                total
+                status
               }
             }
             """
         }
         
         try:
-            # GraphQL يتطلب إرسال الطلب كـ POST
-            response = requests.post(self.api_url, json=query, headers=self.headers)
+            response = requests.post(self.api_url, json=query_payload, headers=self.headers)
             
             if response.status_code == 200:
                 result = response.json()
-                # جلب البيانات من مسار 'data.orders' الخاص بـ GraphQL
+                # نرجع البيانات من دالة orders كما هو متوقع
                 return result.get('data', {}).get('orders', [])
             else:
-                logger.error(f"فشل الاتصال بـ API قمرة: {response.status_code} - {response.text}")
+                logger.error(f"خطأ: {response.status_code} - {response.text}")
                 return []
-                
         except Exception as e:
-            logger.error(f"خطأ أثناء جلب الطلبات: {str(e)}")
+            logger.error(f"خطأ أثناء الاتصال: {str(e)}")
             return []
 
     def sync_orders_to_db(self):
-        """مزامنة الطلبات وحفظها في قاعدة البيانات المحلية"""
-        raw_orders = self.fetch_orders_from_qumra() 
+        """مزامنة الطلبات"""
+        raw_orders = self.fetch_orders_from_qumra()
         
         if not raw_orders:
-            logger.warning("لم يتم جلب أي طلبات من المنصة.")
+            logger.warning("لم يتم جلب أي طلبات (تحقق من اسم الدالة في الـ GraphQL).")
             return
 
         for o in raw_orders:
-            # استخدام الحقول كما يتم استرجاعها من الـ GraphQL Query
-            q_id = str(o.get('orderId'))
+            # استخدام _id كما ظهر في الصورة
+            q_id = str(o.get('_id'))
             
-            # التحقق من وجود الطلب لمنع التكرار
             existing = Order.query.filter_by(order_id_qumra=q_id).first()
-            
             if not existing:
                 new_order = Order(
                     order_id_qumra=q_id,
-                    customer_name=o.get('customerName', 'غير معروف'),
-                    total=float(o.get('totalPriceWithTax', 0)),
-                    status='pending',
-                    payment_status='unpaid'
+                    customer_name=o.get('customer', {}).get('name', 'غير معروف'),
+                    total=float(o.get('total', 0)),
+                    status=o.get('status', 'pending')
                 )
                 db.session.add(new_order)
         
         db.session.commit()
-        logger.info("تمت مزامنة الطلبات بنجاح إلى قاعدة البيانات.")
+        logger.info("تمت المزامنة بنجاح.")
