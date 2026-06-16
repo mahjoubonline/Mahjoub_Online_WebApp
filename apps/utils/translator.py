@@ -2,27 +2,29 @@
 
 def translate_status(status_key):
     """
-    تحويل حالات الطلب والدفع من الإنجليزية إلى العربية 
-    بناءً على التسميات المعتمدة في النظام.
+    ترجمة الحالات البرمجية الخاصة بالطلبات والدفع والمصادر إلى اللغة العربية.
     """
+    if not status_key:
+        return "غير محدد"
+        
     translations = {
-        # حالات الطلب
+        # حالات الطلب العامة (Order Status)
         'pending': 'قيد الانتظار',
         'confirmed': 'مؤكد',
-        'processing': 'تحت التجهيز',
+        'processing': 'تحت التنفيذ',
         'shipped': 'تم الشحن',
         'delivered': 'تم التسليم',
         'cancelled': 'ملغي',
         'refunded': 'مسترد',
-        
-        # حالات الدفع
-        'paid': 'مدفوع',
-        'unpaid': 'غير مدفوع',
         'failed': 'فشل الدفع',
         
-        # المصادر
+        # حالات الدفع المالية (Financial Status)
+        'paid': 'مدفوع',
+        'unpaid': 'غير مدفوع',
+        
+        # قنوات ومصادر الطلبات (Channels)
         'store': 'المتجر',
-        'funnel': 'فانل'
+        'funnel': 'فانل تسويقي'
     }
     
-    return translations.get(status_key.lower(), status_key)
+    return translations.get(status_key.lower().strip(), status_key)
