@@ -1,48 +1,54 @@
-# coding: utf-8
-# 📂 apps/utils/sync_all.py - محرك المزامنة الذكي
-
-from apps.models.supplier_db import Supplier
-from apps.models.wallet_db import SupplierWallet
-from apps.utils.orders_engine import get_pending_orders
+# 📂 apps/utils/sync_all.py
+import logging
 from apps.extensions import db
+from apps.utils.orders_engine import get_pending_orders
+# افترضنا وجود كلاس الطلبات في ملف الموديلات
+from apps.models.wallet_db import WalletTransaction 
 
-def run_sync():
-    print("🚀 بدء دورة المزامنة المالية...")
+logger = logging.getLogger(__name__)
+
+def sync_orders_to_local():
+    """
+    جلب الطلبات المعلقة من منصة قمرة وحفظها في قاعدة البيانات المحلية.
+    """
+    logger.info("Starting synchronization process...")
     
-    # 1. جلب الطلبات المعلقة من قمرة
-    orders = get_pending_orders()
-    if not orders:
-        print("✅ لا توجد طلبات جديدة للتسوية.")
-        return
-
-    for order in orders:
-        order_id = order.get('id')
-        total_price = float(order.get('totalPrice', 0))
+    try:
+        # 1. جلب الطلبات من المحرك
+        remote_orders = get_pending_orders()
         
-        # 2. استخراج الـ Tags من الطلب لتحديد المورد
-        # نفترض أن الـ tag للمورد موجود داخل الـ lineItems
-        for item in order.get('lineItems', []):
-            tags = item.get('product', {}).get('tags', [])
+        if not remote_orders:
+            logger.info("No pending orders found to sync.")
+            return {"status": "success", "count": 0}
             
-            for tag in tags:
-                # 3. البحث عن المورد في قاعدة البيانات باستخدام الـ tag
-                # هنا نبحث عن المورد الذي يملك هذا الـ tag في sovereign_id
-                supplier = Supplier.query.filter_by(sovereign_id=tag).first()
-                
-                if supplier and supplier.wallet:
-                    # 4. تسوية مالية: إضافة الرصيد للمحفظة
-                    # نستخدم add_transaction الذي أنشأناه في wallet_db
-                    supplier.wallet.add_transaction(
-                        amount=total_price,
-                        currency='SAR', # أو العملة المعتمدة
-                        transaction_type='credit',
-                        order_id=order_id,
-                        description=f"تسوية مالية للطلب رقم {order_id}"
-                    )
-                    print(f"💰 تم تحديث محفظة المورد {supplier.username} للطلب {order_id}")
+        count = 0
+        for order in remote_orders:
+            # 2. التحقق مما إذا كان الطلب موجوداً مسبقاً (لتجنب التكرار)
+            existing = WalletTransaction.query.filter_by(order_id=str(order['id'])).first()
+            
+            if not existing:
+                # 3. إنشاء سجل جديد في قاعدة البيانات المحلية
+                new_txn = WalletTransaction(
+                    order_id=str(order['id']),
+                    amount=str(order.get('totalPrice', 0)),
+                    currency='SAR', # أو حسب عملة قمرة
+                    transaction_type='pending',
+                    description=f"Sync from Qumra: Order #{order['id']}",
+                    status='pending'
+                )
+                db.session.add(new_txn)
+                count += 1
+        
+        # 4. حفظ التغييرات
+        db.session.commit()
+        logger.info(f"Successfully synced {count} new orders.")
+        return {"status": "success", "count": count}
 
-    db.session.commit()
-    print("✅ تمت المزامنة بنجاح!")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Critical error during sync: {str(e)}")
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
-    run_sync()
+    # هذا الجزء يسمح لك بتشغيل المزامنة يدوياً من السيرفر
+    sync_orders_to_local()
