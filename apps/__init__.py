@@ -5,7 +5,6 @@ from flask import Flask
 from flask_talisman import Talisman
 from config import Config
 from apps.extensions import db, login_manager, migrate
-from apps.utils.security import AESCipher
 from werkzeug.security import generate_password_hash
 
 def create_app():
@@ -60,7 +59,7 @@ def create_app():
         from apps.models.wallet_db import SupplierWallet
         from apps.models.financial_db import ExchangeRate
         from apps.models.vault_db import AdminVault
-        from apps.models.orders_db import ProcessedOrder  # 👈 الاستيراد المحمي لضمان بناء جدول التسوية المشفر
+        from apps.models.orders_db import ProcessedOrder  # التوثيق والربط المشفر الآمن لحسم البناء
 
         try:
             # بناء الجداول الأساسية المعتمدة في الداتابيز حياً
