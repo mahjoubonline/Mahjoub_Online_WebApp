@@ -1,28 +1,28 @@
-# 📂 apps/utils/bridge_engine.py
-import requests
-import logging
+# 📂 apps/utils/orders_engine.py
 
-logger = logging.getLogger(__name__)
+# الاستيرادات الآمنة في الأعلى
+from apps.utils.bridge_engine import execute_query
 
-# الرابط الصحيح والمطابق تماماً لإعدادات الـ Sandbox لنطاقك السيادي
-QUMRA_API_URL = "https://mahjoub.online/admin/graphql" 
-
-def execute_query(query, variables=None):
-    """المحرك الأساسي والوحيد لإرسال استعلامات GraphQL"""
-    headers = {
-        "Content-Type": "application/json"
+def get_pending_orders():
+    """
+    جلب الطلبات مباشرة من قمرة لفرز الحالات المعلقة.
+    """
+    query = """
+    query GetOrders {
+      orders {
+        id
+        totalPrice
+        status
+        createdAt
+      }
     }
-    payload = {
-        "query": query,
-        "variables": variables or {}
-    }
-    try:
-        response = requests.post(QUMRA_API_URL, json=payload, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"GraphQL Endpoint Error: {response.status_code} - {response.text}")
-            return None
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Connection failed to GraphQL Endpoint: {str(e)}")
-        return None
+    """
+    result = execute_query(query)
+    
+    if not result or 'data' not in result:
+        return []
+        
+    orders = result.get('data', {}).get('orders', [])
+    
+    # تصفية الطلبات المعلقة محلياً لسرعة العرض
+    return [o for o in orders if o.get('status') == 'pending']
