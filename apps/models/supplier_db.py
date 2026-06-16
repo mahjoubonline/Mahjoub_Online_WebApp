@@ -50,11 +50,16 @@ class Supplier(db.Model):
     # --- نظام توليد الأكواد الآلي (Mahjoub Bridge Standard) ---
     def generate_codes(self):
         """توليد الأكواد الثابتة بناءً على الـ ID بعد حفظه في قاعدة البيانات"""
-        if self.id:
+        if self.id and not self.sovereign_id:
             self.sovereign_id = f"SUP-MAH963{self.id}"
             self.wallet_code = f"WEL-MAH963{self.id}"
             self.sovereign_id_enc = AESCipher.encrypt(self.sovereign_id)
-            db.session.add(self)
+            # تم إزالة db.session.add هنا لأن التعديل سيتم ضمن سياق الـ session الحالية
+            # تأكد من استدعاء db.session.commit() في دالة التسجيل
+
+    def __repr__(self):
+        """تمثيل المورد لتسهيل عملية التتبع والبحث في السجلات"""
+        return f"<Supplier(username='{self.username}', code='{self.sovereign_id}')>"
 
     # --- بوابات التشفير ---
     def _decrypt(self, value): return AESCipher.decrypt(value) if value else None
