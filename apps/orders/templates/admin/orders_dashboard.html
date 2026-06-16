@@ -1,63 +1,65 @@
-{% extends "admin/admin_base.html" %}
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}إدارة الطلبات | القيادة المركزية{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
+<div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="mb-0 fw-bold">إدارة الطلبات (قمرة)</h4>
-            <small class="text-muted">مزامنة الطلبات من منصة قمرة</small>
-        </div>
-        <button class="btn btn-primary shadow-sm" id="syncBtn" onclick="syncOrders()">
-            <i class="fas fa-sync me-2"></i> مزامنة من قمرة
+        <h3 class="fw-bold text-dark"><i class="fas fa-shopping-cart me-2"></i> الطلبات المعلقة</h3>
+        <button class="btn btn-outline-primary" onclick="window.location.reload();">
+            <i class="fas fa-sync-alt"></i> تحديث
         </button>
     </div>
 
-    <div class="card shadow-sm border-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="bg-light">
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
                     <tr>
-                        {% for col in columns %}<th>{{ col.label }}</th>{% endfor %}
-                        <th class="text-center">الإجراءات</th>
+                        <th>رقم الطلب</th>
+                        <th>الإجمالي</th>
+                        <th>المنتجات</th>
+                        <th>الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for order in orders %}
-                    <tr>
-                        {% for col in columns %}
-                            <td>{{ order[col.key] or '---' }}</td>
+                    {% if orders %}
+                        {% for order in orders %}
+                        <tr>
+                            <td>{{ order.id }}</td>
+                            <td>{{ order.totalPrice }}</td>
+                            <td>
+                                {% for item in order.lineItems %}
+                                    <span class="badge bg-secondary">{{ item.product.name }}</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <form action="{{ url_for('orders.process_order', order_id=order.id) }}" method="POST">
+                                    <button type="submit" class="btn btn-sm btn-success">تسوية الطلب</button>
+                                </form>
+                            </td>
+                        </tr>
                         {% endfor %}
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-secondary">عرض</button>
-                        </td>
-                    </tr>
-                    {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="fas fa-box-open fa-3x mb-3"></i>
+                                    <p>لا توجد طلبات معلقة حالياً</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<script>
-    async function syncOrders() {
-        const btn = document.getElementById('syncBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري الجلب...';
-        
-        try {
-            const response = await fetch("/orders/sync-orders", { method: 'POST' });
-            const result = await response.json();
-            if (result.success) {
-                location.reload();
-            } else {
-                alert('خطأ: ' + result.message);
-            }
-        } catch (e) {
-            alert('حدث خطأ أثناء الاتصال');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sync me-2"></i> مزامنة من قمرة';
-        }
-    }
-</script>
+<style>
+    .card { border-radius: 15px; border: none; }
+    .table thead th { background: #f8f9fa; padding: 15px; }
+    .table td { padding: 15px; }
+    .btn-back-gov { color: var(--royal-purple); text-decoration: none; font-weight: 600; }
+</style>
 {% endblock %}
