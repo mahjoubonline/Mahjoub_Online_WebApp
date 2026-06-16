@@ -3,14 +3,14 @@
 {% block title %}لوحة القيادة المركزية | محجوب أونلاين{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="fw-bold" style="color: var(--royal-purple);">لوحة تحكم النظام</h3>
-            <p class="text-muted">مرحباً بك مجدداً، {{ current_user.username }}. نظرة عامة على الأداء المالي والسيادي.</p>
+            <p class="text-muted">مرحباً بك، {{ current_user.username if current_user.is_authenticated else 'المسؤول' }}.</p>
         </div>
         <button class="btn" onclick="window.location.reload();" style="background: var(--mahjoub-gold); color: white; border-radius: 10px;">
-            <i class="fas fa-sync-alt me-2"></i> تحديث البيانات
+            <i class="fas fa-sync-alt me-2"></i> تحديث
         </button>
     </div>
 
@@ -23,7 +23,7 @@
                     </div>
                     <div class="ms-3"><h6 class="text-muted mb-0">إجمالي الموردين</h6></div>
                 </div>
-                <h3 class="fw-bold mb-0">{{ total_suppliers }}</h3>
+                <h3 class="fw-bold mb-0">{{ total_suppliers | default(0) }}</h3>
             </div>
         </div>
 
@@ -35,12 +35,12 @@
                     </div>
                     <div class="ms-3"><h6 class="text-muted mb-0">الأرصدة المركزية</h6></div>
                 </div>
-                {% if total_balance_sar is defined %}
+                {% if total_balance_sar is defined and total_balance_sar is not none %}
                     <h5 class="fw-bold mb-1">{{ "%.2f"|format(total_balance_sar) }} <small>ر.س</small></h5>
-                    <h5 class="fw-bold mb-1">{{ "%.2f"|format(total_balance_yer) }} <small>ر.ي</small></h5>
-                    <h5 class="fw-bold mb-0" style="color: #2c3e50;">{{ "%.2f"|format(total_balance_usd) }} <small>د.أ</small></h5>
+                    <h5 class="fw-bold mb-1">{{ "%.2f"|format(total_balance_yer|default(0)) }} <small>ر.ي</small></h5>
+                    <h5 class="fw-bold mb-0 text-dark">{{ "%.2f"|format(total_balance_usd|default(0)) }} <small>د.أ</small></h5>
                 {% else %}
-                    <h6 class="text-muted">نظام المحفظة قيد التحديث...</h6>
+                    <h6 class="text-muted">جاري تحميل البيانات المالية...</h6>
                 {% endif %}
             </div>
         </div>
@@ -61,18 +61,16 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if recent_transactions is defined and recent_transactions %}
-                                {% for tx in recent_transactions %}
-                                <tr>
-                                    <td>#{{ tx.id }}</td>
-                                    <td>{{ tx.amount }}</td>
-                                    <td>{{ tx.transaction_type }}</td>
-                                    <td><span class="badge bg-info">{{ tx.status }}</span></td>
-                                </tr>
-                                {% endfor %}
+                            {% for tx in recent_transactions %}
+                            <tr>
+                                <td>#{{ tx.id }}</td>
+                                <td>{{ tx.amount }}</td>
+                                <td>{{ tx.transaction_type }}</td>
+                                <td><span class="badge bg-info">{{ tx.status }}</span></td>
+                            </tr>
                             {% else %}
-                                <tr><td colspan="4" class="text-center text-muted">لا توجد عمليات مالية حالياً</td></tr>
-                            {% endif %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">لا توجد عمليات حالياً</td></tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
