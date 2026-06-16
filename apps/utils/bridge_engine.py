@@ -1,41 +1,29 @@
-# 📂 apps/utils/bridge_engine.py
 import requests
-import logging
+import json
 
-logger = logging.getLogger(__name__)
+# الرابط الأساسي للـ GraphQL
+ENDPOINT = "https://mahjoub.online/admin/graphql"
 
-class QumraBridgeEngine:
-    def __init__(self):
-        self.url = "https://mahjoub.online/admin/graphql"
-        self.token = "qmr_e063f7f4-ed44-4c86-b105-8405326b9eb9"
+# ضع الـ Token الخاص بك هنا (يفضل لاحقاً سحبه من متغيرات البيئة)
+ACCESS_TOKEN = "ضع_الـ_TOKEN_الخاص_بك_هنا"
 
-    def execute_query(self, query):
-        """تنفيذ استعلام GraphQL مع معالجة الأخطاء للاتصال"""
-        try:
-            response = requests.post(
-                self.url,
-                headers={
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json",
-                },
-                json={"query": query},
-                timeout=15 # أضفنا تايم أوت لكي لا يعلق النظام للأبد
-            )
-            
-            # تحقق من حالة الرد
-            if response.status_code == 200:
-                result = response.json()
-                # التحقق إذا كان هناك أخطاء داخل رد الـ GraphQL نفسه
-                if "errors" in result:
-                    logger.error(f"GraphQL Errors: {result['errors']}")
-                return result
-            else:
-                logger.error(f"Bridge HTTP Error: {response.status_code} - {response.text}")
-                return {}
-                
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Bridge Connection Error: {str(e)}")
-            return {}
-        except Exception as e:
-            logger.error(f"Bridge Unexpected Error: {str(e)}")
-            return {}
+def execute_query(query, variables=None):
+    """
+    الدالة الأساسية لإرسال أي طلب (Query/Mutation) إلى قمرة
+    """
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {"query": query}
+    if variables:
+        payload["variables"] = variables
+        
+    try:
+        response = requests.post(ENDPOINT, json=payload, headers=headers)
+        response.raise_for_status() # للتأكد من عدم وجود أخطاء في الاتصال
+        return response.json()
+    except Exception as e:
+        print(f"حدث خطأ في الاتصال بقمرة: {e}")
+        return None
