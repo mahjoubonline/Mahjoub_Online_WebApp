@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/models/wallet_db.py - نظام المحافظ (مُشفر بالكامل بـ AES-256 - نسخة محسنة)
+# 📂 apps/models/wallet_db.py - نظام المحافظ (مُشفر بالكامل بـ AES-256)
 
 from apps.extensions import db
 from apps.utils.security import AESCipher
@@ -19,7 +19,6 @@ class SupplierWallet(db.Model):
     
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # خصائص التشفير التلقائي (Properties) مع معالجة الأخطاء
     @property
     def balance_sar(self): 
         val = AESCipher.decrypt(self._balance_sar)
@@ -49,12 +48,16 @@ class SupplierWallet(db.Model):
 
     transactions = db.relationship('WalletTransaction', back_populates='wallet', lazy='dynamic')
 
-    def add_transaction(self, amount, currency, transaction_type, description=None):
+    def add_transaction(self, amount, currency, transaction_type, order_id=None, description=None):
+        """
+        إضافة حركة مالية وربطها بـ order_id القادم من قمرة لضمان التتبع المالي
+        """
         transaction = WalletTransaction(
             wallet_id=self.id,
             amount=amount, 
             currency=currency.upper(),
             transaction_type=transaction_type,
+            order_id=order_id, # ربط الحركة المالية بالطلب
             description=description
         )
         
@@ -75,6 +78,9 @@ class WalletTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     wallet_id = db.Column(db.Integer, db.ForeignKey('supplier_wallets.id'), nullable=False)
     wallet = db.relationship('SupplierWallet', back_populates='transactions')
+    
+    # 🔗 الربط المالي: إضافة order_id لربط الحركة المالية بالطلب في قمرة
+    order_id = db.Column(db.String(100), nullable=True)
     
     _amount = db.Column(db.String(255), nullable=False)
     currency = db.Column(db.String(3), nullable=False)
