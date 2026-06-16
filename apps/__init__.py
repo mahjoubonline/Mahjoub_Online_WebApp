@@ -32,34 +32,26 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # تسجيل المسارات (Blueprints)
+    # تسجيل المسارات (Blueprints) - تم تنظيفها من المجلدات المحذوفة
     from apps.auth_portal.routes import auth_portal
     from apps.add_supplier.routes import add_supplier_bp
     from apps.admin_dashboard.routes import admin_dashboard
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
-    from apps.orders.routes import orders_bp
-    # إضافة مسار الجسر
-    from apps.mahjoub_bridge.routes import bridge_bp
 
     app.register_blueprint(auth_portal, url_prefix='/')
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
-    app.register_blueprint(orders_bp, url_prefix='/orders')
-    # تسجيل مسار الجسر
-    app.register_blueprint(bridge_bp, url_prefix='/bridge')
 
     # إعداد البيانات التأسيسية السيادية
     with app.app_context():
-        # استيراد الموديلات
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet
         from apps.models.financial_db import ExchangeRate
         from apps.models.vault_db import AdminVault
-        from apps.models.orders_db import ProcessedOrder
 
         try:
             db.create_all() 
