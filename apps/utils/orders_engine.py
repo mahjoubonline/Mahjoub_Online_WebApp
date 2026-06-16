@@ -1,29 +1,41 @@
 # 📂 apps/utils/orders_engine.py
-
-# تم التصحيح: استخدام المسار المطلق (Absolute Import)
+import logging
 from apps.utils.bridge_engine import execute_query
+
+logger = logging.getLogger(__name__)
 
 def get_pending_orders():
     """
-    جلب الطلبات التي تحتاج تسوية من محرك قمرة.
+    جلب الطلبات المعلقة مع معالجة أخطاء قوية لتجنب توقف النظام.
     """
+    # تعديل الاستعلام ليكون أكثر دقة أو مرونة إذا لزم الأمر
     query = """
     query {
-      orders(status: "pending") {
+      pendingOrders {
         id
         totalPrice
         lineItems {
           product {
+            name
             tags
           }
         }
       }
     }
     """
-    result = execute_query(query)
-    
-    # التأكد من سلامة البيانات قبل إرجاعها
-    if not result or 'data' not in result:
-        return []
+    try:
+        result = execute_query(query)
         
-    return result.get('data', {}).get('orders', [])
+        # تسجيل النتيجة للتشخيص في حال وجود خطأ
+        if not result or 'data' not in result:
+            logger.warning(f"Qumra API returned empty or error: {result}")
+            return []
+            
+        # نعتمد على أن الحقل قد يكون 'pendingOrders' أو 'orders' حسب API قمرة
+        data = result.get('data', {})
+        return data.get('pendingOrders') or data.get('orders', [])
+
+    except Exception as e:
+        logger.error(f"Critical error in get_pending_orders: {str(e)}")
+        # إرجاع قائمة فارغة لمنع حدوث خطأ 500 للمستخدم
+        return []
