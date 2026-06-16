@@ -1,29 +1,50 @@
 # 📂 apps/utils/translator.py
 from deep_translator import GoogleTranslator
 
-# ذاكرة مؤقتة لتخزين الترجمات السابقة وتسريع عرض الصفحات
 _cache = {}
 
-def translate_to_arabic(text):
-    """
-    دالة ترجمة فورية للنصوص مع نظام Caching للسرعة.
-    تحول النصوص من الإنجليزية إلى العربية.
-    """
-    if not text:
-        return ""
+# قاموس مخصص للمصطلحات لضمان دقة العرض
+_mapping = {
+    # الأعمدة
+    "_id": "رقم الطلب",
+    "customer": "العميل",
+    "createdAt": "تاريخ الإنشاء",
+    "status": "حالة الطلب",
+    "financialStatus": "حالة الدفع",
+    "fulfillmentStatus": "حالة التجهيز",
+    "paymentMethod": "وسيلة الدفع",
+    "totalPrice": "المبلغ",
+    "items": "المنتجات",
     
-    # التحقق مما إذا كان النص قد تُرجم سابقاً لتجنب الاتصال المتكرر بـ API
-    if text in _cache:
-        return _cache[text]
+    # حالات الطلب
+    "pending": "قيد الانتظار",
+    "paid": "مدفوع",
+    "processing": "تحت التنفيذ",
+    "shipped": "تم الشحن",
+    "delivered": "تم التسليم",
+    "cancelled": "ملغي",
+    "refunded": "مسترد",
+    "failed": "فشل الدفع",
     
-    try:
-        # القيام بعملية الترجمة
-        translated = GoogleTranslator(source='en', target='ar').translate(text)
-        
-        # حفظ النتيجة في الذاكرة للطلبات القادمة
-        _cache[text] = translated
-        return translated
-    except Exception as e:
-        # في حال حدوث خطأ (مثل انقطاع الاتصال)، نعيد النص الأصلي لتجنب انهيار الصفحة
-        print(f"⚠️ Translation Error: {e}")
-        return text
+    # وسائل الدفع
+    "cash_on_delivery": "دفع عند الاستلام",
+    "bank_transfer": "تحويل بنكي",
+    "credit_card": "بطاقة ائتمان",
+    "wallet": "محفظة إلكترونية"
+}
+
+def translate(text):
+    """ترجمة ديناميكية تعتمد على القاموس أولاً ثم الترجمة الذكية"""
+    if text in _mapping:
+        return _mapping[text]
+    
+    # تحويل القيم البرمجية (مثل camelCase) إلى نصوص مقروءة قبل الترجمة
+    readable_text = "".join([c if c.islower() else f" {c}" for c in str(text)]).strip()
+    
+    if readable_text not in _cache:
+        try:
+            _cache[readable_text] = GoogleTranslator(source='en', target='ar').translate(readable_text)
+        except:
+            _cache[readable_text] = text
+            
+    return _cache[readable_text]
