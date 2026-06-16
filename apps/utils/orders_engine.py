@@ -6,21 +6,24 @@ logger = logging.getLogger(__name__)
 
 def get_pending_orders():
     """
-    جلب الطلبات مباشرة من قمرة لفرز الحالات المعلقة حياً ومباشراً في الذاكرة.
+    جلب الطلبات مباشرة من قمرة لفرز الحالات المعلقة حياً ومباشراً في الذاكرة العشوائية.
+    متوافق مع بنية PaginatedOrdersResponse لمتجر قمرة.
     """
-    # استخدام الحقل المدعوم رسمياً من سيرفر قمرة: findAllOrders
+    # تعديل الاستعلام ليدخل داخل كائن البيانات الفعلي للـ Pagination
     query = """
     query GetPendingOrders {
       findAllOrders {
-        id
-        totalPrice
-        status
-        createdAt
-        lineItems {
+        data {
           id
-          product {
+          totalPrice
+          status
+          createdAt
+          lineItems {
             id
-            name
+            product {
+              id
+              name
+            }
           }
         }
       }
@@ -31,11 +34,16 @@ def get_pending_orders():
     if not result or 'data' not in result:
         return []
         
-    data = result.get('data', {})
+    response_data = result.get('data', {})
+    paginated_response = response_data.get('findAllOrders') or {}
     
-    # قراءة الحقل الصحيح المرتجع
-    orders = data.get('findAllOrders') or []
-    
+    # استخراج مصفوفة الطلبات الفعلية من داخل حقل data المتوافق مع سكيما قمرة
+    orders = []
+    if isinstance(paginated_response, dict):
+        orders = paginated_response.get('data') or paginated_response.get('nodes') or []
+    elif isinstance(paginated_response, list):
+        orders = paginated_response
+
     if not isinstance(orders, list):
         return []
 
