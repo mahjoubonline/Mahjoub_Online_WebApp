@@ -30,17 +30,15 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        # استيراد محلي آمن لكسر الدائرة
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # تسجيل المسارات (Blueprints)
+    # تسجيل المسارات (Blueprints) - تم حذف bridge
     from apps.auth_portal.routes import auth_portal
     from apps.add_supplier.routes import add_supplier_bp
     from apps.admin_dashboard.routes import admin_dashboard
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
-    from apps.mahjoub_bridge.routes import products_bp
     from apps.orders.routes import orders_bp
 
     app.register_blueprint(auth_portal, url_prefix='/')
@@ -48,52 +46,45 @@ def create_app():
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
-    app.register_blueprint(products_bp, url_prefix='/bridge')
     app.register_blueprint(orders_bp, url_prefix='/orders')
 
-    # إعداد البيانات التأسيسية السيادية للنظام
+    # إعداد البيانات التأسيسية
     with app.app_context():
-        # استيراد الموديلات الأساسية المستقرة بالإضافة للموديل المشفر الجديد للطلبات
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet
         from apps.models.financial_db import ExchangeRate
         from apps.models.vault_db import AdminVault
-        from apps.models.orders_db import ProcessedOrder  # التوثيق والربط المشفر الآمن لحسم البناء
+        from apps.models.orders_db import ProcessedOrder
 
         try:
-            # بناء الجداول الأساسية المعتمدة في الداتابيز حياً
             db.create_all() 
             
-            # إنشاء حساب الإدارة الأعلى (علي محجوب)
+            # إنشاء الحسابات والبيانات التأسيسية كما كانت
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
                 db.session.add(admin)
             
-            # إنشاء شركاء النجاح والمحافظ الرقمية السيادية
             if not Supplier.query.first():
                 for i in range(1, 22):
                     s = Supplier(username=f'supplier_{i}', trade_name=f'متجر رقم {i}', owner_name=f'المالك {i}')
                     s.password_hash = generate_password_hash('123')
                     db.session.add(s)
-                    db.session.flush()  # للحصول على المعرف تلقائياً
+                    db.session.flush()
                     s.generate_codes()
-                    
                     w = SupplierWallet(supplier_id=s.id, balance_sar="500.0")
                     db.session.add(w)
             
-            # تهيئة الخزنة المركزية
             if not AdminVault.query.first():
                 db.session.add(AdminVault(name="الخزنة المركزية", balance_sar=10000))
             
-            # تهيئة أسعار الصرف للعملات الثلاث المعتمدة
             if not ExchangeRate.query.first():
                 db.session.add(ExchangeRate(currency_code='USD', rate_to_sar=3.75))
                 db.session.add(ExchangeRate(currency_code='YER', rate_to_sar=0.004))
             
             db.session.commit()
-            print("✅ تم تأسيس البنية التحتية والبيانات السيادية بنجاح.")
+            print("✅ تم تأسيس البنية التحتية بنجاح.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء التأسيس: {e}")
