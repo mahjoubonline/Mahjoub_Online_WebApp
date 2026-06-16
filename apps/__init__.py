@@ -5,7 +5,6 @@ from flask import Flask
 from flask_talisman import Talisman
 from config import Config
 from apps.extensions import db, login_manager, migrate
-from werkzeug.security import generate_password_hash
 
 def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static', instance_relative_config=True)
@@ -40,6 +39,8 @@ def create_app():
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
     from apps.orders.routes import orders_bp
+    # إضافة مسار الجسر
+    from apps.mahjoub_bridge.routes import bridge_bp
 
     app.register_blueprint(auth_portal, url_prefix='/')
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
@@ -47,10 +48,12 @@ def create_app():
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
     app.register_blueprint(orders_bp, url_prefix='/orders')
+    # تسجيل مسار الجسر
+    app.register_blueprint(bridge_bp, url_prefix='/bridge')
 
     # إعداد البيانات التأسيسية السيادية
     with app.app_context():
-        # استيراد مباشر لضمان عدم وجود أخطاء في الـ __init__.py الخاصة بالموديلات
+        # استيراد الموديلات
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.wallet_db import SupplierWallet
@@ -61,8 +64,7 @@ def create_app():
         try:
             db.create_all() 
             
-            # تأسيس البيانات الأساسية (Admin, Suppliers, Vault, ExchangeRate)
-            # (الكود الخاص بك هنا صحيح تماماً ولا يحتاج تعديل)
+            # تأسيس البيانات الأساسية
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
