@@ -23,15 +23,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% if orders %}
+                    {% if orders and orders|length > 0 %}
                         {% for order in orders %}
                         <tr>
-                            <td>{{ order.id }}</td>
+                            <td class="fw-bold text-primary">#{{ order.id }}</td>
                             <td>{{ order.totalPrice }}</td>
                             <td>
-                                {% for item in order.lineItems %}
-                                    <span class="badge bg-secondary">{{ item.product.name }}</span>
-                                {% endfor %}
+                                {% if order.lineItems %}
+                                    {% for item in order.lineItems %}
+                                        <span class="badge bg-secondary me-1">
+                                            {{ item.product.name if item.product else 'منتج غير معروف' }}
+                                        </span>
+                                    {% endfor %}
+                                {% else %}
+                                    <small class="text-muted">لا توجد منتجات</small>
+                                {% endif %}
                             </td>
                             <td>
                                 <form action="{{ url_for('orders.process_order', order_id=order.id) }}" method="POST">
@@ -45,7 +51,7 @@
                             <td colspan="4" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="fas fa-box-open fa-3x mb-3"></i>
-                                    <p>لا توجد طلبات معلقة حالياً</p>
+                                    <p>لا توجد طلبات معلقة حالياً في النظام</p>
                                 </div>
                             </td>
                         </tr>
@@ -58,8 +64,8 @@
 
 <style>
     .card { border-radius: 15px; border: none; }
-    .table thead th { background: #f8f9fa; padding: 15px; }
+    .table thead th { background: #f8f9fa; padding: 15px; border-bottom: 2px solid #eee; }
     .table td { padding: 15px; }
-    .btn-back-gov { color: var(--royal-purple); text-decoration: none; font-weight: 600; }
+    .badge { font-size: 0.85em; padding: 0.5em 0.8em; }
 </style>
 {% endblock %}
