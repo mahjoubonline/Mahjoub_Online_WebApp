@@ -1,35 +1,51 @@
-# 📂 apps/utils/bridge_engine.py
-import requests
+# 📂 apps/utils/orders_engine.py
 import logging
+from apps.utils.bridge_engine import execute_query
 
 logger = logging.getLogger(__name__)
 
-# ضع رابط الـ API الخاص بـ قمرة هنا (أو اتركه يقرأ من متغيرات البيئة)
-QUMRA_API_URL = "https://api.qumra.sa/graphql" 
-
-def execute_query(query, variables=None):
+def get_pending_orders():
     """
-    المحرك الأساسي لإرسال استعلامات GraphQL إلى منصة قمرة.
+    جلب الطلبات من الواجهة البرمجية لمتجر محجوب معالجة هيكلية التصفح (Pagination)
     """
-    headers = {
-        "Content-Type": "application/json",
-        # "Authorization": "Bearer YOUR_TOKEN_HERE" # أضف التوكن الخاص بك هنا إذا كان مطلوباً
+    query = """
+    query {
+      findAllOrders {
+        __typename
+        items {
+          id
+          totalPrice
+          status
+          createdAt
+          lineItems {
+            product {
+              name
+              tags
+            }
+          }
+        }
+      }
     }
-    
-    payload = {
-        "query": query,
-        "variables": variables or {}
-    }
-    
+    """
     try:
-        response = requests.post(QUMRA_API_URL, json=payload, headers=headers)
+        result = execute_query(query)
         
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Qumra API Error: Status {response.status_code} - {response.text}")
-            return None
+        # طباعة الاستجابة الخام في سجلات Render للتشخيص الدقيق عند الحاجة
+        logger.info(f"DEBUG_DATA: Qumra API Raw Response: {result}")
+        
+        if not result or 'data' not in result:
+            return []
             
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Connection failed to Qumra API: {str(e)}")
-        return None
+        # الوصول إلى حاوية العناصر (items) المفهرسة داخلياً
+        data = result.get('data', {}).get('findAllOrders', {})
+        orders = data.get('items', []) if data else []
+        
+        # نقوم بعمل تصفية (Filter) محلياً للطلبات المعلقة لحين دعم الفلترة من الـ API مباشرة
+        pending_orders = [o for o in orders if o.get('status') == 'pending']
+        
+        # إذا كانت القائمة المفلترة فارغة، نرجع العناصر كاملة لتجنب الجداول الفارغة كإجراء احتياطي
+        return pending_orders if pending_orders else orders
+
+    except Exception as e:
+        logger.error(f"Critical error in get_pending_orders: {str(e)}")
+        return []
