@@ -1,16 +1,17 @@
 # coding: utf-8
 # 📂 apps/utils/bridge_engine.py
+
 import requests
 import logging
 
 logger = logging.getLogger(__name__)
 
-# الرابط السيادي Sandbox المباشر والصحيح والمطابق تماماً لإعدادات الـ Sandbox
+# الرابط السيادي المباشر والصحيح والمطابق تماماً لإعدادات المنصة
 QUMRA_API_URL = "https://mahjoub.online/admin/graphql"
 
 def execute_query(query, variables=None):
     """
-    المحرك الميكروي الأساسي والوحيد لإرسال استعلامات GraphQL حية ومباشرة إلى متجر قمرة.
+    المحرك الميكروي الأساسي والوحيد لإرسال استعلامات GraphQL حية ومباشرة.
     """
     headers = {
         "Content-Type": "application/json"
@@ -36,12 +37,12 @@ def execute_query(query, variables=None):
 
 def get_products_by_supplier(tag="all"):
     """
-    جلب المنتجات حياً من قمرة بناءً على الوسم التابع للمورد (شريك النجاح).
+    جلب المنتجات حياً بناءً على الوسم التابع للمورد (شريك النجاح).
     """
-    # استعلام GraphQL مرن لجلب المنتجات
+    # استعلام مبسط ونظيف لضمان التوافق الكامل وتجنب أخطاء الفلترة الصارمة
     query = """
-    query getProducts($tag: String!) {
-        products(filter: { tag: $tag }) {
+    query {
+        products {
             id
             title
             price
@@ -49,10 +50,13 @@ def get_products_by_supplier(tag="all"):
         }
     }
     """
-    variables = {"tag": tag}
-    result = execute_query(query, variables)
+    result = execute_query(query)
     
     if result and "data" in result and "products" in result["data"]:
-        return result["data"]["products"]
-    
+        all_products = result["data"]["products"]
+        # فلترة المنتجات محلياً في بايثون لضمان عدم حدوث خطأ في سيرفر الـ GraphQL
+        if tag and tag != "all":
+            return [p for p in all_products if p.get("tag") == tag]
+        return all_products
+        
     return []
