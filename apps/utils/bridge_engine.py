@@ -1,3 +1,4 @@
+# coding: utf-8
 # 📂 apps/utils/bridge_engine.py
 import requests
 import logging
@@ -32,3 +33,26 @@ def execute_query(query, variables=None):
     except requests.exceptions.RequestException as e:
         logger.error(f"Connection failed to GraphQL Endpoint: {str(e)}")
         return None
+
+def get_products_by_supplier(tag="all"):
+    """
+    جلب المنتجات حياً من قمرة بناءً على الوسم التابع للمورد (شريك النجاح).
+    """
+    # استعلام GraphQL مرن لجلب المنتجات
+    query = """
+    query getProducts($tag: String!) {
+        products(filter: { tag: $tag }) {
+            id
+            title
+            price
+            image_url
+        }
+    }
+    """
+    variables = {"tag": tag}
+    result = execute_query(query, variables)
+    
+    if result and "data" in result and "products" in result["data"]:
+        return result["data"]["products"]
+    
+    return []
