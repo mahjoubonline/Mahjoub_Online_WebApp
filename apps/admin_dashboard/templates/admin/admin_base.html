@@ -40,7 +40,6 @@
         .top-navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 999; }
         .content-body { padding: 25px; }
 
-        /* تعديلات الجوال والتابلت */
         @media (max-width: 992px) {
             .sidebar { right: -280px; }
             .sidebar.active { right: 0; }
@@ -79,7 +78,6 @@
                 <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-handshake me-3"></i> <span>إدارة الموردين</span> <i class="fas fa-chevron-down ms-auto"></i></div>
                 <ul class="dropdown-content">
                     <li><a href="{{ url_for('add_supplier.add_supplier') }}">إضافة مورد</a></li>
-                    <li><a href="#">قائمة الموردين</a></li>
                 </ul>
             </div>
 
