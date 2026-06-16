@@ -1,30 +1,36 @@
 # 📂 apps/utils/translator.py
 
+def translate_to_arabic(text):
+    """
+    تعريب أو معالجة نصوص وعناوين المنتجات القادمة حياً من قمرة.
+    """
+    if not text:
+        return ""
+    return text
+
 def translate_status(status_key):
     """
-    ترجمة الحالات البرمجية الخاصة بالطلبات والدفع والمصادر إلى اللغة العربية.
+    ترجمة الحالات التقنية للطلبات والمنتجات والعمليات إلى لغة عربية مفهومة.
     """
     if not status_key:
         return "غير محدد"
         
     translations = {
-        # حالات الطلب العامة (Order Status)
+        # حالات المنتجات
+        'active': 'مُفعل',
+        'archived': 'مؤرشف',
+        'draft': 'مسودة',
+        'retired': 'متوقف',
+        
+        # حالات الطلبات والعمليات المالية
         'pending': 'قيد الانتظار',
         'confirmed': 'مؤكد',
         'processing': 'تحت التنفيذ',
         'shipped': 'تم الشحن',
         'delivered': 'تم التسليم',
         'cancelled': 'ملغي',
-        'refunded': 'مسترد',
-        'failed': 'فشل الدفع',
-        
-        # حالات الدفع المالية (Financial Status)
         'paid': 'مدفوع',
-        'unpaid': 'غير مدفوع',
-        
-        # قنوات ومصادر الطلبات (Channels)
-        'store': 'المتجر',
-        'funnel': 'فانل تسويقي'
+        'unpaid': 'غير مدفوع'
     }
     
     return translations.get(status_key.lower().strip(), status_key)
