@@ -6,12 +6,13 @@ logger = logging.getLogger(__name__)
 
 def get_pending_orders():
     """
-    جلب الطلبات المعلقة مع معالجة أخطاء قوية لتجنب توقف النظام.
+    جلب الطلبات المعلقة باستخدام اسم الاستعلام الصحيح (findAllOrders) 
+    الذي يدعمه API قمرة.
     """
-    # تعديل الاستعلام ليكون أكثر دقة أو مرونة إذا لزم الأمر
+    # استخدام findAllOrders بناءً على اقتراح الـ API في الـ Logs
     query = """
     query {
-      pendingOrders {
+      findAllOrders(status: "pending") {
         id
         totalPrice
         lineItems {
@@ -26,14 +27,17 @@ def get_pending_orders():
     try:
         result = execute_query(query)
         
-        # تسجيل النتيجة للتشخيص في حال وجود خطأ
+        # التأكد من وجود البيانات
         if not result or 'data' not in result:
             logger.warning(f"Qumra API returned empty or error: {result}")
             return []
             
-        # نعتمد على أن الحقل قد يكون 'pendingOrders' أو 'orders' حسب API قمرة
+        # استخراج البيانات باستخدام findAllOrders كأولوية
         data = result.get('data', {})
-        return data.get('pendingOrders') or data.get('orders', [])
+        
+        # نتحقق من الحقل الصحيح في الاستجابة
+        orders = data.get('findAllOrders') or data.get('orders', [])
+        return orders
 
     except Exception as e:
         logger.error(f"Critical error in get_pending_orders: {str(e)}")
