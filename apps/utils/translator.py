@@ -10,27 +10,26 @@ def translate_to_arabic(text):
 
 def translate_status(status_key):
     """
-    ترجمة الحالات التقنية للطلبات والمنتجات والعمليات إلى لغة عربية مفهومة.
+    ترجمة الحالات التقنية للطلبات والمنتجات القادمة حياً من قمرة 
+    إلى لغة عربية مفهومة في لوحة التحكم المركزية.
     """
     if not status_key:
         return "غير محدد"
         
     translations = {
-        # حالات المنتجات
+        # حالات المنتجات الحية
         'active': 'مُفعل',
         'archived': 'مؤرشف',
         'draft': 'مسودة',
         'retired': 'متوقف',
         
-        # حالات الطلبات والعمليات المالية
+        # حالات الطلبات الحية
         'pending': 'قيد الانتظار',
         'confirmed': 'مؤكد',
         'processing': 'تحت التنفيذ',
         'shipped': 'تم الشحن',
         'delivered': 'تم التسليم',
-        'cancelled': 'ملغي',
-        'paid': 'مدفوع',
-        'unpaid': 'غير مدفوع'
+        'cancelled': 'ملغي'
     }
     
     return translations.get(status_key.lower().strip(), status_key)
