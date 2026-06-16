@@ -2,7 +2,7 @@
 # 📂 apps/models/__init__.py
 
 from .admin_db import AdminUser
-from .bridge_db import BridgeLog
+from .bridge_db import Product, ProductVariant
 from .financial_db import FinancialLog, ExchangeRate
 from .settlements_db import Settlement
 from .supplier_db import Supplier
@@ -11,7 +11,8 @@ from .wallet_db import SupplierWallet, WalletTransaction
 
 __all__ = [
     'AdminUser',
-    'BridgeLog',
+    'Product',
+    'ProductVariant',
     'FinancialLog',
     'ExchangeRate',
     'Settlement',
