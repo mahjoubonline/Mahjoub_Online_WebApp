@@ -2,23 +2,26 @@
 # 📂 apps/add_supplier/routes.py - معالج الأرشفة السيادية
 
 import os
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, Blueprint
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-from apps.add_supplier import add_supplier_bp
 from apps.models.supplier_db import Supplier
 from apps.extensions import db
 from apps.config import constants
 from datetime import datetime
 
+# تعريف الـ Blueprint
+add_supplier_bp = Blueprint('add_supplier_bp', __name__)
+
 # إعداد مسار حفظ الصور
-UPLOAD_FOLDER = 'apps/static/uploads/identities'
+UPLOAD_FOLDER = os.path.join('apps', 'static', 'uploads', 'identities')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 @add_supplier_bp.route('/add', methods=['GET', 'POST'])
 def add_supplier():
     if request.method == 'GET':
+        # تمرير next_id كقيمة تجريبية؛ يمكنك جلبها من قاعدة البيانات لاحقاً
         return render_template('admin/add_supplier.html', constants=constants, next_id="963")
 
     if request.method == 'POST':
@@ -39,7 +42,7 @@ def add_supplier():
                 identity_image.save(save_path)
                 image_path = filename
 
-            # 3. إنشاء المورد الجديد مع حقول البحث المحدثة
+            # 3. إنشاء المورد الجديد
             new_supplier = Supplier(
                 username=username,
                 password_hash=generate_password_hash(password),
