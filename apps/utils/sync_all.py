@@ -11,11 +11,11 @@ def check_live_sync_status():
     مباشرة من متجر قمرة المركزي دون الحاجة لأي جداول محلية.
     """
     try:
-        # جلب البيانات حية من المحركات الميكروية
+        # جلب البيانات حية ومباشرة من المحركات الميكروية في الذاكرة
         live_products = get_products_by_supplier("all")
         live_orders = get_pending_orders()
         
-        # إرجاع تقرير التدفق الحي في الذاكرة فوراً للمتصفح
+        # إرجاع تقرير التدفق الحي فوراً بدون وسيط محلي
         return {
             "status": "success",
             "products_count": len(live_products),
