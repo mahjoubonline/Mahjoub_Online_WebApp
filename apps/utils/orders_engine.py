@@ -1,38 +1,52 @@
-# 📂 apps/utils/translator.py
-from deep_translator import GoogleTranslator
+# 📂 apps/utils/orders_engine.py
+import logging
+from apps.utils.bridge_engine import execute_query
 
-_cache = {}
+logger = logging.getLogger(__name__)
 
-# قاموس مخصص للمصطلحات لضمان دقة العرض
-_mapping = {
-    # الحقول
-    "_id": "رقم الطلب",
-    "customer": "العميل",
-    "createdAt": "تاريخ الإنشاء",
-    "status": "حالة الطلب",
-    "financialStatus": "حالة الدفع",
-    "fulfillmentStatus": "حالة التجهيز",
-    "totalPrice": "المبلغ",
-    "items": "المنتجات",
-    # الحالات
-    "pending": "قيد الانتظار",
-    "paid": "مدفوع",
-    "processing": "تحت التنفيذ",
-    "shipped": "تم الشحن",
-    "delivered": "تم التسليم",
-    "cancelled": "ملغي",
-    "refunded": "مسترد",
-    "failed": "فشل الدفع"
-}
-
-def translate(text):
-    """ترجمة ديناميكية مع الاعتماد على القاموس أولاً"""
-    if text in _mapping:
-        return _mapping[text]
-    
-    if text not in _cache:
+class OrdersEngine:
+    def get_all_orders(self):
+        """جلب الطلبات من قمرة مع كافة الحقول المحددة"""
+        query = """
+        query {
+          findAllOrders(input: { limit: 20, page: 1 }) {
+            data {
+              _id
+              customer { name }
+              createdAt
+              status
+              financialStatus
+              fulfillmentStatus
+              paymentMethod
+              totalPrice { amount currency }
+              items { productId price quantity }
+            }
+          }
+        }
+        """
         try:
-            _cache[text] = GoogleTranslator(source='en', target='ar').translate(text)
-        except:
-            _cache[text] = text
-    return _cache[text]
+            result = execute_query(query)
+            if not result or 'data' not in result:
+                return []
+            
+            # استخراج البيانات حسب هيكلية PaginatedOrdersResponse
+            return result.get('data', {}).get('findAllOrders', {}).get('data', [])
+        except Exception as e:
+            logger.error(f"Error fetching orders: {str(e)}")
+            return []
+
+    def get_pending_orders(self):
+        """جلب الطلبات المعلقة فقط وتصفيتها برمجياً"""
+        all_orders = self.get_all_orders()
+        # التصفية بناءً على القيمة 'pending'
+        return [o for o in all_orders if o.get('status') == 'pending']
+
+    def sync_orders_from_source(self):
+        """مزامنة الطلبات"""
+        try:
+            orders = self.get_all_orders()
+            logger.info(f"Successfully synced {len(orders)} orders.")
+            return True
+        except Exception as e:
+            logger.error(f"Sync failed: {str(e)}")
+            return False
