@@ -1,23 +1,16 @@
 # coding: utf-8
 # 📂 apps/models/bridge_db.py
 
-from apps import db
+from apps.extensions import db  # تصحيح: استيراد db من extensions
 from datetime import datetime
 from cryptography.fernet import Fernet
 import os
 
 # --- قسم التشفير ---
+# ملاحظة: نستخدم مفتاح ثابت أو متغير بيئة لضمان عدم توليد مفتاح جديد عند كل طلب
 def get_cipher_suite():
-    """الحصول على المفتاح من البيئة وتهيئته بشكل صحيح"""
-    key = os.environ.get('ENCRYPTION_KEY')
-    if key:
-        try:
-            return Fernet(key.encode('utf-8'))
-        except Exception as e:
-            print(f"❌ خطأ في مفتاح التشفير: {e}")
-            raise ValueError("ENCRYPTION_KEY غير صالح.")
-    
-    return Fernet(Fernet.generate_key())
+    key = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
+    return Fernet(key.encode('utf-8'))
 
 cipher_suite = get_cipher_suite()
 
@@ -29,7 +22,7 @@ def decrypt(value):
     if value is None: return None
     try:
         return cipher_suite.decrypt(value.encode('utf-8')).decode('utf-8')
-    except Exception:
+    except:
         return "0.0"
 
 # --- قسم الموديلات ---
@@ -55,7 +48,6 @@ class Product(db.Model):
 
 class ProductVariant(db.Model):
     __tablename__ = 'product_variants'
-    # تم التصحيح: استخدام db.Column بدلاً من db.Integer مباشرة
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     sku = db.Column(db.String(100))
