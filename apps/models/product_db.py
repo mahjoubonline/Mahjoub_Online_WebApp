@@ -7,10 +7,10 @@ from datetime import datetime
 class Product(db.Model):
     __tablename__ = 'products'
     
-    id = db.Column(db.String(100), primary_key=True) # معرف المنتج في قمرة
+    id = db.Column(db.String(100), primary_key=True) # معرف المنتج
     title = db.Column(db.String(255), nullable=False)
     price = db.Column(db.Float, default=0.0)
-    tag = db.Column(db.String(100), index=True) # الوسم للفلترة (اسم شريك النجاح)
+    tag = db.Column(db.String(100), index=True) # الوسم للفلترة
     image_url = db.Column(db.String(500))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
