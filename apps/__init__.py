@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - النسخة النهائية المطهرة والمستقرة
+# 📂 apps/__init__.py - المصنع السيادي المتناغم
 
 from flask import Flask
 from flask_talisman import Talisman
@@ -32,38 +32,32 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # تسجيل المسارات (Blueprints) - تم تنظيفها من المجلدات المحذوفة
+    # تسجيل المسارات (Blueprints)
     from apps.auth_portal.routes import auth_portal
     from apps.add_supplier.routes import add_supplier_bp
     from apps.admin_dashboard.routes import admin_dashboard
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
 
+    # التأكد من أن الـ url_prefix يطابق المنطق الذي وضعناه في القائمة الجانبية
     app.register_blueprint(auth_portal, url_prefix='/')
     app.register_blueprint(add_supplier_bp, url_prefix='/suppliers')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
 
-    # إعداد البيانات التأسيسية السيادية
+    # إعداد البيانات التأسيسية
     with app.app_context():
         from apps.models.admin_db import AdminUser
-        from apps.models.supplier_db import Supplier
-        from apps.models.wallet_db import SupplierWallet
-        from apps.models.financial_db import ExchangeRate
-        from apps.models.vault_db import AdminVault
-
+        # ... بقية الموديلات ...
         try:
             db.create_all() 
-            
-            # تأسيس البيانات الأساسية
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
                 db.session.add(admin)
-            
             db.session.commit()
-            print("✅ تم تأسيس النظام بنجاح.")
+            print("✅ النظام يعمل بكفاءة: الربط بين المصنع والمسارات مكتمل.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ خطأ أثناء التأسيس: {e}")
