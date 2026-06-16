@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي المصحح لمنع تداخل الاستيراد
+# 📂 apps/__init__.py - المصنع السيادي للنظام
 
 from flask import Flask
 from flask_talisman import Talisman
@@ -7,10 +7,11 @@ from config import Config
 from apps.extensions import db, login_manager, migrate
 
 def create_app():
+    # 1. إعداد المصنع
     app = Flask(__name__, template_folder='templates', static_folder='static', instance_relative_config=True)
     app.config.from_object(Config)
 
-    # 🛡️ سياسة أمان المحتوى (CSP)
+    # 2. 🛡️ سياسة أمان المحتوى (CSP)
     csp_policy = {
         'default-src': ["'self'"],
         'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
@@ -21,7 +22,7 @@ def create_app():
     Talisman(app, force_https=True, content_security_policy=csp_policy,
              frame_options='SAMEORIGIN', referrer_policy='strict-origin-when-cross-origin')
 
-    # تهيئة الإضافات
+    # 3. تهيئة الإضافات
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -32,7 +33,8 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # تسجيل المسارات (Blueprints)
+    # 4. تسجيل المسارات (Blueprints)
+    # ملاحظة: يتم الاستيراد داخل الدالة لمنع تداخل الاستيراد (Circular Imports)
     from apps.auth_portal.routes import auth_portal
     from apps.add_supplier.routes import add_supplier_bp
     from apps.admin_dashboard.routes import admin_dashboard
@@ -45,10 +47,10 @@ def create_app():
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
 
-    # إعداد البيانات التأسيسية
+    # 5. إعداد البيانات التأسيسية
     with app.app_context():
         try:
-            # استيراد النماذج هنا فقط داخل سياق التطبيق
+            # استيراد النماذج داخل السياق
             from apps.models.admin_db import AdminUser
             db.create_all() 
             
