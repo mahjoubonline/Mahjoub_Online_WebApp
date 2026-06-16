@@ -25,12 +25,15 @@ def get_pending_orders():
     """
     try:
         result = execute_query(query)
+        
+        # التأكد من وصول البيانات
         if not result or 'data' not in result:
             return []
+            
+        # استخراج الطلبات وتصفيتها برمجياً
+        all_orders = result.get('data', {}).get('findAllOrders', {}).get('data', [])
+        return [o for o in all_orders if o.get('status') == 'pending']
         
-        # استخراج البيانات وتصفية المعلق فقط
-        orders = result.get('data', {}).get('findAllOrders', {}).get('data', [])
-        return [o for o in orders if o.get('status') == 'pending']
     except Exception as e:
         logger.error(f"Error fetching direct from Qumra: {str(e)}")
         return []
