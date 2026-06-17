@@ -19,21 +19,19 @@ def orders_dashboard():
 @orders_blueprint.route('/sync-all', methods=['POST'])
 @login_required
 def sync_all():
-    """مزامنة شاملة مع كشف الأخطاء الحقيقي"""
+    """مزامنة شاملة مع إظهار تقرير النتيجة للمستخدم"""
     try:
-        # التعديل: المحرك الآن يرجع (success, message) بدلاً من Boolean فقط
-        # ملاحظة: إذا لم نعدل المحرك، سأفترض أننا نكتفي بالتسجيل في الـ Logs
+        # استدعاء محرك المزامنة
         success = SyncEngine.fetch_and_sync_order()
         
         if success:
-            flash("✅ تمت المزامنة بنجاح.", "success")
+            flash("✅ تمت مزامنة الطلبات بنجاح من منصة قمرة.", "success")
         else:
-            # هنا التعديل: سنظهر رسالة توجيهية للمستخدم
-            flash("⚠️ فشلت المزامنة. راجع 'Logs' في Render لمعرفة السبب التقني (قد يكون التوكن أو اسم الاستعلام).", "danger")
+            flash("⚠️ فشلت المزامنة. يرجى التحقق من سجلات Render (Logs) للتأكد من اتصال الـ API.", "danger")
             
     except Exception as e:
         logger.error(f"❌ [Routes] خطأ غير متوقع في مسار المزامنة: {e}")
-        flash(f"خطأ غير متوقع: {str(e)}", "danger")
+        flash(f"حدث خطأ تقني أثناء المزامنة: {str(e)}", "danger")
         
     return redirect(url_for('orders.orders_dashboard'))
 
@@ -42,7 +40,7 @@ def sync_all():
 def cancel_order_route(order_id):
     result = SyncEngine.cancel_order(order_id)
     if result and 'errors' not in result:
-        flash(f"تم إلغاء الطلب {order_id}.", "info")
+        flash(f"تم إلغاء الطلب {order_id} في قمرة.", "info")
     else:
         error_msg = result.get('errors', 'خطأ غير معروف') if result else "تعذر الاتصال بـ API"
         flash(f"فشل الإلغاء: {error_msg}", "danger")
@@ -53,7 +51,7 @@ def cancel_order_route(order_id):
 def fulfill_order_route(order_id):
     result = SyncEngine.mark_as_fulfilled(order_id)
     if result and 'errors' not in result:
-        flash(f"تم تحديث الطلب {order_id} ليكون مشحوناً.", "success")
+        flash(f"تم تحديث حالة الطلب {order_id} إلى 'مشحون'.", "success")
     else:
         flash("فشل تحديث حالة الشحن في قمرة.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
@@ -63,17 +61,17 @@ def fulfill_order_route(order_id):
 def process_order(order_id):
     order = ProcessedOrder.query.get(order_id)
     if not order:
-        flash("الطلب غير موجود محلياً.", "danger")
+        flash("الطلب غير موجود في قاعدة البيانات المحلية.", "danger")
         return redirect(url_for('orders.orders_dashboard'))
     
     try:
         order.status = 'settled'
         db.session.commit()
-        flash(f"تمت التسوية المالية للطلب {order_id}.", "success")
+        flash(f"تمت التسوية المالية للطلب {order_id} بنجاح.", "success")
     except Exception as e:
         db.session.rollback()
         logger.error(f"❌ [Financial Error] {order_id}: {e}")
-        flash("خطأ أثناء التسوية المالية.", "danger")
+        flash("خطأ أثناء معالجة التسوية المالية.", "danger")
         
     return redirect(url_for('orders.orders_dashboard'))
 
@@ -82,12 +80,12 @@ def process_order(order_id):
 def update_status_route(order_id):
     new_status = request.form.get('status')
     if not new_status:
-        flash("يرجى اختيار حالة صالحة.", "warning")
+        flash("يرجى اختيار حالة صالحة للطلب.", "warning")
         return redirect(url_for('orders.orders_dashboard'))
         
     result = SyncEngine.update_order_status(order_id, new_status)
     if result and 'errors' not in result:
-        flash(f"تم تحديث الحالة للطلب {order_id}.", "success")
+        flash(f"تم تحديث الحالة للطلب {order_id} بنجاح.", "success")
     else:
-        flash("فشل التحديث في قمرة.", "danger")
+        flash("فشل تحديث الحالة في منصة قمرة.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
