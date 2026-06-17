@@ -10,6 +10,9 @@ class Config:
     # 🔐 مفتاح التشفير المركزي (لـ AES-256) 
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
     
+    # 🕵️‍♂️ مفتاح توقيع الويب هوك (للتحقق من سلامة الطلبات القادمة)
+    WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET', '1ef7466362876153c77229d8c88da75dba09bad654723cbea9298adccdd077d6')
+    
     # 🔒 إعدادات الحماية الأمنية للـ Cookies
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
@@ -42,7 +45,6 @@ class Config:
     }
     
     # 6. إعدادات البنية التحتية السحابية (Qomra Cloud API)
-    # ملاحظة: تم جلب المفتاح من المتغيرات البيئية حصراً
     QUMRA_API_KEY = os.environ.get('QUMRA_API_KEY')
     QUMRA_API_URL = os.environ.get('QUMRA_API_URL', 'https://mahjoub.online/admin/graphql')
 
