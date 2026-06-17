@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - لوحة تحكم الطلبات والعمليات (النسخة النهائية المتكاملة)
+# 📂 apps/orders/routes.py - لوحة تحكم الطلبات والعمليات (النسخة النهائية المحدثة)
 
 from flask import Blueprint, render_template, flash, redirect, url_for, request
 from flask_login import login_required
@@ -14,19 +14,19 @@ logger = logging.getLogger(__name__)
 @orders_blueprint.route('/dashboard', methods=['GET'])
 @login_required
 def orders_dashboard():
-    """عرض لوحة التحكم مع جلب الطلبات من قاعدة البيانات المحلية"""
-    # ترتيب حسب تاريخ الإنشاء من API قمرة
+    """عرض لوحة التحكم مع كافة بيانات الطلبات"""
+    # جلب كافة الطلبات مرتبة من الأحدث للأقدم
     orders = ProcessedOrder.query.order_by(ProcessedOrder.created_at_api.desc()).all()
     return render_template('admin/orders_dashboard.html', orders=orders)
 
 @orders_blueprint.route('/sync-all', methods=['POST'])
 @login_required
 def sync_all():
-    """مزامنة شاملة لجميع الطلبات من قمرة"""
+    """مزامنة شاملة لجميع الطلبات وتحديث كافة حقولها من قمرة"""
     if SyncEngine.fetch_and_sync_order():
-        flash("تمت مزامنة جميع الطلبات بنجاح من قمرا.", "success")
+        flash("تمت مزامنة الطلبات وتحديث البيانات بنجاح.", "success")
     else:
-        flash("فشلت المزامنة، يرجى التحقق من اتصال API في السجلات.", "danger")
+        flash("فشلت المزامنة، يرجى التحقق من اتصال API في سجلات النظام.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
 @orders_blueprint.route('/cancel/<order_id>', methods=['POST'])
@@ -35,20 +35,20 @@ def cancel_order_route(order_id):
     """إلغاء الطلب في قمرة ومحلياً"""
     result = SyncEngine.cancel_order(order_id)
     if result:
-        flash(f"تم إرسال طلب إلغاء الطلب {order_id} بنجاح.", "info")
+        flash(f"تم تنفيذ طلب الإلغاء للطلب {order_id}.", "info")
     else:
-        flash(f"فشل الاتصال بـ قمرة لإلغاء الطلب {order_id}.", "danger")
+        flash(f"تعذر إلغاء الطلب {order_id} من منصة قمرة.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
 @orders_blueprint.route('/fulfill/<order_id>', methods=['POST'])
 @login_required
 def fulfill_order_route(order_id):
-    """تعليم الطلب كمشحون في قمرة"""
+    """تحديث حالة الطلب كـ مشحون في قمرة"""
     result = SyncEngine.mark_as_fulfilled(order_id)
     if result:
-        flash(f"تم تحديث حالة الطلب {order_id} كـ مشحون.", "success")
+        flash(f"تم تحديث الطلب {order_id} ليكون مشحوناً.", "success")
     else:
-        flash(f"فشل تحديث حالة الشحن في قمرة.", "danger")
+        flash(f"خطأ: لم يتم تحديث حالة الشحن.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
 @orders_blueprint.route('/update-status/<order_id>', methods=['POST'])
@@ -57,32 +57,33 @@ def update_status_route(order_id):
     """تحديث حالة الطلب يدوياً"""
     new_status = request.form.get('status')
     if not new_status:
-        flash("الحالة المطلوبة غير صالحة.", "warning")
+        flash("يرجى اختيار حالة صالحة.", "warning")
         return redirect(url_for('orders.orders_dashboard'))
         
     result = SyncEngine.update_order_status(order_id, new_status)
     if result:
-        flash(f"تم تحديث حالة الطلب {order_id} إلى {new_status}.", "success")
+        flash(f"تم تغيير حالة الطلب {order_id} إلى {new_status}.", "success")
     else:
-        flash("خطأ في تحديث الحالة.", "danger")
+        flash("فشل تحديث الحالة في قمرة.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
 @orders_blueprint.route('/process/<order_id>', methods=['POST'])
 @login_required
 def process_order(order_id):
-    """تسوية مالية محلية (Internal Settlement)"""
+    """تسوية مالية محلية للطلب"""
     order = ProcessedOrder.query.get(order_id)
     if not order:
-        flash("الطلب غير موجود في النظام.", "danger")
+        flash("الطلب غير موجود في قاعدة البيانات.", "danger")
         return redirect(url_for('orders.orders_dashboard'))
     
     try:
+        # ملاحظة: سيتم الربط مع FinancialLog لاحقاً
         order.status = 'settled'
         db.session.commit()
         flash(f"تمت التسوية المالية للطلب {order_id} بنجاح.", "success")
     except Exception as e:
         db.session.rollback()
-        logger.error(f"❌ [Financial Settlement Error] Order ID {order_id}: {e}")
-        flash("حدث خطأ تقني أثناء التسوية المالية.", "danger")
+        logger.error(f"❌ [Financial Error] Order ID {order_id}: {e}")
+        flash("حدث خطأ أثناء عملية التسوية المالية.", "danger")
         
     return redirect(url_for('orders.orders_dashboard'))
