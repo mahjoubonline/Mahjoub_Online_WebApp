@@ -1,4 +1,8 @@
-# 📂 apps/orders/__init__.py
-from .routes import orders_blueprint
+from flask import Blueprint, render_template, redirect, url_for
 
-__all__ = ['orders_blueprint']
+main = Blueprint('main', __name__)
+
+@main.route('/')
+def index():
+    # توجيه المستخدم مباشرة إلى لوحة التحكم أو الصفحة المطلوبة
+    return redirect(url_for('orders.dashboard')) # تأكد أن هذا هو اسم المسار الصحيح للوحة التحكم
