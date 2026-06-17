@@ -1,3 +1,4 @@
 # 📂 apps/orders/__init__.py
-# تم إفراغ هذا الملف لمنع Circular Imports.
-# لا تستورد الـ Blueprint هنا.
+from .routes import orders_blueprint
+
+__all__ = ['orders_blueprint']
