@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة (النسخة الاستقصائية)
+# 📂 apps/api/sync_engine.py - محرك المزامنة (النسخة الأكثر مرونة)
 
 import requests
 import logging
@@ -27,18 +27,14 @@ class SyncEngine:
         while has_next_page:
             logger.info(f"🔄 جاري جلب الصفحة: {page}")
             
-            # نطلب الحقول الأكثر احتمالاً دفعة واحدة
+            # تم تبسيط الاستعلام ليطلب status كقيمة نصية مباشرة، 
+            # لأن السيرفر اعترض على طلب الحقول الفرعية (name, value, إلخ)
             query = """
             query($page: Int) {
                 findAllOrders(input: {page: $page, limit: 10}) {
                     data {
                         _id
-                        status {
-                            name
-                            value
-                            label
-                            key
-                        }
+                        status
                         totalPrice
                         createdAt
                     }
@@ -58,7 +54,9 @@ class SyncEngine:
                 
                 result = response.json()
                 
-                # إذا نجحنا، نخرج البيانات
+                # طباعة الاستجابة للـ Logs لتشخيص أي خطأ مستقبلي
+                logger.info(f"DEBUG RESPONSE: {result}")
+                
                 if 'data' in result and result['data'].get('findAllOrders'):
                     data_wrapper = result['data']['findAllOrders']
                     orders_data = data_wrapper.get('data', [])
@@ -67,9 +65,9 @@ class SyncEngine:
                         order_id = str(item.get('_id'))
                         order = ProcessedOrder.query.get(order_id) or ProcessedOrder(id=order_id)
                         
-                        # محاولة استخراج الحالة من أي حقل متاح
-                        status_obj = item.get('status', {})
-                        order.status = status_obj.get('name') or status_obj.get('value') or status_obj.get('label') or status_obj.get('key') or 'pending'
+                        # استخراج الحالة كقيمة مباشرة (بما أن السيرفر يرفض الحقول الفرعية)
+                        status_val = item.get('status')
+                        order.status = str(status_val) if status_val else 'pending'
                         
                         order.total_price = float(item.get('totalPrice', 0))
                         db.session.add(order)
@@ -87,7 +85,6 @@ class SyncEngine:
                 return False
         return True
 
-    # الدوال الأخرى تبقى كما هي...
     @staticmethod
     def _execute_mutation(mutation, variables):
         try:
