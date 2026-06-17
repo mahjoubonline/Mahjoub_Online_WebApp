@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة النهائي (المتوافق مع _id و title)
+# 📂 apps/api/sync_engine.py - محرك المزامنة النهائي (المتوافق مع بنية GraphQL لسيرفر قمرة المحدثة)
 
 import requests
 import logging
@@ -25,9 +25,9 @@ class SyncEngine:
         has_next_page = True
         
         while has_next_page:
-            logger.info(f"🔄 جاري جلب الصفحة: {page} بطلب الحقول التفصيلية")
+            logger.info(f"🔄 جاري جلب الصفحة: {page} بالحقول المعتمدة من السيرفر")
             
-            # تم توسيع الاستعلام لجلب كافة الحقول التي تظهر في اللوحة الجديدة دفعة واحدة
+            # تم تنظيف الاستعلام من الحقول غير المدعومة وتصحيح الكائنات بناءً على الـ Validation المرتجع من قمرة
             query = """
             query($page: Int) {
                 findAllOrders(input: {page: $page, limit: 10}) {
@@ -39,17 +39,17 @@ class SyncEngine:
                         }
                         totalPrice
                         createdAt
-                        paymentMethod
-                        paymentStatus
-                        fulfillmentStatus
-                        itemsCount
-                        customer {
-                            name
-                            phone
+                        paymentMethod {
+                            title
+                        }
+                        account {
+                            username
                         }
                         shippingAddress {
-                            addressLine
-                            addressCity
+                            address
+                        }
+                        items {
+                            quantity
                         }
                     }
                     pagination {
@@ -77,29 +77,38 @@ class SyncEngine:
                         order_id = str(item.get('_id'))
                         order = ProcessedOrder.query.get(order_id) or ProcessedOrder(id=order_id)
                         
-                        # 1. استخراج حقل title أو _id من داخل كائن status لحالة الطلب الرئيسية
+                        # 1. حالة الطلب الرئيسية
                         status_obj = item.get('status', {})
                         if isinstance(status_obj, dict):
                             order.status = status_obj.get('title') or status_obj.get('_id') or 'قيد الانتظار'
                         else:
                             order.status = 'قيد الانتظار'
                         
-                        # 2. استخراج بيانات العميل
-                        customer_obj = item.get('customer') or {}
-                        order.customer_name = customer_obj.get('name', '---')
+                        # 2. استخراج اسم العميل من كائن الحساب account (البديل المعتمد لـ customer)
+                        account_obj = item.get('account') or {}
+                        order.customer_name = account_obj.get('username', '---')
                         
-                        # 3. استخراج تفاصيل عنوان الشحن
+                        # 3. استخراج تفاصيل عنوان الشحن (استخدام حقل address المعتمد)
                         address_obj = item.get('shippingAddress') or {}
-                        city = address_obj.get('addressCity', '')
-                        line = address_obj.get('addressLine', '')
-                        order.shipping_address = f"{city} - {line}".strip(" - ") or '---'
+                        order.shipping_address = address_obj.get('address', '---')
                         
-                        # 4. استخراج الحقول المالية وحالة الشحن والعدد
+                        # 4. الحقول المالية وحساب الحالات ذكياً لتغذية لوحة التحكم بدون أخطاء
                         order.total_price = float(item.get('totalPrice', 0))
-                        order.payment_method = item.get('paymentMethod', '---')
-                        order.payment_status = item.get('paymentStatus', 'غير مدفوع')
-                        order.shipping_status = item.get('fulfillmentStatus', 'غير مجهز')
-                        order.items_count = int(item.get('itemsCount', 1))
+                        
+                        pay_method_obj = item.get('paymentMethod') or {}
+                        order.payment_method = pay_method_obj.get('title', '---')
+                        
+                        # استنباط الحالات مالياً وبناءً على حالة الطلب العامة
+                        order.payment_status = 'مدفوع' if order.status in ['مكتمل', 'نجاح', 'settled'] else 'غير مدفوع'
+                        order.shipping_status = 'تم التوصيل' if order.status in ['مكتمل'] else 'غير مجهز'
+                        
+                        # 5. حساب عدد المنتجات الإجمالي ديناميكياً من مصفوفة العناصر (بديل itemsCount)
+                        items_list = item.get('items', [])
+                        total_items = 0
+                        if isinstance(items_list, list):
+                            for i in items_list:
+                                total_items += int(i.get('quantity', 1))
+                        order.items_count = total_items if total_items > 0 else 1
                         
                         db.session.add(order)
                     
