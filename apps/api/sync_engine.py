@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المتكامل مع منصة قمرة (نسخة التشخيص الكامل)
+# 📂 apps/api/sync_engine.py - محرك المزامنة المحدث (التوافق مع Schema)
 
 import requests
 import logging
@@ -17,25 +17,23 @@ class SyncEngine:
         return {
             "Authorization": f"Bearer {SyncEngine.API_TOKEN}",
             "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Accept": "application/json",
+            "apollo-require-preflight": "true"
         }
 
     @staticmethod
     def fetch_and_sync_order():
-        """جلب ومزامنة الطلبات مع تحليل دقيق للأخطاء"""
+        """جلب ومزامنة الطلبات بناءً على الـ Schema الجديدة"""
         query = """
         query {
             findAllOrders {
-                orderId
-                customerName
-                itemsCount
-                total
-                status
-                shippingStatus
-                shippingAddress
-                paymentMethod
-                source
-                createdAt
+                data {
+                    _id
+                    status
+                    totalPrice
+                    createdAt
+                    isPaid
+                }
             }
         }
         """
@@ -44,52 +42,47 @@ class SyncEngine:
                 SyncEngine.API_URL, 
                 json={'query': query}, 
                 headers=SyncEngine._get_headers(),
-                timeout=10 # إضافة وقت انتظار لتجنب تعليق النظام
+                timeout=15
             )
             
-            # التحقق من حالة الاتصال
             if response.status_code != 200:
                 logger.error(f"❌ [SyncEngine] فشل الاتصال. حالة الـ HTTP: {response.status_code}")
                 return False
 
             result = response.json()
             
-            # تحليل الأخطاء داخل الـ GraphQL
             if 'errors' in result:
                 logger.error(f"❌ [SyncEngine] خطأ من API قمرة: {result['errors']}")
                 return False
             
-            # سطر التشخيص (سوف يظهر في Log التابع لـ Render)
-            logger.info(f"DEBUG_RESPONSE: {result}") 
+            # تصحيح مسار الوصول للبيانات حسب الـ Schema
+            # findAllOrders -> data -> [list of orders]
+            orders_data = result.get('data', {}).get('findAllOrders', {}).get('data', [])
             
-            orders_data = result.get('data', {}).get('findAllOrders', [])
-            
-            if orders_data is None or len(orders_data) == 0:
-                logger.warning("⚠️ [SyncEngine] الـ API لم يرجع أي طلبات (قد يكون المتجر فارغاً في الـ Sandbox).")
+            if not orders_data:
+                logger.warning("⚠️ [SyncEngine] لم يتم العثور على طلبات في استجابة الـ API.")
                 return False
 
             logger.info(f"🔍 [SyncEngine] تم استلام {len(orders_data)} طلب.")
 
             for item in orders_data:
-                order_id = str(item.get('orderId'))
+                # المعرف هو _id وليس orderId
+                order_id = str(item.get('_id'))
                 if not order_id: continue
                 
                 order = ProcessedOrder.query.get(order_id)
                 if not order:
                     order = ProcessedOrder(id=order_id)
                 
-                order.customer_name = item.get('customerName')
-                order.items_count = int(item.get('itemsCount', 0))
-                order.total_price = float(item.get('total', 0))
+                # تحديث البيانات المتاحة
                 order.status = item.get('status')
-                order.shipping_status = item.get('shippingStatus')
-                order.shipping_address = item.get('shippingAddress')
-                order.payment_method = item.get('paymentMethod')
-                order.source = item.get('source')
+                order.total_price = float(item.get('totalPrice', 0))
                 
+                # معالجة التاريخ
                 created_at = item.get('createdAt')
                 if created_at:
                     try:
+                        # حذف حرف Z إذا وجد وتنسيق التاريخ
                         date_str = created_at.replace('Z', '+00:00')
                         order.created_at_api = datetime.fromisoformat(date_str)
                     except: pass
@@ -97,11 +90,38 @@ class SyncEngine:
                 db.session.add(order)
             
             db.session.commit()
+            logger.info("✅ تم حفظ الطلبات بنجاح.")
             return True
 
         except Exception as e:
-            logger.error(f"❌ [SyncEngine] خطأ تقني غير متوقع: {str(e)}")
+            logger.error(f"❌ [SyncEngine] خطأ تقني: {str(e)}")
             db.session.rollback()
             return False
 
-    # ... (بقية دوال الـ Mutation كما هي)
+    @staticmethod
+    def _execute_mutation(mutation, variables):
+        try:
+            response = requests.post(
+                SyncEngine.API_URL, 
+                json={'query': mutation, 'variables': variables}, 
+                headers=SyncEngine._get_headers()
+            )
+            return response.json()
+        except Exception as e:
+            logger.error(f"❌ [SyncEngine] خطأ Mutation: {e}")
+            return None
+
+    @staticmethod
+    def cancel_order(order_id):
+        mutation = "mutation($id: ID!) { cancelOrder(id: $id) { _id status } }"
+        return SyncEngine._execute_mutation(mutation, {"id": order_id})
+
+    @staticmethod
+    def mark_as_fulfilled(order_id):
+        mutation = "mutation($id: ID!) { markOrderFulfilled(id: $id) { _id status } }"
+        return SyncEngine._execute_mutation(mutation, {"id": order_id})
+
+    @staticmethod
+    def update_order_status(order_id, new_status):
+        mutation = "mutation($id: ID!, $status: String!) { updateOrderStatus(id: $id, status: $status) { _id status } }"
+        return SyncEngine._execute_mutation(mutation, {"id": order_id, "status": new_status})
