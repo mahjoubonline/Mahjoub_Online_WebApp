@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المرن (مُحدث للتصحيح)
+# 📂 apps/api/sync_engine.py - محرك المزامنة المتطور (يدعم التصفح التلقائي)
 
 import requests
 import logging
@@ -22,73 +22,103 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        """جلب ومزامنة الطلبات مع كشف هيكل البيانات"""
-        query = """
-        query {
-            findAllOrders {
-                data {
-                    _id
-                    status
-                    totalPrice
-                    createdAt
+        """جلب ومزامنة الطلبات من كافة الصفحات (نظام 10 طلبات لكل صفحة)"""
+        page = 1
+        has_next_page = True
+        
+        while has_next_page:
+            logger.info(f"🔄 [SyncEngine] جاري جلب الصفحة رقم: {page}")
+            
+            # استعلام يدعم التصفح (Pagination)
+            query = """
+            query($page: Int) {
+                findAllOrders(page: $page, limit: 10) {
+                    data {
+                        _id
+                        status
+                        totalPrice
+                        createdAt
+                    }
+                    pagination {
+                        hasNextPage
+                    }
                 }
             }
-        }
-        """
+            """
+            try:
+                response = requests.post(
+                    SyncEngine.API_URL, 
+                    json={'query': query, 'variables': {'page': page}}, 
+                    headers=SyncEngine._get_headers(),
+                    timeout=20
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"❌ [SyncEngine] فشل الاتصال في الصفحة {page}. الحالة: {response.status_code}")
+                    return False
+
+                result = response.json()
+                data_wrapper = result.get('data', {}).get('findAllOrders', {})
+                orders_data = data_wrapper.get('data', [])
+                pagination = data_wrapper.get('pagination', {})
+                
+                # تحديث حالة التصفح
+                has_next_page = pagination.get('hasNextPage', False)
+
+                if not orders_data:
+                    logger.warning(f"⚠️ [SyncEngine] الصفحة {page} فارغة.")
+                    break
+
+                # معالجة الطلبات وحفظها
+                for item in orders_data:
+                    order_id = str(item.get('_id'))
+                    if not order_id: continue
+                    
+                    order = ProcessedOrder.query.get(order_id)
+                    if not order:
+                        order = ProcessedOrder(id=order_id)
+                    
+                    order.status = item.get('status')
+                    order.total_price = float(item.get('totalPrice', 0))
+                    
+                    created_at = item.get('createdAt')
+                    if created_at:
+                        try:
+                            date_str = created_at.replace('Z', '+00:00')
+                            order.created_at_api = datetime.fromisoformat(date_str)
+                        except: pass
+                    
+                    db.session.add(order)
+                
+                db.session.commit()
+                logger.info(f"✅ [SyncEngine] تم حفظ {len(orders_data)} طلب من الصفحة {page}.")
+                
+                page += 1 # الانتقال للصفحة التالية
+
+            except Exception as e:
+                logger.error(f"❌ [SyncEngine] خطأ أثناء معالجة الصفحة {page}: {str(e)}")
+                db.session.rollback()
+                return False
+        
+        logger.info("🏁 [SyncEngine] اكتملت عملية المزامنة الشاملة بنجاح.")
+        return True
+
+    # --- باقي دوال الـ Mutation تظل كما هي ---
+    @staticmethod
+    def _execute_mutation(mutation, variables):
         try:
-            response = requests.post(
-                SyncEngine.API_URL, 
-                json={'query': query}, 
-                headers=SyncEngine._get_headers(),
-                timeout=20
-            )
-            
-            if response.status_code != 200:
-                logger.error(f"❌ [SyncEngine] فشل الاتصال. الحالة: {response.status_code}")
-                return False
+            response = requests.post(SyncEngine.API_URL, json={'query': mutation, 'variables': variables}, headers=SyncEngine._get_headers())
+            return response.json() if response.status_code == 200 else None
+        except: return None
 
-            result = response.json()
-            
-            # --- تسجيل الهيكل للتشخيص ---
-            logger.info(f"🔍 [SyncEngine] الرد الخام: {result}")
+    @staticmethod
+    def cancel_order(order_id):
+        return SyncEngine._execute_mutation("mutation($id: ID!) { cancelOrder(id: $id) { _id } }", {"id": order_id})
 
-            # محاولة مرنة للوصول للبيانات (نحاول أكثر من مسار إذا فشل الأول)
-            data_wrapper = result.get('data', {})
-            findAllOrders = data_wrapper.get('findAllOrders', {})
-            
-            # إذا كان الهيكل {'findAllOrders': [...]} وليس {'findAllOrders': {'data': [...]}}
-            orders_data = findAllOrders.get('data', []) if isinstance(findAllOrders, dict) else findAllOrders
-            
-            if not orders_data:
-                logger.warning("⚠️ [SyncEngine] لم يتم العثور على طلبات. تأكد من مسار البيانات في الـ JSON أعلاه.")
-                return False
+    @staticmethod
+    def mark_as_fulfilled(order_id):
+        return SyncEngine._execute_mutation("mutation($id: ID!) { markOrderFulfilled(id: $id) { _id } }", {"id": order_id})
 
-            logger.info(f"✅ [SyncEngine] تم العثور على {len(orders_data)} طلب. بدء الحفظ...")
-
-            for item in orders_data:
-                order_id = str(item.get('_id'))
-                if not order_id: continue
-                
-                order = ProcessedOrder.query.get(order_id)
-                if not order:
-                    order = ProcessedOrder(id=order_id)
-                
-                order.status = item.get('status')
-                order.total_price = float(item.get('totalPrice', 0))
-                
-                created_at = item.get('createdAt')
-                if created_at:
-                    try:
-                        date_str = created_at.replace('Z', '+00:00')
-                        order.created_at_api = datetime.fromisoformat(date_str)
-                    except: pass
-                
-                db.session.add(order)
-            
-            db.session.commit()
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ [SyncEngine] خطأ استثنائي: {str(e)}")
-            db.session.rollback()
-            return False
+    @staticmethod
+    def update_order_status(order_id, new_status):
+        return SyncEngine._execute_mutation("mutation($id: ID!, $status: String!) { updateOrderStatus(id: $id, status: $status) { _id } }", {"id": order_id, "status": new_status})
