@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - لوحة تحكم الطلبات والعمليات (النسخة النهائية)
+# 📂 apps/orders/routes.py - لوحة تحكم الطلبات والعمليات (النسخة النهائية المصححة)
 
 from flask import Blueprint, render_template, flash, redirect, url_for
 from flask_login import login_required
@@ -32,4 +32,36 @@ def manual_sync(order_id):
     """زر المزامنة اليدوية: يقوم بجلب تفاصيل الطلب من قمرا وتحديثه"""
     try:
         # استدعاء المحرك لجلب البيانات وتحديثها
-        success = SyncEngine.fetch_and_sync_order(order
+        success = SyncEngine.fetch_and_sync_order(order_id)
+        
+        if success:
+            flash(f"تمت مزامنة الطلب {order_id} بنجاح!", "success")
+        else:
+            flash(f"فشلت المزامنة للطلب {order_id}. تأكد من الاتصال بالمتجر.", "danger")
+            
+    except Exception as e:
+        logger.error(f"❌ [Manual Sync Error] للطلب {order_id}: {e}")
+        flash("حدث خطأ أثناء المزامنة.", "danger")
+        
+    return redirect(url_for('orders.orders_dashboard'))
+
+@orders_blueprint.route('/process/<order_id>', methods=['POST'])
+@login_required
+def process_order(order_id):
+    """منطق تسوية حالة الطلب يدوياً"""
+    try:
+        order = ProcessedOrder.query.get(order_id)
+        if order:
+            order.status = 'settled'
+            db.session.commit()
+            logger.info(f"✅ [Order Processed] الطلب {order_id} تم تسويته.")
+            flash(f"تمت تسوية الطلب {order_id} بنجاح.", "success")
+        else:
+            flash(f"الطلب {order_id} غير موجود.", "warning")
+            
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ [Process Error] خطأ تسوية الطلب {order_id}: {e}")
+        flash("حدث خطأ تقني.", "danger")
+    
+    return redirect(url_for('orders.orders_dashboard'))
