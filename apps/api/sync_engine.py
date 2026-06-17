@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المتكامل مع منصة قمرة
+# 📂 apps/api/sync_engine.py - محرك المزامنة المتكامل مع منصة قمرة (النسخة المصححة)
 
 import requests
 import logging
@@ -21,10 +21,10 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        """جلب ومزامنة الطلبات مع معالجة التواريخ والعدد"""
+        """جلب ومزامنة الطلبات من findAllOrders بدلاً من orders"""
         query = """
         query {
-            orders {
+            findAllOrders {
                 id
                 orderId
                 customerName
@@ -38,7 +38,9 @@ class SyncEngine:
         try:
             response = requests.post(SyncEngine.API_URL, json={'query': query}, headers=SyncEngine._get_headers())
             result = response.json()
-            orders_data = result.get('data', {}).get('orders', [])
+            
+            # تصحيح مسار البيانات ليتطابق مع findAllOrders
+            orders_data = result.get('data', {}).get('findAllOrders', [])
             
             logger.info(f"🔍 [SyncEngine] تم استلام {len(orders_data)} طلب من API.")
 
@@ -49,17 +51,19 @@ class SyncEngine:
                 if not order:
                     order = ProcessedOrder(id=order_id)
                 
-                # تحديث كافة الحقول
+                # تحديث الحقول
                 order.customer_name = item.get('customerName')
                 order.items_count = int(item.get('itemsCount', 0))
                 order.total_price = float(item.get('total', 0))
                 order.status = item.get('status')
                 
-                # تحويل التاريخ إذا لزم الأمر
+                # تحويل التاريخ
                 if item.get('createdAt'):
                     try:
-                        order.created_at_api = datetime.fromisoformat(item['createdAt'].replace('Z', '+00:00'))
-                    except:
+                        # معالجة تنسيق التاريخ ISO
+                        date_str = item['createdAt'].replace('Z', '+00:00')
+                        order.created_at_api = datetime.fromisoformat(date_str)
+                    except Exception:
                         pass
                 
                 db.session.add(order)
@@ -68,8 +72,35 @@ class SyncEngine:
             logger.info("✅ تم حفظ الطلبات في قاعدة البيانات بنجاح.")
             return True
         except Exception as e:
-            logger.error(f"❌ [SyncEngine] خطأ: {e}")
+            logger.error(f"❌ [SyncEngine] خطأ أثناء المزامنة: {e}")
             db.session.rollback()
             return False
 
-    # ... (بقية دوال Mutation ثابتة كما هي)
+    @staticmethod
+    def _execute_mutation(mutation, variables):
+        """إجراءات التعديل (Mutations)"""
+        try:
+            response = requests.post(
+                SyncEngine.API_URL, 
+                json={'query': mutation, 'variables': variables}, 
+                headers=SyncEngine._get_headers()
+            )
+            return response.json()
+        except Exception as e:
+            logger.error(f"❌ [SyncEngine] خطأ Mutation: {e}")
+            return None
+
+    @staticmethod
+    def cancel_order(order_id):
+        mutation = "mutation($id: ID!) { cancelOrder(id: $id) { id status } }"
+        return SyncEngine._execute_mutation(mutation, {"id": order_id})
+
+    @staticmethod
+    def mark_as_fulfilled(order_id):
+        mutation = "mutation($id: ID!) { markOrderFulfilled(id: $id) { id status } }"
+        return SyncEngine._execute_mutation(mutation, {"id": order_id})
+
+    @staticmethod
+    def update_order_status(order_id, new_status):
+        mutation = "mutation($id: ID!, $status: String!) { updateOrderStatus(id: $id, status: $status) { id status } }"
+        return SyncEngine._execute_mutation(mutation, {"id": order_id, "status": new_status})
