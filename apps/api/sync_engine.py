@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المتكامل مع منصة قمرة (النسخة النهائية)
+# 📂 apps/api/sync_engine.py - محرك المزامنة المتكامل مع منصة قمرة
 
 import requests
 import logging
@@ -22,10 +22,10 @@ class SyncEngine:
     @staticmethod
     def fetch_and_sync_order():
         """جلب ومزامنة الطلبات من findAllOrders مع كافة الحقول المطلوبة"""
+        # تم ترتيب الحقول لتطابق استجابة الـ GraphQL كما في image_438aab.png
         query = """
         query {
             findAllOrders {
-                id
                 orderId
                 customerName
                 itemsCount
@@ -40,20 +40,31 @@ class SyncEngine:
         }
         """
         try:
-            response = requests.post(SyncEngine.API_URL, json={'query': query}, headers=SyncEngine._get_headers())
+            response = requests.post(
+                SyncEngine.API_URL, 
+                json={'query': query}, 
+                headers=SyncEngine._get_headers()
+            )
             result = response.json()
             
+            # استخراج البيانات بناءً على هيكلية GraphQL الموضحة في image_438aab.png
             orders_data = result.get('data', {}).get('findAllOrders', [])
+            
+            if not orders_data:
+                logger.warning("⚠️ [SyncEngine] لم يتم العثور على طلبات في استجابة الـ API.")
+                return False
+
             logger.info(f"🔍 [SyncEngine] تم استلام {len(orders_data)} طلب من API.")
 
             for item in orders_data:
-                order_id = str(item['orderId'])
-                order = ProcessedOrder.query.get(order_id)
+                order_id = str(item.get('orderId'))
+                if not order_id: continue
                 
+                order = ProcessedOrder.query.get(order_id)
                 if not order:
                     order = ProcessedOrder(id=order_id)
                 
-                # تحديث كافة الحقول لتطابق الواجهة
+                # تحديث الحقول
                 order.customer_name = item.get('customerName')
                 order.items_count = int(item.get('itemsCount', 0))
                 order.total_price = float(item.get('total', 0))
@@ -63,12 +74,13 @@ class SyncEngine:
                 order.payment_method = item.get('paymentMethod')
                 order.source = item.get('source')
                 
-                # تحويل التاريخ
-                if item.get('createdAt'):
+                # معالجة التاريخ
+                created_at = item.get('createdAt')
+                if created_at:
                     try:
-                        date_str = item['createdAt'].replace('Z', '+00:00')
+                        date_str = created_at.replace('Z', '+00:00')
                         order.created_at_api = datetime.fromisoformat(date_str)
-                    except Exception:
+                    except:
                         pass
                 
                 db.session.add(order)
@@ -81,11 +93,14 @@ class SyncEngine:
             db.session.rollback()
             return False
 
-    # دوال الـ Mutations تبقى كما هي لدعم الإجراءات (إلغاء، شحن، تحديث)
     @staticmethod
     def _execute_mutation(mutation, variables):
         try:
-            response = requests.post(SyncEngine.API_URL, json={'query': mutation, 'variables': variables}, headers=SyncEngine._get_headers())
+            response = requests.post(
+                SyncEngine.API_URL, 
+                json={'query': mutation, 'variables': variables}, 
+                headers=SyncEngine._get_headers()
+            )
             return response.json()
         except Exception as e:
             logger.error(f"❌ [SyncEngine] خطأ Mutation: {e}")
