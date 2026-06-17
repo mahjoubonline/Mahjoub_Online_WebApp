@@ -1,9 +1,10 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي للنظام (النسخة النهائية والمحدثة)
+# 📂 apps/__init__.py - المصنع السيادي للنظام (النسخة النهائية والمصححة)
 
 from flask import Flask
 from flask_talisman import Talisman
-from config import Config
+# تأكد أن ملف config.py موجود في المجلد الرئيسي (Root)
+from config import Config 
 from apps.extensions import db, login_manager, migrate
 
 def create_app():
@@ -39,8 +40,7 @@ def create_app():
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
     from apps.orders.routes import orders_blueprint
-    
-    # استيراد الويب هوك الجديد
+    # استيراد الويب هوك - تأكد أن هذا المسار لا يسبب حلقة استيراد (Circular Import)
     from apps.api.webhooks import webhooks_bp
 
     app.register_blueprint(auth_portal, url_prefix='/')
@@ -49,8 +49,7 @@ def create_app():
     app.register_blueprint(vault_bp, url_prefix='/vault')
     app.register_blueprint(orders_blueprint, url_prefix='/orders')
     
-    # تسجيل الويب هوك ليصبح متاحاً على مسار /api/webhooks
-    # الرابط النهائي سيكون: https://mahjoub.online/api/webhooks
+    # تسجيل الويب هوك - الرابط النهائي سيكون: /api/webhooks
     app.register_blueprint(webhooks_bp, url_prefix='/api')
 
     # 5. إعداد البيانات التأسيسية وهيكلة الجداول ذاتياً
