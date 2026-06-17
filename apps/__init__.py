@@ -49,7 +49,8 @@ def create_app():
     app.register_blueprint(vault_bp, url_prefix='/vault')
     app.register_blueprint(orders_blueprint, url_prefix='/orders')
     
-    # تسجيل الويب هوك مع بادئة /api ليصبح الرابط: /api/webhooks
+    # تسجيل الويب هوك ليصبح متاحاً على مسار /api/webhooks
+    # الرابط النهائي سيكون: https://mahjoub.online/api/webhooks
     app.register_blueprint(webhooks_bp, url_prefix='/api')
 
     # 5. إعداد البيانات التأسيسية وهيكلة الجداول ذاتياً
