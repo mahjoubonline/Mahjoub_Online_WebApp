@@ -3,8 +3,7 @@
 
 from flask import Flask
 from flask_talisman import Talisman
-# تأكد أن ملف config.py موجود في المجلد الرئيسي (Root)
-from config import Config 
+from config import Config
 from apps.extensions import db, login_manager, migrate
 
 def create_app():
@@ -40,7 +39,6 @@ def create_app():
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
     from apps.orders.routes import orders_blueprint
-    # استيراد الويب هوك - تأكد أن هذا المسار لا يسبب حلقة استيراد (Circular Import)
     from apps.api.webhooks import webhooks_bp
 
     app.register_blueprint(auth_portal, url_prefix='/')
