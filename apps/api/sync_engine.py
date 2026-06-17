@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة (النسخة الأكثر مرونة)
+# 📂 apps/api/sync_engine.py - محرك المزامنة النهائي المتوافق مع Schema قمرة
 
 import requests
 import logging
@@ -27,14 +27,16 @@ class SyncEngine:
         while has_next_page:
             logger.info(f"🔄 جاري جلب الصفحة: {page}")
             
-            # تم تبسيط الاستعلام ليطلب status كقيمة نصية مباشرة، 
-            # لأن السيرفر اعترض على طلب الحقول الفرعية (name, value, إلخ)
+            # تم تعديل الاستعلام هنا لطلب id و title المتوافقة مع نوع orderStatus
             query = """
             query($page: Int) {
                 findAllOrders(input: {page: $page, limit: 10}) {
                     data {
                         _id
-                        status
+                        status {
+                            id
+                            title
+                        }
                         totalPrice
                         createdAt
                     }
@@ -53,9 +55,7 @@ class SyncEngine:
                 )
                 
                 result = response.json()
-                
-                # طباعة الاستجابة للـ Logs لتشخيص أي خطأ مستقبلي
-                logger.info(f"DEBUG RESPONSE: {result}")
+                logger.info(f"🔄 استجابة السيرفر لطلب المزامنة: {result}")
                 
                 if 'data' in result and result['data'].get('findAllOrders'):
                     data_wrapper = result['data']['findAllOrders']
@@ -65,9 +65,12 @@ class SyncEngine:
                         order_id = str(item.get('_id'))
                         order = ProcessedOrder.query.get(order_id) or ProcessedOrder(id=order_id)
                         
-                        # استخراج الحالة كقيمة مباشرة (بما أن السيرفر يرفض الحقول الفرعية)
-                        status_val = item.get('status')
-                        order.status = str(status_val) if status_val else 'pending'
+                        # استخراج حقل title أو id من داخل كائن status الجديد
+                        status_obj = item.get('status', {})
+                        if isinstance(status_obj, dict):
+                            order.status = status_obj.get('title') or status_obj.get('id') or 'pending'
+                        else:
+                            order.status = 'pending'
                         
                         order.total_price = float(item.get('totalPrice', 0))
                         db.session.add(order)
@@ -76,12 +79,12 @@ class SyncEngine:
                     has_next_page = data_wrapper.get('pagination', {}).get('hasNextPage', False)
                     page += 1
                 else:
-                    logger.error(f"❌ خطأ في الاستجابة: {result}")
+                    logger.error(f"❌ فشل مطابقة البيانات المستلمة: {result}")
                     return False
                 
             except Exception as e:
                 db.session.rollback()
-                logger.error(f"❌ خطأ برمجي: {str(e)}")
+                logger.error(f"❌ خطأ برمجي أثناء المعالجة: {str(e)}")
                 return False
         return True
 
