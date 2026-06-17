@@ -20,23 +20,23 @@ def handle_qumra_webhook():
     تعتمد على التوقيع المشفر (HMAC-SHA256) للأمان.
     """
     
-    # 1. تشخيص الترويسات (يظهر في سجلات Render)
-    # ملاحظة: إذا كان التوقيع لا يتطابق، افحص هذه السجلات لمعرفة الاسم الصحيح للـ Header
+    # 1. تشخيص الترويسات (للتعرف على اسم الـ Header الصحيح في سجلات Render)
     logger.info(f"Incoming Request Headers: {dict(request.headers)}")
     
-    # الحصول على التوقيع - قمرا عادة تستخدم X-Qumra-Signature أو مشابه
+    # الحصول على التوقيع - تم دمج خيارات الأسماء المحتملة
     signature = request.headers.get('X-WebHook-Signature') or request.headers.get('X-Signature')
     
     if not signature:
         logger.warning("⚠️ محاولة وصول بدون توقيع!")
         return jsonify({"error": "Missing signature"}), 401
 
-    # 2. التحقق من التوقيع الأمني
-    secret = Config.WEBHOOK_SECRET.encode('utf-8')
-    payload = request.data # البيانات الخام ضرورية لمطابقة توقيع الـ HMAC
+    # 2. التحقق من التوقيع الأمني (مع تنظيف المفتاح من أي مسافات زائدة)
+    secret = Config.WEBHOOK_SECRET.strip().encode('utf-8')
+    payload = request.get_data() # استخدام get_data() لضمان الحصول على البيانات الخام كما وصلت
+    
     expected_signature = hmac.new(secret, payload, hashlib.sha256).hexdigest()
 
-    # سجلات للمقارنة (تظهر في Render Logs - هذا سيكشف سبب الـ 403 فوراً)
+    # سجلات للمقارنة (تظهر في Render Logs - هذا هو مفتاح الحل للـ 403)
     logger.info(f"Expected Sig: {expected_signature}")
     logger.info(f"Received Sig: {signature}")
 
