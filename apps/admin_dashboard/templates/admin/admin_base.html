@@ -36,7 +36,7 @@
         .nav-link:hover, .nav-link.active { background: rgba(212, 175, 55, 0.2); color: var(--mahjoub-gold); }
         
         .dropdown-content { display: none; list-style: none; padding: 0 35px 0 0; margin: 5px 0; border-right: 2px solid var(--mahjoub-gold); }
-        .dropdown-content a { color: #ccc; text-decoration: none; padding: 8px 0; display: block; font-size: 0.85rem; }
+        .dropdown-content a { color: #ccc; text-decoration: none; padding: 8px 0; display: block; font-size: 0.85rem; transition: var(--transition); }
         .dropdown-content a:hover { color: var(--mahjoub-gold); }
         
         .main-wrapper { margin-right: var(--sidebar-width); transition: var(--transition); }
@@ -61,9 +61,9 @@
         </div>
 
         <nav class="nav-menu">
-            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="nav-link"><i class="fas fa-chart-line me-3"></i> <span>الإحصائيات</span></a>
+            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="nav-link {% if request.endpoint == 'admin_dashboard.dashboard' %}active{% endif %}"><i class="fas fa-chart-line me-3"></i> <span>الإحصائيات</span></a>
             
-            <a href="{{ url_for('orders.orders_dashboard') }}" class="nav-link"><i class="fas fa-shopping-bag me-3"></i> <span>إدارة الطلبات</span></a>
+            <a href="{{ url_for('orders.orders_dashboard') }}" class="nav-link {% if request.endpoint == 'orders.orders_dashboard' %}active{% endif %}"><i class="fas fa-shopping-bag me-3"></i> <span>إدارة الطلبات</span></a>
 
             <div class="nav-item">
                 <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-handshake me-3"></i> <span>إدارة الموردين</span> <i class="fas fa-chevron-down ms-auto arrow-icon"></i></div>
@@ -105,7 +105,6 @@
             let drop = el.nextElementSibling;
             let arrow = el.querySelector('.arrow-icon');
             let isVisible = (drop.style.display === "block");
-            
             drop.style.display = isVisible ? "none" : "block";
             arrow.style.transform = isVisible ? "rotate(0deg)" : "rotate(180deg)";
         }
