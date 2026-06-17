@@ -1,8 +1,7 @@
-# coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المستقل
+# 📂 apps/api/sync_engine.py - محرك المزامنة (النسخة المكتملة)
 
 import logging
-# تصحيح الاستيراد: من المجلد الجذر وليس من داخل مجلد apps
+import requests
 from config import Config
 from apps.extensions import db
 from apps.models.orders_db import ProcessedOrder
@@ -10,36 +9,43 @@ from apps.models.orders_db import ProcessedOrder
 logger = logging.getLogger(__name__)
 
 class SyncEngine:
-    """
-    محرك مستقل لمعالجة ومزامنة البيانات.
-    يتم استخدامه داخل الويب هوك أو المهام الخلفية.
-    """
     
     @staticmethod
+    def fetch_and_sync_order(order_id):
+        """جلب تفاصيل الطلب من المتجر مباشرة عبر API ثم مزامنته"""
+        try:
+            # 1. الاتصال بمتجر محجوب
+            url = f"{Config.STORE_BASE_URL}/admin/graphql" # أو الرابط الصحيح للـ API
+            headers = {"Authorization": f"Bearer {Config.QUMRA_API_KEY}"}
+            
+            # استعلام GraphQL (مثال)
+            query = {"query": "{ order(id: " + order_id + ") { status total { amount } } }"}
+            
+            response = requests.post(url, json=query, headers=headers)
+            if response.status_code == 200:
+                order_data = response.json().get('data', {}).get('order', {})
+                return SyncEngine.sync_order_data(order_data)
+            
+            return False
+        except Exception as e:
+            logger.error(f"❌ [SyncEngine] خطأ أثناء الاتصال بالمتجر: {e}")
+            return False
+
+    @staticmethod
     def sync_order_data(order_data):
-        """
-        يقوم بمعالجة بيانات الطلب وحفظها في قاعدة البيانات.
-        """
+        """يقوم بمعالجة بيانات الطلب وحفظها في قاعدة البيانات"""
         try:
             order_id = str(order_data.get('id', ''))
-            if not order_id:
-                return False
+            if not order_id: return False
 
-            # البحث عن الطلب أو إنشاء جديد
-            order = ProcessedOrder.query.get(order_id)
-            if not order:
-                order = ProcessedOrder(id=order_id)
+            order = ProcessedOrder.query.get(order_id) or ProcessedOrder(id=order_id)
 
-            # تحديث الحالة
             order.status = order_data.get('status', 'pending')
-            
-            # تحديث القيمة المالية (سيقوم الـ setter في الموديل بالتشفير تلقائياً)
             total_amount = order_data.get('total', {}).get('amount', 0.0)
             order.total_price = float(total_amount)
 
             db.session.add(order)
             db.session.commit()
-            
             logger.info(f"🔄 [SyncEngine] تمت مزامنة الطلب {order_id} بنجاح.")
             return True
         
