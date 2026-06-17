@@ -1,15 +1,17 @@
-# 📂 apps/models/sync_log.py
-from apps.extensions import db
+# coding: utf-8
+# 📂 apps/models/sync_log.py - سجل مراقبة المزامنة
+
 from datetime import datetime
+from apps.extensions import db
 
 class SyncLog(db.Model):
     __tablename__ = 'sync_logs'
 
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.String(100), index=True) # رقم الطلب للبحث السريع
-    status = db.Column(db.String(20)) # (success, failed)
-    message = db.Column(db.Text) # وصف ما حدث
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
+    status = db.Column(db.String(20)) # (success, failed)
+    message = db.Column(db.Text)      # تفاصيل الخطأ أو عدد الطلبات المزامنة
+    page = db.Column(db.Integer)      # أي صفحة توقفت عندها
+    
     def __repr__(self):
-        return f"<SyncLog {self.order_id} - {self.status}>"
+        return f"<SyncLog {self.status} at {self.timestamp}>"
