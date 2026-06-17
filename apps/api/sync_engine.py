@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة النهائي المتوافق مع Schema قمرة
+# 📂 apps/api/sync_engine.py - محرك المزامنة النهائي (المتوافق مع _id و title)
 
 import requests
 import logging
@@ -27,14 +27,14 @@ class SyncEngine:
         while has_next_page:
             logger.info(f"🔄 جاري جلب الصفحة: {page}")
             
-            # تم تعديل الاستعلام هنا لطلب id و title المتوافقة مع نوع orderStatus
+            # تم التعديل إلى _id بناءً على رسالة الخطأ الصريحة من السيرفر
             query = """
             query($page: Int) {
                 findAllOrders(input: {page: $page, limit: 10}) {
                     data {
                         _id
                         status {
-                            id
+                            _id
                             title
                         }
                         totalPrice
@@ -65,10 +65,10 @@ class SyncEngine:
                         order_id = str(item.get('_id'))
                         order = ProcessedOrder.query.get(order_id) or ProcessedOrder(id=order_id)
                         
-                        # استخراج حقل title أو id من داخل كائن status الجديد
+                        # استخراج حقل title أو _id من داخل كائن status
                         status_obj = item.get('status', {})
                         if isinstance(status_obj, dict):
-                            order.status = status_obj.get('title') or status_obj.get('id') or 'pending'
+                            order.status = status_obj.get('title') or status_obj.get('_id') or 'pending'
                         else:
                             order.status = 'pending'
                         
