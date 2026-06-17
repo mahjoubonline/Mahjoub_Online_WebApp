@@ -39,6 +39,7 @@ def create_app():
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
     from apps.orders.routes import orders_blueprint
+    
     # استيراد الويب هوك الجديد
     from apps.api.webhooks import webhooks_bp
 
@@ -48,8 +49,8 @@ def create_app():
     app.register_blueprint(vault_bp, url_prefix='/vault')
     app.register_blueprint(orders_blueprint, url_prefix='/orders')
     
-    # تسجيل الويب هوك ليصبح متاحاً على مسار /api/webhooks/qumra
-    app.register_blueprint(webhooks_bp)
+    # تسجيل الويب هوك مع بادئة /api ليصبح الرابط: /api/webhooks
+    app.register_blueprint(webhooks_bp, url_prefix='/api')
 
     # 5. إعداد البيانات التأسيسية وهيكلة الجداول ذاتياً
     with app.app_context():
