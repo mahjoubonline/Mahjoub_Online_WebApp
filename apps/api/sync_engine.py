@@ -25,9 +25,9 @@ class SyncEngine:
         has_next_page = True
         
         while has_next_page:
-            logger.info(f"🔄 جاري جلب الصفحة: {page}")
+            logger.info(f"🔄 جاري جلب الصفحة: {page} بطلب الحقول التفصيلية")
             
-            # تم التعديل إلى _id بناءً على رسالة الخطأ الصريحة من السيرفر
+            # تم توسيع الاستعلام لجلب كافة الحقول التي تظهر في اللوحة الجديدة دفعة واحدة
             query = """
             query($page: Int) {
                 findAllOrders(input: {page: $page, limit: 10}) {
@@ -39,6 +39,18 @@ class SyncEngine:
                         }
                         totalPrice
                         createdAt
+                        paymentMethod
+                        paymentStatus
+                        fulfillmentStatus
+                        itemsCount
+                        customer {
+                            name
+                            phone
+                        }
+                        shippingAddress {
+                            addressLine
+                            addressCity
+                        }
                     }
                     pagination {
                         hasNextPage
@@ -65,14 +77,30 @@ class SyncEngine:
                         order_id = str(item.get('_id'))
                         order = ProcessedOrder.query.get(order_id) or ProcessedOrder(id=order_id)
                         
-                        # استخراج حقل title أو _id من داخل كائن status
+                        # 1. استخراج حقل title أو _id من داخل كائن status لحالة الطلب الرئيسية
                         status_obj = item.get('status', {})
                         if isinstance(status_obj, dict):
-                            order.status = status_obj.get('title') or status_obj.get('_id') or 'pending'
+                            order.status = status_obj.get('title') or status_obj.get('_id') or 'قيد الانتظار'
                         else:
-                            order.status = 'pending'
+                            order.status = 'قيد الانتظار'
                         
+                        # 2. استخراج بيانات العميل
+                        customer_obj = item.get('customer') or {}
+                        order.customer_name = customer_obj.get('name', '---')
+                        
+                        # 3. استخراج تفاصيل عنوان الشحن
+                        address_obj = item.get('shippingAddress') or {}
+                        city = address_obj.get('addressCity', '')
+                        line = address_obj.get('addressLine', '')
+                        order.shipping_address = f"{city} - {line}".strip(" - ") or '---'
+                        
+                        # 4. استخراج الحقول المالية وحالة الشحن والعدد
                         order.total_price = float(item.get('totalPrice', 0))
+                        order.payment_method = item.get('paymentMethod', '---')
+                        order.payment_status = item.get('paymentStatus', 'غير مدفوع')
+                        order.shipping_status = item.get('fulfillmentStatus', 'غير مجهز')
+                        order.items_count = int(item.get('itemsCount', 1))
+                        
                         db.session.add(order)
                     
                     db.session.commit()
