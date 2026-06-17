@@ -15,10 +15,16 @@ logger = logging.getLogger(__name__)
 
 @webhooks_bp.route('/webhooks', methods=['POST'])
 def handle_qumra_webhook():
-    # 1. تشخيص الترويسات (للتعرف على اسم التوقيع الصحيح الذي ترسل به قمرا)
+    """
+    نقطة النهاية لاستقبال أحداث الويب هوك من منصة قمرا.
+    تعتمد على التوقيع المشفر (HMAC-SHA256) للأمان.
+    """
+    
+    # 1. تشخيص الترويسات (يظهر في سجلات Render)
+    # ملاحظة: إذا كان التوقيع لا يتطابق، افحص هذه السجلات لمعرفة الاسم الصحيح للـ Header
     logger.info(f"Incoming Request Headers: {dict(request.headers)}")
     
-    # نحاول جلب التوقيع من الاسم الشائع (يمكنك تغييره بناءً على ما ستراه في السجلات)
+    # الحصول على التوقيع - قمرا عادة تستخدم X-Qumra-Signature أو مشابه
     signature = request.headers.get('X-WebHook-Signature') or request.headers.get('X-Signature')
     
     if not signature:
@@ -27,13 +33,14 @@ def handle_qumra_webhook():
 
     # 2. التحقق من التوقيع الأمني
     secret = Config.WEBHOOK_SECRET.encode('utf-8')
-    payload = request.data # استخدام البيانات الخام للتطابق مع تشفير قمرا
+    payload = request.data # البيانات الخام ضرورية لمطابقة توقيع الـ HMAC
     expected_signature = hmac.new(secret, payload, hashlib.sha256).hexdigest()
 
-    # سجلات للمقارنة (تظهر في Render Logs)
-    logger.info(f"Expected: {expected_signature}")
-    logger.info(f"Received: {signature}")
+    # سجلات للمقارنة (تظهر في Render Logs - هذا سيكشف سبب الـ 403 فوراً)
+    logger.info(f"Expected Sig: {expected_signature}")
+    logger.info(f"Received Sig: {signature}")
 
+    # المقارنة الآمنة ضد هجمات التوقيت
     if not hmac.compare_digest(expected_signature, signature):
         logger.error("🚫 محاولة وصول بتوقيع غير صالح!")
         return jsonify({"error": "Invalid signature"}), 403
@@ -48,25 +55,27 @@ def handle_qumra_webhook():
 
     logger.info(f"✅ تم استلام ويب هوك نوع: {event}")
 
-    # 4. معالجة وحفظ الطلب
+    # 4. معالجة وحفظ الطلب في قاعدة البيانات
     if event in ['order/created', 'order/updated', 'cart/created']:
         order_id = str(order_data.get('id', ''))
         
         if order_id:
+            # البحث عن الطلب الحالي أو إنشاء واحد جديد
             order = ProcessedOrder.query.get(order_id)
             if not order:
                 order = ProcessedOrder(id=order_id)
             
+            # تحديث الحالة
             order.status = order_data.get('status', 'pending')
             
-            # تحديث القيمة المالية المشفرة تلقائياً
+            # تحديث القيمة المالية (الموديل سيقوم بالتشفير تلقائياً عبر total_price setter)
             total_amount = order_data.get('total', {}).get('amount', 0.0)
             order.total_price = float(total_amount)
             
             try:
                 db.session.add(order)
                 db.session.commit()
-                logger.info(f"💾 تم حفظ الطلب {order_id} بنجاح.")
+                logger.info(f"💾 تم حفظ الطلب {order_id} بنجاح في قاعدة البيانات.")
             except Exception as e:
                 db.session.rollback()
                 logger.error(f"❌ خطأ أثناء حفظ الطلب {order_id}: {e}")
