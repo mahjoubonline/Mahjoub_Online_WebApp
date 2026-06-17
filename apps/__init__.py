@@ -39,17 +39,22 @@ def create_app():
     from apps.admin_dashboard.routes import admin_dashboard
     from apps.wallet.routes import wallet_app
     from apps.vault.routes import vault_bp
+    from apps.orders.routes import orders_blueprint
 
     app.register_blueprint(auth_portal, url_prefix='/')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
+    app.register_blueprint(orders_blueprint, url_prefix='/orders')
 
     # 5. إعداد البيانات التأسيسية
     with app.app_context():
         try:
-            # استيراد النماذج داخل السياق
+            # استيراد النماذج داخل السياق لضمان تحميلها
             from apps.models.admin_db import AdminUser
+            from apps.models.orders_db import ProcessedOrder
+            from apps.models.sync_log import SyncLog
+            
             db.create_all() 
             
             # تأسيس المسؤول الأول (المدير السيادي)
