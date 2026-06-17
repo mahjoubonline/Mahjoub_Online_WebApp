@@ -21,14 +21,9 @@
     </div>
 
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary">الجميع</button>
-            <button class="btn btn-outline-secondary">معلق</button>
-            <button class="btn btn-outline-secondary">مؤكد</button>
-            <button class="btn btn-outline-secondary">ملغي</button>
-        </div>
+        <h4 class="fw-bold">قائمة الطلبات</h4>
         <form action="{{ url_for('orders.sync_all') }}" method="POST">
-            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-cloud-download"></i> مزامنة الكل</button>
+            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-cloud-download me-2"></i> مزامنة الكل</button>
         </form>
     </div>
 
@@ -38,34 +33,48 @@
                 <thead class="table-light">
                     <tr>
                         <th class="ps-4">رقم الطلب</th>
-                        <th>اسم العميل</th>
+                        <th>العميل</th>
                         <th>عنوان الشحن</th>
                         <th>الإجمالي</th>
-                        <th>وسيلة الدفع</th>
+                        <th>الدفع</th>
                         <th>حالة الدفع</th>
                         <th>حالة الشحن</th>
-                        <th>عدد العناصر</th>
+                        <th>العدد</th>
                         <th>المصدر</th>
-                        <th>تاريخ الإنشاء</th>
-                        <th class="text-center">الاجراءات</th>
+                        <th>التاريخ</th>
+                        <th class="text-center">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for order in orders %}
                     <tr>
-                        <td class="ps-4">{{ order.id }}</td>
+                        <td class="ps-4 fw-bold">{{ order.id }}</td>
                         <td>{{ order.customer_name or '---' }}</td>
-                        <td>{{ order.shipping_address or '---' }}</td>
+                        <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ order.shipping_address or '---' }}</td>
                         <td>{{ "%.2f"|format(order.total_price) }} ر.س</td>
                         <td>{{ order.payment_method or '---' }}</td>
                         <td><span class="badge bg-light text-dark border">{{ order.status|upper }}</span></td>
-                        <td><span class="badge bg-light text-dark border">{{ order.shipping_status or 'غير مجهز' }}</span></td>
-                        <td>{{ order.items_count }} عنصر</td>
+                        <td><span class="badge bg-light text-dark border">{{ order.shipping_status or '---' }}</span></td>
+                        <td>{{ order.items_count }}</td>
                         <td><span class="badge bg-info text-white">{{ order.source or 'المتجر' }}</span></td>
                         <td>{{ order.created_at_api.strftime('%Y-%m-%d') if order.created_at_api else '---' }}</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-light border" data-bs-toggle="dropdown">•••</button>
+                            <div class="btn-group">
+                                <form action="{{ url_for('orders.cancel_order_route', order_id=order.id) }}" method="POST">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="إلغاء"><i class="bi bi-x-circle"></i></button>
+                                </form>
+                                <form action="{{ url_for('orders.fulfill_order_route', order_id=order.id) }}" method="POST">
+                                    <button type="submit" class="btn btn-sm btn-outline-info" title="شحن"><i class="bi bi-box-seam"></i></button>
+                                </form>
+                                <form action="{{ url_for('orders.process_order', order_id=order.id) }}" method="POST">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="تسوية"><i class="bi bi-check-circle"></i></button>
+                                </form>
+                            </div>
                         </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="11" class="text-center py-4 text-muted">لا توجد طلبات لعرضها حالياً.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
