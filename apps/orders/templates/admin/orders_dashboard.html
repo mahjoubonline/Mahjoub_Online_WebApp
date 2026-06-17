@@ -9,8 +9,13 @@
             <h2>📋 إدارة الطلبات الواردة</h2>
             <p class="text-muted">نظام إدارة ومزامنة الطلبات المشفر</p>
         </div>
-        <div class="text-end">
-            <span class="badge bg-primary fs-6">إجمالي الطلبات: {{ orders|length }}</span>
+        <div class="d-flex gap-2">
+            <form action="{{ url_for('orders.sync_all') }}" method="POST">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-cloud-download"></i> مزامنة الكل
+                </button>
+            </form>
+            <span class="badge bg-secondary fs-6 d-flex align-items-center">إجمالي الطلبات: {{ orders|length }}</span>
         </div>
     </div>
 
@@ -32,9 +37,11 @@
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">رقم الطلب</th>
+                            <th>العميل</th>
+                            <th>عدد المنتجات</th>
                             <th>الحالة</th>
                             <th>الإجمالي</th>
-                            <th>تاريخ الوصول</th>
+                            <th>تاريخ الطلب</th>
                             <th class="text-center">الإجراءات</th>
                         </tr>
                     </thead>
@@ -42,38 +49,44 @@
                         {% for order in orders %}
                         <tr>
                             <td class="ps-4"><strong>{{ order.id }}</strong></td>
+                            <td>{{ order.customer_name or 'غير معروف' }}</td>
+                            <td>{{ order.items_count }}</td>
                             <td>
-                                <span class="badge {% if order.status == 'settled' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                <span class="badge {% if order.status == 'paid' %}bg-success{% elif order.status == 'pending' %}bg-warning{% else %}bg-info{% endif %}">
                                     {{ order.status|upper }}
                                 </span>
                             </td>
                             <td>{{ "%.2f"|format(order.total_price) }}</td>
-                            <td>{{ order.processed_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ order.created_at_api.strftime('%Y-%m-%d %H:%M') if order.created_at_api else '---' }}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <form action="{{ url_for('orders.manual_sync', order_id=order.id) }}" method="POST" class="me-1">
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="مزامنة مع قمرا">
-                                            <i class="bi bi-arrow-repeat"></i> تحديث
+                                    <form action="{{ url_for('orders.cancel_order_route', order_id=order.id) }}" method="POST" class="me-1">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="إلغاء الطلب">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </form>
+                                    
+                                    <form action="{{ url_for('orders.fulfill_order_route', order_id=order.id) }}" method="POST" class="me-1">
+                                        <button type="submit" class="btn btn-sm btn-outline-info" title="تم الشحن">
+                                            <i class="bi bi-box-seam"></i>
                                         </button>
                                     </form>
 
                                     {% if order.status != 'settled' %}
                                     <form action="{{ url_for('orders.process_order', order_id=order.id) }}" method="POST">
                                         <button type="submit" class="btn btn-sm btn-outline-primary" title="تسوية مالية">
-                                            <i class="bi bi-check-circle"></i> تسوية
+                                            <i class="bi bi-check-circle"></i>
                                         </button>
                                     </form>
-                                    {% else %}
-                                    <button class="btn btn-sm btn-light" disabled>مكتمل</button>
                                     {% endif %}
                                 </div>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
+                            <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-2"></i>
-                                <p>لا توجد طلبات واردة حالياً في النظام.</p>
+                                <p>لا توجد طلبات. اضغط على "مزامنة الكل" لجلب الطلبات من قمرا.</p>
                             </td>
                         </tr>
                         {% endfor %}
