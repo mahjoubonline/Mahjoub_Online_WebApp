@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/models/orders_db.py - نموذج الطلبات التفصيلي والمشفر (محدث ومتوافق)
+# 📂 apps/models/orders_db.py - نموذج الطلبات التفصيلي والمشفر (النسخة النهائية)
 
 import base64
 import hashlib
@@ -12,24 +12,24 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
-# 1. إعداد التشفير الآمن
+# 1. إعداد محرك التشفير الآمن
 try:
     raw_key = Config.ENCRYPTION_KEY
     hashed_key = hashlib.sha256(raw_key.encode()).digest()
     fernet_key = base64.urlsafe_b64encode(hashed_key)
     cipher_suite = Fernet(fernet_key)
 except Exception as e:
-    logger.critical(f"❌ فشل إعداد محرك التشفير: {e}")
+    logger.critical(f"❌ [Critical] فشل إعداد محرك التشفير: {e}")
     raise e
 
 class ProcessedOrder(db.Model):
     __tablename__ = 'processed_orders'
 
-    # البيانات الأساسية
+    # البيانات الأساسية المستمدة من قمرة
     id = db.Column(db.String(100), primary_key=True) 
     status = db.Column(db.String(50), default='pending')
     
-    # حقول لتطابق بيانات API قمرة
+    # حقول تفصيلية لبيانات الطلب
     customer_name = db.Column(db.String(255), nullable=True)
     items_count = db.Column(db.Integer, default=0)
     shipping_status = db.Column(db.String(50), nullable=True)
@@ -41,12 +41,13 @@ class ProcessedOrder(db.Model):
     created_at_api = db.Column(db.DateTime, nullable=True) 
     processed_at = db.Column(db.DateTime, default=datetime.utcnow) 
     
-    # الحقل المشفر للقيمة المالية (تم جعله nullable=True لمرونة أكبر)
+    # الحقل المشفر للقيمة المالية (لا يتم التعامل معه مباشرة)
     _encrypted_total_price = db.Column(db.Text, nullable=True)
 
-    # 2. إدارة التشفير
+    # 2. إدارة التشفير (Property Getters/Setters)
     @property
     def total_price(self):
+        """فك تشفير السعر عند القراءة"""
         if not self._encrypted_total_price:
             return Decimal('0.0')
         try:
@@ -58,6 +59,7 @@ class ProcessedOrder(db.Model):
 
     @total_price.setter
     def total_price(self, value):
+        """تشفير السعر عند الحفظ"""
         try:
             val_to_encrypt = str(value) if value is not None else '0.0'
             self._encrypted_total_price = cipher_suite.encrypt(val_to_encrypt.encode()).decode()
@@ -78,6 +80,7 @@ class OrderItem(db.Model):
     quantity = db.Column(db.Integer, default=1)
     price = db.Column(db.Numeric(10, 2), default=0.0)
     
+    # علاقة الربط مع الطلب الرئيسي
     order = db.relationship(
         'ProcessedOrder', 
         backref=db.backref('items', lazy='dynamic', cascade="all, delete-orphan")
