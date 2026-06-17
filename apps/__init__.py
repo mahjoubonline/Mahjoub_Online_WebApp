@@ -11,7 +11,7 @@ def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static', instance_relative_config=True)
     app.config.from_object(Config)
 
-    # 2. 🛡️ سياسة أمان المحتوى (CSP) - تعزيز أمان المتصفح
+    # 2. 🛡️ سياسة أمان المحتوى (CSP)
     csp_policy = {
         'default-src': ["'self'"],
         'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
@@ -22,7 +22,7 @@ def create_app():
     Talisman(app, force_https=True, content_security_policy=csp_policy,
              frame_options='SAMEORIGIN', referrer_policy='strict-origin-when-cross-origin')
 
-    # 3. تهيئة الإضافات (Extensions)
+    # 3. تهيئة الإضافات
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -46,14 +46,12 @@ def create_app():
     app.register_blueprint(wallet_app, url_prefix='/wallet')
     app.register_blueprint(vault_bp, url_prefix='/vault')
     app.register_blueprint(orders_blueprint, url_prefix='/orders')
-    
-    # تسجيل الويب هوك - نقطة الاستقبال ستكون /api/webhooks
     app.register_blueprint(webhooks_bp, url_prefix='/api')
 
-    # 5. إعداد البيانات التأسيسية وهيكلة الجداول ذاتياً
+    # 5. إعداد البيانات التأسيسية وهيكلة الجداول
     with app.app_context():
         try:
-            # استيراد كافة النماذج لضمان تسجيلها في SQLAlchemy قبل الإنشاء
+            # استيراد النماذج
             from apps.models.admin_db import AdminUser
             from apps.models.orders_db import ProcessedOrder, OrderItem
             from apps.models.sync_log import SyncLog
@@ -62,18 +60,19 @@ def create_app():
             from apps.models.vault_db import AdminVault, VaultTransaction
             from apps.models.wallet_db import SupplierWallet, WalletTransaction
             
-            # إنشاء الجداول تلقائياً في قاعدة البيانات
+            # إنشاء الجداول
             db.create_all() 
+            print("✅ [System] تم الاتصال بقاعدة البيانات وإنشاء الجداول بنجاح.")
             
-            # تأسيس المسؤول الأول إذا لم يكن موجوداً
+            # تأسيس المسؤول
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
                 db.session.add(admin)
                 db.session.commit()
-                print("✅ [System] تم تأسيس الهيكل وقاعدة البيانات بنجاح.")
+                print("✅ [System] تم تأسيس حساب المسؤول بنجاح.")
         except Exception as e:
             db.session.rollback()
-            print(f"⚠️ [Error] خطأ أثناء التأسيس الذاتي: {e}")
+            print(f"⚠️ [Error] فشل في تهيئة قاعدة البيانات: {e}")
 
     return app
