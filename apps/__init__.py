@@ -53,7 +53,7 @@ def create_app():
     # 5. إعداد البيانات التأسيسية وهيكلة الجداول ذاتياً
     with app.app_context():
         try:
-            # استيراد النماذج لضمان تسجيلها في SQLAlchemy
+            # استيراد كافة النماذج لضمان تسجيلها في SQLAlchemy قبل الإنشاء
             from apps.models.admin_db import AdminUser
             from apps.models.orders_db import ProcessedOrder, OrderItem
             from apps.models.sync_log import SyncLog
