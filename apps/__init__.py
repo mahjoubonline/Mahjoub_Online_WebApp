@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي للنظام (النسخة النهائية والمصححة)
+# 📂 apps/__init__.py - المصنع السيادي للنظام (النسخة النهائية والمستقرة)
 
 from flask import Flask, redirect, url_for
 from flask_talisman import Talisman
@@ -11,7 +11,7 @@ def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static', instance_relative_config=True)
     app.config.from_object(Config)
 
-    # 2. 🛡️ سياسة أمان المحتوى (CSP)
+    # 2. 🛡️ سياسة أمان المحتوى (CSP) - محسنة للعمل مع الخدمات الخارجية
     csp_policy = {
         'default-src': ["'self'"],
         'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
@@ -41,7 +41,7 @@ def create_app():
     from apps.orders.routes import orders_blueprint
     from apps.api.webhooks import webhooks_bp
 
-    # مسار التوجيه الرئيسي لحل مشكلة الـ 404
+    # مسار التوجيه الرئيسي
     @app.route('/')
     def index():
         return redirect(url_for('auth_portal.login'))
@@ -56,7 +56,7 @@ def create_app():
     # 5. إعداد البيانات التأسيسية وهيكلة الجداول
     with app.app_context():
         try:
-            # استيراد النماذج
+            # استيراد النماذج لضمان التعرف عليها
             from apps.models.admin_db import AdminUser
             from apps.models.orders_db import ProcessedOrder, OrderItem
             from apps.models.sync_log import SyncLog
@@ -69,7 +69,7 @@ def create_app():
             db.create_all() 
             print("✅ [System] تم الاتصال بقاعدة البيانات وإنشاء الجداول بنجاح.")
             
-            # تأسيس المسؤول
+            # تأسيس المسؤول الأول
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
