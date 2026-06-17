@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المحدث (متوافق مع GraphQL)
+# 📂 apps/api/sync_engine.py - محرك المزامنة النهائي (متوافق مع Schema)
 
 import requests
 import logging
@@ -22,17 +22,17 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        """جلب ومزامنة الطلبات من كافة الصفحات"""
+        """جلب ومزامنة الطلبات باستخدام الاستعلام الصحيح findAllOrders"""
         page = 1
         has_next_page = True
         
         while has_next_page:
             logger.info(f"🔄 [SyncEngine] جاري جلب الصفحة رقم: {page}")
             
-            # الاستعلام المحدث بناءً على توثيق GraphQL
+            # الاستعلام الصحيح بناءً على الـ Schema
             query = """
             query($page: Int) {
-                orders(page: $page, limit: 10) {
+                findAllOrders(input: {page: $page, limit: 10}) {
                     data {
                         _id
                         status
@@ -54,18 +54,19 @@ class SyncEngine:
                 )
                 
                 if response.status_code != 200:
-                    logger.error(f"❌ [SyncEngine] فشل الاتصال (كود {response.status_code}). الرد: {response.text}")
+                    logger.error(f"❌ [SyncEngine] فشل: {response.text}")
                     return False
 
                 result = response.json()
-                data_wrapper = result.get('data', {}).get('orders', {})
+                # الوصول للبيانات باستخدام المفتاح الصحيح findAllOrders
+                data_wrapper = result.get('data', {}).get('findAllOrders', {})
                 orders_data = data_wrapper.get('data', [])
                 pagination = data_wrapper.get('pagination', {})
                 
                 has_next_page = pagination.get('hasNextPage', False)
 
                 if not orders_data:
-                    logger.warning(f"⚠️ [SyncEngine] الصفحة {page} فارغة أو انتهت البيانات.")
+                    logger.warning(f"⚠️ الصفحة {page} فارغة.")
                     break
 
                 for item in orders_data:
@@ -89,16 +90,17 @@ class SyncEngine:
                     db.session.add(order)
                 
                 db.session.commit()
-                logger.info(f"✅ [SyncEngine] تم حفظ {len(orders_data)} طلب من الصفحة {page}.")
+                logger.info(f"✅ تم حفظ {len(orders_data)} طلب من الصفحة {page}.")
                 page += 1
 
             except Exception as e:
-                logger.error(f"❌ [SyncEngine] خطأ أثناء معالجة الصفحة {page}: {str(e)}")
+                logger.error(f"❌ خطأ: {str(e)}")
                 db.session.rollback()
                 return False
         
         return True
 
+    # الدوال الأخرى تبقى كما هي
     @staticmethod
     def _execute_mutation(mutation, variables):
         try:
