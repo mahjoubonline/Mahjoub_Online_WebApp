@@ -22,7 +22,6 @@ class SyncEngine:
     @staticmethod
     def fetch_and_sync_order():
         """جلب ومزامنة الطلبات من findAllOrders مع كافة الحقول المطلوبة"""
-        # تم ترتيب الحقول لتطابق استجابة الـ GraphQL كما في image_438aab.png
         query = """
         query {
             findAllOrders {
@@ -47,7 +46,9 @@ class SyncEngine:
             )
             result = response.json()
             
-            # استخراج البيانات بناءً على هيكلية GraphQL الموضحة في image_438aab.png
+            # 🔍 سطر التصحيح (DEBUGGER) لمعرفة ماذا يصلنا من المنصة
+            logger.info(f"DEBUG_RESPONSE: {result}") 
+            
             orders_data = result.get('data', {}).get('findAllOrders', [])
             
             if not orders_data:
