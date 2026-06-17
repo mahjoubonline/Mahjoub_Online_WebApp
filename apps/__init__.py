@@ -33,7 +33,7 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # 4. تسجيل المسارات (Blueprints) - هيكلة القسم الإداري والمالي
+    # 4. تسجيل المسارات (Blueprints)
     from apps.auth_portal.routes import auth_portal
     from apps.admin_dashboard.routes import admin_dashboard
     from apps.wallet.routes import wallet_app
@@ -47,7 +47,7 @@ def create_app():
     app.register_blueprint(vault_bp, url_prefix='/vault')
     app.register_blueprint(orders_blueprint, url_prefix='/orders')
     
-    # تسجيل الويب هوك - نقطة الاستقبال المباشرة من قمرا
+    # تسجيل الويب هوك - نقطة الاستقبال ستكون /api/webhooks
     app.register_blueprint(webhooks_bp, url_prefix='/api')
 
     # 5. إعداد البيانات التأسيسية وهيكلة الجداول ذاتياً
@@ -55,7 +55,7 @@ def create_app():
         try:
             # استيراد النماذج لضمان تسجيلها في SQLAlchemy
             from apps.models.admin_db import AdminUser
-            from apps.models.orders_db import ProcessedOrder
+            from apps.models.orders_db import ProcessedOrder, OrderItem
             from apps.models.sync_log import SyncLog
             from apps.models.financial_db import ExchangeRate, FinancialLog
             from apps.models.supplier_db import Supplier
@@ -65,7 +65,7 @@ def create_app():
             # إنشاء الجداول تلقائياً في قاعدة البيانات
             db.create_all() 
             
-            # تأسيس المسؤول الأول (المدير السيادي) إذا لم يكن موجوداً
+            # تأسيس المسؤول الأول إذا لم يكن موجوداً
             if not AdminUser.query.filter_by(username='علي_محجوب').first():
                 admin = AdminUser(username='علي_محجوب', role='Owner', phone_number='0000000000')
                 admin.set_password('123')
