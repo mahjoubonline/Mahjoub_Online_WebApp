@@ -23,7 +23,7 @@ class SyncEngine:
     def fetch_and_sync_order():
         logger.info("🔄 بدء المزامنة الشاملة مع قمرة...")
         
-        # استعلام مبسط وأكثر توافقاً
+        # تم إضافة الحقول المطلوبة (financialStatus, fulfillmentStatus) للاستعلام
         query = """
         query {
             findAllOrders {
@@ -31,6 +31,8 @@ class SyncEngine:
                     _id
                     totalPrice
                     status
+                    financialStatus
+                    fulfillmentStatus
                     createdAt
                 }
             }
@@ -53,10 +55,15 @@ class SyncEngine:
                     
                 order = ProcessedOrder.query.filter_by(id=id_api).first() or ProcessedOrder(id=id_api)
                 
-                # إسناد القيم الأساسية المتاحة بالتأكيد
-                order.order_id = id_api[:8] # استخدام جزء من الـ ID كبديل لـ orderNumber
+                # إسناد القيم المزامنة من قمرة
+                order.order_id = id_api[:8]
                 order.total_price = float(item.get('totalPrice', 0.0))
                 order.order_status = item.get('status', 'pending')
+                
+                # تحديث الحالات السيادية الجديدة
+                order.financial_status = item.get('financialStatus', 'unpaid')
+                order.fulfillment_status = item.get('fulfillmentStatus', 'unfulfilled')
+                
                 order.source = 'QumraCloud'
                 
                 # التاريخ
@@ -69,7 +76,7 @@ class SyncEngine:
                 db.session.add(order)
             
             db.session.commit()
-            logger.info(f"✅ تم بنجاح مزامنة {len(orders_data)} طلب.")
+            logger.info(f"✅ تم بنجاح مزامنة {len(orders_data)} طلب وتحديث حالاتها.")
             return True
             
         except Exception as e:
