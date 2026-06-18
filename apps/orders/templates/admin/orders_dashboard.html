@@ -9,7 +9,8 @@
     <div class="row mb-4 align-items-center">
         <div class="col-md-6 d-flex gap-2">
             <a href="{{ url_for('admin_dashboard.dashboard') }}" class="btn btn-outline-secondary px-3" style="border-radius: 6px;"><i class="bi bi-arrow-right"></i></a>
-            <input type="text" id="orderSearch" class="form-control" placeholder="بحث..." style="border-radius: 6px; width: 250px;">
+            <input type="text" id="orderSearch" class="form-control" placeholder="بحث في الطلبات..." style="border-radius: 6px; width: 250px;">
+            <button class="btn btn-light border" style="border-radius: 6px;"><i class="bi bi-funnel"></i></button>
         </div>
         
         <div class="col-md-6 text-start">
@@ -22,7 +23,7 @@
         </div>
     </div>
 
-    {# جدول الطلبات السيادي #}
+    {# جدول الطلبات #}
     <div class="card border-0 shadow-sm" style="border-radius: 8px; overflow: hidden;">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -45,26 +46,24 @@
                             #{{ order.order_id }}
                         </td>
                         <td>{{ order.customer_name }}</td>
-                        <td class="text-muted">{{ order.shipping_city }}</td>
+                        <td class="text-muted">{{ order.shipping_city or '---' }}</td>
                         <td class="fw-bold">{{ order.total_price }} ر.ي</td>
                         
-                        {# قائمة حالة الدفع الديناميكية - مطابقة للنموذج financial_status #}
+                        {# القائمة المنسدلة لحالة الدفع - مرتبطة بـ financial_status #}
                         <td>
                             <select class="form-select form-select-sm border-0 bg-light fw-bold" style="color: #6A1B9A; width: 140px;"
                                     onchange="updateOrderField('{{ order.id }}', 'financial_status', this.value)">
-                                <option value="{{ order.financial_status }}" selected>{{ order.financial_status|capitalize }}</option>
-                                <option value="unpaid">Unpaid</option>
-                                <option value="paid">Paid</option>
+                                <option value="unpaid" {% if order.financial_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                                <option value="paid" {% if order.financial_status == 'paid' %}selected{% endif %}>Paid</option>
                             </select>
                         </td>
 
-                        {# قائمة حالة الشحن الديناميكية - مطابقة للنموذج fulfillment_status #}
+                        {# القائمة المنسدلة لحالة الشحن - مرتبطة بـ fulfillment_status #}
                         <td>
                             <select class="form-select form-select-sm border-0 bg-light fw-bold" style="color: #00796B; width: 140px;"
                                     onchange="updateOrderField('{{ order.id }}', 'fulfillment_status', this.value)">
-                                <option value="{{ order.fulfillment_status }}" selected>{{ order.fulfillment_status|capitalize }}</option>
-                                <option value="unfulfilled">Unfulfilled</option>
-                                <option value="fulfilled">Fulfilled</option>
+                                <option value="unfulfilled" {% if order.fulfillment_status == 'unfulfilled' %}selected{% endif %}>Unfulfilled</option>
+                                <option value="fulfilled" {% if order.fulfillment_status == 'fulfilled' %}selected{% endif %}>Fulfilled</option>
                             </select>
                         </td>
 
@@ -106,7 +105,7 @@
 </div>
 
 <script>
-// وظيفة التحديث المباشر للبيانات للنموذج الموحد
+// وظيفة التحديث المباشر للبيانات
 async function updateOrderField(orderId, field, value) {
     try {
         const response = await fetch(`/orders/update-order-field/${orderId}`, {
@@ -114,9 +113,7 @@ async function updateOrderField(orderId, field, value) {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ field: field, value: value })
         });
-        if (!response.ok) {
-            console.error("خطأ في تحديث البيانات");
-        }
+        if (!response.ok) alert("حدث خطأ أثناء التحديث");
     } catch (error) {
         console.error("خطأ:", error);
     }
@@ -124,7 +121,7 @@ async function updateOrderField(orderId, field, value) {
 </script>
 
 <style>
-    .pagination .page-link { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px !important; border: 1px solid #EAEAEA !important; color: #6A1B9A !important; }
+    .pagination .page-link { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px !important; border: 1px solid #EAEAEA !important; color: #6A1B9A !important; font-weight: 600; }
     .pagination .page-item.active .page-link { background: linear-gradient(45deg, #6A1B9A, #8E24AA) !important; color: #FFF !important; border: none !important; }
     .dropdown-item:hover { background-color: #F3E5F5; color: #6A1B9A; }
 </style>
