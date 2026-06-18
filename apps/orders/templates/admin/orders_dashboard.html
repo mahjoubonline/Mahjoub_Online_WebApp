@@ -124,33 +124,27 @@
                         </td>
                         
                         <td>
-                            {% if order.order_status == 'cancelled' %}
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">ملغى</span>
-                            {% elif order.order_status == 'confirmed' %}
-                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">مؤكد</span>
-                            {% elif order.order_status == 'delivered' %}
-                                <span class="badge bg-purple-subtle text-purple border px-2 py-1">تم التوصيل</span>
-                            {% else %}
-                                <span class="badge bg-warning-subtle text-warning border px-2 py-1">قيد الانتظار</span>
-                            {% endif %}
+                            <select class="form-select form-select-sm status-field-selector" data-order-id="{{ order.id }}" data-field="order_status" style="border-radius: 4px; font-weight: bold; min-width: 110px;">
+                                <option value="pending" {% if order.order_status == 'pending' %}selected{% endif %}>⏳ قيد الانتظار</option>
+                                <option value="confirmed" {% if order.order_status == 'confirmed' %}selected{% endif %}>✅ مؤكد</option>
+                                <option value="delivered" {% if order.order_status == 'delivered' %}selected{% endif %}>📦 تم التوصيل</option>
+                                <option value="cancelled" {% if order.order_status == 'cancelled' %}selected{% endif %}>❌ ملغى</option>
+                            </select>
                         </td>
 
                         <td>
-                            {% if order.financial_status == 'paid' %}
-                                <span class="badge bg-success text-white px-2 py-1"><i class="bi bi-cash-coin me-1"></i> مدفوع</span>
-                            {% elif order.financial_status == 'refunded' %}
-                                <span class="badge bg-dark-subtle text-dark border px-2 py-1">مسترد</span>
-                            {% else %}
-                                <span class="badge bg-danger-subtle text-danger border px-2 py-1">غير مدفوع</span>
-                            {% endif %}
+                            <select class="form-select form-select-sm status-field-selector" data-order-id="{{ order.id }}" data-field="financial_status" style="border-radius: 4px; font-weight: bold; min-width: 110px;">
+                                <option value="unpaid" {% if order.financial_status == 'unpaid' %}selected{% endif %}>🚨 غير مدفوع</option>
+                                <option value="paid" {% if order.financial_status == 'paid' %}selected{% endif %}>💰 مدفوع</option>
+                                <option value="refunded" {% if order.financial_status == 'refunded' %}selected{% endif %}>🔄 مسترد</option>
+                            </select>
                         </td>
 
                         <td>
-                            {% if order.fulfillment_status == 'fulfilled' %}
-                                <span class="badge bg-info text-white px-2 py-1"><i class="bi bi-truck me-1"></i> مشحون</span>
-                            {% else %}
-                                <span class="badge bg-light text-muted border px-2 py-1">بانتظار التجهيز</span>
-                            {% endif %}
+                            <select class="form-select form-select-sm status-field-selector" data-order-id="{{ order.id }}" data-field="fulfillment_status" style="border-radius: 4px; font-weight: bold; min-width: 130px;">
+                                <option value="unfulfilled" {% if order.fulfillment_status == 'unfulfilled' %}selected{% endif %}>📦 بانتظار التجهيز</option>
+                                <option value="fulfilled" {% if order.fulfillment_status == 'fulfilled' %}selected{% endif %}>🚚 مشحون</option>
+                            </select>
                         </td>
                         
                         <td>
@@ -279,7 +273,47 @@ document.querySelectorAll('.supplier-selector').forEach(select => {
     });
 });
 
-// ج) تأثير حركية زر المزامنة للحماية من تعدد النقر العشوائي
+// ج) تحديث الحالات الثلاثة فورا وبشكل ديناميكي متزامن (AJAX موحد)
+document.querySelectorAll('.status-field-selector').forEach(select => {
+    select.addEventListener('change', function() {
+        const orderId = this.getAttribute('data-order-id');
+        const fieldName = this.getAttribute('data-field');
+        const fieldValue = this.value;
+        
+        // تأثير الشفافية البصرية أثناء الانتظار
+        this.style.opacity = '0.5';
+        
+        fetch(`/orders/update-order-field/${orderId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ field: fieldName, value: fieldValue })
+        })
+        .then(response => response.json())
+        .then(data => {
+            this.style.opacity = '1';
+            if (data.status === 'success') {
+                // تفعيل الإطار الأخضر للنجاح
+                this.classList.add('is-valid');
+                // تحديث الـ attribute الخاص بالفرز فورا ليعمل الفلتر الهيدروليكي بدون ريفريش
+                this.closest('.order-row').setAttribute(`data-${fieldName.split('_')[0]}`, fieldValue);
+                setTimeout(() => this.classList.remove('is-valid'), 1200);
+            } else if (data.status === 'warning') {
+                alert(`⚠️ ${data.message}`);
+                this.classList.add('is-valid'); // يظل صالحاً محلياً
+            } else {
+                alert('❌ فشل تحديث وتأكيد الحالة في السيرفر.');
+            }
+        })
+        .catch(error => {
+            this.style.opacity = '1';
+            console.error('Error:', error);
+        });
+    });
+});
+
+// د) تأثير حركية زر المزامنة للحماية من تعدد النقر العشوائي
 document.getElementById('syncForm').addEventListener('submit', function() {
     var btn = document.getElementById('syncBtn');
     btn.disabled = true;
@@ -296,6 +330,19 @@ document.getElementById('syncForm').addEventListener('submit', function() {
     .page-item.active .page-link { background-color: #6A1B9A !important; border-color: #6A1B9A !important; color: #FFF !important; }
     .page-link { color: #6A1B9A; }
     .page-link:hover { color: #8E24AA; background-color: #F3E5F5; }
+    
+    /* مظهر جمالي مخصص لقوائم اختيار الحالات الثلاث لتعكس الهوية البنفسجية الملكية */
+    .status-field-selector {
+        background-color: #FAF7FC;
+        color: #4A148C;
+        border: 1px solid rgba(106, 27, 154, 0.18);
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    .status-field-selector:hover {
+        background-color: #F3E5F5;
+        border-color: #6A1B9A;
+    }
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 {% endblock %}
