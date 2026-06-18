@@ -5,9 +5,10 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from apps.extensions import db
 from apps.models.orders_db import ProcessedOrder, OrderItem
 from apps.api.sync_engine import SyncEngine
-from apps.models.suppliers import Supplier # تأكد من استيراد نموذج الموردين لديك
+from apps.models.suppliers import Supplier 
 import logging
 
+# تعريف الـ Blueprint الخاص بالطلبات
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 @orders_bp.route('/dashboard')
 def orders_dashboard():
     page = request.args.get('page', 1, type=int)
-    # جلب الطلبات مرتبة من الأحدث للأقدم
+    # جلب الطلبات مرتبة من الأحدث للأقدم مع نظام الترقيم المدمج
     pagination = ProcessedOrder.query.order_by(ProcessedOrder.created_at_local.desc()).paginate(
         page=page, per_page=10, error_out=False
     )
@@ -25,10 +26,15 @@ def orders_dashboard():
 # 2. المزامنة الشاملة (تستدعي محرك المزامنة)
 @orders_bp.route('/sync-all', methods=['POST'])
 def sync_all():
-    if SyncEngine.fetch_and_sync_order():
-        flash("تمت مزامنة الطلبات بنجاح من قمرة كلاود.", "success")
-    else:
-        flash("فشل في المزامنة، يرجى مراجعة سجلات الخطأ.", "danger")
+    try:
+        # محاكاة لعملية المزامنة عبر SyncEngine
+        if SyncEngine.fetch_and_sync_order():
+            flash("تمت مزامنة الطلبات بنجاح من قمرة كلاود.", "success")
+        else:
+            flash("لم يتم العثور على طلبات جديدة للمزامنة.", "warning")
+    except Exception as e:
+        logger.error(f"Sync error: {e}")
+        flash("حدث خطأ أثناء الاتصال بخادم المزامنة.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
 # 3. تحديث الحالات ديناميكياً (عبر AJAX)
@@ -44,12 +50,12 @@ def update_order_field(order_id):
         if hasattr(order, field):
             setattr(order, field, value)
             db.session.commit()
-            return jsonify({'status': 'success'})
+            return jsonify({'status': 'success', 'message': 'تم تحديث الحقل بنجاح'})
     except Exception as e:
         logger.error(f"خطأ في التحديث: {e}")
         db.session.rollback()
         
-    return jsonify({'status': 'error'}), 400
+    return jsonify({'status': 'error', 'message': 'فشل تحديث البيانات'}), 400
 
 # 4. تحديث المورد المحلي (عبر AJAX)
 @orders_bp.route('/update-supplier/<string:order_id>', methods=['POST'])
@@ -58,6 +64,7 @@ def update_supplier(order_id):
     supplier_id = data.get('supplier_id')
     
     order = ProcessedOrder.query.get_or_404(order_id)
+    # تحديث المورد للطلب المحدد
     order.supplier_id = supplier_id if supplier_id else None
     
     try:
@@ -78,6 +85,17 @@ def process_order(order_id):
 def cancel_order_route(order_id):
     order = ProcessedOrder.query.get_or_404(order_id)
     order.order_status = 'cancelled'
-    db.session.commit()
-    flash(f"تم إلغاء الطلب {order.order_id} بنجاح.", "info")
+    try:
+        db.session.commit()
+        flash(f"تم إلغاء الطلب {order.order_id} بنجاح.", "info")
+    except:
+        db.session.rollback()
+        flash("تعذر إلغاء الطلب، يرجى المحاولة لاحقاً.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
+
+# 7. مسار البحث (اختياري، يسهل البحث في الطلبات)
+@orders_bp.route('/search')
+def search_orders():
+    query = request.args.get('q', '')
+    orders = ProcessedOrder.query.filter(ProcessedOrder.customer_name.contains(query)).all()
+    return render_template('orders/dashboard.html', orders=orders)
