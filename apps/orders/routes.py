@@ -5,7 +5,6 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from apps.extensions import db
 from apps.models.orders_db import ProcessedOrder, OrderItem
 from apps.api.sync_engine import SyncEngine
-from apps.models.suppliers import Supplier 
 import logging
 
 # تعريف الـ Blueprint الخاص بالطلبات
@@ -20,7 +19,8 @@ def orders_dashboard():
     pagination = ProcessedOrder.query.order_by(ProcessedOrder.created_at_local.desc()).paginate(
         page=page, per_page=10, error_out=False
     )
-    suppliers = Supplier.query.all()
+    # تم إيقاف جلب الموردين مؤقتاً لتجنب خطأ ModuleNotFoundError
+    suppliers = [] 
     return render_template('orders/dashboard.html', pagination=pagination, suppliers=suppliers)
 
 # 2. المزامنة الشاملة (تستدعي محرك المزامنة)
@@ -61,11 +61,10 @@ def update_order_field(order_id):
 @orders_bp.route('/update-supplier/<string:order_id>', methods=['POST'])
 def update_supplier(order_id):
     data = request.get_json()
-    supplier_id = data.get('supplier_id')
+    supplier_name = data.get('supplier_name') # تم التعديل ليتناسب مع الحقل النصي الجديد
     
     order = ProcessedOrder.query.get_or_404(order_id)
-    # تحديث المورد للطلب المحدد
-    order.supplier_id = supplier_id if supplier_id else None
+    order.supplier_name = supplier_name
     
     try:
         db.session.commit()
@@ -93,9 +92,9 @@ def cancel_order_route(order_id):
         flash("تعذر إلغاء الطلب، يرجى المحاولة لاحقاً.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
-# 7. مسار البحث (اختياري، يسهل البحث في الطلبات)
+# 7. مسار البحث
 @orders_bp.route('/search')
 def search_orders():
     query = request.args.get('q', '')
     orders = ProcessedOrder.query.filter(ProcessedOrder.customer_name.contains(query)).all()
-    return render_template('orders/dashboard.html', orders=orders)
+    return render_template('orders/dashboard.html', pagination=None, orders=orders)
