@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - إدارة الطلبات السيادية والموردين (النسخة النهائية الشاملة والمطابقة)
+# 📂 apps/orders/routes.py - إدارة الطلبات السيادية والموردين (النسخة النهائية الشاملة والمطابقة لعام 2026)
 
 from flask import Blueprint, render_template, flash, redirect, url_for, request, jsonify
 from flask_login import login_required
@@ -87,7 +87,6 @@ def update_order_field(order_id):
                 SyncEngine.update_order_status(order_id, value)
             elif field == 'fulfillment_status' and value == 'fulfilled':
                 SyncEngine.mark_as_fulfilled(order_id)
-            # ملاحظة: يمكنك هنا ربط تحديثات الحالات المالية الإضافية عند توفرها بـ SyncEngine
         except Exception as api_err:
             logger.error(f"⚠️ تم الحفظ محلياً ولكن فشل التحديث الفوري في سيرفر قمرة: {api_err}")
             return jsonify({
@@ -143,10 +142,14 @@ def download_invoice(order_id):
 @login_required
 def cancel_order_route(order_id):
     """إرسال أمر إلغاء الطلب إلى سيرفرات قمرة تزامناً مع النظام"""
+    order = ProcessedOrder.query.get(order_id)
     result = SyncEngine.cancel_order(order_id)
-    # التحقق من خلو الاستجابة من الأخطاء في الـ Root الأساسي بناءً على تحديث قمرة
+    
     if result and isinstance(result, dict) and 'errors' not in result:
-        flash(f"تم إلغاء الطلب {order_id} في قمرة بنجاح.", "info")
+        if order:
+            order.order_status = 'cancelled'  # 👈 تعديل: تحديث الحالة محلياً فور نجاح طلب السيرفر
+            db.session.commit()
+        flash(f"تم إلغاء الطلب {order_id} في قمرة وتحديثه محلياً بنجاح.", "info")
     else:
         flash("فشل إلغاء الطلب، يرجى مراجعة الصلاحيات في قمرة.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
@@ -155,9 +158,14 @@ def cancel_order_route(order_id):
 @login_required
 def fulfill_order_route(order_id):
     """تحديث حالة الشحن والتجهيز الفوري للطلب"""
+    order = ProcessedOrder.query.get(order_id)
     result = SyncEngine.mark_as_fulfilled(order_id)
+    
     if result and isinstance(result, dict) and 'errors' not in result:
-        flash(f"تم تحديث الطلب {order_id} إلى 'مشحون' ومجهز في قمرة.", "success")
+        if order:
+            order.fulfillment_status = 'fulfilled'  # 👈 تعديل: تحديث حالة التجهيز محلياً فور نجاح طلب السيرفر
+            db.session.commit()
+        flash(f"تم تحديث الطلب {order_id} إلى 'مشحون' ومجهز في قمرة ومحلياً.", "success")
     else:
         flash("فشل تحديث الشحن في السيرفر الخارجي لقمرة.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
@@ -171,9 +179,14 @@ def update_status_route(order_id):
         flash("حالة غير صالحة أو حقل فارغ.", "warning")
         return redirect(url_for('orders.orders_dashboard'))
         
+    order = ProcessedOrder.query.get(order_id)
     result = SyncEngine.update_order_status(order_id, new_status)
+    
     if result and isinstance(result, dict) and 'errors' not in result:
-        flash(f"تم تحديث حالة الطلب {order_id} بنجاح في سيرفر قمرة.", "success")
+        if order:
+            order.order_status = new_status  # 👈 تعديل: التحديث محلياً لضمان التطابق المستمر
+            db.session.commit()
+        flash(f"تم تحديث حالة الطلب {order_id} بنجاح في سيرفر قمرة والمستودع المحلي.", "success")
     else:
         flash("فشل التحديث المتزامن في قمرة.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
