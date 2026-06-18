@@ -51,11 +51,15 @@ class ProcessedOrder(db.Model):
     shipping_district = db.Column(db.String(100), nullable=True)
     shipping_street = db.Column(db.String(255), nullable=True)
     
+    # ➕ الحقول التكميلية المضافة لضمان مطابقة محرك المزامنة ومنع الانهيار
+    source = db.Column(db.String(50), default='QumraCloud')  # مصدر الطلب
+    items_count = db.Column(db.Integer, default=1)           # عدد المنتجات التابعة للطلب
+    
     # الطوابع الزمنية (توقيت النظام الخارجي وتوقيت التدوين المحلي)
     created_at_api = db.Column(db.DateTime, nullable=True)
     created_at_local = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # الروابط والعلاقات المباشرة
+    # 🔗 الروابط والعلاقات المباشرة
     items = db.relationship('OrderItem', backref='order', lazy='dynamic', cascade='all, delete-orphan')
 
     @property
@@ -100,6 +104,8 @@ class ProcessedOrder(db.Model):
             'fulfillment_status': self.fulfillment_status,
             'payment_type': self.payment_type,
             'total_price': self.total_price,
+            'source': self.source,
+            'items_count': self.items_count,
             'customer': {
                 'name': self.customer_name,
                 'phone': self.customer_phone,
@@ -128,7 +134,7 @@ class OrderItem(db.Model):
     product_name = db.Column(db.String(255), nullable=False)
     quantity = db.Column(db.Integer, default=1)
     
-    # سعر القطعة الفردية (حفظ تقليدي أو مشفر حسب الرغبة، مفضل حفظه لتسهيل الجرد)
+    # سعر القطعة الفردية
     unit_price = db.Column(db.Float, default=0.0)
     sku = db.Column(db.String(100), nullable=True)
 
