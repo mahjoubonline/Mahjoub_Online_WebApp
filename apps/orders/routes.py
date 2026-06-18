@@ -81,12 +81,16 @@ def update_order_field(order_id):
         setattr(order, field, value)
         db.session.commit()
         
-        # 2. إرسال التحديث المتزامن إلى سيرفر قمرة بناءً على نوع الحقل المعدل
+        # 2. إرسال التحديث المتزامن إلى سيرفر قمرة بناءً على خريطة الحالات المقبولة بالسيرفر الخارجي
         try:
+            # سيرفر قمرة الخارجي يقبل فقط حقل الحالات الموحد (status) عبر الميثود المحدثة
             if field == 'order_status':
                 SyncEngine.update_order_status(order_id, value)
             elif field == 'fulfillment_status' and value == 'fulfilled':
                 SyncEngine.mark_as_fulfilled(order_id)
+            elif field == 'financial_status' and value == 'paid':
+                # إذا تم تعليمها كمدفوعة محلياً، نرفع إشارة التسليم المالي والجسدي للسيرفر
+                SyncEngine.update_order_status(order_id, 'delivered')
         except Exception as api_err:
             logger.error(f"⚠️ تم الحفظ محلياً ولكن فشل التحديث الفوري في سيرفر قمرة: {api_err}")
             return jsonify({
@@ -116,7 +120,11 @@ def process_order(order_id):
             order.financial_status = 'paid'
             order.order_status = 'confirmed'
             db.session.commit()
-            flash(f"✅ تمت التسوية المالية الكاملة وتأكيد الطلب {order_id} محلياً.", "success")
+            
+            # مزامنة الحالة المدفوعة والمؤكدة مع السيرفر الخارجي عبر المحرك الموحد
+            SyncEngine.update_order_status(order_id, 'delivered')
+            
+            flash(f"✅ تمت التسوية المالية الكاملة وتأكيد الطلب {order_id} محلياً ومزامنتها كـ delivered.", "success")
         except Exception as e:
             db.session.rollback()
             logger.error(f"❌ خطأ في التسوية: {e}")
@@ -145,13 +153,16 @@ def cancel_order_route(order_id):
     order = ProcessedOrder.query.get(order_id)
     result = SyncEngine.cancel_order(order_id)
     
+    # فحص صارم للرد للتأكد من عدم وجود أخطاء من بوابة GraphQL لقمرة
     if result and isinstance(result, dict) and 'errors' not in result:
         if order:
-            order.order_status = 'cancelled'  # 👈 تعديل: تحديث الحالة محلياً فور نجاح طلب السيرفر
+            order.order_status = 'cancelled'  # تحديث حقل الحالة الثلاثية محلياً
+            order.financial_status = 'unpaid'
+            order.fulfillment_status = 'unfulfilled'
             db.session.commit()
         flash(f"تم إلغاء الطلب {order_id} في قمرة وتحديثه محلياً بنجاح.", "info")
     else:
-        flash("فشل إلغاء الطلب، يرجى مراجعة الصلاحيات في قمرة.", "danger")
+        flash("فشل إلغاء الطلب، يرجى مراجعة الصلاحيات في قمرة وطبيعة الـ Schema.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
 @orders_blueprint.route('/fulfill/<order_id>', methods=['POST'])
@@ -163,7 +174,8 @@ def fulfill_order_route(order_id):
     
     if result and isinstance(result, dict) and 'errors' not in result:
         if order:
-            order.fulfillment_status = 'fulfilled'  # 👈 تعديل: تحديث حالة التجهيز محلياً فور نجاح طلب السيرفر
+            order.fulfillment_status = 'fulfilled'  # تحديث حالة التجهيز محلياً فور نجاح طلب السيرفر
+            order.order_status = 'delivered'       # قمرة تحول الحالة تلقائياً عند التوصيل لـ delivered
             db.session.commit()
         flash(f"تم تحديث الطلب {order_id} إلى 'مشحون' ومجهز في قمرة ومحلياً.", "success")
     else:
@@ -184,9 +196,12 @@ def update_status_route(order_id):
     
     if result and isinstance(result, dict) and 'errors' not in result:
         if order:
-            order.order_status = new_status  # 👈 تعديل: التحديث محلياً لضمان التطابق المستمر
+            order.order_status = new_status  # التحديث محلياً لضمان التطابق المستمر
+            if new_status == 'delivered':
+                order.financial_status = 'paid'
+                order.fulfillment_status = 'fulfilled'
             db.session.commit()
         flash(f"تم تحديث حالة الطلب {order_id} بنجاح في سيرفر قمرة والمستودع المحلي.", "success")
     else:
-        flash("فشل التحديث المتزامن في قمرة.", "danger")
+        flash("فشل التحديث المتزامن في قمرة بسبب عدم مطابقة الحالات.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
