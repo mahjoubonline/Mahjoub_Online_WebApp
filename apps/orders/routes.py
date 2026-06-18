@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # 1. لوحة تحكم الطلبات (مع دعم البحث والفلاتر والترقيم)
 @orders_bp.route('/dashboard')
 def orders_dashboard():
-    # الحصول على البارامترات من الرابط
+    # الحصول على البارامترات من الرابط (مع القيم الافتراضية)
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '', type=str)
     payment_status = request.args.get('payment_status', '')
@@ -35,9 +35,9 @@ def orders_dashboard():
         )
     
     # تطبيق الفلاتر
-    if payment_status:
+    if payment_status and payment_status != 'all':
         query = query.filter_by(financial_status=payment_status)
-    if fulfillment_status:
+    if fulfillment_status and fulfillment_status != 'all':
         query = query.filter_by(fulfillment_status=fulfillment_status)
         
     # الترتيب والترقيم (10 طلبات في الصفحة)
@@ -45,7 +45,11 @@ def orders_dashboard():
         page=page, per_page=10, error_out=False
     )
     
-    return render_template('admin/orders_dashboard.html', pagination=pagination)
+    return render_template('admin/orders_dashboard.html', 
+                           pagination=pagination, 
+                           search=search, 
+                           payment_status=payment_status,
+                           fulfillment_status=fulfillment_status)
 
 # 2. المزامنة الشاملة
 @orders_bp.route('/sync-all', methods=['POST'])
@@ -55,7 +59,7 @@ def sync_all():
         flash("تمت مزامنة البيانات من قمرة بنجاح", "success")
     except Exception as e:
         logger.error(f"Sync error: {e}")
-        flash("حدث خطأ أثناء المزامنة", "danger")
+        flash(f"حدث خطأ أثناء المزامنة: {str(e)}", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
 # 3. تحديث الحالات (AJAX)
@@ -70,7 +74,7 @@ def update_order_field(order_id):
     if field in ['financial_status', 'fulfillment_status']:
         setattr(order, field, value)
         db.session.commit()
-        return jsonify({'status': 'success'})
+        return jsonify({'status': 'success', 'message': 'تم التحديث'})
     
     return jsonify({'status': 'error', 'message': 'Invalid field'}), 400
 
@@ -92,5 +96,6 @@ def process_order(order_id):
 # 6. تحميل الفاتورة
 @orders_bp.route('/download-invoice/<string:order_id>')
 def download_invoice(order_id):
+    # هنا يضاف منطق توليد الـ PDF لاحقاً
     flash("جاري تجهيز الفاتورة للتحميل...", "info")
     return redirect(url_for('orders.orders_dashboard'))
