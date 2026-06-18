@@ -65,9 +65,13 @@ class SyncEngine:
                 # جلب أو إنشاء الطلب
                 order = ProcessedOrder.query.filter_by(id=id_api).first() or ProcessedOrder(id=id_api)
                 
-                # إسناد القيم المباشرة
+                # إسناد القيم الأساسية مع معالجة آمنة للسعر
                 order.order_id = id_api[:8]
-                order.total_price = float(item.get('totalPrice', 0.0))
+                try:
+                    order.total_price = float(item.get('totalPrice') or 0.0)
+                except (ValueError, TypeError):
+                    order.total_price = 0.0
+                    
                 order.order_status = item.get('status', 'pending')
                 
                 # إسناد بيانات العميل والعنوان
