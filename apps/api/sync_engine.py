@@ -1,8 +1,9 @@
 # coding: utf-8
+# 📂 apps/api/sync_engine.py - النسخة السيادية النهائية للمزامنة
+
 import requests
 import logging
 from apps.models.orders_db import ProcessedOrder, db
-from apps.models.sync_log import SyncLog
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -21,12 +22,12 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        logger.info("🔄 بدء المزامنة الشاملة مع قمرة...")
+        logger.info("🔄 بدء المزامنة الشاملة مع قمرة للقيادة المركزية...")
         
-        # تم إضافة الحقول المطلوبة (financialStatus, fulfillmentStatus) للاستعلام
+        # استعلام موسع لجلب كافة البيانات المطلوبة للجدول والبطاقات
         query = """
         query {
-            findAllOrders {
+            findAllOrders(input: {}) {
                 data {
                     _id
                     totalPrice
@@ -34,6 +35,14 @@ class SyncEngine:
                     financialStatus
                     fulfillmentStatus
                     createdAt
+                    customer {
+                        name
+                        shippingAddress
+                    }
+                    items {
+                        _id
+                        quantity
+                    }
                 }
             }
         }
@@ -53,20 +62,29 @@ class SyncEngine:
                 id_api = str(item.get('_id'))
                 if not id_api: continue
                     
+                # جلب أو إنشاء الطلب
                 order = ProcessedOrder.query.filter_by(id=id_api).first() or ProcessedOrder(id=id_api)
                 
-                # إسناد القيم المزامنة من قمرة
+                # إسناد القيم المباشرة
                 order.order_id = id_api[:8]
                 order.total_price = float(item.get('totalPrice', 0.0))
                 order.order_status = item.get('status', 'pending')
                 
-                # تحديث الحالات السيادية الجديدة
+                # إسناد بيانات العميل والعنوان
+                customer = item.get('customer') or {}
+                order.customer_name = customer.get('name', 'عميل غير معروف')
+                order.shipping_city = customer.get('shippingAddress', '---')
+                
+                # حساب عدد العناصر للعمود المطلوب
+                items_list = item.get('items') or []
+                order.items_count = len(items_list)
+                
+                # الحالات السيادية
                 order.financial_status = item.get('financialStatus', 'unpaid')
                 order.fulfillment_status = item.get('fulfillmentStatus', 'unfulfilled')
-                
                 order.source = 'QumraCloud'
                 
-                # التاريخ
+                # معالجة التاريخ
                 try:
                     if item.get('createdAt'):
                         order.created_at_local = datetime.fromisoformat(item.get('createdAt').replace('Z', '+00:00'))
@@ -76,10 +94,10 @@ class SyncEngine:
                 db.session.add(order)
             
             db.session.commit()
-            logger.info(f"✅ تم بنجاح مزامنة {len(orders_data)} طلب وتحديث حالاتها.")
+            logger.info(f"✅ تم بنجاح مزامنة {len(orders_data)} طلب ببياناتها الكاملة.")
             return True
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"❌ فشل المزامنة: {e}")
+            logger.error(f"❌ فشل المزامنة الشاملة: {e}")
             return False
