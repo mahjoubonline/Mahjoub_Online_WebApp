@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المستقر والمطابق لـ GraphQL الـ Sandbox (النسخة التصحيحية النهائية)
+# 📂 apps/api/sync_engine.py - محرك المزامنة المستقر والمطابق لـ GraphQL الـ Sandbox (النسخة التصحيحية الفعالة)
 
 import requests
 import logging
@@ -65,10 +65,20 @@ class SyncEngine:
                     SyncEngine.API_URL, 
                     json=payload, 
                     headers=SyncEngine._get_headers(),
-                    timeout=120  # 🎯 تم رفع المهلة من 30 إلى 120 ثانية لتجنب الـ Read Timeout ومنح الخادم وقت كافٍ
+                    timeout=120  # 🎯 مهلة الانتظار الآمنة لحسم الـ Timeout
                 )
                 
-                result = response.json()
+                # 🎯 فحص مأمونية الاستجابة والتقاط نوع الخطأ إذا أرجع الخادم HTML بدلاً من JSON
+                try:
+                    result = response.json()
+                except Exception:
+                    error_html = f"⚠️ الخادم المستهدف لم يرسل استجابة JSON! الرد الفعلي هو: {response.text[:500]}"
+                    logger.error(error_html)
+                    
+                    log_entry = SyncLog(status="failed", message="❌ استجابة غير صالحة (ليست JSON) من سيرفر الإدارة.", page=page)
+                    db.session.add(log_entry)
+                    db.session.commit()
+                    return False
                 
                 # التحقق الصارم من وجود أخطاء في الرد لمنع تعارض الحقول
                 if 'errors' in result:
@@ -177,11 +187,15 @@ class SyncEngine:
                 SyncEngine.API_URL, 
                 json={'query': mutation, 'variables': variables}, 
                 headers=SyncEngine._get_headers(),
-                timeout=120  # 🎯 تم زيادة مهلة الـ Mutations أيضاً لتطابق إعدادات الأمان الجديدة
+                timeout=120
             )
-            if response.status_code == 200:
+            
+            try:
                 return response.json()
-            return None
+            except Exception:
+                logger.error(f"⚠️ الـ Mutation أرجعت استجابة غير صالحة: {response.text[:200]}")
+                return None
+                
         except Exception as e:
             logger.error(f"❌ خطأ أثناء تنفيذ الـ Mutation: {e}")
             return None
@@ -201,7 +215,7 @@ class SyncEngine:
 
     @staticmethod
     def cancel_order(order_id):
-        """إرسال أمر إلغاء الطلب السيادي عبر الـ Mutation"""
+        """إرسال أمر إلغاء الطلب عبر الـ Mutation"""
         return SyncEngine.update_order_status(order_id, "cancelled")
 
     @staticmethod
