@@ -1,10 +1,11 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المستقر والمطابق الفعلي لسيرفر قمرة (النسخة التصحيحية النهائية)
+# 📂 apps/api/sync_engine.py - محرك المزامنة المستقر والمطابق الفعلي لسيرفر قمرة مع توثيق السجلات (النسخة التصحيحية النهائية)
 
 import requests
 import logging
 from datetime import datetime
 from apps.models.orders_db import ProcessedOrder, db
+from apps.models.sync_log import SyncLog  # استيراد نموذج السجلات لتوثيق العمليات والأخطاء
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class SyncEngine:
     def fetch_and_sync_order():
         page = 1
         has_next_page = True
+        total_synced = 0
         
         while has_next_page:
             logger.info(f"🔄 جاري جلب ومزامنة الصفحة: {page} باستخدام الهيكل والمطابقة المحدثة لقمرة")
@@ -69,7 +71,13 @@ class SyncEngine:
                 
                 # التحقق الصارم من وجود أخطاء في الرد لمنع تعارض الحقول
                 if 'errors' in result:
-                    logger.error(f"❌ خطأ تدوين من سيرفر قمرة: {result['errors']}")
+                    error_msg = f"❌ خطأ تدوين من سيرفر قمرة: {result['errors']}"
+                    logger.error(error_msg)
+                    
+                    # توثيق خطأ قمرة الداخلي في قاعدة البيانات
+                    log_entry = SyncLog(status="failed", message=error_msg, page=page)
+                    db.session.add(log_entry)
+                    db.session.commit()
                     return False
                 
                 orders_data = result.get('data', {}).get('orders', [])
@@ -131,6 +139,8 @@ class SyncEngine:
                             order.created_at_api = datetime.utcnow()
                     else:
                         order.created_at_api = datetime.utcnow()
+                    
+                    total_synced += 1
                 
                 db.session.commit()
                 
@@ -142,9 +152,21 @@ class SyncEngine:
                     
             except Exception as e:
                 db.session.rollback()
-                logger.error(f"❌ خطأ برمجي أثناء المعالجة أو المزامنة: {str(e)}")
-                return False
+                error_context = f"❌ خطأ في المزامنة أو الاتصال بالشبكة الخرجية: {str(e)}"
+                logger.error(error_context)
                 
+                # توثيق انقطاع الاتصال أو خطأ الـ DNS الخارجي تلقائياً في جدول الـ SyncLog للمراقبة السيادية
+                log_entry = SyncLog(status="failed", message=error_context, page=page)
+                db.session.add(log_entry)
+                db.session.commit()
+                return False
+        
+        # عند النجاح الكامل، وثق السجل الإيجابي بعدد الطلبات المتزامنة
+        if total_synced > 0:
+            log_entry = SyncLog(status="success", message=f"✅ تمت المزامنة بنجاح. إجمالي الطلبات المحدثة: {total_synced}", page=page)
+            db.session.add(log_entry)
+            db.session.commit()
+            
         return True
 
     @staticmethod
