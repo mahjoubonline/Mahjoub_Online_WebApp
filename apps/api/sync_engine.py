@@ -22,9 +22,9 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        logger.info("🔄 بدء المزامنة الشاملة...")
+        logger.info("🔄 بدء المزامنة الشاملة مع قمرة...")
         
-        # استعلام موسع لجلب كافة تفاصيل الطلب والعميل
+        # استعلام GraphQL لجلب بيانات الطلبات والعملاء
         query = """
         query GetOrders {
             findAllOrders {
@@ -33,6 +33,7 @@ class SyncEngine:
                     orderNumber
                     totalPrice
                     status
+                    createdAt
                     customer {
                         name
                         phone
@@ -61,24 +62,32 @@ class SyncEngine:
                 id_api = item.get('_id')
                 if not id_api: continue
                     
+                # البحث عن الطلب الموجود أو إنشاء طلب جديد
                 order = ProcessedOrder.query.get(id_api) or ProcessedOrder(id=id_api)
                 
-                # إسناد المعرفات الأساسية (ضمان عدم وجود Null)
+                # إسناد القيم الأساسية
                 order.order_id = str(item.get('orderNumber') or id_api)
                 order.total_price = float(item.get('totalPrice', 0.0))
                 order.order_status = item.get('status', 'pending')
                 order.source = 'QumraCloud'
                 
-                # إسناد تفاصيل العميل
+                # إسناد تفاصيل العميل (مع معالجة الأخطاء في حال غياب البيانات)
                 customer = item.get('customer') or {}
-                order.customer_name = customer.get('name')
-                order.customer_phone = customer.get('phone')
+                order.customer_name = customer.get('name') or 'غير معروف'
+                order.customer_phone = customer.get('phone') or '---'
                 order.customer_email = customer.get('email')
                 
                 # إسناد تفاصيل الشحن
                 shipping = item.get('shippingAddress') or {}
-                order.shipping_city = shipping.get('city')
+                order.shipping_city = shipping.get('city') or 'غير محدد'
                 order.shipping_street = shipping.get('street')
+                
+                # إسناد التاريخ إذا كان متاحاً
+                try:
+                    if item.get('createdAt'):
+                        order.created_at_local = datetime.fromisoformat(item.get('createdAt').replace('Z', '+00:00'))
+                except:
+                    pass
                 
                 db.session.add(order)
             
@@ -88,7 +97,7 @@ class SyncEngine:
             
         except Exception as e:
             db.session.rollback()
-            # تسجيل الفشل في السجل
+            # تسجيل الفشل في سجلات النظام (SyncLog)
             log = SyncLog(status="failed", error_message=str(e))
             db.session.add(log)
             db.session.commit()
