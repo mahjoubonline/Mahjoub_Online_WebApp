@@ -15,22 +15,11 @@ orders_bp = Blueprint(
 )
 logger = logging.getLogger(__name__)
 
-# 1. لوحة تحكم الطلبات مع الفلاتر
+# 1. لوحة تحكم الطلبات
 @orders_bp.route('/dashboard')
 def orders_dashboard():
     page = request.args.get('page', 1, type=int)
-    # الحصول على الفلاتر من الرابط
-    status_payment = request.args.get('payment_status')
-    status_shipping = request.args.get('shipping_status')
-    
-    query = ProcessedOrder.query
-    
-    if status_payment:
-        query = query.filter_by(payment_status=status_payment)
-    if status_shipping:
-        query = query.filter_by(shipping_status=status_shipping)
-        
-    pagination = query.order_by(ProcessedOrder.created_at_local.desc()).paginate(
+    pagination = ProcessedOrder.query.order_by(ProcessedOrder.created_at_local.desc()).paginate(
         page=page, per_page=10, error_out=False
     )
     return render_template('admin/orders_dashboard.html', pagination=pagination)
@@ -46,23 +35,25 @@ def sync_all():
         flash("حدث خطأ أثناء المزامنة", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
-# 3. تحديث الحالات (AJAX - لدعم القوائم المنسدلة في الجدول)
-@orders_bp.route('/update-status/<int:order_id>', methods=['POST'])
-def update_status(order_id):
+# 3. تحديث الحالات (تعديل الحقول لتطابق الـ Models)
+@orders_bp.route('/update-order-field/<string:order_id>', methods=['POST'])
+def update_order_field(order_id):
     data = request.get_json()
     order = ProcessedOrder.query.get_or_404(order_id)
     
-    # تحديث الحقل بناءً على الطلب القادم من القائمة المنسدلة
-    if 'payment_status' in data:
-        order.payment_status = data['payment_status']
-    if 'shipping_status' in data:
-        order.shipping_status = data['shipping_status']
-        
-    db.session.commit()
-    return jsonify({'status': 'success'})
+    field = data.get('field')
+    value = data.get('value')
+    
+    # تحديث الحقول المحددة في الـ Model
+    if field in ['financial_status', 'fulfillment_status']:
+        setattr(order, field, value)
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    
+    return jsonify({'status': 'error', 'message': 'Invalid field'}), 400
 
-# 4. مسار حذف الطلب (للإجراءات)
-@orders_bp.route('/delete/<int:order_id>', methods=['POST'])
+# 4. مسار حذف الطلب
+@orders_bp.route('/delete/<string:order_id>', methods=['POST'])
 def delete_order(order_id):
     order = ProcessedOrder.query.get_or_404(order_id)
     db.session.delete(order)
@@ -71,14 +62,13 @@ def delete_order(order_id):
     return redirect(url_for('orders.orders_dashboard'))
 
 # 5. عرض تفاصيل الطلب
-@orders_bp.route('/process/<int:order_id>')
+@orders_bp.route('/process/<string:order_id>')
 def process_order(order_id):
     order = ProcessedOrder.query.get_or_404(order_id)
     return render_template('admin/order_details.html', order=order)
 
-# 6. تحميل الفاتورة (نموذجي)
-@orders_bp.route('/download-invoice/<int:order_id>')
+# 6. تحميل الفاتورة
+@orders_bp.route('/download-invoice/<string:order_id>')
 def download_invoice(order_id):
-    # هنا يتم استدعاء دالة توليد الـ PDF
     flash("جاري تجهيز الفاتورة للتحميل...", "info")
     return redirect(url_for('orders.orders_dashboard'))
