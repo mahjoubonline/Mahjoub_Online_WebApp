@@ -1,4 +1,6 @@
 # coding: utf-8
+# 📂 apps/api/sync_engine.py - المحرك السيادي للمزامنة (نسخة التشخيص والعمل)
+
 import requests
 import logging
 from apps.models.orders_db import ProcessedOrder, db
@@ -20,7 +22,7 @@ class SyncEngine:
     def fetch_and_sync_order():
         logger.info("🔄 بدء المزامنة الموسعة...")
         
-        # استعلام مضاف إليه حقول العميل والشحن
+        # الاستعلام الذي اعتمدته
         query = """
         query {
             findAllOrders(input: {}) {
@@ -41,8 +43,11 @@ class SyncEngine:
             response = requests.post(SyncEngine.API_URL, json={'query': query}, headers=SyncEngine._get_headers(), timeout=120)
             result = response.json()
             
+            # معالجة الأخطاء الذكية
             if 'errors' in result:
-                logger.error(f"❌ خطأ GraphQL (قد تحتاج لتعديل أسماء الحقول): {result['errors']}")
+                # تسجيل الخطأ بوضوح لتتمكن من معرفة الحقل المرفوض
+                error_msg = result['errors'][0].get('message', 'خطأ غير معروف في GraphQL')
+                logger.error(f"❌ خطأ GraphQL: {error_msg}")
                 return False
             
             orders_data = result.get('data', {}).get('findAllOrders', {}).get('data', [])
@@ -53,26 +58,29 @@ class SyncEngine:
                 
                 order = ProcessedOrder.query.filter_by(id=order_id).first() or ProcessedOrder(id=order_id)
                 
-                # البيانات الأساسية
+                # 1. البيانات الأساسية
                 order.order_id = order_id[-8:]
                 order.total_price = float(item.get('totalPrice') or 0.0)
                 order.order_status = item.get('status', {}).get('code', 'pending')
                 order.items_count = len(item.get('items') or [])
                 
-                # بيانات العميل الجديدة
+                # 2. بيانات العميل
                 cust = item.get('customer') or {}
                 order.customer_name = cust.get('name') or "غير معروف"
+                order.customer_phone = cust.get('phone')
                 
-                # بيانات الشحن الجديدة
+                # 3. بيانات الشحن
                 ship = item.get('shipping') or {}
                 order.shipping_city = ship.get('city') or "غير محدد"
+                order.shipping_street = ship.get('address')
                 
                 db.session.add(order)
             
             db.session.commit()
+            logger.info(f"✅ تمت مزامنة {len(orders_data)} طلب بنجاح.")
             return True
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"❌ خطأ فني أثناء المزامنة: {e}")
+            logger.error(f"❌ خطأ فني غير متوقع أثناء المزامنة: {str(e)}")
             return False
