@@ -2,7 +2,6 @@
 import requests
 import logging
 from apps.models.orders_db import ProcessedOrder, db
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +18,9 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        logger.info("🔄 بدء المزامنة الآمنة...")
+        logger.info("🔄 بدء المزامنة الموسعة...")
         
-        # استعلام مبسط جداً يتوافق مع هيكلية قمرة الحالية
+        # استعلام مضاف إليه حقول العميل والشحن
         query = """
         query {
             findAllOrders(input: {}) {
@@ -31,6 +30,8 @@ class SyncEngine:
                     createdAt
                     status { code }
                     items { productId }
+                    customer { name phone }
+                    shipping { city address }
                 }
             }
         }
@@ -41,7 +42,7 @@ class SyncEngine:
             result = response.json()
             
             if 'errors' in result:
-                logger.error(f"❌ خطأ GraphQL: {result['errors']}")
+                logger.error(f"❌ خطأ GraphQL (قد تحتاج لتعديل أسماء الحقول): {result['errors']}")
                 return False
             
             orders_data = result.get('data', {}).get('findAllOrders', {}).get('data', [])
@@ -52,11 +53,19 @@ class SyncEngine:
                 
                 order = ProcessedOrder.query.filter_by(id=order_id).first() or ProcessedOrder(id=order_id)
                 
-                # تعبئة البيانات المتاحة فقط
+                # البيانات الأساسية
                 order.order_id = order_id[-8:]
                 order.total_price = float(item.get('totalPrice') or 0.0)
                 order.order_status = item.get('status', {}).get('code', 'pending')
                 order.items_count = len(item.get('items') or [])
+                
+                # بيانات العميل الجديدة
+                cust = item.get('customer') or {}
+                order.customer_name = cust.get('name') or "غير معروف"
+                
+                # بيانات الشحن الجديدة
+                ship = item.get('shipping') or {}
+                order.shipping_city = ship.get('city') or "غير محدد"
                 
                 db.session.add(order)
             
@@ -65,5 +74,5 @@ class SyncEngine:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"❌ فشل المزامنة: {e}")
+            logger.error(f"❌ خطأ فني أثناء المزامنة: {e}")
             return False
