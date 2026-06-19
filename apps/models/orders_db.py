@@ -1,7 +1,9 @@
 # coding: utf-8
 import requests
 import logging
-from apps.models.orders_db import ProcessedOrder, db
+from apps.extensions import db
+# نقوم باستيراد النموذج هنا فقط، وتأكد أن orders_db.py لا يستورد SyncEngine
+from apps.models.orders_db import ProcessedOrder 
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,6 @@ class SyncEngine:
     def fetch_and_sync_order():
         logger.info("🔄 بدء المزامنة الكاملة...")
         
-        # استعلام دقيق يستهدف الحقول الموجودة في قاعدة بياناتك
         query = """
         query {
             findAllOrders(input: {}) {
@@ -56,16 +57,16 @@ class SyncEngine:
                 
                 # 1. تحديث البيانات الأساسية
                 order.order_id = order_id[-8:]
-                order.total_price = float(item.get('totalPrice') or 0.0) # سيتم تشفيره تلقائياً عبر @setter
+                order.total_price = float(item.get('totalPrice') or 0.0) 
                 order.order_status = item.get('status', {}).get('code', 'pending')
                 
-                # 2. تحديث بيانات العميل (مطابقة لـ orders_db.py)
+                # 2. تحديث بيانات العميل
                 acc = item.get('account') or {}
                 order.customer_name = acc.get('name')
                 order.customer_phone = acc.get('phone')
                 order.customer_email = acc.get('email')
                 
-                # 3. تحديث بيانات الشحن (مطابقة لـ orders_db.py)
+                # 3. تحديث بيانات الشحن
                 ship = item.get('shippingAddress') or {}
                 order.shipping_city = ship.get('city')
                 order.shipping_street = ship.get('address1')
@@ -78,5 +79,5 @@ class SyncEngine:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"❌ خطأ فني: {str(e)}")
+            logger.error(f"❌ خطأ فني أثناء المزامنة: {str(e)}")
             return False
