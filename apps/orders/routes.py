@@ -1,10 +1,10 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - النسخة السيادية النهائية (مصححة)
+# 📂 apps/orders/routes.py - النسخة السيادية النهائية (مصححة بالكامل)
 
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for
 from apps.extensions import db
 from apps.models.orders_db import ProcessedOrder
-from apps.api.sync_engine import SyncEngine # تأكد أن هذا الاستيراد صحيح
+from apps.api.sync_engine import SyncEngine
 import logging
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders', template_folder='templates')
@@ -20,19 +20,21 @@ def orders_dashboard():
     
     query = ProcessedOrder.query
     
-    # حساب الإجمالي برمجياً
+    # حساب الإجمالي برمجياً لتجنب خطأ قاعدة البيانات مع القيم المشفرة
     all_orders = ProcessedOrder.query.all()
     total_sales = sum(order.total_price for order in all_orders)
     
     completed_count = ProcessedOrder.query.filter_by(fulfillment_status='fulfilled').count()
     cancelled_count = 0 
     
+    # تطبيق البحث
     if search:
         query = query.filter(
             (ProcessedOrder.order_id.contains(search)) | 
             (ProcessedOrder.customer_name.contains(search))
         )
     
+    # تطبيق الفلاتر
     if payment_status and payment_status != 'all':
         query = query.filter_by(financial_status=payment_status)
     if fulfillment_status and fulfillment_status != 'all':
@@ -53,19 +55,18 @@ def orders_dashboard():
                                'cancelled': cancelled_count
                            })
 
-# --- إضافة الدالة المفقودة ---
+# 2. المزامنة الشاملة (المسار المصحح)
 @orders_bp.route('/sync-all', methods=['POST'])
 def sync_all():
-    """دالة المزامنة المطلوبة في ملفات القالب"""
+    """دالة المزامنة التي تستدعي الميثود الصحيح من SyncEngine"""
     try:
-        # هنا يتم استدعاء محرك المزامنة الخاص بك
-        engine = SyncEngine()
-        engine.sync_all_orders()
-        flash("✅ تمت مزامنة الطلبات بنجاح!", "success")
+        # استدعاء الميثود الصحيح بناءً على ما هو موجود في SyncEngine
+        SyncEngine.fetch_and_sync_order()
+        flash("✅ تمت مزامنة الطلبات بنجاح من قمرة!", "success")
     except Exception as e:
         logger.error(f"❌ خطأ في المزامنة: {e}")
         flash(f"⚠️ حدث خطأ أثناء المزامنة: {e}", "danger")
     
     return redirect(url_for('orders.orders_dashboard'))
 
-# (بقية المسارات الأخرى يمكنك إضافتها هنا بنفس الطريقة)
+# يمكنك إضافة بقية المسارات هنا لاحقاً
