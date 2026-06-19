@@ -2,8 +2,6 @@
 import requests
 import logging
 from apps.extensions import db
-# نقوم باستيراد النموذج هنا فقط، وتأكد أن orders_db.py لا يستورد SyncEngine
-from apps.models.orders_db import ProcessedOrder 
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +18,9 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
+        # تأخير الاستيراد لمنع الاستيراد الدائري
+        from apps.models.orders_db import ProcessedOrder
+        
         logger.info("🔄 بدء المزامنة الكاملة...")
         
         query = """
