@@ -18,10 +18,10 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        # تأخير الاستيراد لمنع الاستيراد الدائري
-        from apps.models.orders_db import ProcessedOrder
+        # استيراد محلي لتجنب الاستيراد الدائري (Circular Import)
+        from apps.models import ProcessedOrder
         
-        logger.info("🔄 بدء المزامنة الكاملة...")
+        logger.info("🔄 بدء المزامنة الكاملة من محجوب أونلاين...")
         
         query = """
         query {
@@ -40,7 +40,20 @@ class SyncEngine:
         """
         
         try:
-            response = requests.post(SyncEngine.API_URL, json={'query': query}, headers=SyncEngine._get_headers(), timeout=120)
+            response = requests.post(
+                SyncEngine.API_URL, 
+                json={'query': query}, 
+                headers=SyncEngine._get_headers(), 
+                timeout=60
+            )
+            
+            # تسجيل حالة الاستجابة لمراقبة المشكلة
+            logger.info(f"🌐 حالة الاتصال بالسيرفر: {response.status_code}")
+            
+            if response.status_code != 200:
+                logger.error(f"❌ فشل الاتصال بالسيرفر، الكود: {response.status_code}")
+                return False
+
             result = response.json()
             
             if 'errors' in result:
@@ -49,6 +62,11 @@ class SyncEngine:
             
             orders_data = result.get('data', {}).get('findAllOrders', {}).get('data', [])
             
+            if not orders_data:
+                logger.warning("⚠️ لا توجد طلبات جديدة للمزامنة.")
+                return True
+            
+            sync_count = 0
             for item in orders_data:
                 order_id = str(item.get('_id'))
                 if not order_id: continue
@@ -56,26 +74,25 @@ class SyncEngine:
                 # جلب الطلب أو إنشاؤه
                 order = ProcessedOrder.query.filter_by(id=order_id).first() or ProcessedOrder(id=order_id)
                 
-                # 1. تحديث البيانات الأساسية
+                # تحديث البيانات
                 order.order_id = order_id[-8:]
                 order.total_price = float(item.get('totalPrice') or 0.0) 
                 order.order_status = item.get('status', {}).get('code', 'pending')
                 
-                # 2. تحديث بيانات العميل
                 acc = item.get('account') or {}
                 order.customer_name = acc.get('name')
                 order.customer_phone = acc.get('phone')
                 order.customer_email = acc.get('email')
                 
-                # 3. تحديث بيانات الشحن
                 ship = item.get('shippingAddress') or {}
                 order.shipping_city = ship.get('city')
                 order.shipping_street = ship.get('address1')
                 
                 db.session.add(order)
+                sync_count += 1
             
             db.session.commit()
-            logger.info(f"✅ تمت مزامنة {len(orders_data)} طلب بنجاح.")
+            logger.info(f"✅ تمت مزامنة {sync_count} طلب بنجاح.")
             return True
             
         except Exception as e:
