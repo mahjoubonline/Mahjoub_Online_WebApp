@@ -21,9 +21,9 @@ class SyncEngine:
     def fetch_and_sync_order():
         from apps.models import ProcessedOrder
         
-        logger.info("🔄 بدء المزامنة الكاملة من محجوب أونلاين...")
+        logger.info("🔄 بدء المزامنة الكاملة من محجوب أونلاين (Schema v2)...")
         
-        # استعلام GraphQL محسن ومتوافق مع المعايير
+        # استعلام محدث بناءً على معايير السيرفر الجديدة
         query = """
         query {
             findAllOrders {
@@ -32,9 +32,20 @@ class SyncEngine:
                     totalPrice
                     createdAt
                     status { code }
-                    items { productTitle quantity price }
-                    account { name phone email }
-                    shippingAddress { city address1 }
+                    items { 
+                        productData { title } 
+                        quantity 
+                        price 
+                    }
+                    account { 
+                        firstName 
+                        lastName 
+                        mobile 
+                    }
+                    shippingAddress { 
+                        city { name } 
+                        address 
+                    }
                 }
             }
         }
@@ -48,10 +59,9 @@ class SyncEngine:
                 timeout=60
             )
             
-            # في حال وجود خطأ 400 أو غيره، سنطبع المحتوى لمعرفة السبب الدقيق
             if response.status_code != 200:
                 logger.error(f"❌ فشل الاتصال بالسيرفر! الكود: {response.status_code}")
-                logger.error(f"📝 تفاصيل استجابة السيرفر: {response.text}")
+                logger.error(f"📝 استجابة السيرفر: {response.text}")
                 return False
 
             result = response.json()
@@ -63,7 +73,7 @@ class SyncEngine:
             orders_data = result.get('data', {}).get('findAllOrders', {}).get('data', [])
             
             if not orders_data:
-                logger.warning("⚠️ لم يتم استرجاع أي بيانات من السيرفر.")
+                logger.warning("⚠️ لا توجد طلبات جديدة للمزامنة.")
                 return True
             
             sync_count = 0
@@ -74,25 +84,27 @@ class SyncEngine:
                 # جلب الطلب أو إنشاؤه
                 order = ProcessedOrder.query.filter_by(id=order_id).first() or ProcessedOrder(id=order_id)
                 
-                # تحديث البيانات (الموديل سيقوم بتشفيرها تلقائياً عبر ה-setters)
+                # تحديث البيانات (الموديل سيقوم بالتشفير التلقائي)
                 order.order_id = order_id[-8:]
                 order.total_price = float(item.get('totalPrice') or 0.0) 
                 order.order_status = item.get('status', {}).get('code', 'pending')
                 
+                # تحديث بيانات الحساب بناءً على الهيكلية الجديدة
                 acc = item.get('account') or {}
-                order.customer_name = acc.get('name') or "---"
-                order.customer_phone = acc.get('phone') or "---"
-                order.customer_email = acc.get('email') or "---"
+                order.customer_name = f"{acc.get('firstName', '')} {acc.get('lastName', '')}".strip()
+                order.customer_phone = acc.get('mobile') or "---"
                 
+                # تحديث بيانات الشحن بناءً على الهيكلية الجديدة
                 ship = item.get('shippingAddress') or {}
-                order.shipping_city = ship.get('city') or "---"
-                order.shipping_street = ship.get('address1') or "---"
+                city_obj = ship.get('city') or {}
+                order.shipping_city = city_obj.get('name') or "---"
+                order.shipping_street = ship.get('address') or "---"
                 
                 db.session.add(order)
                 sync_count += 1
             
             db.session.commit()
-            logger.info(f"✅ تمت مزامنة {sync_count} طلب بنجاح.")
+            logger.info(f"✅ تمت مزامنة {sync_count} طلب بنجاح وفق البنية الجديدة.")
             return True
             
         except Exception as e:
