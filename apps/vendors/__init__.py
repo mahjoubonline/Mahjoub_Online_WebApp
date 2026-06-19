@@ -1,10 +1,12 @@
+# apps/vendors/__init__.py
 from flask import Blueprint
 
-# 1. تعريف "المدير" (Blueprint)
-# الاسم (مثلاً 'vendors') يجب أن يكون فريداً لكل تطبيق
-# template_folder='templates' يضمن عزل قوالب هذا التطبيق عن غيره
-manager = Blueprint('manager_name', __name__, template_folder='templates')
+# تعريف الـ Blueprint الخاص بالموردين
+# name: 'vendors' (اسم الـ Blueprint)
+# import_name: __name__ (يخبر Flask بموقع هذا التطبيق)
+# template_folder: 'templates' (المكان الذي سيجلب منه ملفات الـ HTML)
+vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
 
-# 2. استيراد المسارات الخاصة بهذا التطبيق فقط
-# يتم وضع المسارات في ملف routes.py داخل نفس المجلد
+# استيراد المسارات لربطها بالـ Blueprint
+# نضعها في الأسفل لتجنب مشكلة "الاستيراد الدائري" (Circular Import)
 from . import routes
