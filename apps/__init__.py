@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي للنظام (النسخة النهائية والمستقرة)
+# 📂 apps/__init__.py - المصنع السيادي للنظام
 
 from flask import Flask, redirect, url_for
 from flask_talisman import Talisman
@@ -54,23 +54,16 @@ def create_app():
     app.register_blueprint(orders_bp, url_prefix='/orders')
     app.register_blueprint(webhooks_bp, url_prefix='/api')
 
-    # 5. إعداد البيانات التأسيسية وهيكلة الجداول
+    # 5. إعداد البيانات التأسيسية
     with app.app_context():
+        # استيراد النماذج من خلال الـ __init__ الخاص بالموديلات (التي قمنا بتنظيفها سابقاً)
+        from apps.models import AdminUser, ProcessedOrder, OrderItem, SyncLog, ExchangeRate, FinancialLog, Supplier, AdminVault, VaultTransaction, SupplierWallet, WalletTransaction
+        
         try:
-            # استيراد النماذج لضمان التعرف عليها
-            from apps.models.admin_db import AdminUser
-            from apps.models.orders_db import ProcessedOrder, OrderItem
-            from apps.models.sync_log import SyncLog
-            from apps.models.financial_db import ExchangeRate, FinancialLog
-            from apps.models.supplier_db import Supplier
-            from apps.models.vault_db import AdminVault, VaultTransaction
-            from apps.models.wallet_db import SupplierWallet, WalletTransaction
-            
-            # إنشاء الجداول
             db.create_all() 
             print("✅ [System] تم الاتصال بقاعدة البيانات وإنشاء الجداول بنجاح.")
             
-            # زراعة حساب المالك (علي محجوب)
+            # زراعة حساب المالك
             owner_username = 'علي محجوب'
             if not AdminUser.query.filter_by(username=owner_username).first():
                 admin = AdminUser(username=owner_username, role='Owner', phone_number='0000000000')
@@ -81,6 +74,6 @@ def create_app():
             
         except Exception as e:
             db.session.rollback()
-            print(f"⚠️ [Error] فشل في تهيئة قاعدة البيانات أو زراعة المالك: {e}")
+            print(f"⚠️ [Error] فشل في تهيئة قاعدة البيانات: {e}")
 
     return app
