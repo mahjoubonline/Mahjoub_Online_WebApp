@@ -8,38 +8,42 @@ import logging
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders', template_folder='templates')
 logger = logging.getLogger(__name__)
 
-# 1. لوحة تحكم الطلبات مع التنظيف الذكي للبيانات
+# 1. لوحة تحكم الطلبات مع التنظيف الذكي
 @orders_bp.route('/dashboard')
 def orders_dashboard():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '', type=str)
     
-    query = ProcessedOrder.query
-    
-    # حساب الإحصائيات (بناءً على الأعمدة الموجودة في موديل ProcessedOrder)
+    # استرجاع جميع الطلبات للعمليات الحسابية
     all_orders = ProcessedOrder.query.all()
+    
+    # حساب الإحصائيات بناءً على القيم المفكوكة (Decrypted)
     total_sales = sum([float(order.total_price or 0) for order in all_orders])
+    completed_count = sum(1 for o in all_orders if o.order_status == 'delivered')
+    cancelled_count = sum(1 for o in all_orders if o.order_status == 'cancelled')
     
-    # استخدام status الموجود في الموديل
-    completed_count = ProcessedOrder.query.filter_by(order_status='completed').count()
-    cancelled_count = ProcessedOrder.query.filter_by(order_status='cancelled').count()
+    # البحث (يتم برمجياً لأن الحقول مشفرة ولا يمكن الفلترة بـ SQL مباشرة)
+    query = ProcessedOrder.query.order_by(ProcessedOrder.id.desc())
+    items = query.all()
     
-    # الفلترة والبحث
     if search:
-        query = query.filter((ProcessedOrder.order_id.contains(search)) | 
-                           (ProcessedOrder.customer_name.contains(search)))
+        items = [o for o in items if search.lower() in str(o.order_id).lower() or 
+                                     search.lower() in o.customer_name.lower()]
     
-    pagination = query.order_by(ProcessedOrder.id.desc()).paginate(page=page, per_page=10, error_out=False)
+    # التقسيم (Pagination) يدوي بسيط بعد البحث
+    start = (page - 1) * 10
+    end = start + 10
+    pagination_items = items[start:end]
     
-    # منطق التنظيف الذكي: تعويض None بـ "---" للعرض فقط
-    for order in pagination.items:
+    # التنظيف الذكي للعرض
+    for order in pagination_items:
         if not order.customer_name: order.customer_name = "---"
         if not order.customer_phone: order.customer_phone = "---"
-        if not order.shipping_city: order.shipping_city = "---"
-        if not order.shipping_street: order.shipping_street = "---"
     
     return render_template('admin/orders_dashboard.html', 
-                           pagination=pagination, 
+                           items=pagination_items, # نستخدم items بدلاً من pagination.items
+                           total_pages=(len(items)//10) + 1,
+                           current_page=page,
                            stats={
                                'total_sales': total_sales, 
                                'completed': completed_count, 
@@ -56,24 +60,19 @@ def sync_all():
         flash("⚠️ فشلت المزامنة، يرجى مراجعة سجلات الأخطاء.", "danger")
     return redirect(url_for('orders.orders_dashboard'))
 
-# 3. تحديث الحقول لحظياً (AJAX)
+# 3. تحديث الحقول لحظياً
 @orders_bp.route('/update-order-field/<order_id>', methods=['POST'])
 def update_order_field(order_id):
     data = request.json
     order = ProcessedOrder.query.get(order_id)
     if order:
-        # ملاحظة: عند استخدام setattr، سيقوم الموديل بتشفير القيمة تلقائياً بفضل الـ setter
+        # الموديل يتكفل بالتشفير تلقائياً عبر ה-setter
         setattr(order, data['field'], data['value'])
         db.session.commit()
         return jsonify({'status': 'success'})
     return jsonify({'status': 'error', 'message': 'الطلب غير موجود'}), 404
 
-# 4. الإجراءات الإضافية
-@orders_bp.route('/view/<order_id>')
-def view_order(order_id):
-    order = ProcessedOrder.query.get_or_404(order_id)
-    return render_template('admin/view_order.html', order=order)
-
+# 4. حذف طلب
 @orders_bp.route('/delete-order/<order_id>', methods=['POST'])
 def delete_order(order_id):
     order = ProcessedOrder.query.get(order_id)
