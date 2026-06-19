@@ -1,6 +1,8 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي للنظام
+# 📂 apps/__init__.py - المصنع السيادي للنظام (ذكي ومستقل)
 
+import os
+import importlib
 from flask import Flask, redirect, url_for
 from flask_talisman import Talisman
 from config import Config
@@ -35,33 +37,35 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # 4. تسجيل المسارات (Blueprints)
-    from apps.auth_portal.routes import auth_portal
-    from apps.admin_dashboard.routes import admin_dashboard
-    from apps.wallet.routes import wallet_app
-    from apps.vault.routes import vault_bp
-    from apps.orders.routes import orders_bp
-    from apps.api.webhooks import webhooks_bp
+    # 4. 🚀 المحرك التلقائي لاكتشاف وتسجيل التطبيقات (Blueprints)
+    # لن تحتاج لتعديل هذا الجزء أبداً بعد الآن
+    apps_dir = os.path.dirname(__file__)
+    for folder in os.listdir(apps_dir):
+        folder_path = os.path.join(apps_dir, folder)
+        
+        # نتجاهل الملفات والمجلدات الخاصة
+        if os.path.isdir(folder_path) and not folder.startswith('__') and folder != 'models' and folder != 'static' and folder != 'templates':
+            try:
+                # نبحث عن ملف registry.py في كل مجلد
+                registry_path = os.path.join(folder_path, 'registry.py')
+                if os.path.exists(registry_path):
+                    module = importlib.import_module(f'apps.{folder}.registry')
+                    if hasattr(module, 'register_app'):
+                        module.register_app(app)
+                        print(f"✅ [System] تم تسجيل التطبيق تلقائياً: {folder}")
+            except Exception as e:
+                print(f"⚠️ [System] فشل في تسجيل التطبيق {folder}: {e}")
 
     @app.route('/')
     def index():
         return redirect(url_for('auth_portal.login'))
 
-    app.register_blueprint(auth_portal, url_prefix='/auth')
-    app.register_blueprint(admin_dashboard, url_prefix='/admin')
-    app.register_blueprint(wallet_app, url_prefix='/wallet')
-    app.register_blueprint(vault_bp, url_prefix='/vault')
-    app.register_blueprint(orders_bp, url_prefix='/orders')
-    app.register_blueprint(webhooks_bp, url_prefix='/api')
-
     # 5. إعداد البيانات التأسيسية
     with app.app_context():
-        # استيراد النماذج من خلال الـ __init__ الخاص بالموديلات (التي قمنا بتنظيفها سابقاً)
-        from apps.models import AdminUser, ProcessedOrder, OrderItem, SyncLog, ExchangeRate, FinancialLog, Supplier, AdminVault, VaultTransaction, SupplierWallet, WalletTransaction
-        
+        from apps.models import AdminUser # ... (بقية الموديلات)
         try:
             db.create_all() 
-            print("✅ [System] تم الاتصال بقاعدة البيانات وإنشاء الجداول بنجاح.")
+            print("✅ [System] تم الاتصال بقاعدة البيانات.")
             
             # زراعة حساب المالك
             owner_username = 'علي محجوب'
@@ -70,8 +74,6 @@ def create_app():
                 admin.set_password('123')
                 db.session.add(admin)
                 db.session.commit()
-                print(f"✅ [System] تم تأسيس حساب المالك '{owner_username}' بنجاح.")
-            
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ [Error] فشل في تهيئة قاعدة البيانات: {e}")
