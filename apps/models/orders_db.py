@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/models/orders_db.py - النسخة النهائية المحدثة (الدستور البرمجي)
+# 📂 apps/models/orders_db.py - النسخة النهائية المحدثة (الدستور البرمجي المتكامل)
 
 from apps.extensions import db
 from datetime import datetime
@@ -21,8 +21,8 @@ class ProcessedOrder(db.Model):
     __tablename__ = 'processed_orders'
 
     # 1. البيانات العامة والتعريفية
-    id = db.Column(db.String(100), primary_key=True) # المعرف التقني
-    order_id = db.Column(db.String(50), nullable=False, index=True) # رقم الطلب #...
+    id = db.Column(db.String(100), primary_key=True) 
+    order_id = db.Column(db.String(50), nullable=False, index=True) 
     order_status = db.Column(db.String(30), default='pending', index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -34,7 +34,7 @@ class ProcessedOrder(db.Model):
     customer_phone2 = db.Column(db.String(50), nullable=True)
     customer_email = db.Column(db.String(100), nullable=True)
     customer_source = db.Column(db.String(50), nullable=True)
-    customer_type = db.Column(db.String(30), default='guest') # guest/registered
+    customer_type = db.Column(db.String(30), default='guest')
 
     # 3. بيانات الشحن
     shipping_city = db.Column(db.String(100), nullable=True)
@@ -46,7 +46,6 @@ class ProcessedOrder(db.Model):
     channel = db.Column(db.String(50), default='STORE')
 
     # 4. البيانات المالية
-    # تشفير السعر لضمان الخصوصية
     total_price_raw = db.Column('total_price', db.String(255), nullable=True)
     sub_total = db.Column(db.Float, default=0.0)
     tax_amount = db.Column(db.Float, default=0.0)
@@ -77,11 +76,14 @@ class OrderItem(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     order_id = db.Column(db.String(100), db.ForeignKey('processed_orders.id', ondelete='CASCADE'), nullable=False)
     
+    product_id = db.Column(db.String(100), nullable=True)       # ➕ مضاف
     product_title = db.Column(db.String(255), nullable=False)
     sku = db.Column(db.String(100), nullable=True)
+    variant_id = db.Column(db.String(100), nullable=True)       # ➕ مضاف
+    
     quantity = db.Column(db.Integer, default=1)
-    price = db.Column(db.Float, default=0.0) # سعر الوحدة
-    total_price = db.Column(db.Float, default=0.0) # السعر الإجمالي للصنف
+    price = db.Column(db.Float, default=0.0)
+    total_price = db.Column(db.Float, default=0.0)
     compare_at_price = db.Column(db.Float, default=0.0)
     total_savings = db.Column(db.Float, default=0.0)
-    product_image = db.Column(db.String(500), nullable=True)
+    product_image = db.Column(db.Text, nullable=True)           # 🔧 تم توسيعه لـ Text
