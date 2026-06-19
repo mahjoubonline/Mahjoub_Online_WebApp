@@ -1,8 +1,7 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - النسخة السيادية النهائية للقيادة المركزية
+# 📂 apps/orders/routes.py - النسخة السيادية النهائية المحدثة
 
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
-from sqlalchemy import func
 from apps.extensions import db
 from apps.models.orders_db import ProcessedOrder
 from apps.api.sync_engine import SyncEngine
@@ -21,10 +20,15 @@ def orders_dashboard():
     
     query = ProcessedOrder.query
     
-    # حساب الإحصائيات (العمليات السيادية)
-    total_sales = db.session.query(func.sum(ProcessedOrder.total_price)).scalar() or 0
+    # --- التعديل الأساسي لحل خطأ "can't adapt type property" ---
+    # جلب جميع الطلبات لحساب الإجمالي برمجياً لأن قاعدة البيانات لا تستطيع التعامل مع البيانات المشفرة
+    all_orders = ProcessedOrder.query.all()
+    total_sales = sum(order.total_price for order in all_orders)
+    
+    # إحصائيات الحالة
     completed_count = ProcessedOrder.query.filter_by(fulfillment_status='fulfilled').count()
-    cancelled_count = 0 # يمكن إضافة منطق الحالة الملغاة لاحقاً
+    cancelled_count = 0 
+    # -----------------------------------------------------------
     
     # تطبيق البحث
     if search:
