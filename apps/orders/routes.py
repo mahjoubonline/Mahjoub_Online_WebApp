@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - النسخة السيادية النهائية (مصححة بالكامل)
+# 📂 apps/orders/routes.py - النسخة السيادية (مُحدثة لضمان الاستقرار)
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from apps.extensions import db
@@ -20,9 +20,14 @@ def orders_dashboard():
     
     query = ProcessedOrder.query
     
-    # حساب الإجمالي برمجياً لتجنب خطأ قاعدة البيانات مع القيم المشفرة
+    # حساب الإجمالي مع معالجة آمنة للأخطاء
     all_orders = ProcessedOrder.query.all()
-    total_sales = sum(order.total_price for order in all_orders)
+    total_sales = 0.0
+    for order in all_orders:
+        try:
+            total_sales += float(order.total_price or 0.0)
+        except (ValueError, TypeError):
+            continue
     
     completed_count = ProcessedOrder.query.filter_by(fulfillment_status='fulfilled').count()
     cancelled_count = 0 
@@ -55,18 +60,18 @@ def orders_dashboard():
                                'cancelled': cancelled_count
                            })
 
-# 2. المزامنة الشاملة (المسار المصحح)
+# 2. المزامنة الشاملة
 @orders_bp.route('/sync-all', methods=['POST'])
 def sync_all():
-    """دالة المزامنة التي تستدعي الميثود الصحيح من SyncEngine"""
+    """دالة المزامنة مع معالجة دقيقة للنتائج"""
     try:
-        # استدعاء الميثود الصحيح بناءً على ما هو موجود في SyncEngine
-        SyncEngine.fetch_and_sync_order()
-        flash("✅ تمت مزامنة الطلبات بنجاح من قمرة!", "success")
+        success = SyncEngine.fetch_and_sync_order()
+        if success:
+            flash("✅ تمت مزامنة الطلبات بنجاح من قمرة!", "success")
+        else:
+            flash("⚠️ فشلت المزامنة. تحقق من سجلات النظام (Logs) لمعرفة السبب.", "danger")
     except Exception as e:
-        logger.error(f"❌ خطأ في المزامنة: {e}")
-        flash(f"⚠️ حدث خطأ أثناء المزامنة: {e}", "danger")
+        logger.error(f"❌ خطأ غير متوقع في المزامنة: {e}")
+        flash(f"⚠️ خطأ فني: {str(e)}", "danger")
     
     return redirect(url_for('orders.orders_dashboard'))
-
-# يمكنك إضافة بقية المسارات هنا لاحقاً
