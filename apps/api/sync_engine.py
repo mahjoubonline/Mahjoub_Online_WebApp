@@ -13,19 +13,20 @@ class SyncEngine:
     def _get_headers():
         return {
             "Authorization": f"Bearer {SyncEngine.API_TOKEN}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Accept": "application/json"
         }
 
     @staticmethod
     def fetch_and_sync_order():
-        # استيراد محلي لتجنب الاستيراد الدائري (Circular Import)
         from apps.models import ProcessedOrder
         
         logger.info("🔄 بدء المزامنة الكاملة من محجوب أونلاين...")
         
+        # استعلام GraphQL محسن ومتوافق مع المعايير
         query = """
         query {
-            findAllOrders(input: {}) {
+            findAllOrders {
                 data {
                     _id
                     totalPrice
@@ -47,11 +48,10 @@ class SyncEngine:
                 timeout=60
             )
             
-            # تسجيل حالة الاستجابة لمراقبة المشكلة
-            logger.info(f"🌐 حالة الاتصال بالسيرفر: {response.status_code}")
-            
+            # في حال وجود خطأ 400 أو غيره، سنطبع المحتوى لمعرفة السبب الدقيق
             if response.status_code != 200:
-                logger.error(f"❌ فشل الاتصال بالسيرفر، الكود: {response.status_code}")
+                logger.error(f"❌ فشل الاتصال بالسيرفر! الكود: {response.status_code}")
+                logger.error(f"📝 تفاصيل استجابة السيرفر: {response.text}")
                 return False
 
             result = response.json()
@@ -63,7 +63,7 @@ class SyncEngine:
             orders_data = result.get('data', {}).get('findAllOrders', {}).get('data', [])
             
             if not orders_data:
-                logger.warning("⚠️ لا توجد طلبات جديدة للمزامنة.")
+                logger.warning("⚠️ لم يتم استرجاع أي بيانات من السيرفر.")
                 return True
             
             sync_count = 0
@@ -74,19 +74,19 @@ class SyncEngine:
                 # جلب الطلب أو إنشاؤه
                 order = ProcessedOrder.query.filter_by(id=order_id).first() or ProcessedOrder(id=order_id)
                 
-                # تحديث البيانات
+                # تحديث البيانات (الموديل سيقوم بتشفيرها تلقائياً عبر ה-setters)
                 order.order_id = order_id[-8:]
                 order.total_price = float(item.get('totalPrice') or 0.0) 
                 order.order_status = item.get('status', {}).get('code', 'pending')
                 
                 acc = item.get('account') or {}
-                order.customer_name = acc.get('name')
-                order.customer_phone = acc.get('phone')
-                order.customer_email = acc.get('email')
+                order.customer_name = acc.get('name') or "---"
+                order.customer_phone = acc.get('phone') or "---"
+                order.customer_email = acc.get('email') or "---"
                 
                 ship = item.get('shippingAddress') or {}
-                order.shipping_city = ship.get('city')
-                order.shipping_street = ship.get('address1')
+                order.shipping_city = ship.get('city') or "---"
+                order.shipping_street = ship.get('address1') or "---"
                 
                 db.session.add(order)
                 sync_count += 1
