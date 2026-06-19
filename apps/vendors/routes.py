@@ -1,5 +1,13 @@
-from . import vendors_manager # استيراد المدير الخاص بنا
+from flask import render_template
+# استيراد الـ Blueprint الذي عرفناه سابقاً في __init__.py الخاص بالموردين
+from . import vendors_bp 
 
-@vendors_manager.route('/vendor/dashboard')
+@vendors_bp.route('/dashboard')
 def dashboard():
-    return "لوحة المورد الخاصة"
+    # هنا تضع كود عرض لوحة التحكم الخاصة بالمورد
+    # ملاحظة: الملف يجب أن يكون في: apps/vendors/templates/vendor/dashboard.html
+    return render_template('vendor/dashboard.html')
+
+@vendors_bp.route('/profile')
+def profile():
+    return "هذه صفحة المورد الشخصية"
