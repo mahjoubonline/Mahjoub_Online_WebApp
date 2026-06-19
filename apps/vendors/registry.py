@@ -1,5 +1,13 @@
-from .routes import vendors_bp # استيراد الـ Blueprint من ملف المسارات الخاص بك
+# 📂 apps/vendors/registry.py
+from .routes import vendors_bp 
 
 def register_app(app):
-    # هنا يتم تسجيل التطبيق تلقائياً عند تشغيل المصنع الأم
+    """
+    دالة التسجيل الذاتي للتطبيق في المصنع الأم.
+    هذه الدالة تُستدعى تلقائياً من قبل apps/__init__.py
+    """
+    # تسجيل مسارات الموردين تحت البادئة /vendors
     app.register_blueprint(vendors_bp, url_prefix='/vendors')
+    
+    # يمكن إضافة أي إعدادات خاصة بالموردين هنا مستقبلاً
+    # مثل تسجيل الـ Context Processors أو أي إضافات خاصة بهم
