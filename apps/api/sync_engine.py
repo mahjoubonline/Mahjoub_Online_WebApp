@@ -21,22 +21,21 @@ class SyncEngine:
     def fetch_and_sync_order():
         from apps.models import ProcessedOrder
         
-        logger.info("🔄 بدء المزامنة المطابقة لهيكل QumraQL...")
+        logger.info("🔄 بدء المزامنة مع هيكل GraphQL المعتمد...")
         
-        # استعلام محدث يطابق الهيكل الجديد (Metrics & Dimensions & Details)
+        # استعلام متوافق مع رد السيرفر المباشر
         query = """
         query {
             findAllOrders {
                 data {
-                    qid
-                    orderId
+                    _id
                     totalPrice
-                    orderStatus
-                    financialStatus
-                    fulfillmentStatus
-                    customerPhone
-                    items { title qty subtotal }
-                    shipping { city district street }
+                    status { code }
+                    account { mobile }
+                    shippingAddress { 
+                        city { name } 
+                        street 
+                    }
                 }
             }
         }
@@ -59,30 +58,30 @@ class SyncEngine:
             
             sync_count = 0
             for item in orders_data:
-                # نستخدم qid كمعرف فريد أساسي (Primary Key)
-                unique_id = str(item.get('qid'))
+                unique_id = str(item.get('_id'))
                 if not unique_id: continue
                 
                 order = ProcessedOrder.query.filter_by(id=unique_id).first() or ProcessedOrder(id=unique_id)
                 
-                # تحديث الحقول الأساسية
-                order.order_id = item.get('orderId')
+                # تحديث البيانات بناءً على الهيكل المكتشف
                 order.total_price = float(item.get('totalPrice') or 0.0)
-                order.order_status = item.get('orderStatus')
-                order.financial_status = item.get('financialStatus')
-                order.fulfillment_status = item.get('fulfillmentStatus')
-                order.customer_phone = item.get('customerPhone')
+                order.order_status = item.get('status', {}).get('code', 'pending')
                 
-                # تفاصيل الشحن
-                ship = item.get('shipping') or {}
-                order.shipping_city = ship.get('city')
-                order.shipping_street = ship.get('street')
+                # بيانات العميل
+                acc = item.get('account') or {}
+                order.customer_phone = acc.get('mobile') or "---"
+                
+                # بيانات الشحن
+                ship = item.get('shippingAddress') or {}
+                city_obj = ship.get('city') or {}
+                order.shipping_city = city_obj.get('name') or "---"
+                order.shipping_street = ship.get('street') or "---"
                 
                 db.session.add(order)
                 sync_count += 1
             
             db.session.commit()
-            logger.info(f"✅ تمت مزامنة {sync_count} طلب بنجاح حسب مواصفات QumraQL.")
+            logger.info(f"✅ تمت المزامنة بنجاح لعدد {sync_count} طلب.")
             return True
             
         except Exception as e:
