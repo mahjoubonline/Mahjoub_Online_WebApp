@@ -8,43 +8,63 @@
     {# شريط الأدوات العلوي #}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="btn btn-outline-secondary me-2">
-                <i class="bi bi-arrow-right"></i>
+            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="btn btn-outline-secondary rounded-circle me-2" style="width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;">
+                <i class="bi bi-chevron-right"></i>
             </a>
-            <h4 class="d-inline fw-bold text-dark">إدارة الطلبات</h4>
+            <h4 class="d-inline fw-bold text-dark align-middle">إدارة الطلبات</h4>
         </div>
         <div class="d-flex gap-2">
             <form action="{{ url_for('orders.sync_all') }}" method="POST">
-                <button type="submit" class="btn text-white" style="background-color: #F57C00; border: none;">
+                <button type="submit" class="btn text-white shadow-sm" style="background-color: #F57C00; border: none;">
                     <i class="bi bi-arrow-clockwise"></i> مزامنة البيانات
                 </button>
             </form>
-            <a href="#" class="btn text-white" style="background: linear-gradient(45deg, #6A1B9A, #8E24AA);">+ إنشاء طلب</a>
+            <a href="#" class="btn text-white shadow-sm" style="background: linear-gradient(45deg, #6A1B9A, #8E24AA);">+ إنشاء طلب</a>
         </div>
     </div>
 
-    {# البطاقات الإحصائية - بيانات حقيقية #}
-    <div class="row mb-4">
-        <div class="col-md-3"><div class="card p-3 border-0 shadow-sm"><small class="text-muted">الطلبات الملغاة</small><h4 class="fw-bold">{{ stats.cancelled }}</h4></div></div>
-        <div class="col-md-3"><div class="card p-3 border-0 shadow-sm"><small class="text-muted">الطلبات المكتملة</small><h4 class="fw-bold">{{ stats.completed }}</h4></div></div>
-        <div class="col-md-3"><div class="card p-3 border-0 shadow-sm"><small class="text-muted">إجمالي المبيعات</small><h4 class="fw-bold">{{ "%.2f"|format(stats.total_sales) }} ر.ي</h4></div></div>
-        <div class="col-md-3"><div class="card p-3 border-0 shadow-sm"><small class="text-muted">عدد الطلبات</small><h4 class="fw-bold">{{ pagination.total }}</h4></div></div>
+    {# البطاقات الإحصائية - ملونة واحترافية #}
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm text-white" style="background: linear-gradient(45deg, #d32f2f, #f44336);">
+                <small class="opacity-75">الطلبات الملغاة</small>
+                <h4 class="fw-bold mb-0">{{ stats.cancelled }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm text-white" style="background: linear-gradient(45deg, #388e3c, #4caf50);">
+                <small class="opacity-75">الطلبات المكتملة</small>
+                <h4 class="fw-bold mb-0">{{ stats.completed }}</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm text-white" style="background: linear-gradient(45deg, #1976d2, #2196f3);">
+                <small class="opacity-75">إجمالي المبيعات</small>
+                <h4 class="fw-bold mb-0">{{ "{:,.2f}".format(stats.total_sales) }} ر.س</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm text-dark bg-light">
+                <small class="text-muted">عدد الطلبات</small>
+                <h4 class="fw-bold mb-0">{{ pagination.total }}</h4>
+            </div>
+        </div>
     </div>
 
-    {# منطقة الفلاتر والبحث - مربوطة بالمسار #}
+    {# منطقة الفلاتر والبحث #}
     <div class="card border-0 shadow-sm p-3 mb-4" style="border-radius: 8px;">
         <form method="GET" action="{{ url_for('orders.orders_dashboard') }}" class="row g-2 align-items-center">
-            <div class="col-md-4"><input type="text" name="search" class="form-control" placeholder="بحث برقم الطلب أو اسم العميل..." value="{{ search }}"></div>
+            <div class="col-md-4"><input type="text" name="search" class="form-control" placeholder="بحث برقم الطلب أو العميل..." value="{{ search }}"></div>
             <div class="col-md-2">
                 <select name="payment_status" class="form-select">
-                    <option value="all">حالة الدفع (الجميع)</option>
+                    <option value="all">حالة الدفع</option>
                     <option value="paid" {% if payment_status == 'paid' %}selected{% endif %}>مدفوع</option>
                     <option value="unpaid" {% if payment_status == 'unpaid' %}selected{% endif %}>غير مدفوع</option>
                 </select>
             </div>
             <div class="col-md-2">
                 <select name="fulfillment_status" class="form-select">
-                    <option value="all">حالة الشحن (الجميع)</option>
+                    <option value="all">حالة الشحن</option>
                     <option value="fulfilled" {% if fulfillment_status == 'fulfilled' %}selected{% endif %}>تم التوصيل</option>
                     <option value="unfulfilled" {% if fulfillment_status == 'unfulfilled' %}selected{% endif %}>غير مجهز</option>
                 </select>
@@ -63,21 +83,19 @@
                     <th>العنوان</th>
                     <th>الإجمالي</th>
                     <th>المصدر</th>
-                    <th>العدد</th>
                     <th>حالة الدفع</th>
                     <th>حالة الشحن</th>
-                    <th class="text-center">الاجراءات</th>
+                    <th class="text-center">إجراء</th>
                 </tr>
             </thead>
             <tbody>
                 {% for order in pagination.items %}
                 <tr>
-                    <td class="ps-4 fw-bold">#{{ order.order_id }}</td>
+                    <td class="ps-4 fw-bold text-primary">#{{ order.order_id }}</td>
                     <td>{{ order.customer_name }}</td>
                     <td>{{ order.shipping_city }}</td>
-                    <td>{{ order.total_price }} ر.ي</td>
+                    <td>{{ "{:,.2f}".format(order.total_price) }} ر.س</td>
                     <td><span class="badge bg-secondary">{{ order.source }}</span></td>
-                    <td>{{ order.items_count }}</td>
                     <td>
                         <select class="form-select form-select-sm" onchange="updateOrderField('{{ order.id }}', 'financial_status', this.value)">
                             <option value="unpaid" {% if order.financial_status == 'unpaid' %}selected{% endif %}>غير مدفوع</option>
@@ -91,9 +109,7 @@
                         </select>
                     </td>
                     <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary" onclick="window.location.href='{{ url_for('orders.process_order', order_id=order.id) }}'">
-                            <i class="bi bi-eye"></i>
-                        </button>
+                        <a href="#" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
                     </td>
                 </tr>
                 {% endfor %}
