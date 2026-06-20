@@ -2,14 +2,13 @@
 # 📂 apps/models/supplier_profile_db.py - (البيانات التجارية المتقدمة للموردين)
 
 from apps.extensions import db
-from apps.utils.security import AESCipher
 
 class SupplierProfile(db.Model):
     __tablename__ = 'supplier_profiles'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     
-    # الربط المفتاحي مع الحساب الموحد المفتوح أمامك
+    # الربط المفتاحي الحوكمي مع الحساب الموحد
     user_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), unique=True, nullable=False)
     wallet_code = db.Column(db.String(50), nullable=True)
 
@@ -25,4 +24,5 @@ class SupplierProfile(db.Model):
     bank_name_enc = db.Column(db.String(255), nullable=True)
     bank_acc_enc = db.Column(db.String(255), nullable=True)
 
-    user = db.relationship('AdminUser', back_populates='supplier_profile')
+    # العلاقات البرمجية: تم استخدام الاستدعاء الكسول (lazy='joined') لمنع أي تعليق أو تضارب في المعالج
+    user = db.relationship('AdminUser', back_populates='supplier_profile', lazy='joined')
