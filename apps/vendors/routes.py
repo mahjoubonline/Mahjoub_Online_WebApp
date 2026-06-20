@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/vendors/routes.py - المحرك الأساسي لمسارات بوابة الموردين (نسخة نهائية)
+# 📂 apps/vendors/routes.py - المحرك الأساسي لمسارات بوابة الموردين (نسخة نهائية ومؤمنة)
 
 from flask import Blueprint, render_template, request, session, jsonify, redirect, url_for
 from apps.extensions import db
@@ -27,11 +27,17 @@ def login_page():
 
         # الحالة 1: طلب إرسال رمز التحقق
         if email and phone and not otp:
-            # التحقق من وجود المورد قبل إرسال الرمز (اختياري لزيادة الأمان)
+            # التحقق من وجود المورد ومطابقة رقم الهاتف
             supplier = Supplier.query.filter_by(_owner_email=email).first()
+            
             if not supplier:
                 return jsonify({"status": "error", "message": "البريد الإلكتروني غير مسجل"}), 404
-                
+            
+            # التأكد من مطابقة رقم الهاتف (افترضنا أن اسم الحقل هو phone_number)
+            # يرجى التأكد من مطابقة اسم الحقل في model الخاص بك
+            if supplier.phone_number != phone:
+                return jsonify({"status": "error", "message": "رقم الهاتف غير مطابق لسجلاتنا"}), 400
+            
             raw_otp = OTPVerification.generate_otp(email)
             print(f"DEBUG: OTP Code for {email} is {raw_otp}") 
             return jsonify({"status": "pending", "message": "تم إرسال رمز التأكيد إلى بريدك"})
@@ -39,7 +45,6 @@ def login_page():
         # الحالة 2: التحقق من رمز OTP المدخل
         if email and otp:
             if OTPVerification.verify_otp(email, otp):
-                # ربط الجلسة بالمورد بعد التحقق الناجح
                 supplier = Supplier.query.filter_by(_owner_email=email).first()
                 if supplier:
                     session['vendor_authenticated'] = True
