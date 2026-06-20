@@ -2,54 +2,32 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محجوب أونلاين | بوابة الشركاء</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <title>بوابة الشركاء | محجوب أونلاين</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { --bg: #05020a; --gold: #ce9e49; --card-bg: #0f071c; }
-        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: #fff; min-height: 100vh; display: flex; flex-direction: column; }
-        
-        /* Header */
-        header { padding: 20px 5%; display: flex; justify-content: space-between; align-items: center; }
-        .logo-area { display: flex; align-items: center; gap: 10px; font-weight: 900; }
-        .logo-area img { width: 45px; filter: brightness(0) invert(1); }
-        
-        /* Main Container */
-        .wrapper { display: flex; width: 90%; max-width: 1100px; margin: 40px auto; background: var(--card-bg); border-radius: 20px; border: 1px solid #222; overflow: hidden; }
+        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: #fff; min-height: 100vh; }
+        .wrapper { display: flex; width: 90%; max-width: 1000px; margin: 50px auto; background: var(--card-bg); border: 1px solid #222; border-radius: 20px; overflow: hidden; }
         .side { flex: 1; padding: 40px; }
         .login-side { border-left: 1px solid #222; }
         .marketing-side { background: #0a0614; display: flex; flex-direction: column; justify-content: center; }
-
-        /* Inputs & Buttons */
+        input { width: 100%; padding: 15px; margin: 10px 0; background: #000; border: 1px solid #333; border-radius: 10px; color: #fff; }
+        .btn-gold { width: 100%; padding: 15px; background: var(--gold); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .badge-row { display: flex; gap: 10px; margin-bottom: 20px; }
         .badge { flex: 1; padding: 10px; background: #160d26; border: 1px solid #333; border-radius: 10px; text-align: center; font-size: 0.75rem; }
-        input { width: 100%; padding: 15px; margin-bottom: 15px; background: #000; border: 1px solid #333; border-radius: 10px; color: #fff; box-sizing: border-box; transition: border-color 0.3s; }
-        input:focus { border-color: var(--gold); outline: none; }
-        .btn-gold { width: 100%; padding: 15px; background: var(--gold); border: none; border-radius: 10px; font-weight: 700; color: #000; cursor: pointer; transition: 0.3s; }
-        .btn-gold:hover { opacity: 0.9; }
-
-        @media (max-width: 900px) { .wrapper { flex-direction: column; } .login-side { border-left: none; border-bottom: 1px solid #222; } }
     </style>
 </head>
 <body>
 
-<header>
-    <div class="logo-area">
-        <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp">
-        <div>MAHJOUB ONLINE</div>
-    </div>
-</header>
-
 <div class="wrapper">
-    <div class="side login-side" id="login-container">
+    <div class="side login-side" id="auth-area">
         <h3>بوابة الشركاء الكرام</h3>
-        <p style="font-size: 0.8rem; color: #888;">الخطوة 1: التحقق من بيانات الإدارة</p>
         <div class="badge-row">
             <div class="badge">معرف النظام<br>MAH-SUP963</div>
             <div class="badge">المحفظة السيادية<br>MAH-WEL963</div>
         </div>
-        <input type="email" id="email" placeholder="البريد الإلكتروني للمستخدم">
+        <input type="email" id="email" placeholder="البريد الإلكتروني للمورد">
         <input type="tel" id="phone" placeholder="رقم الهاتف الإداري">
         <button class="btn-gold" onclick="sendOtp()">إرسال رمز التأكيد <i class="fas fa-paper-plane"></i></button>
         <div style="margin-top: 20px; text-align: center; color: var(--gold); cursor: pointer;" onclick="quickLogin()">
@@ -59,57 +37,29 @@
 
     <div class="side marketing-side">
         <h1 style="font-size: 2rem;">سوقك الذكي بأعلى المعايير العالمية</h1>
-        <p style="color: #aaa;">نضمن للموردين والتجار تجربة نشر مركزية فائقة الدقة.</p>
+        <p style="color: #aaa;">اللامركزية في الحوكمة تبدأ من هنا، حيث يربط المورد بضاعته بالمتاجر في منصة واحدة.</p>
     </div>
 </div>
 
 <script>
-let isProcessing = false;
-
 async function sendOtp() {
-    if (isProcessing) return;
-    const email = document.getElementById('email').value;
-    const phone = document.getElementById('phone').value;
-    const container = document.getElementById('login-container');
-
-    isProcessing = true;
-    const res = await fetch('/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email, phone})
-    });
-    
+    const data = { email: document.getElementById('email').value, phone: document.getElementById('phone').value };
+    const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
     if (res.ok) {
-        container.innerHTML = `
-            <h3>تأكيد الدخول</h3>
-            <p>تم إرسال الرمز لـ ${email}</p>
-            <input type="text" id="otp-input" placeholder="أدخل رمز التحقق (OTP)">
-            <button class="btn-gold" onclick="verifyOtp('${email}', '${phone}')">دخول آمن</button>
-        `;
-    } else {
-        alert("خطأ في الاتصال، حاول مجدداً");
+        document.getElementById('auth-area').innerHTML = `<h3>تأكيد الدخول</h3><input type="text" id="otp" placeholder="أدخل رمز الـ OTP"><button class="btn-gold" onclick="verify()">دخول آمن</button>`;
     }
-    isProcessing = false;
 }
-
-async function verifyOtp(email, phone) {
-    const otp = document.getElementById('otp-input').value;
-    const res = await fetch('/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email, phone, otp})
-    });
+async function verify() {
+    const otp = document.getElementById('otp').value;
+    const res = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({otp}) });
     const result = await res.json();
     if (result.status === 'success') window.location.href = result.redirect;
-    else alert("رمز التحقق غير صحيح");
 }
-
 async function quickLogin() {
     const res = await fetch('/quick-login', { method: 'POST' });
     const result = await res.json();
     if (result.status === 'success') window.location.href = result.redirect;
 }
 </script>
-
 </body>
 </html>
