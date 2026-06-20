@@ -1,8 +1,2 @@
-from flask import Blueprint
-
-# قم بتحديد المسار الصحيح لمجلد القوالب الخاص بك
-vendor_bp = Blueprint(
-    'vendor', 
-    __name__, 
-    template_folder='templates'  # هذا سيجعل Flask ينظر داخل apps/vendors/templates
-)
+from apps.vendors.routes import vendors_bp
+app.register_blueprint(vendors_bp, url_prefix='/vendors')
