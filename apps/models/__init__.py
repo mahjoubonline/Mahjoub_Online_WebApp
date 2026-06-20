@@ -1,9 +1,9 @@
 # coding: utf-8
 # 📂 apps/models/__init__.py - الموزع المركزي للنماذج بنظام التعجيل وحماية السياق
 
-# مصفوفة النماذج المتاحة للوصول الخارجي
+# مصفوفة النماذج المتاحة للوصول الخارجي (تمت إضافة SupplierProfile)
 __all__ = [
-    'AdminUser', 'ExchangeRate', 'FinancialLog', 'Supplier', 
+    'AdminUser', 'ExchangeRate', 'FinancialLog', 'Supplier', 'SupplierProfile',
     'AdminVault', 'VaultTransaction', 'SupplierWallet', 
     'WalletTransaction', 'ProcessedOrder', 'OrderItem', 'SyncLog'
 ]
@@ -25,6 +25,10 @@ def __getattr__(name):
     elif name == 'Supplier':
         from .supplier_db import Supplier
         return Supplier
+    elif name == 'SupplierProfile':
+        # تم تفعيل الاستدعاء الذكي لكلاس التوصيف لحل مشكلة الـ Mapper في العلاقات
+        from .supplier_db import SupplierProfile
+        return SupplierProfile
     elif name == 'AdminVault':
         from .vault_db import AdminVault
         return AdminVault
