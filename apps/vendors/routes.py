@@ -19,7 +19,7 @@ def index():
 
 @vendors_bp.route('/auth-gateway', methods=['POST'])
 def auth_gateway():
-    print("DEBUG: auth_gateway was reached!") # سطر تشخيصي
+    print("DEBUG: auth_gateway was reached!") 
     data = request.get_json()
     email = data.get('email')
     
@@ -42,6 +42,19 @@ def auth_gateway():
         print(f"DEBUG ERROR: {str(e)}")
         return jsonify({"status": "error", "message": "حدث خطأ داخلي"}), 500
 
+@vendors_bp.route('/check-db-data')
+def check_db_data():
+    """مسار تشخيصي لكشف الإيميلات المخزنة في القاعدة"""
+    suppliers = Supplier.query.all()
+    output = []
+    for s in suppliers:
+        try:
+            decrypted = AESCipher.decrypt(s._owner_email)
+            output.append(f"Found Email: {decrypted}")
+        except Exception as e:
+            output.append(f"Error decrypting ID {s.id}: {str(e)}")
+    return jsonify(output)
+
 @vendors_bp.route('/register-complete', methods=['POST'])
 def register_complete():
     data = request.get_json()
@@ -54,7 +67,7 @@ def register_complete():
     try:
         new_supplier = Supplier(
             username=data['username'],
-            owner_email=email, # الـ setter سيقوم بالتشفير تلقائياً
+            owner_email=email, 
             owner_phone=full_phone,
             password_hash=generate_password_hash(data['password']),
             trade_name="جديد" 
