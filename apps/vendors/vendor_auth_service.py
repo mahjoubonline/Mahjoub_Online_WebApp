@@ -1,15 +1,19 @@
 # coding: utf-8
+# 📂 apps/vendors/vendor_auth_service.py
+
 import requests
 import logging
 from flask import session, redirect, url_for
 from functools import wraps
 from apps.models.otp_db import OTPVerification
 
-# إعداد الـ Logger
+# إعداد الـ Logger لمراقبة العمليات في Render
 logger = logging.getLogger("mahjoub_auth")
-logging.basicConfig(level=logging.INFO)
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO)
 
 def send_whatsapp_otp(phone, otp_code):
+    """إرسال الرمز عبر خدمة TextMeBot مع تنظيف الرقم من الرموز الزائدة"""
     clean_phone = "".join(filter(str.isdigit, str(phone)))
     api_key = "rb3tZFnHRcsN" 
     message = f"رمز التحقق الخاص بك في محجوب أونلاين هو: {otp_code}"
@@ -27,6 +31,7 @@ def send_whatsapp_otp(phone, otp_code):
         return False
 
 def trigger_otp_process(email, full_phone):
+    """توليد الرمز وإرساله عبر الواتساب"""
     logger.info(f"بدء عملية الـ OTP لـ: {email}")
     try:
         otp = OTPVerification.generate_otp(email, expires_in_minutes=5)
@@ -39,4 +44,15 @@ def trigger_otp_process(email, full_phone):
         logger.error(f"خطأ فادح في trigger_otp_process: {str(e)}")
         return False
 
-# باقي الدوال (verify_vendor_otp, vendor_login_required) كما هي...
+def verify_vendor_otp(email, otp):
+    """التحقق من صحة الرمز"""
+    return OTPVerification.verify_otp(email, otp)
+
+def vendor_login_required(f):
+    """ديكوريتور لحماية لوحة التحكم"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('vendor_authenticated'):
+            return redirect(url_for('vendors.index'))
+        return f(*args, **kwargs)
+    return decorated_function
