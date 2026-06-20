@@ -1,56 +1,49 @@
 # coding: utf-8
+# 📂 apps/orders/routes.py - المحرك السيادي لمعالجة الطلبات (نسخة أداء عالٍ)
+
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from apps.extensions import db
 from apps.models import ProcessedOrder
 from apps.api.sync_engine import SyncEngine
+from sqlalchemy import func
 import logging
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders', template_folder='templates')
 logger = logging.getLogger(__name__)
 
-# 1. لوحة تحكم الطلبات مع التنظيف الذكي
+# 1. لوحة تحكم الطلبات (بأداء محسن عبر قاعدة البيانات)
 @orders_bp.route('/dashboard')
 def orders_dashboard():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '', type=str)
     
-    # استرجاع جميع الطلبات للعمليات الحسابية
-    all_orders = ProcessedOrder.query.all()
+    # تحسين الأداء: إجراء الحسابات في قاعدة البيانات مباشرة بدلاً من جلب كل السجلات
+    stats = db.session.query(
+        func.sum(ProcessedOrder.total_price).label('total_sales'),
+        func.count(ProcessedOrder.id).filter(ProcessedOrder.order_status == 'delivered').label('completed'),
+        func.count(ProcessedOrder.id).filter(ProcessedOrder.order_status == 'cancelled').label('cancelled')
+    ).first()
     
-    # حساب الإحصائيات (بناءً على الـ Properties المفكوكة في الموديل)
-    total_sales = sum([float(order.total_price or 0) for order in all_orders])
-    
-    # تحديث الحالة لتطابق ما يتم جلبه من API
-    completed_count = sum(1 for o in all_orders if o.order_status == 'delivered')
-    cancelled_count = sum(1 for o in all_orders if o.order_status == 'cancelled')
-    
-    # البحث
+    # بناء استعلام البحث
     query = ProcessedOrder.query.order_by(ProcessedOrder.id.desc())
-    items = query.all()
-    
     if search:
-        items = [o for o in items if search.lower() in str(o.order_id).lower() or 
-                                     search.lower() in o.customer_name.lower()]
+        search_filter = f"%{search}%"
+        query = query.filter(
+            (ProcessedOrder.order_id.ilike(search_filter)) | 
+            (ProcessedOrder.customer_name.ilike(search_filter))
+        )
     
-    # التقسيم (Pagination) يدوي
-    start = (page - 1) * 10
-    end = start + 10
-    pagination_items = items[start:end]
-    
-    # التنظيف الذكي للعرض (تعويض القيم الفارغة)
-    for order in pagination_items:
-        if not order.customer_name: order.customer_name = "---"
-        if not order.customer_phone: order.customer_phone = "---"
-        if not order.shipping_city: order.shipping_city = "---"
+    # التقسيم (Pagination) الاحترافي
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
     
     return render_template('admin/orders_dashboard.html', 
-                           items=pagination_items,
-                           total_pages=(len(items)//10) + 1,
+                           items=pagination.items,
+                           total_pages=pagination.pages,
                            current_page=page,
                            stats={
-                               'total_sales': total_sales, 
-                               'completed': completed_count, 
-                               'cancelled': cancelled_count
+                               'total_sales': stats.total_sales or 0, 
+                               'completed': stats.completed or 0, 
+                               'cancelled': stats.cancelled or 0
                            }, 
                            search=search)
 
@@ -68,12 +61,15 @@ def sync_all():
 def update_order_field(order_id):
     data = request.json
     order = ProcessedOrder.query.get(order_id)
-    if order:
-        # الموديل يتكفل بالتشفير تلقائياً عبر الـ setter
-        setattr(order, data['field'], data['value'])
-        db.session.commit()
-        return jsonify({'status': 'success'})
-    return jsonify({'status': 'error', 'message': 'الطلب غير موجود'}), 404
+    if order and hasattr(order, data.get('field')):
+        try:
+            setattr(order, data['field'], data['value'])
+            db.session.commit()
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            logger.error(f"Error updating field: {e}")
+            return jsonify({'status': 'error', 'message': 'فشل تحديث البيانات'}), 500
+    return jsonify({'status': 'error', 'message': 'الطلب غير موجود أو الحقل غير مسموح'}), 404
 
 # 4. حذف طلب
 @orders_bp.route('/delete-order/<order_id>', methods=['POST'])
