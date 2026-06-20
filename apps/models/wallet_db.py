@@ -11,8 +11,8 @@ class SupplierWallet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id', ondelete='CASCADE'), nullable=False, unique=True)
     
-    # 🔗 الربط المتبادل مع جدول الموردين (Supplier)
-    supplier = db.relationship('Supplier', back_populates='wallet')
+    # 🔗 الربط المتبادل المعزول مع جدول الموردين وحل تداخل العلاقات نهائياً
+    supplier = db.relationship('Supplier', back_populates='wallet', overlaps="supplier_owner")
     
     # --- الأرصدة المتاحة المشفّرة (Available Balance) ---
     _balance_sar = db.Column(db.String(255), default=AESCipher.encrypt("0.0"))
@@ -120,7 +120,6 @@ class SupplierWallet(db.Model):
             elif curr == 'USD': self.balance_usd -= amount
             
         db.session.add(transaction)
-        # تم إزالة db.session.commit() لتترك حرة تحت سياق الـ controller لضمان تكامل العمليات (Atomicity)
         return transaction
 
 
