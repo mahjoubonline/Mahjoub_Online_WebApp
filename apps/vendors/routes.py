@@ -1,23 +1,24 @@
 # coding: utf-8
 # 📂 apps/vendors/routes.py
 
+import os
 from flask import Blueprint, request, jsonify, session, render_template
 from apps.extensions import db
 from apps.models.supplier_db import Supplier
 from apps.models.supplier_profile_db import SupplierProfile
 from apps.vendors.vendor_auth_service import trigger_otp_process, verify_vendor_otp, vendor_login_required
 from werkzeug.security import generate_password_hash
-import os
 
-# تعريف الـ Blueprint مع تحديد مسار القوالب لضمان العثور عليه في أي بيئة (Production/Local)
-# نستخدم os.path للوصول لمجلد templates الرئيسي
+# إعداد مسار القوالب بشكل ديناميكي (يضمن العثور على المجلد أينما كان التطبيق)
+# بناءً على GitHub لديك، المجلد هو 'templates'
 template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates'))
 vendors_bp = Blueprint('vendors', __name__, template_folder=template_dir)
 
-# --- المسار الجذري لحل مشكلة 404 ---
+# --- المسار الجذري ---
 @vendors_bp.route('/', methods=['GET'])
 def index():
-    return render_template('vendors/login.html')
+    # لاحظ هنا: استدعينا 'vendor/login.html' ليتطابق مع اسم المجلد في GitHub
+    return render_template('vendor/login.html')
 
 @vendors_bp.route('/auth-gateway', methods=['POST'])
 def auth_gateway():
