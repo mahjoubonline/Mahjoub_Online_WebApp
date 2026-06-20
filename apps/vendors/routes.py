@@ -9,8 +9,8 @@ from apps.models import AdminUser, SupplierProfile  # استدعاء علوي ا
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
-# إعداد الـ Blueprint لنظام الموردين بنطاق معزول
-vendors_bp = Blueprint('vendors', __name__, url_prefix='/vendors')
+# التعديل هنا: تم تغيير الـ url_prefix من /vendors إلى /supplier ليتوافق مع رابط منصتك المباشر
+vendors_bp = Blueprint('vendors', __name__, url_prefix='/supplier')
 
 # إعداد وتأمين مسار المجلد الخاص برفع صور المنتجات
 UPLOAD_FOLDER = os.path.join('apps', 'static', 'uploads', 'products')
