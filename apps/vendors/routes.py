@@ -14,10 +14,8 @@ vendors_bp = Blueprint('vendors', __name__)
 def auth_gateway():
     data = request.get_json()
     email = data.get('email')
-    # دمج مفتاح الدولة مع الرقم لضمان التنسيق الدولي الكامل
     phone = f"{data.get('country_code', '')}{data.get('phone', '')}"
     
-    # البحث عن المورد
     supplier = Supplier.query.filter_by(_owner_email=email).first() 
     
     if supplier:
@@ -29,44 +27,56 @@ def auth_gateway():
 @vendors_bp.route('/register-complete', methods=['POST'])
 def register_complete():
     data = request.get_json()
+    email = data.get('email')
     full_phone = f"{data.get('country_code', '')}{data.get('phone', '')}"
     
+    # تحقق من عدم وجود البريد مسبقاً
+    if Supplier.query.filter_by(_owner_email=email).first():
+        return jsonify({"status": "error", "message": "هذا البريد الإلكتروني مسجل مسبقاً"}), 400
+
     try:
-        # 1. إنشاء المورد الأساسي
+        # 1. إنشاء المورد الأساسي بقيم أولية
         new_supplier = Supplier(
             username=data['username'],
-            owner_email=data['email'],
-            owner_phone=full_phone, # حفظ الرقم المدمج والمشفر
+            owner_email=email,
+            owner_phone=full_phone,
             password_hash=generate_password_hash(data['password']),
-            trade_name=data['trade_name']
+            trade_name="جديد" # قيمة افتراضية
         )
         new_supplier.generate_codes()
         db.session.add(new_supplier)
-        db.session.flush() 
+        db.session.flush() # للحصول على الـ ID فوراً
         
-        # 2. إنشاء الملف التجاري المتقدم
+        # 2. إنشاء الملف التجاري المتقدم بقيم افتراضية
         new_profile = SupplierProfile(
             user_id=new_supplier.id,
-            trade_name=data['trade_name'],
-            owner_name=data.get('owner_name'), # الحقل الجديد
-            bank_acc=data.get('bank_acc')      # الحقل الجديد
+            trade_name="جديد",
+            owner_name="غير محدد",
+            bank_acc="غير محدد"
         )
         db.session.add(new_profile)
         db.session.commit()
         
-        # 3. تفعيل عملية التحقق
-        trigger_otp_process(data['email'], full_phone)
+        # 3. إرسال رمز التحقق
+        trigger_otp_process(email, full_phone)
         
         return jsonify({"status": "success", "message": "تم إنشاء حسابك، بانتظار التحقق من واتساب"})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "حدث خطأ أثناء التسجيل: " + str(e)}), 500
 
 @vendors_bp.route('/verify-otp', methods=['POST'])
 def verify():
     data = request.get_json()
-    if verify_vendor_otp(data.get('email'), data.get('otp')):
+    email = data.get('email')
+    otp = data.get('otp')
+    
+    if not email or not otp:
+        return jsonify({"status": "error", "message": "بيانات غير مكتملة"}), 400
+
+    if verify_vendor_otp(email, otp):
         session['vendor_authenticated'] = True
+        session['vendor_email'] = email
         return jsonify({"status": "success", "redirect": "/vendors/dashboard"})
     
-    return jsonify({"status": "error", "message": "الرمز غير صحيح"}), 400
+    return jsonify({"status": "error", "message": "الرمز غير صحيح أو انتهت صلاحيته"}), 400
