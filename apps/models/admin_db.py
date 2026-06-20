@@ -32,9 +32,9 @@ class AdminUser(db.Model, UserMixin):
     last_login = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # 🔗 الربط الموحد: تصحيح التوجيه إلى الكلاس الفعلي 'Supplier' لمنع الـ Mapper Error
-    # تم إرجاع العلاقة بشكل مرن (backref) متوافق مع نظام الفصل للحفاظ على استقلالية الإدارة عن الموردين
-    supplier_profile = db.relationship('Supplier', backref='admin_user', uselist=False, lazy='joined')
+    # 🔗 الربط الموحد: التوجيه الصحيح إلى الكلاس الفعلي المسؤول عن البيانات التجارية 'SupplierProfile'
+    # استخدام back_populates يضمن التزامن الكامل والتوافق المطلق مع جدول التوصيف المتقدم لحساب المورد
+    supplier_profile = db.relationship('SupplierProfile', back_populates='user', uselist=False, lazy='joined')
 
     # --- نظام توليد الأكواد الآلي الموحد ---
     def generate_sovereign_code(self):
