@@ -8,22 +8,21 @@ from apps.models.supplier_db import Supplier
 from apps.models.supplier_profile_db import SupplierProfile
 from werkzeug.security import generate_password_hash
 
-# إعداد مسار القوالب لضمان وصول Flask للملفات في بيئة لينكس
 base_dir = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(base_dir, 'templates')
 
-# تعريف الـ Blueprint الخاص بالموردين
 vendors_bp = Blueprint('vendors', __name__, template_folder=template_dir)
 
 # --- المسار الجذري ---
 @vendors_bp.route('/', methods=['GET'])
 def index():
-    return render_template('vendor/login.html')
+    # تمرير حالة الجلسة للقالب ليعرف هل المستخدم ينتظر رمزاً أم لا
+    pending_email = session.get('pending_otp_email')
+    return render_template('vendor/login.html', pending_email=pending_email)
 
 # --- بوابة التحقق ---
 @vendors_bp.route('/auth-gateway', methods=['POST'])
 def auth_gateway():
-    # Lazy Import لكسر حلقة الاستيراد
     from apps.vendors.vendor_auth_service import trigger_otp_process
     
     data = request.get_json()
@@ -34,7 +33,8 @@ def auth_gateway():
     
     if supplier:
         trigger_otp_process(email, phone)
-        return jsonify({"status": "existing_user", "message": "تم العثور على حسابك، يرجى إدخال الرمز المرسل"})
+        session['pending_otp_email'] = email # حفظ الحالة في الجلسة
+        return jsonify({"status": "existing_user", "message": "تم إرسال الرمز، يرجى إدخاله للتأكيد"})
     else:
         return jsonify({"status": "new_partner", "message": "مرحباً بك كشريك جديد"})
 
@@ -72,11 +72,12 @@ def register_complete():
         db.session.commit()
         
         trigger_otp_process(email, full_phone)
+        session['pending_otp_email'] = email # حفظ الحالة
         
-        return jsonify({"status": "success", "message": "تم إنشاء حسابك، بانتظار التحقق من واتساب"})
+        return jsonify({"status": "success", "message": "تم إنشاء حسابك، يرجى إدخال رمز التحقق"})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": "حدث خطأ أثناء التسجيل: " + str(e)}), 500
+        return jsonify({"status": "error", "message": "حدث خطأ: " + str(e)}), 500
 
 # --- التحقق من الرمز ---
 @vendors_bp.route('/verify-otp', methods=['POST'])
@@ -93,16 +94,16 @@ def verify():
     if verify_vendor_otp(email, otp):
         session['vendor_authenticated'] = True
         session['vendor_email'] = email
+        session.pop('pending_otp_email', None) # تنظيف الجلسة بعد نجاح التحقق
         return jsonify({"status": "success", "redirect": "/vendors/dashboard"})
     
-    return jsonify({"status": "error", "message": "الرمز غير صحيح أو انتهت صلاحيته"}), 400
+    return jsonify({"status": "error", "message": "الرمز غير صحيح"}), 400
 
 # --- لوحة التحكم ---
 @vendors_bp.route('/dashboard')
 def dashboard():
     from apps.vendors.vendor_auth_service import vendor_login_required
     
-    # استخدام الديكوريتور داخلياً لتجنب مشاكل الاستيراد المبكر
     @vendor_login_required
     def protected_dashboard():
         return "مرحباً بك في لوحة تحكم الموردين - محجوب أونلاين"
