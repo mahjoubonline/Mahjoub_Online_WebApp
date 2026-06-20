@@ -4,6 +4,7 @@
 from apps.extensions import db
 from flask_login import UserMixin
 from datetime import datetime
+from apps.utils.security import AESCipher # استيراد أداة التشفير
 
 class Supplier(db.Model, UserMixin):
     """
@@ -23,25 +24,48 @@ class Supplier(db.Model, UserMixin):
     status = db.Column(db.String(20), default='active', nullable=False)
     
     # حقول مشفرة بـ AES-256
-    _owner_phone = db.Column(db.String(255), nullable=True)
-    _owner_email = db.Column(db.String(255), nullable=True)
+    _owner_phone = db.Column('owner_phone', db.String(255), nullable=True)
+    _owner_email = db.Column('owner_email', db.String(255), nullable=True)
     
     # الأكواد السيادية والمحفظة
     supplier_code = db.Column(db.String(50), unique=True, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # 🔗 العلاقات البرمجية المعزولة (باستخدام السلسلة النصية لحل التداخل)
-    # ملاحظة: تم ضبط back_populates ليتوافق مع الإعداد في wallet_db
+    # 🔗 العلاقات البرمجية المعزولة
     wallet = db.relationship('SupplierWallet', back_populates='supplier', uselist=False, lazy=True, cascade="all, delete-orphan")
 
+    # --- Property للتحكم في الهاتف مع التشفير ---
     @property
     def owner_phone(self):
-        return self._owner_phone
+        """فك تشفير الهاتف عند الاستدعاء"""
+        try:
+            return AESCipher.decrypt(self._owner_phone) if self._owner_phone else None
+        except Exception:
+            return None
 
     @owner_phone.setter
     def owner_phone(self, value):
-        # يمكنك إضافة منطق التشفير هنا
-        self._owner_phone = value
+        """تشفير الهاتف قبل التخزين وتنظيفه من المسافات"""
+        if value:
+            clean_phone = "".join(value.split())
+            self._owner_phone = AESCipher.encrypt(clean_phone)
+        else:
+            self._owner_phone = None
+
+    # --- Property للتحكم في البريد الإلكتروني ---
+    @property
+    def owner_email(self):
+        try:
+            return AESCipher.decrypt(self._owner_email) if self._owner_email else None
+        except Exception:
+            return None
+
+    @owner_email.setter
+    def owner_email(self, value):
+        if value:
+            self._owner_email = AESCipher.encrypt(value)
+        else:
+            self._owner_email = None
 
     def generate_codes(self):
         if not self.supplier_code and self.id:
