@@ -28,9 +28,27 @@
             <div class="badge">معرف النظام<br>MAH-SUP963</div>
             <div class="badge">المحفظة السيادية<br>MAH-WEL963</div>
         </div>
+        
         <input type="email" id="email" placeholder="البريد الإلكتروني للمورد">
-        <input type="tel" id="phone" placeholder="رقم الهاتف الإداري">
+        
+        <div style="display: flex; gap: 10px; margin: 10px 0;">
+            <select id="country-code" style="width: 35%; background: #000; border: 1px solid #333; border-radius: 10px; color: #fff; padding: 10px; text-align: center;">
+                <option value="+966">🇸🇦 +966</option>
+                <option value="+971">🇦🇪 +971</option>
+                <option value="+967">🇾🇪 +967</option>
+                <option value="+20">🇪🇬 +20</option>
+                <option value="+965">🇰🇼 +965</option>
+                <option value="+968">🇴🇲 +968</option>
+                <option value="+974">🇶🇦 +974</option>
+                <option value="+973">🇧🇭 +973</option>
+                <option value="+962">🇯🇴 +962</option>
+                <option value="+961">🇱🇧 +961</option>
+            </select>
+            <input type="tel" id="phone" placeholder="رقم الهاتف الإداري" style="flex: 1; margin: 0;">
+        </div>
+
         <button class="btn-gold" onclick="sendOtp()">إرسال رمز التأكيد <i class="fas fa-paper-plane"></i></button>
+        
         <div style="margin-top: 20px; text-align: center; color: var(--gold); cursor: pointer;" onclick="quickLogin()">
             <i class="fas fa-bolt"></i> دخول سريع عابر للأنظمة
         </div>
@@ -43,18 +61,21 @@
 </div>
 
 <script>
-    // تخزين مؤقت للبريد لإتمام التحقق
     let currentEmail = "";
 
     async function sendOtp() {
         const email = document.getElementById('email').value;
-        const phone = document.getElementById('phone').value;
+        const countryCode = document.getElementById('country-code').value;
+        const phoneNum = document.getElementById('phone').value;
+        
+        // دمج رمز الدولة مع الرقم لإرساله كقيمة واحدة
+        const fullPhone = countryCode + phoneNum;
         currentEmail = email;
         
         const res = await fetch('/vendors/login', { 
             method: 'POST', 
             headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ email, phone }) 
+            body: JSON.stringify({ email, phone: fullPhone }) 
         });
         
         if (res.ok) {
