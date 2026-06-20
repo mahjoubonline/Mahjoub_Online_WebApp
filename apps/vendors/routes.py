@@ -31,7 +31,11 @@ def login():
     if current_user.is_authenticated:
         if current_user.role == 'supplier':
             return redirect(url_for('vendors.dashboard'))
-        return redirect(url_for('main.index'))
+        # إذا كان الحساب مسؤولاً (Owner) أو رتبة أخرى، يتم توجيهه للمسار الرئيسي للمنصة لتجنب الـ BuildError
+        try:
+            return redirect(url_for('index'))
+        except:
+            return redirect('/admin/dashboard') # حماية احتياطية في حال كان التوجيه للمسار الرئيسي مقيداً
         
     if request.method == 'POST':
         username = request.form.get('username')
@@ -68,7 +72,7 @@ def dashboard():
     # تأمين الواجهة التأكيدي: منع أي رتبة أخرى من استعراض بيانات المورد
     if current_user.role != 'supplier':
         flash('غير مصرح لك بدخول هذه اللوحة.', 'danger')
-        return redirect(url_for('auth_portal.login'))
+        return redirect(url_for('vendors.login'))
     return render_template('vendors/dashboard.html')
 
 # --- مسار تسجيل الخروج ---
