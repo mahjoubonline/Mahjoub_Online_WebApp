@@ -7,7 +7,11 @@ from functools import wraps
 from apps.models.otp_db import OTPVerification
 
 def send_whatsapp_otp(phone, otp_code):
-    """إرسال الرمز عبر خدمة TextMeBot"""
+    """إرسال الرمز عبر خدمة TextMeBot مع تنظيف الرقم من الرموز الزائدة"""
+    
+    # تنظيف الرقم: إزالة أي "+" أو مسافات أو رموز غير رقمية
+    # هذا يضمن أن الرقم يصل للـ API بصيغة أرقام فقط (مثل 967779077746)
+    clean_phone = "".join(filter(str.isdigit, str(phone)))
     
     # مفتاحك الشخصي من TextMeBot
     api_key = "rb3tZFnHRcsN" 
@@ -20,7 +24,7 @@ def send_whatsapp_otp(phone, otp_code):
     
     # المعاملات كما يتطلبها الـ API الخاص بهم
     params = {
-        "recipient": phone, 
+        "recipient": clean_phone, 
         "apikey": api_key,
         "text": message
     }
@@ -29,7 +33,9 @@ def send_whatsapp_otp(phone, otp_code):
         # إرسال الطلب
         response = requests.get(url, params=params)
         
-        # طباعة النتيجة في Logs للتأكد
+        # طباعة النتيجة في Logs للتأكد (مهم جداً للتشخيص)
+        print(f"DEBUG: Original Phone: {phone}")
+        print(f"DEBUG: Cleaned Phone: {clean_phone}")
         print(f"DEBUG: TextMeBot Response: {response.status_code}, {response.text}")
         
         # TextMeBot يعيد عادة 200 إذا تم قبول الطلب
