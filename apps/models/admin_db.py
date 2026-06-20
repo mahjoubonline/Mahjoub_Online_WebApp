@@ -18,7 +18,7 @@ class AdminUser(db.Model, UserMixin):
     username = db.Column(db.String(100), unique=True, nullable=False)        # اسم المستخدم المعتمد
     admin_email = db.Column(db.String(150), unique=True, nullable=False)     # البريد الإلكتروني المدخل بالخطوة الأولى
     password_hash = db.Column(db.String(255), nullable=False)
-    _phone_number_enc = db.Column(db.String(255), nullable=True)             # الهاتف الإداري المشفر بـ Fernet
+    _phone_number_enc = db.Column(db.String(255), nullable=True)              # الهاتف الإداري المشفر بـ Fernet
     
     # --- فرز رتب السيادة والحوكمة ---
     role = db.Column(db.String(50), default='supplier') # (super_admin, admin, supplier, marketer)
@@ -40,44 +40,4 @@ class AdminUser(db.Model, UserMixin):
     def generate_sovereign_code(self):
         """توليد الأكواد بناءً على الرتبة المحددة للحساب"""
         if self.id and not self.admin_code:
-            if self.role in ['super_admin', 'admin']:
-                self.admin_code = f"ADMIN-MAH963{self.id}"
-            elif self.role == 'supplier':
-                self.admin_code = f"SUP-MAH963{self.id}"
-            else:
-                self.admin_code = f"USER-MAH963{self.id}"
-
-    def _get_encryption_key(self):
-        try:
-            return current_app.config.get('ENCRYPTION_KEY') or os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
-        except:
-            return os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
-
-    @property
-    def phone_number(self):
-        if self._phone_number_enc:
-            try:
-                key = self._get_encryption_key()
-                cipher = Fernet(key.encode())
-                return cipher.decrypt(self._phone_number_enc.encode()).decode()
-            except:
-                return "Error"
-        return ""
-    
-    @phone_number.setter
-    def phone_number(self, value):
-        if value:
-            key = self._get_encryption_key()
-            cipher = Fernet(key.encode())
-            self._phone_number_enc = cipher.encrypt(str(value).encode()).decode()
-            self.search_phone = str(value)[:20]
-            if self.username:
-                self.search_name = str(self.username)[:150]
-        else:
-            self._phone_number_enc = None
-
-    def set_password(self, password): 
-        self.password_hash = generate_password_hash(password)
-        
-    def check_password(self, password): 
-        return check_password_hash(self.password_hash, password)
+            if self.
