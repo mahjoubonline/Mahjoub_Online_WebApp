@@ -8,8 +8,13 @@ from apps.extensions import db
 from apps.models import AdminUser
 from datetime import datetime
 
-# إعداد الـ Blueprint مع نطاق مسار الموردين الجديد
-vendors_bp = Blueprint('vendors', __name__, url_prefix='/supplier')
+# تم إضافة template_folder='templates' ليتمكن Flask من العثور على القوالب داخل مسار الموردين
+vendors_bp = Blueprint(
+    'vendors', 
+    __name__, 
+    url_prefix='/supplier',
+    template_folder='templates'
+)
 
 # --- دالة زراعة المستخدمين (للإدارة فقط) ---
 def seed_user(username, password, role, is_active=True):
