@@ -2,10 +2,10 @@
 # 📂 apps/vendors/routes.py - نظام إدارة الموردين والربط البرمجي الموحد
 
 import os
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from apps.extensions import db
-from apps.models import AdminUser, SupplierProfile
+from apps.models import AdminUser
 from datetime import datetime
 
 # إعداد الـ Blueprint مع نطاق مسار الموردين الجديد
@@ -18,7 +18,7 @@ def seed_user(username, password, role, is_active=True):
         return f"المستخدم {username} موجود مسبقاً."
     
     new_user = AdminUser(username=username, role=role, is_active=is_active)
-    new_user.set_password(password) # تأكد أن هذه الدالة معرفة في موديل AdminUser
+    new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
     return f"تم إنشاء {role} بنجاح: {username}"
@@ -35,10 +35,12 @@ def seed_data():
 # --- مسار تسجيل دخول الموردين ---
 @vendors_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    # التحقق من الجلسة الحالية
     if current_user.is_authenticated:
         if current_user.role == 'supplier':
             return redirect(url_for('vendors.dashboard'))
-        return redirect(url_for('main.index')) # تأكد من وجود مسار index
+        # تم تصحيح الخطأ هنا: استخدام 'index' بدلاً من 'main.index'
+        return redirect(url_for('index')) 
         
     if request.method == 'POST':
         username = request.form.get('username')
@@ -47,6 +49,7 @@ def login():
         user = AdminUser.query.filter_by(username=username).first()
         
         if user and user.check_password(password):
+            # حوكمة الصلاحيات
             if user.role != 'supplier':
                 flash('عذراً، هذا الحساب ليس حساب مورد معتمد.', 'danger')
                 return redirect(url_for('vendors.login'))
@@ -62,7 +65,7 @@ def login():
             
         flash('اسم المستخدم أو كلمة المرور غير صحيحة.', 'danger')
         
-    return render_template('vendor/login.html') # تأكد من اسم المجلد (vendor)
+    return render_template('vendor/login.html')
 
 # --- مسار لوحة تحكم المورد ---
 @vendors_bp.route('/dashboard')
