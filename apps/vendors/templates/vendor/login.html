@@ -6,111 +6,86 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --bg: #05020a; --gold: #ce9e49; --card-bg: #0f071c; }
-        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: #fff; min-height: 100vh; }
-        .wrapper { display: flex; width: 90%; max-width: 1000px; margin: 50px auto; background: var(--card-bg); border: 1px solid #222; border-radius: 20px; overflow: hidden; }
+        :root { --bg: #05020a; --gold: #ce9e49; --card-bg: #0f071c; --text: #fff; }
+        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .wrapper { display: flex; width: 90%; max-width: 900px; background: var(--card-bg); border: 1px solid #222; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .side { flex: 1; padding: 40px; }
-        .login-side { border-left: 1px solid #222; }
-        .marketing-side { background: #0a0614; display: flex; flex-direction: column; justify-content: center; }
-        input { width: 100%; padding: 15px; margin: 10px 0; background: #000; border: 1px solid #333; border-radius: 10px; color: #fff; box-sizing: border-box; }
-        .btn-gold { width: 100%; padding: 15px; background: var(--gold); border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-gold:hover { opacity: 0.9; }
-        .badge-row { display: flex; gap: 10px; margin-bottom: 20px; }
-        .badge { flex: 1; padding: 10px; background: #160d26; border: 1px solid #333; border-radius: 10px; text-align: center; font-size: 0.75rem; }
+        .login-side { background: #120921; }
+        .marketing-side { background: linear-gradient(135deg, #0a0614, #1a0f30); display: flex; flex-direction: column; justify-content: center; padding: 40px; }
+        h3 { margin-bottom: 20px; color: var(--gold); }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; background: #000; border: 1px solid #333; border-radius: 8px; color: #fff; box-sizing: border-box; }
+        .phone-group { display: flex; gap: 10px; }
+        .phone-group select { width: 35%; }
+        .phone-group input { width: 65%; }
+        .btn-gold { width: 100%; padding: 12px; background: var(--gold); border: none; border-radius: 8px; color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-gold:hover { background: #b88a3e; }
+        .btn-outline { width: 100%; padding: 12px; background: transparent; border: 1px solid var(--gold); border-radius: 8px; color: var(--gold); font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .step-indicator { color: var(--gold); font-size: 0.9rem; margin-bottom: 15px; font-weight: bold; }
+        @media (max-width: 768px) { .wrapper { flex-direction: column; } .marketing-side { display: none; } }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
     <div class="side login-side" id="auth-area">
-        <h3>بوابة الشركاء الكرام</h3>
-        <div class="badge-row">
-            <div class="badge">معرف النظام<br>MAH-SUP963</div>
-            <div class="badge">المحفظة السيادية<br>MAH-WEL963</div>
-        </div>
+        <h3 id="form-title">ابدأ رحلة الشراكة</h3>
         
-        <input type="email" id="email" placeholder="البريد الإلكتروني للمورد">
-        
-        <div style="display: flex; gap: 10px; margin: 10px 0;">
-            <select id="country-code" style="width: 35%; background: #000; border: 1px solid #333; border-radius: 10px; color: #fff; padding: 10px; text-align: center;">
-                <option value="+966">🇸🇦 +966</option>
-                <option value="+971">🇦🇪 +971</option>
-                <option value="+967">🇾🇪 +967</option>
-                <option value="+20">🇪🇬 +20</option>
-                <option value="+965">🇰🇼 +965</option>
-                <option value="+968">🇴🇲 +968</option>
-                <option value="+974">🇶🇦 +974</option>
-                <option value="+973">🇧🇭 +973</option>
-                <option value="+962">🇯🇴 +962</option>
-                <option value="+961">🇱🇧 +961</option>
-            </select>
-            <input type="tel" id="phone" placeholder="رقم الهاتف الإداري" style="flex: 1; margin: 0;">
+        <div id="auth-fields">
+            <div class="step-indicator">الخطوة 1: البيانات الأساسية</div>
+            <input type="email" id="email" placeholder="البريد الإلكتروني الرسمي">
+            <div class="phone-group">
+                <select id="country-code">
+                    <option value="+966">🇸🇦 +966</option><option value="+967">🇾🇪 +967</option>
+                    <option value="+971">🇦🇪 +971</option><option value="+965">🇰🇼 +965</option>
+                    <option value="+973">🇧🇭 +973</option><option value="+968">🇴🇲 +968</option>
+                    <option value="+20">🇪🇬 +20</option>
+                </select>
+                <input type="tel" id="phone" placeholder="رقم الهاتف">
+            </div>
+            <button class="btn-gold" onclick="verifyOTPStep()">التالي (إرسال رمز التحقق)</button>
         </div>
 
-        <button class="btn-gold" onclick="sendOtp()">إرسال رمز التأكيد <i class="fas fa-paper-plane"></i></button>
-        
-        <div style="margin-top: 20px; text-align: center; color: var(--gold); cursor: pointer;" onclick="quickLogin()">
-            <i class="fas fa-bolt"></i> دخول سريع عابر للأنظمة
+        <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+        <div style="text-align: center;">
+            <p style="color: #888; font-size: 0.85rem;">هل أنت شريك مسجل بالفعل؟</p>
+            <button class="btn-outline" onclick="showLogin()">تسجيل الدخول</button>
         </div>
     </div>
 
     <div class="side marketing-side">
-        <h1 style="font-size: 2rem;">سوقك الذكي بأعلى المعايير العالمية</h1>
-        <p style="color: #aaa;">اللامركزية في الحوكمة تبدأ من هنا، حيث يربط المورد بضاعته بالمتاجر في منصة واحدة.</p>
+        <h1 style="font-size: 2.5rem; line-height: 1.2;">انضم إلى<br><span style="color: var(--gold);">محجوب أونلاين</span></h1>
+        <p style="color: #aaa;">نظام متكامل يربط الموردين بالمتاجر. ابدأ اليوم بضغطة زر.</p>
     </div>
 </div>
 
 <script>
-    let currentEmail = "";
-
-    async function sendOtp() {
-        const email = document.getElementById('email').value;
-        const countryCode = document.getElementById('country-code').value;
-        const phoneNum = document.getElementById('phone').value;
-        
-        const fullPhone = countryCode + phoneNum;
-        currentEmail = email;
-        
-        const res = await fetch('/vendors/login', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ email, phone: fullPhone }) 
-        });
-        
-        if (res.ok) {
-            document.getElementById('auth-area').innerHTML = `
-                <h3>تأكيد الدخول</h3>
-                <p style="font-size: 0.9rem; color: #888;">تم إرسال الرمز إلى: ${email}</p>
-                <input type="text" id="otp" placeholder="أدخل رمز الـ OTP">
-                <button class="btn-gold" onclick="verify()">دخول آمن</button>
-            `;
-        } else {
-            const error = await res.json();
-            alert(error.message || "خطأ في الاتصال بالسيرفر");
-        }
+    function verifyOTPStep() {
+        document.getElementById('form-title').innerText = "التحقق من الهوية";
+        document.getElementById('auth-area').innerHTML = `
+            <div class="step-indicator">الخطوة 2: أدخل رمز التحقق المرسل</div>
+            <input type="text" id="otp-code" placeholder="------" style="text-align:center; font-size:1.5rem; letter-spacing:10px;">
+            <button class="btn-gold" onclick="setCredentialsStep()">تحقق ومتابعة</button>
+        `;
     }
 
-    async function verify() {
-        const otp = document.getElementById('otp').value;
-        const res = await fetch('/vendors/login', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ email: currentEmail, otp: otp }) 
-        });
-        
-        const result = await res.json();
-        if (result.status === 'success') {
-            window.location.href = result.redirect;
-        } else {
-            alert(result.message || "رمز التحقق غير صحيح");
-        }
+    function setCredentialsStep() {
+        document.getElementById('form-title').innerText = "بيانات الدخول";
+        document.getElementById('auth-area').innerHTML = `
+            <div class="step-indicator">الخطوة 3: تعيين بيانات الحساب</div>
+            <input type="text" id="username" placeholder="اسم مستخدم فريد">
+            <input type="password" id="password" placeholder="كلمة المرور">
+            <button class="btn-gold" onclick="alert('تم تفعيل اشتراكك بنجاح!')">إتمام الاشتراك</button>
+        `;
     }
 
-    async function quickLogin() {
-        const res = await fetch('/vendors/quick-login', { method: 'POST' });
-        const result = await res.json();
-        if (result.status === 'success') window.location.href = result.redirect;
-        else alert("خطأ في الدخول السريع");
+    function showLogin() {
+        document.getElementById('form-title').innerText = "تسجيل دخول الشركاء";
+        document.getElementById('auth-area').innerHTML = `
+            <input type="text" placeholder="اسم المستخدم">
+            <input type="password" placeholder="كلمة المرور">
+            <button class="btn-gold" onclick="alert('جارٍ تسجيل الدخول...')">دخول</button>
+            <div style="margin-top: 20px; text-align: center; color: var(--gold); cursor: pointer;" onclick="location.reload()">العودة للاشتراك</div>
+        `;
     }
 </script>
 </body>
