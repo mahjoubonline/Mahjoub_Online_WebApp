@@ -1,16 +1,5 @@
-# 📂 apps/vendors/__init__.py
-from flask import Blueprint
-
-# تعريف الـ Blueprint الخاص بالموردين
-# مع تحديد المجلدات الخاصة بالقوالب والملفات الثابتة لضمان الاستقلالية
-vendors_bp = Blueprint(
-    'vendors', 
-    __name__, 
-    template_folder='templates', 
-    static_folder='static',
-    static_url_path='/vendors/static'
-)
-
-# استيراد المسارات لربطها بالـ Blueprint
-# نضعها في الأسفل لتجنب مشكلة "الاستيراد الدائري" (Circular Import)
-from . import routes
+registry_path = os.path.join(folder_path, 'registry.py')
+if os.path.exists(registry_path):
+    module = importlib.import_module(f'apps.{folder}.registry')
+    if hasattr(module, 'register_app'):
+        module.register_app(app)
