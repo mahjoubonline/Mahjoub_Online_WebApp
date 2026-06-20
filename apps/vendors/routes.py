@@ -9,15 +9,17 @@ from apps.models.supplier_profile_db import SupplierProfile
 from apps.vendors.vendor_auth_service import trigger_otp_process, verify_vendor_otp, vendor_login_required
 from werkzeug.security import generate_password_hash
 
-# إعداد مسار القوالب بشكل ديناميكي (يضمن العثور على المجلد أينما كان التطبيق)
-# بناءً على GitHub لديك، المجلد هو 'templates'
-template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates'))
+# بما أن المسار هو apps/vendors/templates/vendor/login.html
+# يجب أن يشير الـ template_folder إلى المجلد الذي يحتوي على مجلد 'vendor'
+# نخرج من المجلد الحالي ثم ندخل إلى templates
+template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
+
 vendors_bp = Blueprint('vendors', __name__, template_folder=template_dir)
 
 # --- المسار الجذري ---
 @vendors_bp.route('/', methods=['GET'])
 def index():
-    # لاحظ هنا: استدعينا 'vendor/login.html' ليتطابق مع اسم المجلد في GitHub
+    # سيبحث الآن داخل 'apps/vendors/templates/vendor/login.html'
     return render_template('vendor/login.html')
 
 @vendors_bp.route('/auth-gateway', methods=['POST'])
