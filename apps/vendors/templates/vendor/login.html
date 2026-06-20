@@ -2,18 +2,21 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>بوابة الشركاء | محجوب أونلاين</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #05020a; --gold: #ce9e49; --card-bg: #0f071c; --text: #fff; }
-        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .wrapper { display: flex; width: 90%; max-width: 900px; background: var(--card-bg); border-radius: 20px; overflow: hidden; }
+        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .wrapper { display: flex; width: 100%; max-width: 900px; background: var(--card-bg); border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #222; }
         .side { flex: 1; padding: 40px; }
         .login-side { background: #120921; }
-        h3 { color: var(--gold); }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; background: #000; border: 1px solid #333; border-radius: 8px; color: #fff; }
+        h3 { color: var(--gold); margin-top: 0; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; background: #000; border: 1px solid #333; border-radius: 8px; color: #fff; box-sizing: border-box; }
         .phone-group { display: flex; gap: 10px; }
-        .btn-gold { width: 100%; padding: 12px; background: var(--gold); border: none; border-radius: 8px; color: #000; font-weight: bold; cursor: pointer; }
+        .btn-gold { width: 100%; padding: 12px; background: var(--gold); border: none; border-radius: 8px; color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-gold:hover { background: #b88a3e; }
+        @media (max-width: 768px) { .wrapper { flex-direction: column; } }
     </style>
 </head>
 <body>
@@ -24,7 +27,11 @@
         <div id="auth-fields">
             <input type="email" id="email" placeholder="البريد الإلكتروني الرسمي">
             <div class="phone-group">
-                <select id="country-code"><option value="+966">🇸🇦 +966</option><option value="+967">🇾🇪 +967</option></select>
+                <select id="country-code">
+                    <option value="+966">🇸🇦 +966</option>
+                    <option value="+967">🇾🇪 +967</option>
+                    <option value="+971">🇦🇪 +971</option>
+                </select>
                 <input type="tel" id="phone" placeholder="رقم الهاتف">
             </div>
             <button class="btn-gold" onclick="authGateway()">التالي</button>
@@ -35,7 +42,6 @@
 <script>
     let userData = {};
 
-    // 1. بوابة التحقق من وجود المستخدم
     async function authGateway() {
         userData.email = document.getElementById('email').value;
         userData.country_code = document.getElementById('country-code').value;
@@ -48,15 +54,14 @@
         });
         const data = await res.json();
         
+        document.getElementById('form-title').innerText = "التحقق من الهوية";
         document.getElementById('auth-area').innerHTML = `
-            <h3>التحقق من الهوية</h3>
             <p>أدخل رمز التحقق المرسل عبر واتساب</p>
-            <input type="text" id="otp-code" placeholder="------" style="text-align:center;">
+            <input type="text" id="otp-code" placeholder="------" style="text-align:center; font-size:1.2rem;">
             <button class="btn-gold" onclick="verifyOTP()">تحقق</button>
         `;
     }
 
-    // 2. التحقق من الرمز
     async function verifyOTP() {
         const otp = document.getElementById('otp-code').value;
         const res = await fetch('/vendors/verify-otp', {
@@ -65,9 +70,10 @@
             body: JSON.stringify({ email: userData.email, otp: otp })
         });
         
-        if((await res.json()).status === 'success') {
+        const result = await res.json();
+        if(result.status === 'success') {
+            document.getElementById('form-title').innerText = "البيانات التجارية";
             document.getElementById('auth-area').innerHTML = `
-                <h3>البيانات التجارية</h3>
                 <input type="text" id="trade_name" placeholder="الاسم التجاري">
                 <input type="text" id="owner_name" placeholder="اسم المالك">
                 <input type="text" id="bank_acc" placeholder="رقم الحساب البنكي">
@@ -75,10 +81,11 @@
                 <input type="password" id="password" placeholder="كلمة المرور">
                 <button class="btn-gold" onclick="register()">إتمام التسجيل</button>
             `;
+        } else {
+            alert(result.message);
         }
     }
 
-    // 3. إتمام الربط الداخلي النهائي
     async function register() {
         userData.trade_name = document.getElementById('trade_name').value;
         userData.owner_name = document.getElementById('owner_name').value;
@@ -92,8 +99,11 @@
             body: JSON.stringify(userData)
         });
         
-        if((await res.json()).status === 'success') {
+        const result = await res.json();
+        if(result.status === 'success') {
             window.location.href = "/vendors/dashboard";
+        } else {
+            alert(result.message);
         }
     }
 </script>
