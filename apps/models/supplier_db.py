@@ -9,13 +9,13 @@ from apps.utils.security import AESCipher # استيراد أداة التشفي
 class Supplier(db.Model, UserMixin):
     """
     الجدول الأساسي والمحكم لإدارة كيانات الموردين وصلاحياتهم الرقمية.
-    تم استخدام السلاسل النصية في العلاقات لضمان فك الارتباط الدائري.
+    تم إضافة حقل country_code لضمان دقة الاتصال الدولي والتحقق عبر الواتساب.
     """
     __tablename__ = 'suppliers'
 
     id = db.Column(db.Integer, primary_key=True)
     
-    # 🔗 الجسر السيادي: ربط المورد بحسابه في كيان نظام الهوية الموحد (admin_users)
+    # 🔗 الجسر السيادي
     admin_user_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), unique=True, nullable=True)
 
     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
@@ -25,19 +25,26 @@ class Supplier(db.Model, UserMixin):
     
     # حقول مشفرة بـ AES-256
     _owner_phone = db.Column('owner_phone', db.String(255), nullable=True)
+    _country_code = db.Column('country_code', db.String(10), nullable=True) # حقل منفصل لرمز الدولة
     _owner_email = db.Column('owner_email', db.String(255), nullable=True)
     
-    # الأكواد السيادية والمحفظة
+    # الأكواد السيادية
     supplier_code = db.Column(db.String(50), unique=True, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # 🔗 العلاقات البرمجية المعزولة
+    # 🔗 العلاقات البرمجية
     wallet = db.relationship('SupplierWallet', back_populates='supplier', uselist=False, lazy=True, cascade="all, delete-orphan")
 
-    # --- Property للتحكم في الهاتف مع التشفير ---
+    # --- Property للتحكم في الهاتف ورمز الدولة ---
+    @property
+    def full_phone(self):
+        """إرجاع الرقم الكامل المدمج (رمز الدولة + الرقم)"""
+        phone = self.owner_phone # استدعاء الـ property الخاص بفك التشفير
+        return f"{self._country_code}{phone}" if self._country_code and phone else None
+
     @property
     def owner_phone(self):
-        """فك تشفير الهاتف عند الاستدعاء"""
+        """فك تشفير الرقم الأساسي"""
         try:
             return AESCipher.decrypt(self._owner_phone) if self._owner_phone else None
         except Exception:
