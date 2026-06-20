@@ -10,16 +10,16 @@ class OTPVerification(db.Model):
     __tablename__ = 'otp_verifications'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_email = db.Column(db.String(150), index=True, nullable=False) # البريد المستهدف للتحقق بالخطوة الأولى
+    user_email = db.Column(db.String(150), index=True, nullable=False) # البريد المستهدف للتحقق
     
-    # تخزين الرمز مشفراً بمعيار AES-256 الفوقي لحظر القراءة المباشرة من قاعدة البيانات
+    # تخزين الرمز مشفراً بمعيار AES-256 لحظر القراءة المباشرة من قاعدة البيانات
     _otp_code_enc = db.Column('otp_code', db.String(255), nullable=False)
     
     is_used = db.Column(db.Boolean, default=False)
     expires_at = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # --- Property للتحكم في الرمز وتشفيره تلقائياً عبر معيار المنصة ---
+    # --- Property للتحكم في الرمز وتشفيره تلقائياً ---
     @property
     def otp_code(self):
         """فك تشفير الرمز للمطابقة الخلفية أثناء عملية الدخول"""
@@ -39,8 +39,8 @@ class OTPVerification(db.Model):
     # --- العمليات الذكية للتحقق والتوليد حياً ---
     @staticmethod
     def generate_otp(email, expires_in_minutes=5):
-        """توليد رمز جديد وإلغاء الرموز السابقة لنفس البريد تلقائياً لحظر التكرار"""
-        # إلغاء الرموز القديمة غير المستخدمة لنفس الحساب فوراً
+        """توليد رمز جديد وإلغاء الرموز السابقة لنفس البريد فوراً"""
+        # إلغاء الرموز القديمة غير المستخدمة لنفس الحساب لضمان عدم وجود أكثر من رمز نشط
         OTPVerification.query.filter_by(user_email=email, is_used=False).update({"is_used": True})
         
         # توليد رمز عشوائي آمن مكون من 6 أرقام
@@ -50,21 +50,23 @@ class OTPVerification(db.Model):
             user_email=email,
             expires_at=datetime.utcnow() + timedelta(minutes=expires_in_minutes)
         )
-        new_otp.otp_code = raw_code  # هنا يتم استدعاء الـ setter والتشفير بـ AES256 آلياً
+        new_otp.otp_code = raw_code  # استدعاء الـ setter للتشفير آلياً
         db.session.add(new_otp)
+        db.session.commit() # تأكيد الحفظ في قاعدة البيانات
         
         return raw_code
 
     @staticmethod
     def verify_otp(email, input_code):
-        """التحقق من صحة الرمز وصلاحيته الزمنية حياً واستهلاكه فوراً للسيادة الأمنية"""
+        """التحقق من صحة الرمز وصلاحيته الزمنية واستهلاكه فوراً للسيادة الأمنية"""
         now = datetime.utcnow()
+        # البحث عن أي رمز نشط وغير مستخدم لهذا البريد
         active_otps = OTPVerification.query.filter_by(user_email=email, is_used=False).all()
         
         for otp in active_otps:
-            # الـ getter يقوم بفك التشفير تلقائياً خلف الكواليس للمطابقة الحية
+            # التحقق من الزمن والمطابقة (فك التشفير يتم في الـ getter)
             if otp.expires_at > now and otp.otp_code == str(input_code):
-                otp.is_used = True  # استهلاك الرمز فوراً لمنع إعادة استخدامه وثغرات الإعادة
+                otp.is_used = True  # استهلاك الرمز فوراً لمنع هجمات إعادة الاستخدام
                 db.session.commit()
                 return True
         return False
