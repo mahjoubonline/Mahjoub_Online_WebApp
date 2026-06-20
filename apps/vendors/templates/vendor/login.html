@@ -11,7 +11,8 @@
         .wrapper { width: 100%; max-width: 500px; background: var(--card-bg); border-radius: 24px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); border: 1px solid #222; text-align: center; }
         h3 { color: var(--gold); font-size: 1.8rem; margin-bottom: 20px; }
         input, select { width: 100%; padding: 15px; margin: 10px 0; background: #000; border: 1px solid #333; border-radius: 12px; color: #fff; box-sizing: border-box; transition: 0.3s; }
-        .btn-gold { width: 100%; padding: 15px; background: var(--gold); border: none; border-radius: 12px; color: #000; font-weight: 900; cursor: pointer; margin-top: 15px; }
+        .btn-gold { width: 100%; padding: 15px; background: var(--gold); border: none; border-radius: 12px; color: #000; font-weight: 900; cursor: pointer; margin-top: 15px; transition: 0.3s; }
+        .btn-gold:disabled { background: #555; cursor: not-allowed; }
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -36,7 +37,6 @@
 </div>
 
 <script>
-    // تهيئة البيانات من الجلسة إذا كانت موجودة
     let userData = {
         email: "{{ pending_email if pending_email else '' }}",
         phone: "",
@@ -48,6 +48,22 @@
             showOtpScreen();
         }
     };
+
+    function startCountdown() {
+        const btn = document.getElementById('resend-btn');
+        let counter = 60;
+        btn.disabled = true;
+        
+        const interval = setInterval(() => {
+            counter--;
+            btn.innerText = `إعادة إرسال الرمز (${counter})`;
+            if (counter <= 0) {
+                clearInterval(interval);
+                btn.disabled = false;
+                btn.innerText = "إعادة إرسال الرمز؟";
+            }
+        }, 1000);
+    }
 
     function updateUI(title, html) {
         const area = document.getElementById('auth-area');
@@ -83,8 +99,9 @@
             <p style="opacity: 0.8;">أدخل رمز التحقق (6 أرقام) المرسل لواتساب</p>
             <input type="text" id="otp-code" placeholder="------" maxlength="6" style="text-align:center; font-size:1.5rem; letter-spacing: 10px;">
             <button class="btn-gold" onclick="verifyOTP()">تحقق الآن</button>
-            <button onclick="resendOtp()" style="background:none; border:none; color:var(--gold); margin-top:15px; cursor:pointer; text-decoration:underline;">إعادة إرسال الرمز؟</button>
+            <button id="resend-btn" class="btn-gold" style="background:transparent; border:1px solid var(--gold); color:var(--gold); margin-top:10px;" onclick="resendOtp()">إعادة إرسال الرمز؟</button>
         `);
+        startCountdown();
     }
 
     async function verifyOTP() {
@@ -104,8 +121,8 @@
     }
 
     async function resendOtp() {
-        await authGateway(); // إعادة استخدام دالة الإرسال الأساسية
-        alert("تمت إعادة إرسال الرمز.");
+        await authGateway();
+        startCountdown();
     }
 </script>
 </body>
