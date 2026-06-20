@@ -1,11 +1,10 @@
-# 📂 apps/vendors/vendor_auth_service.py
-
 from functools import wraps
 from flask import session, redirect, url_for
-import random
+from apps.models.otp_db import OTPVerification
+from apps.extensions import db
 
 def vendor_login_required(f):
-    """حارس المسارات: التأكد من تسجيل الدخول"""
+    """حارس المسارات: التأكد من تسجيل الدخول باستخدام الجلسة الآمنة"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('vendor_authenticated'):
@@ -14,29 +13,15 @@ def vendor_login_required(f):
     return decorated_function
 
 def generate_and_send_otp(email, phone):
-    """
-    توليد رمز التحقق وتجهيزه للإرسال.
-    هنا يتم الربط مع مزود الخدمة (SMS أو Email)
-    """
-    otp_code = str(random.randint(100000, 999999))
+    """توليد رمز عبر قاعدة البيانات (استبدال الجلسات بالنموذج الآمن)"""
+    # استخدام الدالة الجاهزة في otp_db.py
+    raw_otp = OTPVerification.generate_otp(email)
     
-    # تخزين الرمز في الجلسة ليتم مقارنته لاحقاً
-    session['otp_code'] = otp_code
-    session['otp_email'] = email
-    
-    # مكان ربط الـ API:
-    # send_sms(phone, f"رمز التحقق الخاص بك هو: {otp_code}")
-    print(f"DEBUG: تم إرسال الرمز {otp_code} إلى {email} / {phone}")
-    
+    # هنا سيتم ربط مزود الخدمة الفعلي (SMS/Email)
+    print(f"DEBUG: تم إرسال الرمز {raw_otp} إلى البريد {email}")
     return True
 
-def verify_otp_logic(user_input):
-    """
-    التحقق من مطابقة الرمز المدخل مع المخزن في الجلسة
-    """
-    actual_otp = session.get('otp_code')
-    if actual_otp and user_input == actual_otp:
-        # مسح الرمز بعد استخدامه بنجاح للأمان
-        session.pop('otp_code', None)
-        return True
-    return False
+def verify_otp_logic(email, user_input):
+    """التحقق باستخدام النموذج السيادي في قاعدة البيانات"""
+    # استخدام الدالة الجاهزة في otp_db.py
+    return OTPVerification.verify_otp(email, user_input)
