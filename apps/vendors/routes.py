@@ -2,7 +2,7 @@
 # 📂 apps/vendors/routes.py
 
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
-from flask_login import login_user, login_required, logout_current_user
+from flask_login import login_user, login_required, logout_user
 from apps.vendors.vendor_auth_service import VendorAuthService
 from apps.models.otp_db import OTPVerification
 from apps.models.supplier_db import Supplier
@@ -28,7 +28,7 @@ def login():
     if phone and otp:
         if OTPVerification.verify_otp(phone, otp):
             # التحقق من وجود المورد في قاعدة البيانات
-            supplier = Supplier.query.filter_by(_owner_phone=phone).first() # تأكد من آلية البحث هنا
+            supplier = Supplier.query.filter_by(_owner_phone=phone).first() 
             
             # إذا كان موجوداً نسجل دخوله
             if supplier:
