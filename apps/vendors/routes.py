@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/vendors/routes.py - نظام الدخول السيادي (مؤمن ومصحح للتحويل)
+# 📂 apps/vendors/routes.py - نظام الدخول السيادي (مؤمن ومصحح)
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, login_required, logout_user, current_user
@@ -14,26 +14,12 @@ vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
 
 @vendors_bp.before_request
 def check_login():
-    # 1. استثناء مسارات المصنع: السماح للمصنع بالعمل بحرية كاملة
-    if request.path.startswith('/supplier'):
-        return None
-    
-    # 2. حماية صفحة الإعداد: التأكد من أن المستخدم مسجل قبل الوصول لها
-    if request.endpoint == 'vendors.setup_profile':
-        if not current_user.is_authenticated:
-            return redirect(url_for('vendors.login'))
-        return None
-    
-    # 3. تحديد المسارات العامة التي لا تتطلب تسجيل دخول
+    # استثناء المسارات العامة
     allowed_endpoints = ['vendors.login', 'vendors.index', 'static']
     
-    # 4. الحماية السيادية: طرد أي مستخدم غير مسجل يحاول الوصول لمسار غير مسموح
+    # حماية سيادية: طرد غير المسجلين إلا في المسارات المسموحة
     if not current_user.is_authenticated and request.endpoint not in allowed_endpoints:
         return redirect(url_for('vendors.login'))
-
-@vendors_bp.route('/')
-def index():
-    return redirect(url_for('vendors.login'))
 
 @vendors_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -46,14 +32,11 @@ def login():
             return jsonify({"status": "error", "message": "بيانات غير صالحة"}), 400
 
         login_type = data.get('type')
-        raw_phone = data.get('phone', '')
-        phone = "".join(filter(str.isdigit, raw_phone))
-        otp = data.get('otp')
-        username = data.get('username')
-        password = data.get('password')
-
+        
         # --- أ. دخول المسوقين ---
         if login_type == 'marketer':
+            username = data.get('username')
+            password = data.get('password')
             user = Marketer.query.filter_by(username=username).first()
             if user and user.check_password(password):
                 login_user(user, remember=True)
@@ -61,6 +44,10 @@ def login():
             return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
 
         # --- ب. دخول الموردين ---
+        raw_phone = data.get('phone', '')
+        phone = "".join(filter(str.isdigit, raw_phone))
+        otp = data.get('otp')
+
         if phone and not otp:
             new_otp = OTPVerification.generate_otp(phone)
             if new_otp and VendorAuthService.initiate_login(phone, new_otp):
@@ -69,23 +56,24 @@ def login():
 
         if phone and otp:
             if OTPVerification.verify_otp(phone, otp):
-                supplier = Supplier.query.filter_by(phone_index=phone).first()
+                supplier = Supplier.query.filter_by(owner_phone=phone).first()
                 
-                # إنشاء مورد جديد إذا كان أول دخول له
+                # إنشاء مورد جديد إذا كان أول دخول
                 if not supplier:
                     supplier = Supplier(
                         owner_phone=phone,
                         username=f"vendor_{uuid.uuid4().hex[:8]}",
                         password_hash="temp_pass",
-                        trade_name="جديد"
+                        trade_name="مورد جديد"
                     )
                     db.session.add(supplier)
                     db.session.commit()
+                    db.session.refresh(supplier) # تأكد من الحصول على ID المورد الجديد
                 
                 login_user(supplier, remember=True)
                 session.permanent = True
                 
-                # التوجيه الذكي: إما للمصنع (Dashboard) أو لصفحة الإعداد (Setup)
+                # التوجيه الذكي
                 is_ready = getattr(supplier, 'is_setup_complete', False)
                 redirect_url = url_for('vendor_dashboard.dashboard') if is_ready else url_for('vendors.setup_profile')
                 
@@ -98,11 +86,6 @@ def login():
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": "حدث خطأ في النظام"}), 500
-
-@vendors_bp.route('/dashboard')
-@login_required
-def dashboard():
-    return redirect(url_for('vendor_dashboard.dashboard'))
 
 @vendors_bp.route('/setup', methods=['GET', 'POST'])
 @login_required
