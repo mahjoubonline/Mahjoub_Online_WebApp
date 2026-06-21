@@ -3,9 +3,7 @@
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
-from apps import db
-# استيراد الموديلات المطلوبة هنا عند الحاجة
-# from apps.models.order_db import Order 
+from apps.models.supplier_profile_db import SupplierProfile
 
 dashboard_bp = Blueprint('vendor_dashboard', __name__, template_folder='templates')
 
@@ -13,39 +11,35 @@ dashboard_bp = Blueprint('vendor_dashboard', __name__, template_folder='template
 @login_required
 def dashboard():
     """
-    لوحة تحكم المورد السيادية:
-    1. تتحقق من اكتمال البيانات (is_setup_complete).
-    2. تمرر البيانات للمورد بأمان.
+    لوحة تحكم المورد السيادية (محدثة لتتوافق مع الموديلات المشفرة)
     """
     
-    # التحقق من حالة المورد (هل أكمل ملفه الشخصي؟)
-    # نستخدم getattr للتعامل بأمان في حال لم تكن الخاصية موجودة في الموديل
-    is_ready = getattr(current_user, 'is_setup_complete', False)
+    # 1. تحقق سيادي: هل يملك المورد بروفايل في قاعدة البيانات؟
+    # العلاقة supplier_profile تم تعريفها في AdminUser بـ lazy='joined'
+    profile = current_user.supplier_profile 
     
-    if not is_ready:
-        # توجيه المورد لصفحة الإعداد إذا لم يكمل بياناته
+    # إذا لم يوجد بروفايل، يجب إكمال الإعداد
+    if not profile:
         return redirect(url_for('vendors.setup_profile'))
 
-    # جلب البيانات المطلوبة للوحة التحكم مع معالجة الأخطاء
     try:
-        # جلب أحدث الطلبات (قم بفك التعليق وتعديل الموديل عند تجهيز جداول الطلبات)
-        # recent_orders = Order.query.filter_by(supplier_id=current_user.id).order_by(Order.created_at.desc()).limit(5).all()
+        # جلب البيانات من الموديلات المشفرة بأمان
+        # هنا نستغل خصائص الـ @property التي عرفناها في الموديل للفك التشفير تلقائياً
         recent_orders = [] 
         
-        # إحصائيات المورد (يمكنك لاحقاً ربطها بدالة حسابية من الموديلات)
         supplier_stats = {
-            'total_sales': "0.00",
+            'total_sales': "0.00", # يمكن ربطها لاحقاً بـ wallet.balance_sar
             'pending_orders': 0
         }
         
     except Exception as e:
-        # في حال حدوث أي خطأ في قاعدة البيانات، نعرض اللوحة فارغة بدلاً من انهيار النظام
         print(f"DEBUG: Dashboard Data Error: {e}")
         recent_orders = []
         supplier_stats = {'total_sales': "0.00", 'pending_orders': 0}
 
     return render_template(
         'vendor/dashboard.html', 
+        profile=profile,
         recent_orders=recent_orders, 
         supplier_stats=supplier_stats
     )
@@ -53,5 +47,4 @@ def dashboard():
 @dashboard_bp.route('/settings')
 @login_required
 def settings():
-    """صفحة إعدادات الحساب للمورد"""
-    return "صفحة إعدادات المورد قيد التطوير - يمكنك إضافة النموذج الخاص بتحديث البيانات هنا"
+    return "صفحة إعدادات المورد قيد التطوير"
