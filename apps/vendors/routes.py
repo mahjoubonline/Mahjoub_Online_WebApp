@@ -14,8 +14,14 @@ vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
 
 @vendors_bp.before_request
 def check_login():
-    # استثناء المسارات التي لا تتطلب تسجيل دخول
+    # 1. السماح للمصنع بالعمل بحرية دون تدخل من هذا الـ Blueprint
+    if request.path.startswith('/supplier'):
+        return None
+    
+    # 2. استثناء المسارات العامة التي لا تتطلب تسجيل دخول
     allowed_endpoints = ['vendors.login', 'vendors.index', 'static']
+    
+    # 3. إذا لم يكن مسجلاً، اطرده لصفحة الدخول
     if not current_user.is_authenticated and request.endpoint not in allowed_endpoints:
         return redirect(url_for('vendors.login'))
 
@@ -44,7 +50,7 @@ def login():
         if login_type == 'marketer':
             user = Marketer.query.filter_by(username=username).first()
             if user and user.check_password(password):
-                login_user(user, remember=True) # إضافة remember=True لتثبيت الجلسة
+                login_user(user, remember=True)
                 return jsonify({"status": "success", "redirect": url_for('marketers.dashboard')})
             return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
 
@@ -69,10 +75,10 @@ def login():
                     db.session.add(supplier)
                     db.session.commit()
                 
-                # التسجيل القسري للجلسة
                 login_user(supplier, remember=True)
-                session.permanent = True # ضمان استمرارية الجلسة
+                session.permanent = True
                 
+                # توجيه ذكي للمصنع
                 is_ready = getattr(supplier, 'is_setup_complete', False)
                 redirect_url = url_for('vendor_dashboard.dashboard') if is_ready else url_for('vendors.setup_profile')
                 
@@ -90,6 +96,7 @@ def login():
 @vendors_bp.route('/dashboard')
 @login_required
 def dashboard():
+    # هذا المسار مجرد جسر لعبور المورد إلى المصنع
     return redirect(url_for('vendor_dashboard.dashboard'))
 
 @vendors_bp.route('/setup', methods=['GET', 'POST'])
