@@ -107,11 +107,16 @@
     }
 
     async function verifyOtp() {
-        const phone = document.getElementById('country-code').value + document.getElementById('reg-phone').value;
+        // تأكد من دمج كود الدولة مع الرقم عند الإرسال
+        const fullPhone = document.getElementById('country-code').value + document.getElementById('reg-phone').value;
         const otp = document.getElementById('otp-input').value;
-        const res = await apiCall({type: 'vendor', phone: phone, otp: otp});
-        if(res.status === 'success') window.location.href = res.redirect;
-        else showMessage(res.message, 'error');
+        
+        const res = await apiCall({type: 'vendor', phone: fullPhone, otp: otp});
+        if(res.status === 'success') {
+            window.location.href = res.redirect;
+        } else {
+            showMessage(res.message, 'error');
+        }
     }
 
     async function loginMarketer() {
