@@ -7,8 +7,8 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="fw-bold" style="color: var(--royal-purple);">لوحة التحكم الخاصة بك</h3>
-            {# تصحيح: استخدام getattr للوصول الآمن للاسم #}
-            <p class="text-muted">أهلاً بك يا شريك النجاح، {{ getattr(current_user, 'trade_name', 'المورد') }}.</p>
+            {# تم تصحيح الصيغة لتتوافق مع Jinja2 #}
+            <p class="text-muted">أهلاً بك يا شريك النجاح، {{ current_user.trade_name or 'المورد' }}.</p>
         </div>
         <button class="btn" onclick="window.location.reload();" style="background: var(--mahjoub-gold); color: white; border-radius: 10px;">
             <i class="fas fa-sync-alt me-2"></i> تحديث البيانات
@@ -42,7 +42,7 @@
             </div>
         </div>
 
-        {# الرصيد المتاح - تم تحديثه ليقرأ من محفظة المورد وليس من user مباشرة #}
+        {# الرصيد المتاح #}
         <div class="col-xl-3 col-md-6">
             <div class="card p-4 shadow-sm border-0" style="border-radius: 15px;">
                 <div class="d-flex align-items-center mb-3">
@@ -51,7 +51,6 @@
                     </div>
                     <div class="ms-3"><h6 class="text-muted mb-0">رصيدك المتاح</h6></div>
                 </div>
-                {# افتراض وجود علاقة wallet مع الـ current_user #}
                 <h5 class="fw-bold mb-0">
                     {{ current_user.wallet.balance if current_user.wallet else '0.00' }} 
                     <small>ر.س</small>
@@ -60,7 +59,6 @@
         </div>
     </div>
     
-    {# جدول الطلبات (كما هو، فهو سليم) #}
-    {# ... بقية كود الجدول ... #}
+    {# يمكنك إضافة بقية جدول الطلبات هنا #}
 </div>
 {% endblock %}
