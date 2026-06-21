@@ -2,7 +2,7 @@
 # 📂 apps/vendors/routes.py
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
-from flask_login import login_user, login_required, logout_user
+from flask_login import login_user, login_required, logout_user, current_user
 from apps import db
 from apps.vendors.vendor_auth_service import VendorAuthService
 from apps.models.otp_db import OTPVerification
@@ -11,6 +11,15 @@ from apps.models.marketer_db import Marketer
 import uuid 
 
 vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
+
+# --- المعترض الذكي لمنع التحويل الخاطئ لبوابة الإدارة ---
+@vendors_bp.before_request
+def check_login():
+    # إذا كان المسار يتطلب تسجيل دخول وهو غير مسجل، وجهه لمسار دخول الموردين
+    if not current_user.is_authenticated:
+        # السماح فقط بمسارات الدخول والتحقق لتجنب التكرار
+        if request.endpoint not in ['vendors.login', 'vendors.index']:
+            return redirect(url_for('vendors.login'))
 
 @vendors_bp.route('/')
 def index():
@@ -42,19 +51,16 @@ def login():
             return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
 
         # --- 2. دخول الموردين (نظام صامت) ---
-        # أ) إرسال رمز التحقق
         if phone and not otp:
             new_otp = OTPVerification.generate_otp(phone)
             if new_otp and VendorAuthService.initiate_login(phone, new_otp):
                 return jsonify({"status": "success", "message": "تم إرسال رمز التحقق"})
             return jsonify({"status": "error", "message": "فشل إرسال الرمز"}), 500
 
-        # ب) التحقق من الرمز وتسجيل الدخول
         if phone and otp:
             if OTPVerification.verify_otp(phone, otp):
                 supplier = Supplier.query.filter_by(_owner_phone=phone).first()
                 
-                # إذا لم يكن موجوداً، ننشئه (بدون إخبار المستخدم بأي شيء)
                 if not supplier:
                     supplier = Supplier(
                         _owner_phone=phone,
@@ -65,10 +71,7 @@ def login():
                     db.session.add(supplier)
                     db.session.commit()
                 
-                # تسجيل الدخول دائماً (سواء كان قديماً أو جديداً)
                 login_user(supplier)
-                
-                # توجيه ذكي: للوحة التحكم إذا أكمل بياناته، أو لصفحة الإعداد إذا كان "جديداً"
                 is_ready = getattr(supplier, 'is_setup_complete', False)
                 return jsonify({
                     "status": "success", 
@@ -87,7 +90,6 @@ def login():
 @vendors_bp.route('/dashboard')
 @login_required
 def dashboard():
-    # التحويل للـ Blueprint الخاص بلوحة التحكم
     return redirect(url_for('vendor_dashboard.dashboard'))
 
 @vendors_bp.route('/setup', methods=['GET', 'POST'])
