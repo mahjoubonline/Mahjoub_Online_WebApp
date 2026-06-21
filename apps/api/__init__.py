@@ -8,6 +8,3 @@ from .sync_engine import SyncEngine
 
 # إنشاء نسخة من المحرك ليتم استخدامها في كامل التطبيق (Singleton)
 engine = SyncEngine()
-
-# تعريف ما يتم تصديره عند استدعاء الحزمة
-__all__ = ['webhooks_bp', 'engine']
