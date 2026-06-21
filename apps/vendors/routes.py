@@ -1,107 +1,32 @@
-# coding: utf-8
-# 📂 apps/vendors/routes.py
+import requests
+from apps.models.otp_db import OTPVerification
 
-import os
-from flask import Blueprint, request, jsonify, session, render_template
-from apps.extensions import db
-from apps.models.supplier_db import Supplier
-from apps.models.supplier_profile_db import SupplierProfile
-from werkzeug.security import generate_password_hash
-from apps.utils.security import AESCipher
-from apps.vendors.vendor_auth_service import trigger_otp_process, verify_vendor_otp, vendor_login_required
-
-vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
-
-@vendors_bp.route('/', methods=['GET'])
-def index():
-    pending_email = session.get('pending_otp_email')
-    return render_template('vendor/login.html', pending_email=pending_email)
-
-@vendors_bp.route('/auth-gateway', methods=['POST'])
-def auth_gateway():
-    print("DEBUG: auth_gateway was reached!") 
-    data = request.get_json()
-    email = data.get('email')
+class VendorAuthService:
+    API_KEY = "rb3tZFnHRcsN" # المفتاح الذي ظهر في الصورة
     
-    try:
-        encrypted_email = AESCipher.encrypt(email)
-        print(f"DEBUG: Searching for: {email} -> Encrypted: {encrypted_email}")
+    @staticmethod
+    def send_whatsapp_otp(phone_number, otp_code):
+        """إرسال الكود عبر واتساب باستخدام API المورد"""
+        message = f"مرحباً، رمز التحقق الخاص بك لبوابة الموردين هو: {otp_code}"
+        # تشفير الرسالة لتناسب الـ URL
+        encoded_message = requests.utils.quote(message)
         
-        supplier = Supplier.query.filter_by(_owner_email=encrypted_email).first() 
+        # الرابط بناءً على صيغة الـ API التي أرسلتها
+        url = f"http://api.textmebot.com/send.php?recipient={phone_number}&apikey={VendorAuthService.API_KEY}&text={encoded_message}"
         
-        if supplier:
-            print(f"DEBUG: Supplier found: {supplier.trade_name}")
-            trigger_otp_process(email, supplier.full_phone)
-            session['pending_otp_email'] = email 
-            return jsonify({"status": "existing_user", "message": "تم إرسال الرمز"})
-        else:
-            print("DEBUG: Supplier not found in database.")
-            return jsonify({"status": "new_partner", "message": "مرحباً بك كشريك جديد"})
-            
-    except Exception as e:
-        print(f"DEBUG ERROR: {str(e)}")
-        return jsonify({"status": "error", "message": "حدث خطأ داخلي"}), 500
-
-@vendors_bp.route('/check-db-data')
-def check_db_data():
-    """مسار تشخيصي لكشف الإيميلات المخزنة في القاعدة"""
-    suppliers = Supplier.query.all()
-    output = []
-    for s in suppliers:
         try:
-            decrypted = AESCipher.decrypt(s._owner_email)
-            output.append(f"Found Email: {decrypted}")
+            response = requests.get(url)
+            return response.status_code == 200
         except Exception as e:
-            output.append(f"Error decrypting ID {s.id}: {str(e)}")
-    return jsonify(output)
+            print(f"Error sending WhatsApp: {e}")
+            return False
 
-@vendors_bp.route('/register-complete', methods=['POST'])
-def register_complete():
-    data = request.get_json()
-    email = data.get('email')
-    full_phone = f"{data.get('country_code', '')}{data.get('phone', '')}"
-    
-    if Supplier.query.filter_by(_owner_email=AESCipher.encrypt(email)).first():
-        return jsonify({"status": "error", "message": "هذا البريد مسجل مسبقاً"}), 400
-
-    try:
-        new_supplier = Supplier(
-            username=data['username'],
-            owner_email=email, 
-            owner_phone=full_phone,
-            password_hash=generate_password_hash(data['password']),
-            trade_name="جديد" 
-        )
-        new_supplier.generate_codes()
-        db.session.add(new_supplier)
-        db.session.flush() 
+    @staticmethod
+    def initiate_login(phone):
+        """بدء عملية الدخول: توليد كود وإرساله"""
+        # 1. توليد كود وتخزينه
+        otp = OTPVerification.generate_otp(phone)
         
-        new_profile = SupplierProfile(user_id=new_supplier.id, trade_name="جديد")
-        db.session.add(new_profile)
-        db.session.commit()
-        
-        trigger_otp_process(email, full_phone)
-        session['pending_otp_email'] = email
-        return jsonify({"status": "success", "message": "تم إنشاء حسابك، يرجى إدخال رمز التحقق"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@vendors_bp.route('/verify-otp', methods=['POST'])
-def verify():
-    data = request.get_json()
-    email = data.get('email')
-    otp = data.get('otp')
-    if verify_vendor_otp(email, otp):
-        session['vendor_authenticated'] = True
-        session['vendor_email'] = email
-        session.pop('pending_otp_email', None)
-        return jsonify({"status": "success", "redirect": "/vendors/dashboard"})
-    return jsonify({"status": "error", "message": "الرمز غير صحيح"}), 400
-
-@vendors_bp.route('/dashboard')
-def dashboard():
-    @vendor_login_required
-    def protected_dashboard():
-        return "مرحباً بك في لوحة تحكم الموردين"
-    return protected_dashboard()
+        # 2. إرسال الكود
+        success = VendorAuthService.send_whatsapp_otp(phone, otp)
+        return success
