@@ -2,81 +2,110 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="description" content="ابدأ شراكاتك مجاناً مع محجوب أونلاين. منصة التجارة الذكية المتكاملة لإدارة الموردين بأعلى معايير الأمن والسيادة الرقمية.">
-    <meta name="keywords" content="محجوب أونلاين, إدارة الموردين, تجارة ذكية, نظام سيادي, لوحة تحكم شركاء">
-    <title>بوابة الشركاء | محجوب أونلاين - ابدأ شراكتك الذكية</title>
+    <title>بوابة الشركاء الموحدة | محجوب أونلاين</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;600;900&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #05020a; --gold: #ce9e49; --card-bg: #0f071c; --neon: #7000ff; }
-        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .stars { position: absolute; top:0; left:0; width:100%; height:100%; z-index:-1; background: radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px); background-size: 550px 550px; opacity: 0.1; }
-        .wrapper { display: flex; width: 95%; max-width: 900px; background: rgba(15, 7, 28, 0.95); border: 1px solid #333; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); overflow: hidden; }
-        .side { flex: 1; padding: 60px; display: flex; flex-direction: column; justify-content: center; }
-        .btn-gold { padding: 18px; background: linear-gradient(90deg, #ce9e49, #9e7634); border: none; border-radius: 15px; font-weight: 900; cursor: pointer; transition: 0.4s; color: #000; text-transform: uppercase; }
-        .btn-gold:hover { transform: translateY(-5px); box-shadow: 0 0 20px rgba(206, 158, 73, 0.5); }
-        .cyber-input { background: #000; border: 1px solid #333; padding: 18px; color: #fff; border-radius: 12px; margin: 10px 0; outline: none; transition: 0.3s; }
-        .cyber-input:focus { border-color: var(--gold); }
-        .marketing-side { background: linear-gradient(145deg, #160d26, #05020a); border-left: 1px solid #222; }
-        .title-main { font-size: 2.8rem; line-height: 1.2; margin-bottom: 20px; }
-        .highlight { color: var(--gold); }
-        .forgot-link { color: #666; font-size: 0.8rem; cursor: pointer; margin-top: 15px; text-decoration: underline; }
+        :root { --bg: #05020a; --gold: #ce9e49; --card-bg: #0f071c; }
+        body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .wrapper { display: flex; width: 95%; max-width: 900px; background: rgba(15, 7, 28, 0.95); border: 1px solid #333; border-radius: 30px; overflow: hidden; }
+        .side { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; }
+        .btn-gold { padding: 15px; background: linear-gradient(90deg, #ce9e49, #9e7634); border: none; border-radius: 12px; font-weight: 900; cursor: pointer; color: #000; margin: 8px 0; width: 100%; }
+        .btn-gold:disabled { background: #555; cursor: not-allowed; }
+        .cyber-input { background: #000; border: 1px solid #333; padding: 15px; color: #fff; border-radius: 12px; margin: 8px 0; width: 100%; box-sizing: border-box; }
+        .hidden { display: none; }
+        .forgot-link { color: #666; font-size: 0.85rem; cursor: pointer; text-decoration: underline; margin-top: 10px; display: block; }
+        .marketing-side { background: linear-gradient(145deg, #160d26, #05020a); }
     </style>
 </head>
 <body>
-    <div class="stars"></div>
-    <div class="wrapper">
-        <div class="side marketing-side">
-            <h1 class="title-main">ابدأ شراكاتك <span class="highlight">مجاناً</span><br>مع محجوب أونلاين</h1>
-            <p style="color: #aaa; font-size: 1.1rem;">سوق محجوب أونلاين الذكي يمنحك أدوات الحوكمة، السرعة، والأمن الرقمي المطلق. انضم لنخبة الشركاء اليوم.</p>
+
+<div class="wrapper">
+    <div class="side marketing-side">
+        <h1 style="font-size: 2.2rem;">بوابة الشركاء <span style="color:var(--gold)">السيادية</span></h1>
+        <p>نظام متكامل لإدارة الموردين والمسوقين بأعلى معايير الأمن الرقمي.</p>
+    </div>
+    
+    <div class="side" id="auth-container">
+        <div id="main-menu">
+            <h3 style="color: var(--gold);">اختر نوع الدخول</h3>
+            <button class="btn-gold" onclick="showForm('register')">اشتراك مورد جديد</button>
+            <button class="btn-gold" onclick="showForm('login')">تسجيل دخول الموردين</button>
+            <button class="btn-gold" style="background: #222; color: #fff;" onclick="showForm('marketer-login')">تسجيل دخول المسوقين</button>
         </div>
-        <div class="side" id="auth-area">
-            <h3 style="color: var(--gold);" id="area-title">تفعيل الدخول السيادي</h3>
-            <div style="display: flex; gap: 10px;">
-                <select class="cyber-input" style="width: 30%;"><option value="+967">+967</option></select>
-                <input type="tel" id="phone" class="cyber-input" style="flex: 1;" placeholder="رقم الهاتف الإداري">
+
+        <div id="register-form" class="hidden">
+            <h3 style="color: var(--gold);">الاشتراك برقم الهاتف</h3>
+            <div style="display: flex; gap: 5px;">
+                <select class="cyber-input" style="width: 35%;">
+                    <option value="+967">اليمن +967</option>
+                    <option value="+966">السعودية +966</option>
+                    <option value="+20">مصر +20</option>
+                    <option value="+971">الإمارات +971</option>
+                </select>
+                <input type="tel" id="reg-phone" class="cyber-input" placeholder="رقم الهاتف">
             </div>
-            <button class="btn-gold" id="action-btn" onclick="sendOtp()">تفعيل الاتصال المشفر</button>
+            <button class="btn-gold" id="otp-btn" onclick="sendOtp()">إرسال رمز التحقق</button>
+            <div id="otp-section" class="hidden">
+                <input type="text" class="cyber-input" placeholder="أدخل رمز التحقق (6 أرقام)">
+                <button class="btn-gold" onclick="alert('تم التفعيل!')">تفعيل الحساب</button>
+                <button class="btn-gold" id="resend-btn" style="background:#222; color:#fff;" onclick="resendOtp()">إعادة إرسال الرمز (60)</button>
+            </div>
+            <button onclick="showForm('menu')" style="background:none; border:none; color:#666; cursor:pointer; margin-top:10px;">رجوع</button>
+        </div>
+
+        <div id="login-form" class="hidden">
+            <h3 style="color: var(--gold);">دخول الموردين</h3>
+            <input type="text" class="cyber-input" placeholder="اسم المستخدم">
+            <input type="password" class="cyber-input" placeholder="كلمة المرور">
+            <button class="btn-gold">تسجيل الدخول</button>
+            <span class="forgot-link" onclick="alert('تواصل مع الدعم الفني لاستعادة الوصول')">هل نسيت كلمة المرور؟</span>
+            <button onclick="showForm('menu')" style="background:none; border:none; color:#666; cursor:pointer; margin-top:10px;">رجوع</button>
+        </div>
+
+        <div id="marketer-login" class="hidden">
+            <h3 style="color: var(--gold);">دخول المسوقين</h3>
+            <input type="text" class="cyber-input" placeholder="البريد الإلكتروني أو كود المسوق">
+            <input type="password" class="cyber-input" placeholder="كلمة المرور">
+            <button class="btn-gold">دخول لوحة المسوق</button>
+            <span class="forgot-link">هل نسيت كلمة المرور؟</span>
+            <button onclick="showForm('menu')" style="background:none; border:none; color:#666; cursor:pointer; margin-top:10px;">رجوع</button>
         </div>
     </div>
+</div>
 
 <script>
-    let currentPhone = "";
-    async function sendOtp() {
-        const btn = document.getElementById('action-btn');
-        const phone = document.getElementById('phone').value;
-        if(!phone) return alert("يرجى إدخال رقم الهاتف");
-        
-        btn.innerHTML = "جاري تأمين الاتصال...";
-        currentPhone = "+967" + phone;
-
-        const res = await fetch('/vendors/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: currentPhone }) });
-        const result = await res.json();
-
-        if (result.status === 'success') {
-            document.getElementById('area-title').innerText = "تأكيد الهوية";
-            document.getElementById('auth-area').innerHTML = `
-                <p style="color:#888">تم إرسال رمز التشفير إلى هاتفك</p>
-                <input type="text" id="otp" class="cyber-input" placeholder="000000" maxlength="6" style="text-align:center; font-size: 2rem; letter-spacing: 15px;">
-                <button class="btn-gold" onclick="verify()">فك التشفير والولوج</button>
-                <div class="forgot-link" onclick="alert('يرجى التواصل مع الدعم الفني لإعادة تعيين الصلاحيات')">هل نسيت رمز الدخول؟</div>
-            `;
-        } else {
-            btn.innerHTML = "إعادة المحاولة";
-            alert(result.message);
-        }
+    function showForm(formType) {
+        document.querySelectorAll('#auth-container > div').forEach(div => div.classList.add('hidden'));
+        if (formType === 'menu') document.getElementById('main-menu').classList.remove('hidden');
+        else if (formType === 'register') document.getElementById('register-form').classList.remove('hidden');
+        else if (formType === 'login') document.getElementById('login-form').classList.remove('hidden');
+        else if (formType === 'marketer-login') document.getElementById('marketer-login').classList.remove('hidden');
     }
 
-    async function verify() {
-        const otp = document.getElementById('otp').value;
-        const res = await fetch('/vendors/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ phone: currentPhone, otp: otp }) });
-        const result = await res.json();
-        
-        if (result.status === 'success') {
-            document.body.innerHTML = "<h1 style='text-align:center; color:var(--gold)'>تم فك التشفير بنجاح... 🚀</h1>";
-            setTimeout(() => window.location.href = result.redirect, 1200);
-        } else {
-            alert("كود خاطئ، حاول مجدداً.");
-        }
+    function sendOtp() {
+        document.getElementById('otp-btn').classList.add('hidden');
+        document.getElementById('otp-section').classList.remove('hidden');
+        startTimer(60);
+    }
+
+    function startTimer(duration) {
+        let timer = duration;
+        const btn = document.getElementById('resend-btn');
+        btn.disabled = true;
+        const interval = setInterval(() => {
+            timer--;
+            btn.innerText = "إعادة إرسال الرمز (" + timer + ")";
+            if (timer <= 0) {
+                clearInterval(interval);
+                btn.innerText = "إعادة إرسال الرمز";
+                btn.disabled = false;
+            }
+        }, 1000);
+    }
+
+    function resendOtp() {
+        alert("تم إرسال رمز جديد!");
+        startTimer(60);
     }
 </script>
 </body>
