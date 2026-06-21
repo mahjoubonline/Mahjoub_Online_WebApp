@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 from apps.models.supplier_profile_db import SupplierProfile
 
+# تعريف الـ Blueprint
 dashboard_bp = Blueprint('vendor_dashboard', __name__, template_folder='templates')
 
 @dashboard_bp.route('/dashboard')
@@ -14,21 +15,27 @@ def dashboard():
     لوحة تحكم المورد السيادية (محدثة لتتوافق مع الموديلات المشفرة)
     """
     
+    # 0. حماية سيادية: التأكد من أن المستخدم الحالي هو مورد
+    if not hasattr(current_user, 'supplier_profile'):
+        flash("هذا القسم مخصص للموردين فقط.", "error")
+        return redirect(url_for('auth_portal.login'))
+
     # 1. تحقق سيادي: هل يملك المورد بروفايل في قاعدة البيانات؟
-    # العلاقة supplier_profile تم تعريفها في AdminUser بـ lazy='joined'
+    # العلاقة supplier_profile تم تعريفها في الموديل بـ lazy='joined'
     profile = current_user.supplier_profile 
     
-    # إذا لم يوجد بروفايل، يجب إكمال الإعداد
+    # إذا لم يوجد بروفايل، يجب إكمال الإعداد أولاً
     if not profile:
         return redirect(url_for('vendors.setup_profile'))
 
     try:
         # جلب البيانات من الموديلات المشفرة بأمان
-        # هنا نستغل خصائص الـ @property التي عرفناها في الموديل للفك التشفير تلقائياً
+        # نستغل خصائص الـ @property التي عرفناها في الموديلات لفك التشفير تلقائياً
         recent_orders = [] 
         
+        # إحصائيات المورد (يمكن ربطها لاحقاً بقاعدة البيانات)
         supplier_stats = {
-            'total_sales': "0.00", # يمكن ربطها لاحقاً بـ wallet.balance_sar
+            'total_sales': "0.00", 
             'pending_orders': 0
         }
         
@@ -47,4 +54,8 @@ def dashboard():
 @dashboard_bp.route('/settings')
 @login_required
 def settings():
+    # التحقق من صلاحية الوصول لصفحة الإعدادات
+    if not hasattr(current_user, 'supplier_profile'):
+        return redirect(url_for('auth_portal.login'))
+        
     return "صفحة إعدادات المورد قيد التطوير"
