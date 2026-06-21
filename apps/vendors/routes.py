@@ -14,21 +14,20 @@ vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
 
 @vendors_bp.before_request
 def check_login():
-    # 1. السماح للمصنع بالعمل بحرية دون تدخل
+    # 1. استثناء مسارات المصنع: السماح للمصنع بالعمل بحرية كاملة
     if request.path.startswith('/supplier'):
         return None
     
-    # 2. السماح لصفحة الإعداد (setup) دون طرد المستخدم إذا كان مسجلاً
-    # هذا يحل مشكلة الـ Redirect Loop التي ظهرت في السجلات
+    # 2. حماية صفحة الإعداد: التأكد من أن المستخدم مسجل قبل الوصول لها
     if request.endpoint == 'vendors.setup_profile':
         if not current_user.is_authenticated:
             return redirect(url_for('vendors.login'))
         return None
     
-    # 3. استثناء المسارات العامة
+    # 3. تحديد المسارات العامة التي لا تتطلب تسجيل دخول
     allowed_endpoints = ['vendors.login', 'vendors.index', 'static']
     
-    # 4. إذا لم يكن مسجلاً، اطرده لصفحة الدخول
+    # 4. الحماية السيادية: طرد أي مستخدم غير مسجل يحاول الوصول لمسار غير مسموح
     if not current_user.is_authenticated and request.endpoint not in allowed_endpoints:
         return redirect(url_for('vendors.login'))
 
@@ -53,7 +52,7 @@ def login():
         username = data.get('username')
         password = data.get('password')
 
-        # --- دخول المسوقين ---
+        # --- أ. دخول المسوقين ---
         if login_type == 'marketer':
             user = Marketer.query.filter_by(username=username).first()
             if user and user.check_password(password):
@@ -61,7 +60,7 @@ def login():
                 return jsonify({"status": "success", "redirect": url_for('marketers.dashboard')})
             return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
 
-        # --- دخول الموردين ---
+        # --- ب. دخول الموردين ---
         if phone and not otp:
             new_otp = OTPVerification.generate_otp(phone)
             if new_otp and VendorAuthService.initiate_login(phone, new_otp):
@@ -72,6 +71,7 @@ def login():
             if OTPVerification.verify_otp(phone, otp):
                 supplier = Supplier.query.filter_by(phone_index=phone).first()
                 
+                # إنشاء مورد جديد إذا كان أول دخول له
                 if not supplier:
                     supplier = Supplier(
                         owner_phone=phone,
@@ -85,6 +85,7 @@ def login():
                 login_user(supplier, remember=True)
                 session.permanent = True
                 
+                # التوجيه الذكي: إما للمصنع (Dashboard) أو لصفحة الإعداد (Setup)
                 is_ready = getattr(supplier, 'is_setup_complete', False)
                 redirect_url = url_for('vendor_dashboard.dashboard') if is_ready else url_for('vendors.setup_profile')
                 
