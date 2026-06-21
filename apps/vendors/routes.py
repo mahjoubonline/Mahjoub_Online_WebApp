@@ -8,7 +8,7 @@ from apps.vendors.vendor_auth_service import VendorAuthService
 from apps.models.otp_db import OTPVerification
 from apps.models.supplier_db import Supplier
 from apps.models.marketer_db import Marketer
-import uuid # لاستخدامها في توليد اسم مستخدم فريد
+import uuid 
 
 vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
 
@@ -41,33 +41,39 @@ def login():
                 return jsonify({"status": "success", "redirect": "/marketers/dashboard"})
             return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
 
-        # --- 2. دخول الموردين ---
+        # --- 2. دخول الموردين (نظام صامت) ---
+        # أ) إرسال رمز التحقق
         if phone and not otp:
             new_otp = OTPVerification.generate_otp(phone)
             if new_otp and VendorAuthService.initiate_login(phone, new_otp):
                 return jsonify({"status": "success", "message": "تم إرسال رمز التحقق"})
             return jsonify({"status": "error", "message": "فشل إرسال الرمز"}), 500
 
+        # ب) التحقق من الرمز وتسجيل الدخول
         if phone and otp:
             if OTPVerification.verify_otp(phone, otp):
                 supplier = Supplier.query.filter_by(_owner_phone=phone).first()
                 
-                # هنا الحل لمنع الخطأ الداخلي (500)
+                # إذا لم يكن موجوداً، ننشئه (بدون إخبار المستخدم بأي شيء)
                 if not supplier:
-                    # ننشئ المورد ببيانات افتراضية لتلبية شروط قاعدة البيانات
                     supplier = Supplier(
                         _owner_phone=phone,
-                        username=f"vendor_{uuid.uuid4().hex[:8]}", # اسم مستخدم فريد
-                        password_hash="temp_pass", # قيمة افتراضية
-                        trade_name="جديد" # قيمة افتراضية
+                        username=f"vendor_{uuid.uuid4().hex[:8]}",
+                        password_hash="temp_pass",
+                        trade_name="جديد"
                     )
                     db.session.add(supplier)
                     db.session.commit()
                 
+                # تسجيل الدخول دائماً (سواء كان قديماً أو جديداً)
                 login_user(supplier)
-                # التحقق من is_setup_complete بذكاء دون التسبب في خطأ
+                
+                # توجيه ذكي: للوحة التحكم إذا أكمل بياناته، أو لصفحة الإعداد إذا كان "جديداً"
                 is_ready = getattr(supplier, 'is_setup_complete', False)
-                return jsonify({"status": "success", "redirect": "/supplier/dashboard" if is_ready else "/vendors/setup"})
+                return jsonify({
+                    "status": "success", 
+                    "redirect": "/supplier/dashboard" if is_ready else "/vendors/setup"
+                })
             
             return jsonify({"status": "error", "message": "رمز التحقق خاطئ"}), 400
 
@@ -75,13 +81,14 @@ def login():
 
     except Exception as e:
         db.session.rollback()
-        print(f"CRITICAL ERROR: {str(e)}") # هذا السطر سيخبرك بالسبب الحقيقي في الـ Logs
+        print(f"CRITICAL ERROR: {str(e)}") 
         return jsonify({"status": "error", "message": "حدث خطأ أثناء الاتصال بقاعدة البيانات"}), 500
 
 @vendors_bp.route('/dashboard')
 @login_required
 def dashboard():
-    return redirect(url_for('supplier_dashboard.dashboard'))
+    # التحويل للـ Blueprint الخاص بلوحة التحكم
+    return redirect(url_for('vendor_dashboard.dashboard'))
 
 @vendors_bp.route('/setup', methods=['GET', 'POST'])
 @login_required
