@@ -2,16 +2,17 @@
 # 📂 apps/vendors/routes.py
 
 from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_user, login_required
+from flask_login import login_user, login_required, logout_user
 from apps.vendors.vendor_auth_service import VendorAuthService
 from apps.models.otp_db import OTPVerification
 from apps.models.supplier_db import Supplier
+from apps.models.marketer_db import Marketer # افترضنا وجود نموذج للمسوقين
 
 vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
 
 @vendors_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    """مسار إدارة تسجيل دخول الموردين بأسلوب أمني سيادي"""
+    """مسار موحد لإدارة دخول الموردين والمسوقين"""
     if request.method == 'GET':
         return render_template('vendor/login.html')
 
@@ -20,51 +21,56 @@ def login():
         if not data:
             return jsonify({"status": "error", "message": "بيانات غير صالحة"}), 400
 
+        login_type = data.get('type') # 'vendor' or 'marketer'
         phone = data.get('phone')
         otp = data.get('otp')
+        username = data.get('username')
+        password = data.get('password')
 
-        # --- المرحلة 1: طلب إرسال رمز التحقق ---
+        # --- حالة دخول المسوقين (اسم مستخدم وكلمة مرور) ---
+        if login_type == 'marketer':
+            user = Marketer.query.filter_by(username=username).first()
+            if user and user.check_password(password):
+                login_user(user)
+                return jsonify({"status": "success", "redirect": "/marketers/dashboard"})
+            return jsonify({"status": "error", "message": "بيانات دخول المسوق غير صحيحة"}), 401
+
+        # --- حالة الموردين (اشتراك ودخول برقم الهاتف) ---
+        # 1. طلب إرسال رمز التحقق
         if phone and not otp:
-            # توليد الرمز في قاعدة البيانات
             new_otp = OTPVerification.generate_otp(phone)
-            
-            if new_otp:
-                # محاولة الإرسال عبر خدمة واتساب الخارجية
-                if VendorAuthService.initiate_login(phone, new_otp):
-                    return jsonify({"status": "success", "message": "تم إرسال رمز التشفير إلى واتساب الخاص بك"})
-                else:
-                    return jsonify({"status": "warning", "message": "خدمة واتساب غير متاحة حالياً، يرجى التأكد من حالة اتصال الرقم"}), 200
-            else:
-                return jsonify({"status": "error", "message": "فشل إنشاء رمز التحقق في قاعدة البيانات"}), 500
+            if new_otp and VendorAuthService.initiate_login(phone, new_otp):
+                return jsonify({"status": "success", "message": "تم إرسال رمز التشفير إلى واتساب"})
+            return jsonify({"status": "error", "message": "فشل إرسال الرمز"}), 500
 
-        # --- المرحلة 2: التحقق من رمز الدخول ---
+        # 2. التحقق من رمز الدخول
         if phone and otp:
             if OTPVerification.verify_otp(phone, otp):
                 supplier = Supplier.query.filter_by(_owner_phone=phone).first()
-                
-                # إذا كان المورد موجوداً، يتم تسجيل دخوله
                 if supplier:
                     login_user(supplier)
                     return jsonify({"status": "success", "redirect": "/vendors/dashboard"})
-                
-                # إذا كان مورداً جديداً، يتم توجيهه لإعداد ملفه الشخصي
                 return jsonify({"status": "success", "redirect": "/vendors/setup"})
             
-            return jsonify({"status": "error", "message": "رمز التحقق غير صحيح أو منتهي الصلاحية"}), 400
-            
-        return jsonify({"status": "error", "message": "بيانات غير مكتملة"}), 400
+            return jsonify({"status": "error", "message": "رمز التحقق خاطئ أو منتهي الصلاحية"}), 400
+
+        return jsonify({"status": "error", "message": "طلب غير مكتمل"}), 400
 
     except Exception as e:
-        # تسجيل الخطأ في الـ Logs الخاصة بالخادم (Render)
-        print(f"CRITICAL SYSTEM ERROR in /login: {str(e)}")
-        return jsonify({"status": "error", "message": "حدث خطأ غير متوقع، يرجى التواصل مع الدعم الفني"}), 500
+        print(f"CRITICAL SYSTEM ERROR: {str(e)}")
+        return jsonify({"status": "error", "message": "حدث خطأ في النظام"}), 500
 
 @vendors_bp.route('/dashboard')
 @login_required
 def dashboard():
-    return "مرحباً بك في لوحة تحكم المورد السيادية"
+    return "مرحباً بك في لوحة تحكم الشركاء السيادية"
 
 @vendors_bp.route('/setup', methods=['GET', 'POST'])
 @login_required
 def setup_profile():
     return "صفحة إكمال بيانات المورد - قيد التطوير"
+
+@vendors_bp.route('/logout')
+def logout():
+    logout_user()
+    return jsonify({"status": "success", "message": "تم تسجيل الخروج"})
