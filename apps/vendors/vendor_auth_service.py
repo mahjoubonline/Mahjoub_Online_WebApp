@@ -1,68 +1,32 @@
-# coding: utf-8
-# 📂 apps/vendors/vendor_auth_service.py
-
 import requests
-import logging
-from flask import session, redirect, url_for
-from functools import wraps
 from apps.models.otp_db import OTPVerification
 
-# إعداد الـ Logger
-logger = logging.getLogger("mahjoub_auth")
-if not logger.handlers:
-    logging.basicConfig(level=logging.INFO)
+class VendorAuthService:
+    API_KEY = "rb3tZFnHRcsN" # المفتاح الذي ظهر في الصورة
+    
+    @staticmethod
+    def send_whatsapp_otp(phone_number, otp_code):
+        """إرسال الكود عبر واتساب باستخدام API المورد"""
+        message = f"مرحباً، رمز التحقق الخاص بك لبوابة الموردين هو: {otp_code}"
+        # تشفير الرسالة لتناسب الـ URL
+        encoded_message = requests.utils.quote(message)
+        
+        # الرابط بناءً على صيغة الـ API التي أرسلتها
+        url = f"http://api.textmebot.com/send.php?recipient={phone_number}&apikey={VendorAuthService.API_KEY}&text={encoded_message}"
+        
+        try:
+            response = requests.get(url)
+            return response.status_code == 200
+        except Exception as e:
+            print(f"Error sending WhatsApp: {e}")
+            return False
 
-def send_whatsapp_otp(phone, otp_code):
-    """إرسال الرمز عبر خدمة TextMeBot المحدثة"""
-    # تنظيف الرقم والتأكد أنه يبدأ برمز الدولة بدون +
-    clean_phone = "".join(filter(str.isdigit, str(phone)))
-    api_key = "rb3tZFnHRcsN" 
-    message = f"رمز التحقق الخاص بك في محجوب أونلاين هو: {otp_code}"
-    
-    # الرابط المحدث بناءً على توثيق TextMeBot الشائع
-    url = "https://api.textmebot.com/send"
-    
-    # تمرير المعاملات كما يتطلبها الـ API بدقة
-    params = {
-        "phone": clean_phone, 
-        "apikey": api_key, 
-        "text": message
-    }
-    
-    try:
-        logger.info(f"DEBUG: محاولة إرسال واتساب لـ: {clean_phone} عبر الرابط: {url}")
-        response = requests.get(url, params=params, timeout=15)
+    @staticmethod
+    def initiate_login(phone):
+        """بدء عملية الدخول: توليد كود وإرساله"""
+        # 1. توليد كود وتخزينه
+        otp = OTPVerification.generate_otp(phone)
         
-        # طباعة الرد كاملاً في الـ Logs للتشخيص
-        logger.info(f"DEBUG: TextMeBot Response: {response.status_code} - {response.text}")
-        
-        return response.status_code == 200
-    except Exception as e:
-        logger.error(f"خطأ في الاتصال بـ TextMeBot: {str(e)}")
-        return False
-
-def trigger_otp_process(email, full_phone):
-    """توليد الرمز وإرساله عبر الواتساب"""
-    logger.info(f"بدء عملية الـ OTP لـ: {email}")
-    try:
-        otp = OTPVerification.generate_otp(email, expires_in_minutes=5)
-        logger.info(f"تم توليد الرمز {otp} بنجاح لـ {email}")
-        
-        success = send_whatsapp_otp(full_phone, otp)
+        # 2. إرسال الكود
+        success = VendorAuthService.send_whatsapp_otp(phone, otp)
         return success
-    except Exception as e:
-        logger.error(f"خطأ فادح في trigger_otp_process: {str(e)}")
-        return False
-
-def verify_vendor_otp(email, otp):
-    """التحقق من صحة الرمز"""
-    return OTPVerification.verify_otp(email, otp)
-
-def vendor_login_required(f):
-    """ديكوريتور لحماية لوحة التحكم"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('vendor_authenticated'):
-            return redirect(url_for('vendors.index'))
-        return f(*args, **kwargs)
-    return decorated_function
