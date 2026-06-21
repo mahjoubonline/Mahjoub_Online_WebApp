@@ -54,7 +54,8 @@
         </div>
 
         <nav class="nav-menu">
-            <a href="{{ url_for('vendors.dashboard') }}" class="nav-link {% if request.endpoint == 'vendors.dashboard' %}active{% endif %}">
+            <a href="{{ url_for('vendor_dashboard.dashboard') }}" 
+               class="nav-link {% if request.endpoint in ['vendors.dashboard', 'vendor_dashboard.dashboard'] %}active{% endif %}">
                 <i class="fas fa-th-large me-3"></i> <span>الرئيسية</span>
             </a>
             
