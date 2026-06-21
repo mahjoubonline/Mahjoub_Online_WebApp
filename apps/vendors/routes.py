@@ -15,6 +15,7 @@ def login():
         return render_template('vendor/login.html')
 
     try:
+        # استقبال البيانات من المتصفح
         data = request.get_json()
         if not data:
             return jsonify({"status": "error", "message": "لم يتم استلام بيانات"}), 400
@@ -22,27 +23,30 @@ def login():
         phone = data.get('phone')
         otp = data.get('otp')
 
-        # مرحلة 1: طلب الرمز (Login Request)
+        # مرحلة 1: طلب الرمز (إرسال OTP)
         if phone and not otp:
             if VendorAuthService.initiate_login(phone):
                 return jsonify({"status": "success", "message": "تم إرسال الرمز إلى واتساب"})
             else:
-                # هنا التعديل: تحويل فشل الـ API إلى رسالة تنبيه تفاعلية بدلاً من خطأ 500
+                # تسجيل الخطأ في الـ Logs لتتبع المشكلة دون إيقاف النظام
                 print(f"DEBUG: Service busy or disconnected for {phone}")
                 return jsonify({
                     "status": "warning", 
                     "message": "خدمة الرسائل غير متاحة حالياً، يرجى المحاولة بعد قليل أو التأكد من حالة اتصال واتساب."
                 }), 200
 
-        # مرحلة 2: التحقق من الرمز (Verification Request)
+        # مرحلة 2: التحقق من الرمز (إتمام الدخول)
         if phone and otp:
+            # التحقق من صحة الرمز من قاعدة البيانات
             if OTPVerification.verify_otp(phone, otp):
                 supplier = Supplier.query.filter_by(_owner_phone=phone).first() 
                 
+                # إذا كان المورد مسجلاً مسبقاً
                 if supplier:
                     login_user(supplier)
                     return jsonify({"status": "success", "redirect": "/vendors/dashboard"})
                 
+                # إذا كان مورداً جديداً (يتم توجيهه لإكمال بياناته)
                 return jsonify({"status": "success", "redirect": "/vendors/setup"})
             
             return jsonify({"status": "error", "message": "رمز التحقق غير صحيح أو منتهي"}), 400
@@ -50,12 +54,13 @@ def login():
         return jsonify({"status": "error", "message": "بيانات غير مكتملة"}), 400
 
     except Exception as e:
+        # تسجيل الأخطاء الحرجة في سجلات ريندر
         print(f"CRITICAL SYSTEM ERROR in /login: {str(e)}")
         return jsonify({"status": "error", "message": "حدث خطأ غير متوقع في النظام"}), 500
 
 @vendors_bp.route('/quick-login', methods=['POST'])
 def quick_login():
-    """دخول سريع للمطورين"""
+    """دخول سريع للمطورين (لأغراض التطوير)"""
     return jsonify({"status": "success", "redirect": "/vendors/dashboard"})
 
 @vendors_bp.route('/dashboard')
