@@ -1,7 +1,11 @@
 # coding: utf-8
+# 📂 apps/api/sync_engine.py - محرك المزامنة المحدث
+
 import requests
 import logging
 from apps.extensions import db
+# تم تحديث الاستيراد ليعتمد على الموديل الجديد Order
+from apps.models.orders_db import Order
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +23,8 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        from apps.models import ProcessedOrder
-        
         logger.info("🔄 بدء المزامنة مع استبعاد الحقول المرفوضة...")
         
-        # استعلام معدل: إزالة mobile المرفوضة وإضافة حقول الاسم المتاحة
         query = """
         query {
             findAllOrders {
@@ -64,13 +65,14 @@ class SyncEngine:
                 unique_id = str(item.get('_id'))
                 if not unique_id: continue
                 
-                order = ProcessedOrder.query.filter_by(id=unique_id).first() or ProcessedOrder(id=unique_id)
+                # استخدام الكلاس المحدث Order
+                order = Order.query.filter_by(id=unique_id).first() or Order(id=unique_id)
                 
                 # تحديث البيانات الأساسية
                 order.total_price = float(item.get('totalPrice') or 0.0)
                 order.order_status = item.get('status', {}).get('code', 'pending')
                 
-                # تحديث بيانات العميل (دمج الاسم بدلاً من الهاتف المرفوض)
+                # تحديث بيانات العميل
                 acc = item.get('account') or {}
                 first_name = acc.get('firstName', '')
                 last_name = acc.get('lastName', '')
