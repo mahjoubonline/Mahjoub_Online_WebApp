@@ -18,11 +18,9 @@ def check_login():
     """
     حماية سيادية: استثناء مسارات الدخول والملفات الثابتة لمنع حلقات إعادة التوجيه
     """
-    # التأكد من عدم حماية مسارات الدخول
     if request.endpoint in ['vendors.login', 'static']:
         return None
     
-    # حماية باقي المسارات
     if not current_user.is_authenticated:
         return redirect(url_for('vendors.login'))
 
@@ -78,11 +76,8 @@ def login():
                 login_user(supplier, remember=True)
                 session.permanent = True
                 
-                # التوجيه الذكي للمورد
-                is_ready = getattr(supplier, 'is_setup_complete', False)
-                redirect_url = url_for('vendor_dashboard.dashboard') if is_ready else url_for('vendors.setup_profile')
-                
-                return jsonify({"status": "success", "redirect": redirect_url})
+                # تم التعديل: التوجيه مباشرة للداشبورد لتجنب خطأ الـ 500 (TemplateNotFound)
+                return jsonify({"status": "success", "redirect": url_for('vendor_dashboard.dashboard')})
             
             return jsonify({"status": "error", "message": "رمز التحقق خاطئ"}), 400
 
@@ -91,12 +86,6 @@ def login():
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": "حدث خطأ في النظام"}), 500
-
-@vendors_bp.route('/setup', methods=['GET', 'POST'])
-@login_required
-def setup_profile():
-    # تم تغيير المسار ليكون خاصاً بالموردين فقط
-    return render_template('vendor/setup.html', title="إكمال إعدادات المورد")
 
 @vendors_bp.route('/logout')
 def logout():
