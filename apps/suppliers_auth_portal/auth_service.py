@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/vendors/vendor_auth_service.py
+# 📂 apps/vendors/suppliers_auth_portal/_auth_service.py
 
 import requests
 import re
