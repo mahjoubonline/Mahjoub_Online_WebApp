@@ -1,10 +1,14 @@
 # coding: utf-8
-# 📂 apps/vendors/routes.py - نظام الدخول السيادي (مؤمن ومحدث للمسارات)
+# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي (مُحدث المسارات)
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, login_required, logout_user, current_user
 from apps import db
-from apps.vendors.vendor_auth_service import VendorAuthService
+
+# --- التعديل الجوهري هنا ---
+# تم تغيير المسار من apps.vendors إلى المسار الصحيح للمجلد الجديد
+from apps.suppliers_auth_portal.auth_service import VendorAuthService 
+
 from apps.models.otp_db import OTPVerification
 from apps.models.supplier_db import Supplier
 from apps.models.marketer_db import Marketer
@@ -27,7 +31,8 @@ def check_login():
 @vendors_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
-        return render_template('vendor/login.html')
+        # تأكد أن المسار داخل مجلد templates يطابق هذا
+        return render_template('suppliers_auth_portal/login.html')
 
     try:
         data = request.get_json()
@@ -61,7 +66,6 @@ def login():
             if OTPVerification.verify_otp(phone, otp):
                 supplier = Supplier.query.filter_by(owner_phone=phone).first()
                 
-                # إنشاء مورد جديد إذا كان أول دخول له
                 if not supplier:
                     supplier = Supplier(
                         owner_phone=phone,
@@ -71,12 +75,8 @@ def login():
                     )
                     db.session.add(supplier)
                     db.session.commit()
-                    db.session.refresh(supplier) 
                 
                 login_user(supplier, remember=True)
-                session.permanent = True
-                
-                # تم التعديل: التوجيه مباشرة للداشبورد لتجنب خطأ الـ 500 (TemplateNotFound)
                 return jsonify({"status": "success", "redirect": url_for('vendor_dashboard.dashboard')})
             
             return jsonify({"status": "error", "message": "رمز التحقق خاطئ"}), 400
