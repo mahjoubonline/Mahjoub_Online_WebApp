@@ -1,39 +1,54 @@
-# 📂 apps/vendor_dashboard/routes.py
+# coding: utf-8
+# 📂 apps/admin_dashboard/routes.py - لوحة تحكم الإدارة المركزية
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
-from apps.models.supplier_profile_db import SupplierProfile
-from apps.models.supplier_db import Supplier # تأكد من استيراد الموديل
+from apps.models.admin_db import AdminUser
+from apps.models.supplier_db import Supplier
 
-dashboard_bp = Blueprint('vendor_dashboard', __name__, template_folder='templates')
+# تعريف الـ Blueprint الخاص بالإدارة
+admin_dashboard = Blueprint('admin_dashboard', __name__, template_folder='templates')
 
-@dashboard_bp.route('/dashboard')
+@admin_dashboard.route('/dashboard')
 @login_required
 def dashboard():
     """
-    لوحة تحكم المورد: جلب البيانات بناءً على هوية المورد الحالية
+    لوحة تحكم القيادة المركزية للمدير
     """
-    
-    # 1. البحث عن البروفايل يدوياً بناءً على ID المورد الحالي
-    # بما أننا لا نعدل الجداول، نبحث في البروفايلات عن صاحب هذا الـ ID
-    profile = SupplierProfile.query.filter_by(user_id=current_user.id).first()
-    
-    # 2. إذا لم يوجد بروفايل، يجب إكمال الإعداد
-    if not profile:
-        return redirect(url_for('vendors.setup_profile'))
+    # 1. حماية سيادية: التأكد من أن المستخدم مدير
+    if not isinstance(current_user, AdminUser):
+        flash("هذه المنطقة مخصصة للمدراء فقط.", "error")
+        return redirect(url_for('auth_portal.login'))
 
     try:
-        # 3. جلب الإحصائيات (نستخدم current_user لأنه كائن Supplier الفعلي)
-        supplier_stats = {
-            'total_sales': getattr(current_user, 'get_total_sales', lambda: "0.00")(),
-            'pending_orders': getattr(current_user, 'get_pending_orders_count', lambda: 0)()
+        # 2. جلب إحصائيات النظام
+        total_suppliers = Supplier.query.count()
+        
+        stats = {
+            'total_suppliers': total_suppliers,
+            'active_orders': 0,
+            'central_balance': "0.00"
         }
+        
+        return render_template('admin/dashboard.html', stats=stats)
+        
     except Exception as e:
-        print(f"DEBUG: Data Error: {e}")
-        supplier_stats = {'total_sales': "0.00", 'pending_orders': 0}
+        print(f"DEBUG: Admin Dashboard Error: {e}")
+        return "حدث خطأ أثناء تحميل لوحة التحكم", 500
 
-    return render_template(
-        'vendor/dashboard.html', 
-        profile=profile,
-        supplier_stats=supplier_stats
-    )
+@admin_dashboard.route('/settings')
+@login_required
+def settings():
+    if not isinstance(current_user, AdminUser):
+        return redirect(url_for('auth_portal.login'))
+    return "صفحة إعدادات النظام قيد التطوير"
+
+@admin_dashboard.route('/suppliers')
+@login_required
+def manage_suppliers():
+    """عرض قائمة الموردين للمدير"""
+    if not isinstance(current_user, AdminUser):
+        return redirect(url_for('auth_portal.login'))
+        
+    suppliers = Supplier.query.all()
+    return render_template('admin/suppliers.html', suppliers=suppliers)
