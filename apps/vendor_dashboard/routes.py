@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/vendor_dashboard/routes.py
+# 📂 apps/vendor_dashboard/routes.py - لوحة تحكم المورد السيادية
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
@@ -12,16 +12,15 @@ dashboard_bp = Blueprint('vendor_dashboard', __name__, template_folder='template
 @login_required
 def dashboard():
     """
-    لوحة تحكم المورد السيادية (محدثة لتتوافق مع الموديلات المشفرة)
+    لوحة تحكم المورد: تعرض البيانات المشفرة والمحمية للمورد
     """
     
-    # 0. حماية سيادية: التأكد من أن المستخدم الحالي هو مورد
+    # 0. حماية سيادية: التأكد من أن المستخدم الحالي مورد
     if not hasattr(current_user, 'supplier_profile'):
         flash("هذا القسم مخصص للموردين فقط.", "error")
-        return redirect(url_for('auth_portal.login'))
+        return redirect(url_for('vendors.login'))
 
     # 1. تحقق سيادي: هل يملك المورد بروفايل في قاعدة البيانات؟
-    # العلاقة supplier_profile تم تعريفها في الموديل بـ lazy='joined'
     profile = current_user.supplier_profile 
     
     # إذا لم يوجد بروفايل، يجب إكمال الإعداد أولاً
@@ -29,14 +28,14 @@ def dashboard():
         return redirect(url_for('vendors.setup_profile'))
 
     try:
-        # جلب البيانات من الموديلات المشفرة بأمان
-        # نستغل خصائص الـ @property التي عرفناها في الموديلات لفك التشفير تلقائياً
+        # جلب البيانات من الموديلات المشفرة
+        # نستخدم طرق جلب الإحصائيات (التي يجب أن تكون معرفة في الموديل أو الخدمة)
         recent_orders = [] 
         
-        # إحصائيات المورد (يمكن ربطها لاحقاً بقاعدة البيانات)
+        # إحصائيات المورد (تأكد من وجود دوال تجلب هذه القيم في الموديل)
         supplier_stats = {
-            'total_sales': "0.00", 
-            'pending_orders': 0
+            'total_sales': getattr(current_user, 'get_total_sales', lambda: "0.00")(),
+            'pending_orders': getattr(current_user, 'get_pending_orders_count', lambda: 0)()
         }
         
     except Exception as e:
@@ -44,6 +43,7 @@ def dashboard():
         recent_orders = []
         supplier_stats = {'total_sales': "0.00", 'pending_orders': 0}
 
+    # لاحظ هنا المسار: المجلد vendor موجود داخل templates الخاص بالـ Blueprint
     return render_template(
         'vendor/dashboard.html', 
         profile=profile,
@@ -56,6 +56,6 @@ def dashboard():
 def settings():
     # التحقق من صلاحية الوصول لصفحة الإعدادات
     if not hasattr(current_user, 'supplier_profile'):
-        return redirect(url_for('auth_portal.login'))
+        return redirect(url_for('vendors.login'))
         
     return "صفحة إعدادات المورد قيد التطوير"
