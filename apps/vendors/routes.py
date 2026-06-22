@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/vendors/routes.py - نظام الدخول السيادي (مؤمن ومصحح)
+# 📂 apps/vendors/routes.py - نظام الدخول السيادي (مؤمن ومصحح للمسارات)
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, login_required, logout_user, current_user
@@ -10,11 +10,12 @@ from apps.models.supplier_db import Supplier
 from apps.models.marketer_db import Marketer
 import uuid 
 
+# تعريف الـ Blueprint مع تحديد مجلد القوالب الأساسي
 vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
 
 @vendors_bp.before_request
 def check_login():
-    # استثناء المسارات العامة
+    # استثناء المسارات العامة من حماية تسجيل الدخول
     allowed_endpoints = ['vendors.login', 'vendors.index', 'static']
     
     # حماية سيادية: طرد غير المسجلين إلا في المسارات المسموحة
@@ -24,6 +25,7 @@ def check_login():
 @vendors_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
+        # المسار الصحيح بناءً على هيكلة المجلدات لديك
         return render_template('vendor/login.html')
 
     try:
@@ -58,7 +60,7 @@ def login():
             if OTPVerification.verify_otp(phone, otp):
                 supplier = Supplier.query.filter_by(owner_phone=phone).first()
                 
-                # إنشاء مورد جديد إذا كان أول دخول
+                # إنشاء مورد جديد إذا كان أول دخول له
                 if not supplier:
                     supplier = Supplier(
                         owner_phone=phone,
@@ -68,12 +70,12 @@ def login():
                     )
                     db.session.add(supplier)
                     db.session.commit()
-                    db.session.refresh(supplier) # تأكد من الحصول على ID المورد الجديد
+                    db.session.refresh(supplier) 
                 
                 login_user(supplier, remember=True)
                 session.permanent = True
                 
-                # التوجيه الذكي
+                # التوجيه الذكي للمورد
                 is_ready = getattr(supplier, 'is_setup_complete', False)
                 redirect_url = url_for('vendor_dashboard.dashboard') if is_ready else url_for('vendors.setup_profile')
                 
@@ -90,6 +92,7 @@ def login():
 @vendors_bp.route('/setup', methods=['GET', 'POST'])
 @login_required
 def setup_profile():
+    # التأكد من المسار الصحيح للقالب
     return render_template('vendor/setup.html')
 
 @vendors_bp.route('/logout')
