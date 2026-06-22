@@ -1,37 +1,32 @@
 # coding: utf-8
-# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي (مُحدث المسارات)
+# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي (مُعرب بالكامل)
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
-from flask_login import login_user, login_required, logout_user, current_user
+from flask_login import login_user, logout_user, current_user
 from apps import db
 
-# --- التعديل الجوهري هنا ---
-# تم تغيير المسار من apps.vendors إلى المسار الصحيح للمجلد الجديد
+# الاستيرادات الجديدة - تأكد أن هذه الملفات موجودة في المجلدات المشار إليها
 from apps.suppliers_auth_portal.auth_service import VendorAuthService 
-
 from apps.models.otp_db import OTPVerification
 from apps.models.supplier_db import Supplier
-from apps.models.marketer_db import Marketer
+from apps.models.marketer_db import Marketer 
 import uuid 
 
-# تعريف الـ Blueprint
-vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
+# تعريف الـ Blueprint (استخدمنا اسم 'suppliers_portal' لضمان عدم التعارض)
+suppliers_bp = Blueprint('suppliers_portal', __name__, template_folder='templates')
 
-@vendors_bp.before_request
+@suppliers_bp.before_request
 def check_login():
-    """
-    حماية سيادية: استثناء مسارات الدخول والملفات الثابتة لمنع حلقات إعادة التوجيه
-    """
-    if request.endpoint in ['vendors.login', 'static']:
+    """حماية سيادية: استثناء مسارات الدخول"""
+    if request.endpoint in ['suppliers_portal.login', 'static']:
         return None
     
     if not current_user.is_authenticated:
-        return redirect(url_for('vendors.login'))
+        return redirect(url_for('suppliers_portal.login'))
 
-@vendors_bp.route('/login', methods=['GET', 'POST'])
+@suppliers_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
-        # تأكد أن المسار داخل مجلد templates يطابق هذا
         return render_template('suppliers_auth_portal/login.html')
 
     try:
@@ -41,7 +36,7 @@ def login():
 
         login_type = data.get('type')
         
-        # --- أ. دخول المسوقين ---
+        # --- دخول المسوقين ---
         if login_type == 'marketer':
             username = data.get('username')
             password = data.get('password')
@@ -51,7 +46,7 @@ def login():
                 return jsonify({"status": "success", "redirect": url_for('marketers.dashboard')})
             return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
 
-        # --- ب. دخول الموردين ---
+        # --- دخول الموردين ---
         raw_phone = data.get('phone', '')
         phone = "".join(filter(str.isdigit, raw_phone))
         otp = data.get('otp')
@@ -77,6 +72,7 @@ def login():
                     db.session.commit()
                 
                 login_user(supplier, remember=True)
+                session.permanent = True
                 return jsonify({"status": "success", "redirect": url_for('vendor_dashboard.dashboard')})
             
             return jsonify({"status": "error", "message": "رمز التحقق خاطئ"}), 400
@@ -85,9 +81,9 @@ def login():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": "حدث خطأ في النظام"}), 500
+        return jsonify({"status": "error", "message": "حدث خطأ فني"}), 500
 
-@vendors_bp.route('/logout')
+@suppliers_bp.route('/logout')
 def logout():
     logout_user()
-    return redirect(url_for('vendors.login'))
+    return redirect(url_for('suppliers_portal.login'))
