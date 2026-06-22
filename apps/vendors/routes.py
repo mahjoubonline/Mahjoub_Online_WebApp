@@ -91,10 +91,11 @@ def login():
 @vendors_bp.route('/setup', methods=['GET', 'POST'])
 @login_required
 def setup_profile():
-    # توجيه المورد إلى قالب الإدارة المشترك بعد نجاح التحقق
+    # توجيه المورد إلى قالب الإعداد المخصص
     return render_template('admin/dashboard_content.html', title="إكمال إعدادات المورد")
 
 @vendors_bp.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('vendors.login'))
+    
