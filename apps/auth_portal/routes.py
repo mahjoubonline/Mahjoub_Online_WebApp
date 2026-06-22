@@ -1,9 +1,10 @@
 # coding: utf-8
-# 📂 apps/auth_portal/routes.py - البوابة السيادية (مُحدثة للعمل برقم الهاتف مع نظام تتبع)
+# 📂 apps/auth_portal/routes.py - البوابة السيادية (مُحدثة للتعامل التلقائي مع رموز الدولة)
 
 import os
 import time
 import random
+import re
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from flask_login import login_user, logout_user, login_required, current_user
 from apps.extensions import db
@@ -12,6 +13,15 @@ from apps.models.admin_db import AdminUser
 from apps.models.otp_db import OTPVerification
 
 SECRET_LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x')
+
+def format_phone_number(phone):
+    """دالة مساعدة لتصحيح الرقم إلى الصيغة الدولية 967"""
+    clean = re.sub(r'[^\d]', '', str(phone))
+    if len(clean) == 9 and clean.startswith('7'):
+        return '967' + clean
+    elif len(clean) == 10 and clean.startswith('07'):
+        return '967' + clean[1:]
+    return clean
 
 # -------------------------------------------------------------------------
 # 1. مسار الدخول الأساسي
@@ -29,17 +39,17 @@ def login():
         
         try:
             user = AdminUser.query.filter_by(username=username).first()
-            
             if not user or not user.check_password(password):
                 flash('بيانات الدخول غير صحيحة.', 'danger')
                 return render_template('auth/login.html')
 
-            # 💡 تتبع رقم الهاتف المستخدم
-            phone_to_use = getattr(user, 'phone_number', None)
-            print(f"DEBUG [Admin System] محاولة إرسال OTP إلى الرقم: {phone_to_use}")
+            raw_phone = getattr(user, 'phone_number', None)
+            phone_to_use = format_phone_number(raw_phone)
+            
+            print(f"DEBUG [Admin System] إرسال OTP إلى الرقم المنسق: {phone_to_use}")
 
-            if not phone_to_use or len(str(phone_to_use)) < 9:
-                flash('الحساب لا يحتوي على رقم هاتف صحيح.', 'danger')
+            if not phone_to_use or len(phone_to_use) < 12:
+                flash('رقم الهاتف المسجل غير صالح للاستخدام الدولي.', 'danger')
                 return render_template('auth/login.html')
 
             session['temp_user_id'] = user.id
@@ -65,12 +75,11 @@ def verify_otp_page():
     if request.method == 'POST':
         otp_code = request.form.get('otp_code', '').strip()
         user = AdminUser.query.get(session['temp_user_id'])
-        phone_to_use = user.phone_number
+        phone_to_use = format_phone_number(user.phone_number)
 
         if user and OTPVerification.verify_otp(phone_to_use, otp_code):
             login_user(user)
             session.pop('temp_user_id', None)
-            
             if hasattr(user, 'reset_failed_attempts'):
                 user.reset_failed_attempts()
                 db.session.commit()
@@ -84,7 +93,7 @@ def verify_otp_page():
 def resend_otp():
     if 'temp_user_id' in session:
         user = AdminUser.query.get(session['temp_user_id'])
-        phone_to_use = user.phone_number
+        phone_to_use = format_phone_number(user.phone_number)
         if phone_to_use:
             OTPVerification.generate_otp(phone_to_use)
             flash('تم إرسال رمز تحقق جديد إلى هاتفك.', 'info')
