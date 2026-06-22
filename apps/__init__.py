@@ -64,21 +64,21 @@ def create_app():
     def index():
         return redirect(url_for('auth_portal.login'))
 
-    # 6. إعداد البيانات والجداول (تطابق الجداول العشرة)
+    # 6. إعداد البيانات والجداول
     with app.app_context():
         try:
-            # استيراد النماذج (تأكد من مطابقة أسماء الملفات في مجلد models)
+            # استيراد النماذج (تم تصحيح اسم OrderFinancial ليطابق ملف financials_db)
             from apps.models.admin_db import AdminUser
             from apps.models.admin_staff_db import AdminStaff
-            from apps.models.financials_db import FinancialLog # من ملف financials_db.py
-            from apps.models.marketers_db import Marketer      # من ملف marketers_db.py
-            from apps.models.orders_db import ProcessedOrder    # من ملف orders_db.py
-            from apps.models.otp_db import OTPVerification      # من ملف otp_db.py
-            from apps.models.supplier_db import Supplier        # من ملف supplier_db.py
+            from apps.models.financials_db import OrderFinancial
+            from apps.models.marketers_db import Marketer
+            from apps.models.orders_db import ProcessedOrder
+            from apps.models.otp_db import OTPVerification
+            from apps.models.supplier_db import Supplier
             from apps.models.supplier_profile_db import SupplierProfile
             from apps.models.supplier_staff_db import SupplierStaff
-            from apps.models.sync_log import SyncLog            # من ملف sync_log.py
-            from apps.models.wallet_db import SupplierWallet    # من ملف wallet_db.py
+            from apps.models.sync_log import SyncLog
+            from apps.models.wallet_db import SupplierWallet
 
             db.create_all()
             
