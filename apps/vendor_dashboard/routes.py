@@ -1,64 +1,41 @@
 # coding: utf-8
-# 📂 apps/vendor_dashboard/routes.py - لوحة تحكم المورد السيادية
+# 📂 apps/vendor_dashboard/routes.py
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
-from apps.models.supplier_profile_db import SupplierProfile
+from apps.models.supplier_db import Supplier
 
 # تعريف الـ Blueprint
-# تأكد أن المجلدات مرتبة كالتالي: apps/vendor_dashboard/templates/vendor/dashboard.html
+# نحدد template_folder='templates' ليعرف Flask أن القوالب داخل هذا المجلد
 dashboard_bp = Blueprint('vendor_dashboard', __name__, template_folder='templates')
 
 @dashboard_bp.route('/dashboard')
 @login_required
 def dashboard():
     """
-    لوحة تحكم المورد: تعرض البيانات المشفرة والمحمية للمورد
+    لوحة تحكم المورد الرئيسية
     """
-    
-    # 0. حماية سيادية: التأكد من أن المستخدم الحالي مورد
-    # نتحقق من وجود بروفايل أو سمة تدل على أنه مورد
-    if not hasattr(current_user, 'supplier_profile'):
-        flash("هذا القسم مخصص للموردين فقط.", "error")
+    # 1. التأكد من أن المستخدم الحالي هو مورد
+    if not isinstance(current_user, Supplier):
+        flash("غير مصرح لك بالوصول لهذه الصفحة", "danger")
         return redirect(url_for('vendors.login'))
-
-    # 1. تحقق سيادي: هل يملك المورد بروفايل في قاعدة البيانات؟
-    profile = current_user.supplier_profile 
     
-    # إذا لم يوجد بروفايل، يجب إكمال الإعداد أولاً
-    if not profile:
-        return redirect(url_for('vendors.setup_profile'))
+    # 2. إحصائيات افتراضية (يمكنك ربطها بـ models لاحقاً)
+    supplier_stats = {
+        'total_sales': '0.00',
+        'pending_orders': 0
+    }
+    
+    # 3. عرض قالب الداشبورد
+    # المسار الفعلي سيكون: apps/vendor_dashboard/templates/vendor/dashboard.html
+    return render_template('vendor/dashboard.html', 
+                           title="لوحة المورد", 
+                           supplier_stats=supplier_stats)
 
-    try:
-        # جلب البيانات من الموديلات المشفرة
-        # نستخدم getattr لتجنب تعطل النظام إذا كانت الدوال غير معرفة بعد
-        supplier_stats = {
-            'total_sales': getattr(current_user, 'get_total_sales', lambda: "0.00")(),
-            'pending_orders': getattr(current_user, 'get_pending_orders_count', lambda: 0)()
-        }
-        recent_orders = [] 
-        
-    except Exception as e:
-        # تسجيل الخطأ للمطورين فقط
-        print(f"DEBUG: Dashboard Data Error: {e}")
-        supplier_stats = {'total_sales': "0.00", 'pending_orders': 0}
-        recent_orders = []
-
-    # استخدام المسار الكامل داخل الـ templates الخاص بالـ Blueprint
-    # بما أن الـ Blueprint معرف بـ template_folder='templates'، 
-    # فإن render_template سيبحث تلقائياً داخل apps/vendor_dashboard/templates/
-    return render_template(
-        'vendor/dashboard.html', 
-        profile=profile,
-        recent_orders=recent_orders, 
-        supplier_stats=supplier_stats
-    )
-
-@dashboard_bp.route('/settings')
+@dashboard_bp.route('/')
 @login_required
-def settings():
-    # التحقق من صلاحية الوصول لصفحة الإعدادات
-    if not hasattr(current_user, 'supplier_profile'):
-        return redirect(url_for('vendors.login'))
-        
-    return "صفحة إعدادات المورد قيد التطوير"
+def index():
+    """
+    تحويل المسار الجذري للـ blueprint إلى لوحة التحكم
+    """
+    return redirect(url_for('vendor_dashboard.dashboard'))
