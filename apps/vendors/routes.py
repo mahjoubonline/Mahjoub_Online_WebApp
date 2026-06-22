@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/vendors/routes.py - نظام الدخول السيادي (مؤمن ومصحح للمسارات)
+# 📂 apps/vendors/routes.py - نظام الدخول السيادي (مؤمن ومحدث للمسارات)
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, login_required, logout_user, current_user
@@ -10,7 +10,7 @@ from apps.models.supplier_db import Supplier
 from apps.models.marketer_db import Marketer
 import uuid 
 
-# تعريف الـ Blueprint مع تحديد مجلد القوالب الأساسي
+# تعريف الـ Blueprint
 vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
 
 @vendors_bp.before_request
@@ -25,7 +25,6 @@ def check_login():
 @vendors_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
-        # المسار الصحيح بناءً على هيكلة المجلدات لديك
         return render_template('vendor/login.html')
 
     try:
@@ -92,8 +91,8 @@ def login():
 @vendors_bp.route('/setup', methods=['GET', 'POST'])
 @login_required
 def setup_profile():
-    # التأكد من المسار الصحيح للقالب
-    return render_template('vendor/setup.html')
+    # توجيه المورد إلى قالب الإدارة المشترك بعد نجاح التحقق
+    return render_template('admin/dashboard_content.html', title="إكمال إعدادات المورد")
 
 @vendors_bp.route('/logout')
 def logout():
