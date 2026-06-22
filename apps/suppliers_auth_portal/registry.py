@@ -1,6 +1,6 @@
-# 📂 apps/vendors/registry.py
-from apps.vendors.routes import vendors_bp
+# 📂 apps/suppliers_auth_portal/registry.py
+from .routes import vendors_bp
 
-def register_app(app):
-    app.register_blueprint(vendors_bp, url_prefix='/vendors')
-    print("✅ [Registry] تم تسجيل وحدة بوابات الدخول بنجاح على المسار /vendors")
+def register_suppliers_auth(app):
+    """تسجيل تلقائي لبوابة الموردين"""
+    app.register_blueprint(vendors_bp, url_prefix='/suppliers_auth')
