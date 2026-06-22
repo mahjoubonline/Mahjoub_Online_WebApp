@@ -15,12 +15,17 @@ vendors_bp = Blueprint('vendors', __name__, template_folder='templates')
 
 @vendors_bp.before_request
 def check_login():
-    # استثناء المسارات العامة من حماية تسجيل الدخول
-    allowed_endpoints = ['vendors.login', 'vendors.index', 'static']
+    """
+    حماية سيادية للمسارات مع ضمان عدم حدوث حلقة إعادة توجيه
+    """
+    # المسارات المستثناة
+    allowed_endpoints = ['vendors.login', 'static']
     
-    # حماية سيادية: طرد غير المسجلين إلا في المسارات المسموحة
-    if not current_user.is_authenticated and request.endpoint not in allowed_endpoints:
-        return redirect(url_for('vendors.login'))
+    # التحقق من أن الطلب ليس للمسارات المسموحة
+    if request.endpoint not in allowed_endpoints:
+        # إذا لم يكن المستخدم مسجلاً، وجهه لصفحة الدخول
+        if not current_user.is_authenticated:
+            return redirect(url_for('vendors.login'))
 
 @vendors_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -98,4 +103,3 @@ def setup_profile():
 def logout():
     logout_user()
     return redirect(url_for('vendors.login'))
-    
