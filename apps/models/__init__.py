@@ -12,9 +12,8 @@ from .supplier_profile_db import SupplierProfile
 from .supplier_staff_db import SupplierStaff
 from .sync_log import SyncLog
 from .wallet_db import VendorWallet 
-from .vault_db import AdminVault, VaultTransaction
 
-# قائمة للتصدير لضمان سهولة الوصول إليها من أي مكان في النظام
+# تأكد أنك حذفت أي سطر يحتوي على vault_db من هنا
 __all__ = [
     'AdminUser', 
     'AdminStaff', 
@@ -26,7 +25,5 @@ __all__ = [
     'SupplierProfile', 
     'SupplierStaff', 
     'SyncLog', 
-    'VendorWallet',
-    'AdminVault',
-    'VaultTransaction'
+    'VendorWallet'
 ]
