@@ -1,28 +1,29 @@
-# coding: utf-8
-# 📂 apps/models/__init__.py - حوكمة النماذج المركزية (الهيكل السيادي المعتمد)
+# 📂 apps/models/__init__.py
 
+# استيراد النماذج من الملفات المعتمدة
 from .admin_db import AdminUser
 from .admin_staff_db import AdminStaff
-from .suppliers_db import Supplier
+from .financials_db import FinancialLog
+from .marketers_db import Marketer
+from .orders_db import ProcessedOrder
+from .otp_db import OTPVerification
+from .supplier_db import Supplier
 from .supplier_profile_db import SupplierProfile
 from .supplier_staff_db import SupplierStaff
-from .wallet_db import VendorWallet
-from .orders_db import Order
-from .financials_db import OrderFinancial
-from .marketers_db import Marketer
-from .otp_db import OTPVerification
-from .sync_log_db import SyncLog
+from .sync_log import SyncLog
+from .wallet_db import SupplierWallet
 
+# هذا يجعل الجداول متاحة للاستيراد مباشرة من 'apps.models'
 __all__ = [
-    'AdminUser',
-    'AdminStaff',
-    'Supplier',
-    'SupplierProfile',
-    'SupplierStaff',
-    'VendorWallet',
-    'Order',
-    'OrderFinancial',
-    'Marketer',
-    'OTPVerification',
-    'SyncLog'
+    'AdminUser', 
+    'AdminStaff', 
+    'FinancialLog', 
+    'Marketer', 
+    'ProcessedOrder', 
+    'OTPVerification', 
+    'Supplier', 
+    'SupplierProfile', 
+    'SupplierStaff', 
+    'SyncLog', 
+    'SupplierWallet'
 ]
