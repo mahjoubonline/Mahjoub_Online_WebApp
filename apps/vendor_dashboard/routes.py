@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/vendor_dashboard/routes.py - لوحة تحكم المورد السيادية (مصحح)
+# 📂 apps/vendor_dashboard/routes.py - لوحة تحكم المورد السيادية
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
@@ -17,7 +17,7 @@ def dashboard():
     """
     
     # 0. حماية سيادية: التأكد من أن المستخدم الحالي مورد
-    # نتحقق من وجود profile أو role يثبت أنه مورد
+    # نتحقق من وجود بروفايل أو سمة تدل على أنه مورد
     if not hasattr(current_user, 'supplier_profile'):
         flash("هذا القسم مخصص للموردين فقط.", "error")
         return redirect(url_for('vendors.login'))
@@ -30,7 +30,7 @@ def dashboard():
         return redirect(url_for('vendors.setup_profile'))
 
     try:
-        # إحصائيات المورد
+        # جلب البيانات من الموديلات المشفرة
         # نستخدم getattr لتجنب تعطل النظام إذا كانت الدوال غير معرفة بعد
         supplier_stats = {
             'total_sales': getattr(current_user, 'get_total_sales', lambda: "0.00")(),
@@ -44,9 +44,9 @@ def dashboard():
         supplier_stats = {'total_sales': "0.00", 'pending_orders': 0}
         recent_orders = []
 
-    # التصحيح: استخدام المسار الكامل داخل الـ templates الخاص بالـ Blueprint
+    # استخدام المسار الكامل داخل الـ templates الخاص بالـ Blueprint
     # بما أن الـ Blueprint معرف بـ template_folder='templates'، 
-    # فإن render_template سيبحث داخل apps/vendor_dashboard/templates/
+    # فإن render_template سيبحث تلقائياً داخل apps/vendor_dashboard/templates/
     return render_template(
         'vendor/dashboard.html', 
         profile=profile,
@@ -57,6 +57,7 @@ def dashboard():
 @dashboard_bp.route('/settings')
 @login_required
 def settings():
+    # التحقق من صلاحية الوصول لصفحة الإعدادات
     if not hasattr(current_user, 'supplier_profile'):
         return redirect(url_for('vendors.login'))
         
