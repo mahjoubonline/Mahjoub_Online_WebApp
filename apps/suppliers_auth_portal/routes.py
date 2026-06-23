@@ -4,11 +4,7 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, current_user
 from apps import db
-
-# الاستيراد الآمن عبر الحزمة المركزية
-from apps.suppliers_auth_portal.auth_service import VendorAuthService 
-from apps.models import OTPVerification, Supplier, Marketer
-import uuid 
+import uuid
 
 # تعريف الـ Blueprint باسم 'suppliers'
 suppliers_bp = Blueprint('suppliers', __name__, template_folder='templates')
@@ -27,6 +23,10 @@ def login():
     if request.method == 'GET':
         return render_template('suppliers_auth_portal/login.html')
 
+    # استيراد محلي (Lazy Import) لمنع حلقة الاستيراد وانهيار النظام
+    from apps.suppliers_auth_portal.auth_service import VendorAuthService 
+    from apps.models import OTPVerification, Supplier, Marketer
+
     try:
         data = request.get_json()
         if not data:
@@ -38,8 +38,8 @@ def login():
         if login_type == 'marketer':
             username = data.get('username')
             password = data.get('password')
-            user = Marketer.query.filter_by(marketing_code=username).first() # مفترض مطابقة الحقل
-            if user: # تأكد من دالة التحقق من كلمة المرور في موديل Marketer
+            user = Marketer.query.filter_by(marketing_code=username).first()
+            if user: 
                 login_user(user, remember=True)
                 return jsonify({"status": "success", "redirect": url_for('marketers.dashboard')})
             return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
@@ -59,13 +59,14 @@ def login():
         # خطوة 2: التحقق من الـ OTP والدخول
         if phone and otp:
             if OTPVerification.verify_otp(phone, otp):
-                supplier = Supplier.query.filter_by(owner_phone=phone).first()
+                supplier = Supplier.query.filter_by(search_phone=phone).first()
                 
                 if not supplier:
                     supplier = Supplier(
-                        owner_phone=phone,
                         username=f"supplier_{uuid.uuid4().hex[:8]}",
-                        password_hash="temp_pass",
+                        supplier_code=f"VEN-{uuid.uuid4().hex[:6].upper()}",
+                        # التشفير يتم عبر الـ setter في الموديل
+                        phone=phone, 
                         trade_name="مورد جديد"
                     )
                     db.session.add(supplier)
@@ -73,7 +74,7 @@ def login():
                 
                 login_user(supplier, remember=True)
                 session.permanent = True
-                return jsonify({"status": "success", "redirect": url_for('vendor_dashboard.dashboard')})
+                return jsonify({"status": "success", "redirect": url_for('suppliers.dashboard')})
             
             return jsonify({"status": "error", "message": "رمز التحقق خاطئ"}), 400
 
@@ -83,6 +84,10 @@ def login():
         db.session.rollback()
         print(f"Auth Error: {str(e)}")
         return jsonify({"status": "error", "message": "حدث خطأ فني"}), 500
+
+@suppliers_bp.route('/dashboard')
+def dashboard():
+    return "مرحباً بك في لوحة تحكم الموردين"
 
 @suppliers_bp.route('/logout')
 def logout():
