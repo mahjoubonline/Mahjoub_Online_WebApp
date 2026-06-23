@@ -2,16 +2,16 @@
 # 📂 apps/admin_dashboard/routes.py - النسخة النهائية الموثوقة
 
 import os
+import traceback
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
-import traceback
 
 # استيراد النماذج
 from apps.models.admin_db import AdminUser
 from apps.models.supplier_db import Supplier
 
 # تعريف الـ Blueprint
-# ملاحظة: template_folder='templates' تجعل Flask تبحث عن المجلدات والقوالب بدءاً من هذا المجلد
+# نحدد template_folder='templates' لكي يبحث Flask عن القوالب داخل مجلد templates الخاص بهذا المجلد
 admin_dashboard = Blueprint(
     'admin_dashboard', 
     __name__, 
@@ -31,8 +31,8 @@ def dashboard():
         # جلب البيانات الأساسية
         total_suppliers = Supplier.query.count()
         
-        # عند استخدام template_folder='templates'، المسار يبدأ من داخل هذا المجلد.
-        # بما أن المسار الفعلي للقالب هو 'apps/admin_dashboard/templates/admin/dashboard.html'
+        # عند استخدام template_folder='templates'، يبدأ البحث من داخل المجلد المسمى 'templates'.
+        # إذا كان مسار ملفك هو: apps/admin_dashboard/templates/admin/dashboard.html
         # فإن الطلب الصحيح هو 'admin/dashboard.html'
         return render_template(
             'admin/dashboard.html',
@@ -44,17 +44,22 @@ def dashboard():
         )
         
     except Exception as e:
-        # طباعة الخطأ الكامل في الـ Logs لتسهيل التصحيح
-        print(f"🚨 [CRITICAL ERROR] {traceback.format_exc()}")
+        # طباعة الخطأ الكامل في الـ Logs لتسهيل التصحيح ومعرفة سبب فشل العثور على القالب
+        print(f"🚨 [CRITICAL ERROR] Template Loading Failed: {traceback.format_exc()}")
         return f"حدث خطأ فني في تحميل الواجهة: {str(e)}", 500
 
 @admin_dashboard.route('/suppliers')
 @login_required
 def manage_suppliers():
     """عرض قائمة الموردين"""
+    # فحص صلاحية الوصول
     if not isinstance(current_user, AdminUser):
         return redirect(url_for('auth_portal.login'))
         
-    suppliers = Supplier.query.all()
-    # المسار الفعلي: templates/admin/suppliers.html
-    return render_template('admin/suppliers.html', suppliers=suppliers)
+    try:
+        suppliers = Supplier.query.all()
+        # المسار الفعلي: templates/admin/suppliers.html
+        return render_template('admin/suppliers.html', suppliers=suppliers)
+    except Exception as e:
+        print(f"🚨 [CRITICAL ERROR] Suppliers Page Failed: {traceback.format_exc()}")
+        return "حدث خطأ في تحميل قائمة الموردين", 500
