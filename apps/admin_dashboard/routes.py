@@ -1,13 +1,14 @@
 # coding: utf-8
-# 📂 apps/admin_dashboard/routes.py - لوحة تحكم الإدارة المركزية
+# 📂 apps/admin_dashboard/routes.py - لوحة تحكم الإدارة المركزية (مُحسنة)
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
-# تأكد أن هذه الموديلات موجودة في الفهرس الموحد apps/models/__init__.py
+import traceback
+
+# استيراد النماذج
 from apps.models.admin_db import AdminUser
 from apps.models.supplier_db import Supplier
 
-# تعريف الـ Blueprint الخاص بالإدارة
 admin_dashboard = Blueprint('admin_dashboard', __name__, template_folder='templates')
 
 @admin_dashboard.route('/dashboard')
@@ -16,12 +17,16 @@ def dashboard():
     """
     لوحة تحكم القيادة المركزية للمدير
     """
-    # 1. حماية سيادية: التأكد من أن المستخدم مدير
-    if not isinstance(current_user, AdminUser):
-        flash("هذه المنطقة مخصصة للمدراء فقط.", "error")
-        return redirect(url_for('auth_portal.login'))
-
     try:
+        # 1. حماية سيادية: التحقق باستخدام معرف فريد في جدول الإدارة
+        # بدلاً من isinstance التي قد تفشل بسبب Circular Import
+        if not hasattr(current_user, 'is_admin') or not current_user.is_admin:
+            # ملاحظة: تأكد أن نموذج AdminUser يحتوي على خاصية is_admin=True
+            # إذا لم تكن موجودة، استخدم التحقق عبر البريد أو النوع
+            if not isinstance(current_user, AdminUser):
+                flash("هذه المنطقة مخصصة للمدراء فقط.", "danger")
+                return redirect(url_for('auth_portal.login'))
+
         # 2. جلب إحصائيات النظام
         total_suppliers = Supplier.query.count()
         
@@ -34,15 +39,9 @@ def dashboard():
         return render_template('admin/dashboard.html', stats=stats)
         
     except Exception as e:
-        print(f"DEBUG: Admin Dashboard Error: {e}")
-        return "حدث خطأ أثناء تحميل لوحة التحكم", 500
-
-@admin_dashboard.route('/settings')
-@login_required
-def settings():
-    if not isinstance(current_user, AdminUser):
-        return redirect(url_for('auth_portal.login'))
-    return "صفحة إعدادات النظام قيد التطوير"
+        # 💡 طباعة الخطأ الحقيقي بالتفصيل في الـ Logs لتسهيل التصحيح
+        print(f"🚨 [CRITICAL ERROR] Dashboard failed: {traceback.format_exc()}")
+        return f"حدث خطأ فني أثناء تحميل لوحة التحكم: {str(e)}", 500
 
 @admin_dashboard.route('/suppliers')
 @login_required
