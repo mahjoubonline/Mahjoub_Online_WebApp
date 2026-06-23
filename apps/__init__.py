@@ -45,7 +45,7 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # 4. تسجيل مسارات الإدارة فقط
+    # 4. تسجيل مسارات الإدارة (المحرك الأساسي)
     core_blueprints = [
         ('apps.auth_portal.routes', 'auth_portal', '/auth'),
         ('apps.admin_dashboard.routes', 'admin_dashboard', '/admin'),
@@ -62,12 +62,12 @@ def create_app():
         except Exception as e:
             print(f"🚨 [System] خطأ في تحميل مسار الإدارة {bp_name}: {e}")
 
-    # 5. عزل تام للموردين (تم إضافة القائمة السوداء لمنع تحميل الكود التالف)
+    # 5. عزل تام للموردين (القائمة السوداء لمنع الاستيراد التلقائي للكود التالف)
     apps_dir = os.path.dirname(__file__)
     ignore_folders = {
         'models', 'extensions', 'static', 'templates', '__pycache__', 
         'api', 'auth_portal', 'admin_dashboard', 'wallet', 'vault', 'orders',
-        'suppliers_auth_portal', 'suppliers_dashboard' # <--- هؤلاء هم الموردون، سيتم تجاهلهم
+        'suppliers_auth_portal', 'suppliers_dashboard' 
     }
     
     for folder in os.listdir(apps_dir):
