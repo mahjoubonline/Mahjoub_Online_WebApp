@@ -1,4 +1,6 @@
 # coding: utf-8
+# 📂 apps/models/supplier_db.py
+
 from apps import db
 from cryptography.fernet import Fernet
 import os
@@ -24,7 +26,8 @@ class Supplier(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     last_login = db.Column(db.DateTime, nullable=True)
 
-    # 5. العلاقة مع الملف الشخصي (الربط المفقود)
+    # 5. العلاقة مع الملف الشخصي 
+    # تم وضع 'SupplierProfile' بين علامتي تنصيص لضمان الاستقرار في تحميل الموديلات
     supplier_profile = db.relationship(
         'SupplierProfile', 
         back_populates='supplier', 
@@ -35,6 +38,7 @@ class Supplier(db.Model):
     # --- نظام التشفير السيادي ---
     @staticmethod
     def _get_key():
+        # يفضل دائماً إعداد ENCRYPTION_KEY في متغيرات البيئة بـ Render
         return os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=').encode()
 
     @property
