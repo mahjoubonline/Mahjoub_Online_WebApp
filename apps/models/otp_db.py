@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/models/otp_db.py - نظام إدارة الرموز السيادي (مُصحح)
+# 📂 apps/models/otp_db.py - نظام إدارة الرموز السيادي (دعم متعدد للبوابات)
 
 import random
 from apps.extensions import db
@@ -10,13 +10,8 @@ class OTPVerification(db.Model):
     __tablename__ = 'otp_verifications'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    
-    # ⚡ فهرسة user_identifier للوصول السريع
     user_identifier = db.Column(db.String(150), index=True, nullable=False)
-    
-    # 🔐 تخزين الرمز مشفراً
     _otp_code_enc = db.Column('otp_code', db.String(255), nullable=False)
-    
     is_used = db.Column(db.Boolean, default=False, index=True)
     expires_at = db.Column(db.DateTime, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -33,23 +28,21 @@ class OTPVerification(db.Model):
         self._otp_code_enc = AESCipher.encrypt(str(value)) if value else None
 
     @staticmethod
-    def generate_otp(identifier, expires_in_minutes=5):
-        """توليد رمز جديد، إبطال الرموز السابقة، وإرسال الرمز عبر واتساب"""
-        
-        # ✅ استيراد محلي (Lazy Import) لمنع الانهيار أثناء بدء تشغيل التطبيق
-        from apps.suppliers_auth_portal.auth_service import VendorAuthService
-        
+    def generate_otp(identifier, dispatcher, expires_in_minutes=5):
+        """
+        توليد رمز جديد وإرساله عبر الـ dispatcher الممرر (إدارة أو موردين)
+        dispatcher: كائن يحتوي على دالة .send(identifier, code)
+        """
         try:
-            # 1. إبطال الرموز القديمة
+            # 1. إبطال الرموز السابقة
             OTPVerification.query.filter_by(user_identifier=identifier, is_used=False).update({"is_used": True})
             
             raw_code = str(random.randint(100000, 999999))
             
-            # 2. إرسال الرمز عبر خدمة الواتساب
-            success = VendorAuthService.initiate_login(identifier, raw_code)
-            
-            if not success:
-                print(f"⚠️ [OTP Delivery] فشل إرسال الرمز للرقم: {identifier}")
+            # 2. الإرسال عبر الخدمة الممررة (فصل تام للبوابات)
+            if not dispatcher.send(identifier, raw_code):
+                print(f"⚠️ [OTP Delivery] فشل الإرسال للرقم: {identifier}")
+                return None
             
             # 3. حفظ الرمز الجديد
             new_otp = OTPVerification(
@@ -67,7 +60,6 @@ class OTPVerification(db.Model):
 
     @staticmethod
     def verify_otp(identifier, input_code):
-        """التحقق من صحة الرمز واستهلاكه فوراً"""
         try:
             now = datetime.utcnow()
             otp = OTPVerification.query.filter_by(
@@ -81,5 +73,4 @@ class OTPVerification(db.Model):
                 return True
         except Exception:
             db.session.rollback()
-            
         return False
