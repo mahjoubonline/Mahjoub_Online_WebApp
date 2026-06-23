@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي (النسخة النهائية الكاملة)
+# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي (النسخة النهائية الكاملة والمصححة)
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, current_user
@@ -35,6 +35,7 @@ def login():
     if request.method == 'GET':
         if current_user.is_authenticated:
             return redirect(url_for('suppliers.dashboard'))
+        # الإبقاء على المسار الهيكلي الصحيح ليتطابق مع مكان وجود الملف تماماً
         return render_template('suppliers_auth_portal/login.html')
 
     from apps.models.otp_db import OTPVerification
