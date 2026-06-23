@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي للنظام (النسخة المنقحة لضمان الاستقرار)
+# 📂 apps/__init__.py - المصنع السيادي للنظام (النسخة المنقحة)
 
 import os
 import importlib
@@ -9,7 +9,8 @@ from config import Config
 from apps.extensions import db, login_manager, migrate
 
 def create_app():
-    # 1. إعداد المصنع
+    # 1. إعداد المصنع مع جعل مسار القوالب أكثر مرونة
+    # نستخدم المجلد الحالي كمصدر أساسي
     app = Flask(__name__, 
                 template_folder='templates', 
                 static_folder='static', 
@@ -18,7 +19,7 @@ def create_app():
     
     app.config.from_object(Config)
 
-    # تحسينات التوافق
+    # تحسينات التوافق مع بيئة الإنتاج (Render)
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['REMEMBER_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -43,7 +44,7 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # 4. تسجيل المسارات الأساسية
+    # 4. تسجيل المسارات (Blueprints)
     try:
         from apps.auth_portal.routes import auth_portal
         from apps.admin_dashboard.routes import admin_dashboard
@@ -59,9 +60,9 @@ def create_app():
         app.register_blueprint(orders_bp, url_prefix='/orders')
         app.register_blueprint(webhooks_bp, url_prefix='/api')
     except Exception as e:
-        print(f"🚨 [CRITICAL] خطأ في تسجيل المسارات الأساسية: {e}")
+        print(f"🚨 [CRITICAL] خطأ في تسجيل المسارات: {e}")
 
-    # 5. المحرك التلقائي لاكتشاف التطبيقات
+    # 5. المحرك التلقائي لاكتشاف التطبيقات (مع حماية ضد الأخطاء)
     apps_dir = os.path.dirname(__file__)
     ignore_folders = {'models', 'extensions', 'static', 'templates', '__pycache__', 'api', 'auth_portal', 'admin_dashboard', 'wallet', 'vault', 'orders'}
     
@@ -76,21 +77,19 @@ def create_app():
                 if hasattr(module, 'register_app'):
                     module.register_app(app)
             except Exception as e:
-                # خطأ هنا لا يوقف النظام، بل يتم تسجيله فقط
+                # لا نوقف النظام إذا فشل تطبيق ثانوي، فقط نسجل الخطأ
                 print(f"⚠️ [System] تجاوز خطأ في تحميل التطبيق {folder}: {e}")
 
     @app.route('/')
     def index():
         return redirect(url_for('auth_portal.login'))
 
-    # 6. إعداد البيانات والجداول (عزل التحميل)
+    # 6. إعداد البيانات والجداول
     with app.app_context():
         try:
-            # استيراد إجباري للنماذج الأساسية فقط لتهيئة قاعدة البيانات
+            # استيراد النماذج الأساسية فقط لتهيئة الجداول
             from apps.models.admin_db import AdminUser
-            
-            # ملاحظة: إذا كان هناك خطأ Mapper، تأكد من أن الموديلات المضافة 
-            # في models/__init__.py تستخدم String References للعلاقات
+            # تأكد أن جميع الملفات في مجلد models موجودة بالفعل لتفادي Imports Error
             db.create_all()
             
             # تأسيس المالك
