@@ -1,22 +1,23 @@
+# coding: utf-8
 # 📂 apps/models/__init__.py
 # الفهرس الموحد لجميع موديلات قاعدة البيانات (مرتب بدقة لمنع فشل الـ Mapper)
 
-# 1. الموديلات المستقلة تماماً (الأبناء/المكونات الأساسية)
+# 1. الموديلات المستقلة تماماً (المكونات الأساسية)
 from .admin_db import AdminUser
-from .admin_staff_db import AdminStaff
-from .marketers_db import Marketer
+from .admin_staff import AdminStaff
+from .marketer import Marketer
 from .otp_db import OTPVerification
-from .sync_log import SyncLog
+from .sync_log_db import SyncLog
 
-# 2. الموديلات التي تُعتمد عليها (يجب استيرادها قبل الموديلات التي تربط بها)
+# 2. الموديلات التي تعتمد على الموديلات الأساسية
 from .supplier_profile_db import SupplierProfile 
-from .supplier_staff_db import SupplierStaff
-from .wallet_db import VendorWallet 
+from .supplier_staff import SupplierStaff
+from .vendor_wallet import VendorWallet 
 
 # 3. الموديلات الرئيسية (التي تحتوي على الـ relationships)
 from .supplier_db import Supplier
-from .orders_db import Order
-from .financials_db import OrderFinancial 
+from .order import Order
+from .order_financials import OrderFinancial 
 
 # القائمة الموحدة للتصدير
 __all__ = [
