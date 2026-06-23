@@ -11,7 +11,7 @@ from apps.models.admin_db import AdminUser
 from apps.models.supplier_db import Supplier
 
 # تعريف الـ Blueprint
-# ملاحظة: template_folder='templates' تعني أن Flask ستبحث عن أي قالب داخل مجلد templates
+# ملاحظة: template_folder='templates' تجعل Flask تبحث عن المجلدات والقوالب بدءاً من هذا المجلد
 admin_dashboard = Blueprint(
     'admin_dashboard', 
     __name__, 
@@ -23,14 +23,16 @@ admin_dashboard = Blueprint(
 def dashboard():
     """لوحة تحكم الإدارة المركزية"""
     try:
-        # فحص صلاحية الوصول
+        # فحص صلاحية الوصول: التأكد أن المستخدم مدير (Admin)
         if not getattr(current_user, 'is_admin', False) and not isinstance(current_user, AdminUser):
+            flash("عذراً، هذه المنطقة مخصصة للمدراء فقط.", "danger")
             return redirect(url_for('auth_portal.login'))
 
+        # جلب البيانات الأساسية
         total_suppliers = Supplier.query.count()
         
         # عند استخدام template_folder='templates'، المسار يبدأ من داخل هذا المجلد.
-        # بما أن ملفك موجود في 'apps/admin_dashboard/templates/admin/dashboard.html'
+        # بما أن المسار الفعلي للقالب هو 'apps/admin_dashboard/templates/admin/dashboard.html'
         # فإن الطلب الصحيح هو 'admin/dashboard.html'
         return render_template(
             'admin/dashboard.html',
@@ -44,7 +46,7 @@ def dashboard():
     except Exception as e:
         # طباعة الخطأ الكامل في الـ Logs لتسهيل التصحيح
         print(f"🚨 [CRITICAL ERROR] {traceback.format_exc()}")
-        return f"حدث خطأ في تحميل الواجهة: {str(e)}", 500
+        return f"حدث خطأ فني في تحميل الواجهة: {str(e)}", 500
 
 @admin_dashboard.route('/suppliers')
 @login_required
@@ -54,5 +56,5 @@ def manage_suppliers():
         return redirect(url_for('auth_portal.login'))
         
     suppliers = Supplier.query.all()
-    # المسار: templates/admin/suppliers.html
+    # المسار الفعلي: templates/admin/suppliers.html
     return render_template('admin/suppliers.html', suppliers=suppliers)
