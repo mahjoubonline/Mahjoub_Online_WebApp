@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/auth_portal/routes.py - البوابة السيادية (مُحدثة للتعامل التلقائي مع رموز الدولة)
+# 📂 apps/auth_portal/routes.py - البوابة السيادية (مُحدثة لتدعم نظام الإرسال المستقل)
 
 import os
 import time
@@ -11,11 +11,17 @@ from apps.extensions import db
 from . import auth_portal
 from apps.models.admin_db import AdminUser
 from apps.models.otp_db import OTPVerification
+from apps.auth_portal.auth_service import AdminAuthService # استيراد الخدمة المستقلة
 
 SECRET_LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x')
 
+# جسر إرسال الإدارة (للربط مع OTPVerification)
+class AdminDispatcher:
+    @staticmethod
+    def send(phone, code):
+        return AdminAuthService.initiate_login(phone, code)
+
 def format_phone_number(phone):
-    """دالة مساعدة لتصحيح الرقم إلى الصيغة الدولية 967"""
     clean = re.sub(r'[^\d]', '', str(phone))
     if len(clean) == 9 and clean.startswith('7'):
         return '967' + clean
@@ -46,14 +52,13 @@ def login():
             raw_phone = getattr(user, 'phone_number', None)
             phone_to_use = format_phone_number(raw_phone)
             
-            print(f"DEBUG [Admin System] إرسال OTP إلى الرقم المنسق: {phone_to_use}")
-
             if not phone_to_use or len(phone_to_use) < 12:
                 flash('رقم الهاتف المسجل غير صالح للاستخدام الدولي.', 'danger')
                 return render_template('auth/login.html')
 
             session['temp_user_id'] = user.id
-            OTPVerification.generate_otp(phone_to_use) 
+            # استخدام الموجه (Dispatcher) لإرسال الرمز
+            OTPVerification.generate_otp(phone_to_use, AdminDispatcher) 
             
             flash('تم التحقق، يرجى إدخال رمز التحقق (OTP) المرسل لهاتفك.', 'info')
             return redirect(url_for('auth_portal.verify_otp_page'))
@@ -65,7 +70,7 @@ def login():
     return render_template('auth/login.html')
 
 # -------------------------------------------------------------------------
-# 2. مسارات التحقق من الـ OTP
+# 2. مسارات التحقق
 # -------------------------------------------------------------------------
 @auth_portal.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp_page():
@@ -95,7 +100,8 @@ def resend_otp():
         user = AdminUser.query.get(session['temp_user_id'])
         phone_to_use = format_phone_number(user.phone_number)
         if phone_to_use:
-            OTPVerification.generate_otp(phone_to_use)
+            # استخدام الموجه لإعادة الإرسال
+            OTPVerification.generate_otp(phone_to_use, AdminDispatcher)
             flash('تم إرسال رمز تحقق جديد إلى هاتفك.', 'info')
     return redirect(url_for('auth_portal.verify_otp_page'))
 
