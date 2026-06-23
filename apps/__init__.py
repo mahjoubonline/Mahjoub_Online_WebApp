@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي للإدارة (نسخة معزولة تماماً ومصححة)
+# 📂 apps/__init__.py - المصنع السيادي للإدارة (نسخة معزولة ومحمية)
 
 import os
 import importlib
@@ -62,18 +62,27 @@ def create_app():
         except Exception as e:
             print(f"🚨 [System] خطأ في تحميل مسار الإدارة {bp_name}: {e}")
 
-    # 5. عزل تام للموردين عبر الـ Registry الديناميكي
+    # 5. عزل تام للموردين (تم إضافة القائمة السوداء لمنع تحميل الكود التالف)
     apps_dir = os.path.dirname(__file__)
+    ignore_folders = {
+        'models', 'extensions', 'static', 'templates', '__pycache__', 
+        'api', 'auth_portal', 'admin_dashboard', 'wallet', 'vault', 'orders',
+        'suppliers_auth_portal', 'suppliers_dashboard' # <--- هؤلاء هم الموردون، سيتم تجاهلهم
+    }
+    
     for folder in os.listdir(apps_dir):
-        if folder in {'suppliers_auth_portal', 'suppliers_dashboard'}:
-            registry_path = os.path.join(apps_dir, folder, 'registry.py')
-            if os.path.exists(registry_path):
-                try:
-                    module = importlib.import_module(f'apps.{folder}.registry')
-                    if hasattr(module, 'register_app'):
-                        module.register_app(app)
-                except Exception as e:
-                    print(f"⚠️ [Isolation] الموردون {folder} فشلوا في التسجيل، لكن الإدارة تعمل: {e}")
+        # تجاهل المجلدات الموجودة في القائمة السوداء
+        if folder in ignore_folders or not os.path.isdir(os.path.join(apps_dir, folder)):
+            continue
+            
+        registry_path = os.path.join(apps_dir, folder, 'registry.py')
+        if os.path.exists(registry_path):
+            try:
+                module = importlib.import_module(f'apps.{folder}.registry')
+                if hasattr(module, 'register_app'):
+                    module.register_app(app)
+            except Exception as e:
+                print(f"⚠️ [Isolation] الموردون {folder} فشلوا في التسجيل، لكن الإدارة تعمل: {e}")
 
     @app.route('/')
     def index():
