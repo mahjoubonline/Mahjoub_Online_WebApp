@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي للإدارة (نسخة معزولة تماماً)
+# 📂 apps/__init__.py - المصنع السيادي للإدارة (نسخة معزولة تماماً ومصححة)
 
 import os
 import importlib
@@ -45,7 +45,7 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # 4. تسجيل مسارات الإدارة فقط (بدون أي استيراد للموردين هنا)
+    # 4. تسجيل مسارات الإدارة فقط
     core_blueprints = [
         ('apps.auth_portal.routes', 'auth_portal', '/auth'),
         ('apps.admin_dashboard.routes', 'admin_dashboard', '/admin'),
@@ -59,14 +59,39 @@ def create_app():
         try:
             module = importlib.import_module(module_path)
             app.register_blueprint(getattr(module, bp_name), url_prefix=prefix)
-        except ImportError as e:
+        except Exception as e:
             print(f"🚨 [System] خطأ في تحميل مسار الإدارة {bp_name}: {e}")
 
-    # 5. عزل تام: الموردون لا يُسجلون في هذا المصنع إلا عبر الـ Registry الديناميكي
-    # الميزة: لو انهار الموردون، لن تتأثر الإدارة لأنهم لا يستوردون في `try` أعلاه
+    # 5. عزل تام للموردين عبر الـ Registry الديناميكي
     apps_dir = os.path.dirname(__file__)
     for folder in os.listdir(apps_dir):
-        # تجاهل أي شيء ليس جزءاً من الإدارة إذا أردت عزلهم تماماً
         if folder in {'suppliers_auth_portal', 'suppliers_dashboard'}:
             registry_path = os.path.join(apps_dir, folder, 'registry.py')
             if os.path.exists(registry_path):
+                try:
+                    module = importlib.import_module(f'apps.{folder}.registry')
+                    if hasattr(module, 'register_app'):
+                        module.register_app(app)
+                except Exception as e:
+                    print(f"⚠️ [Isolation] الموردون {folder} فشلوا في التسجيل، لكن الإدارة تعمل: {e}")
+
+    @app.route('/')
+    def index():
+        return redirect(url_for('auth_portal.login'))
+
+    # 6. إعداد البيانات
+    with app.app_context():
+        try:
+            from apps.models.admin_db import AdminUser
+            db.create_all()
+            
+            owner_username = 'علي محجوب'
+            if not AdminUser.query.filter_by(username=owner_username).first():
+                admin = AdminUser(username=owner_username, role='Owner', phone_number='779077746')
+                admin.set_password('123')
+                db.session.add(admin)
+                db.session.commit()
+        except Exception as e:
+            print(f"⚠️ [Error] خطأ في قاعدة البيانات: {e}")
+
+    return app
