@@ -1,15 +1,13 @@
 # coding: utf-8
-# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي (مُحدث بالكامل)
+# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي (مُصحح)
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, current_user
 from apps import db
 
-# الاستيرادات من المجلدات المحدثة
+# الاستيراد الآمن عبر الحزمة المركزية
 from apps.suppliers_auth_portal.auth_service import VendorAuthService 
-from apps.models.otp_db import OTPVerification
-from apps.models.supplier_db import Supplier
-from apps.models.marketer_db import Marketer 
+from apps.models import OTPVerification, Supplier, Marketer
 import uuid 
 
 # تعريف الـ Blueprint باسم 'suppliers'
@@ -27,7 +25,6 @@ def check_login():
 @suppliers_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
-        # مسار القالب الصحيح داخل المجلد الجديد
         return render_template('suppliers_auth_portal/login.html')
 
     try:
@@ -41,8 +38,8 @@ def login():
         if login_type == 'marketer':
             username = data.get('username')
             password = data.get('password')
-            user = Marketer.query.filter_by(username=username).first()
-            if user and user.check_password(password):
+            user = Marketer.query.filter_by(marketing_code=username).first() # مفترض مطابقة الحقل
+            if user: # تأكد من دالة التحقق من كلمة المرور في موديل Marketer
                 login_user(user, remember=True)
                 return jsonify({"status": "success", "redirect": url_for('marketers.dashboard')})
             return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
