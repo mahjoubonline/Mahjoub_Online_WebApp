@@ -5,7 +5,34 @@ import random
 from flask import Blueprint, render_template, request, session, jsonify
 from apps.auth_portal.auth_service import AdminAuthService
 
-# تعريف الـ Blueprint
+# تعريف الـ Blueprint# coding: utf-8
+import random
+from flask import Blueprint, render_template, request, session, jsonify
+from apps.auth_portal.auth_service import AdminAuthService
+
+auth_portal = Blueprint('auth_portal', __name__, template_folder='templates')
+
+@auth_portal.route('/m7jb_sovereign_hq_v2_99x', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        # الحصول على الهاتف من النموذج
+        phone = request.form.get('phone')
+        
+        # 1. توليد رمز عشوائي
+        otp_code = str(random.randint(100000, 999999))
+        
+        # 2. إرسال الرمز عبر الـ Service التي ضبطناها
+        success = AdminAuthService.initiate_login(phone, otp_code)
+        
+        if success:
+            # 3. تخزين الهاتف والرمز في الـ Session للتحقق لاحقاً
+            session['otp_code'] = otp_code
+            session['phone'] = phone
+            return jsonify({"message": "تم إرسال رمز التحقق إلى رقمك"}), 200
+        else:
+            return jsonify({"error": "فشل إرسال الرسالة"}), 500
+
+    return render_template('auth/login.html')
 auth_portal = Blueprint('auth_portal', __name__, template_folder='templates')
 
 @auth_portal.route('/m7jb_sovereign_hq_v2_99x', methods=['GET', 'POST'])
