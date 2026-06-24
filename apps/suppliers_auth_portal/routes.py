@@ -21,7 +21,6 @@ class SupplierDispatcher:
 @suppliers_bp.before_request
 def check_login():
     """حماية سيادية: فحص الحماية فقط إذا كان الطلب يخص مستخدم غير مسجل وموجه لهذا الـ Blueprint"""
-    # 🔄 تم إضافة 'suppliers.verify_page' هنا حتى لا يطرد النظام المستخدم أثناء التحقق من الرمز
     if request.endpoint in ['suppliers.login', 'suppliers.verify_page', 'static'] or not request.blueprint == 'suppliers':
         return None
     
@@ -36,17 +35,12 @@ def login():
     if request.method == 'GET':
         if current_user.is_authenticated:
             return redirect(url_for('suppliers.dashboard'))
-        # الإبقاء على المسار الهيكلي الصحيح ليتطابق مع مكان وجود الملف تماماً
         return render_template('suppliers_auth_portal/login.html')
 
     from apps.models.otp_db import OTPVerification
 
     try:
-        if request.is_json:
-            data = request.get_json()
-        else:
-            data = request.form
-
+        data = request.get_json() if request.is_json else request.form
         if not data:
             return jsonify({"status": "error", "message": "بيانات غير صالحة"}), 400
 
@@ -64,10 +58,9 @@ def login():
                 return jsonify({"status": "success", "redirect": url_for('marketers.dashboard')})
             return jsonify({"status": "error", "message": "بيانات الدخول غير صحيحة"}), 401
 
-        # --- دخول الموردين ---
+        # --- دخول الموردين (خطوة 1: طلب الرمز) ---
         raw_phone = data.get('phone', '')
         phone = "".join(filter(str.isdigit, raw_phone))
-        otp = data.get('otp')
 
         if not phone:
             return jsonify({"status": "error", "message": "رقم الهاتف مطلوب"}), 400
@@ -78,50 +71,67 @@ def login():
         elif len(phone) == 10 and phone.startswith('07'):
             phone = '967' + phone[1:]
 
-        # خطوة 1: طلب توليد وإرسال الـ OTP باستخدام الموجه الخاص بالموردين
-        if phone and not otp:
-            # تمرير SupplierDispatcher هنا هو السر لكي تظهر وتعمل بوابة الموردين بشكل مستقل!
-            new_otp = OTPVerification.generate_otp(phone, SupplierDispatcher)
-            if new_otp:
-                return jsonify({"status": "success", "message": "تم إرسال رمز التحقق بنجاح عبر الواتساب"})
-            return jsonify({"status": "error", "message": "فشل إرسال الرمز، يرجى المحاولة لاحقاً"}), 500
-
-        # خطوة 2: التحقق الفعلي وتسجيل الدخول
-        if phone and otp:
-            if OTPVerification.verify_otp(phone, otp):
-                from apps.models import Supplier
-                supplier = Supplier.query.filter_by(phone=phone).first()
-                
-                if not supplier:
-                    # ميزة الدمج الذكي: تسجيل المورد الجديد تلقائياً إذا لم يكن مسجلاً
-                    supplier = Supplier(
-                        username=f"supplier_{uuid.uuid4().hex[:8]}",
-                        supplier_code=f"VEN-{uuid.uuid4().hex[:6].upper()}",
-                        phone=phone, 
-                        trade_name="مورد جديد لدينا"
-                    )
-                    db.session.add(supplier)
-                    db.session.commit()
-                
-                login_user(supplier, remember=True)
-                session.permanent = True
-                return jsonify({"status": "success", "redirect": url_for('suppliers.dashboard')})
-            
-            return jsonify({"status": "error", "message": "رمز التحقق منتهي أو خاطئ"}), 400
-
-        return jsonify({"status": "error", "message": "بيانات غير مكتملة"}), 400
+        # توليد وإرسال الـ OTP
+        new_otp = OTPVerification.generate_otp(phone, SupplierDispatcher)
+        if new_otp:
+            return jsonify({"status": "success", "message": "تم إرسال رمز التحقق بنجاح عبر الواتساب"})
+        return jsonify({"status": "error", "message": "فشل إرسال الرمز، يرجى المحاولة لاحقاً"}), 500
 
     except Exception as e:
         db.session.rollback()
         print(f"🚨 [Supplier Auth Error]: {str(e)}")
         return jsonify({"status": "error", "message": "حدث خطأ فني في خادم المصادقة"}), 500
 
-# 🔄 الموجه المضاف لعرض صفحة التحقق المستقلة للـ OTP
-@suppliers_bp.route('/verify', methods=['GET'])
+
+# 🔄 الموجه المشترك لعرض صفحة التحقق والتحقق الفعلي من الـ OTP لمنع تفكك الجلسة
+@suppliers_bp.route('/verify', methods=['GET', 'POST'])
 def verify_page():
     if current_user.is_authenticated:
         return redirect(url_for('suppliers.dashboard'))
-    return render_template('suppliers_auth_portal/verify.html')
+        
+    if request.method == 'GET':
+        return render_template('suppliers_auth_portal/verify.html')
+
+    # معالجة طلب التحقق الفعلي (POST) المرسل من واجهة verify.html
+    from apps.models.otp_db import OTPVerification
+    try:
+        data = request.get_json() if request.is_json else request.form
+        raw_phone = data.get('phone', '')
+        phone = "".join(filter(str.isdigit, raw_phone))
+        otp = data.get('otp')
+
+        if not phone or not otp:
+            return jsonify({"status": "error", "message": "بيانات التحقق غير مكتملة"}), 400
+
+        if OTPVerification.verify_otp(phone, otp):
+            from apps.models import Supplier
+            supplier = Supplier.query.filter_by(phone=phone).first()
+            
+            if not supplier:
+                supplier = Supplier(
+                    username=f"supplier_{uuid.uuid4().hex[:8]}",
+                    supplier_code=f"VEN-{uuid.uuid4().hex[:6].upper()}",
+                    phone=phone, 
+                    trade_name="مورد جديد لدينا"
+                )
+                db.session.add(supplier)
+                db.session.commit()
+            
+            # تسجيل الدخول وتثبيت الجلسة السيادية بشكل قاطع
+            login_user(supplier, remember=True)
+            session.permanent = True
+            
+            # إرجاع استجابة صريحة ومباشرة بنجاح العملية
+            response = jsonify({"status": "success", "redirect": url_for('suppliers.dashboard')})
+            return response
+        
+        return jsonify({"status": "error", "message": "رمز التحقق منتهي أو خاطئ"}), 400
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"🚨 [Supplier OTP Verify Error]: {str(e)}")
+        return jsonify({"status": "error", "message": "حدث خطأ أثناء فحص رمز التحقق"}), 500
+
 
 @suppliers_bp.route('/dashboard')
 def dashboard():
