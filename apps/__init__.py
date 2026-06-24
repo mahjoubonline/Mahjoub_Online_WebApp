@@ -1,15 +1,21 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي الموحد (نسخة الفحص الاستباقي للـ 404)
+# 📂 apps/__init__.py - المصنع السيادي الموحد (نسخة التسجيل المباشر لتجاوز 404)
 
 import os
-import importlib
 from flask import Flask, redirect
 from flask_talisman import Talisman
 from config import Config
 from apps.extensions import db, login_manager, migrate
 
+# استيراد مباشر للـ Blueprints لضمان تسجيلها
+from apps.auth_portal.routes import auth_portal
+from apps.admin_dashboard.routes import admin_dashboard
+from apps.wallet.routes import wallet_app
+from apps.vault.routes import vault_bp
+from apps.orders.routes import orders_bp
+from apps.api.webhooks import webhooks_bp
+
 def create_app():
-    # 1. إعداد المصنع
     app = Flask(__name__, 
                 template_folder='templates', 
                 static_folder='static', 
@@ -45,44 +51,17 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # 4. تسجيل مسارات الإدارة (بشكل صريح ومضمون)
-    core_blueprints = [
-        ('apps.auth_portal.routes', 'auth_portal', '/auth'),
-        ('apps.admin_dashboard.routes', 'admin_dashboard', '/admin'),
-        ('apps.wallet.routes', 'wallet_app', '/wallet'),
-        ('apps.vault.routes', 'vault_bp', '/vault'),
-        ('apps.orders.routes', 'orders_bp', '/orders'),
-        ('apps.api.webhooks', 'webhooks_bp', '/api')
-    ]
-
-    for module_path, bp_name, prefix in core_blueprints:
-        try:
-            module = importlib.import_module(module_path)
-            app.register_blueprint(getattr(module, bp_name), url_prefix=prefix)
-        except Exception as e:
-            print(f"🚨 [System] خطأ في تسجيل المسار {bp_name}: {e}")
-
-    # 5. 🚀 ميكانيكية الاكتشاف التلقائي (Auto-Discovery Engine)
-    apps_dir = os.path.dirname(__file__)
-    ignore_folders = {'models', 'extensions', 'static', 'templates', '__pycache__', 'api', 'auth_portal', 'admin_dashboard', 'wallet', 'vault', 'orders'}
+    # 4. تسجيل المسارات (تسجيل صريح ومباشر)
+    app.register_blueprint(auth_portal, url_prefix='/auth')
+    app.register_blueprint(admin_dashboard, url_prefix='/admin')
+    app.register_blueprint(wallet_app, url_prefix='/wallet')
+    app.register_blueprint(vault_bp, url_prefix='/vault')
+    app.register_blueprint(orders_bp, url_prefix='/orders')
+    app.register_blueprint(webhooks_bp, url_prefix='/api')
     
-    for folder in os.listdir(apps_dir):
-        if folder in ignore_folders or not os.path.isdir(os.path.join(apps_dir, folder)):
-            continue
-            
-        registry_path = os.path.join(apps_dir, folder, 'registry.py')
-        if os.path.exists(registry_path):
-            try:
-                module = importlib.import_module(f'apps.{folder}.registry')
-                if hasattr(module, 'register_app'):
-                    module.register_app(app)
-                elif hasattr(module, 'register_module'):
-                    module.register_module(app)
-                print(f"📦 [Auto-Discovery] تم تحميل: {folder}")
-            except Exception as e:
-                print(f"⚠️ [Auto-Discovery] فشل تحميل {folder}: {e}")
+    print("✅ [SYSTEM] تم تسجيل كافة المسارات (Blueprints) بنجاح.")
 
-    # [DEBUG] طباعة المسارات الفعلية المسجلة (لحل الـ 404)
+    # 5. [DEBUG] طباعة المسارات المسجلة
     print("📋 [DEBUG] المسارات المسجلة في السيرفر:")
     for rule in app.url_map.iter_rules():
         print(f"DEBUG: Rule: {rule.rule} -> Endpoint: {rule.endpoint}")
