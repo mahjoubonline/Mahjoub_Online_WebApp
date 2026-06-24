@@ -29,9 +29,11 @@ class SupplierDispatcher:
 @suppliers_bp.before_request
 def check_login():
     """حماية المسارات: التحقق من الجلسة قبل السماح بالدخول"""
-    if request.endpoint in ['suppliers.login', 'suppliers.verify_page', 'static'] or not request.blueprint == 'suppliers':
+    # استثناء المسارات العامة من فحص تسجيل الدخول
+    if request.endpoint in ['suppliers.login', 'suppliers.verify_page', 'static']:
         return None
-    if request.endpoint and 'marketers' in request.endpoint:
+    # السماح بالمرور إذا لم يكن الطلب ضمن بلوبرنت الموردين أو كان للمسوقين
+    if not request.blueprint == 'suppliers' or (request.endpoint and 'marketers' in request.endpoint):
         return None
     if not current_user.is_authenticated:
         return redirect(url_for('suppliers.login'))
