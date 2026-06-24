@@ -16,6 +16,7 @@ from apps.orders.routes import orders_bp
 from apps.api.webhooks import webhooks_bp
 
 def create_app():
+    # 1. إعداد المصنع
     app = Flask(__name__, 
                 template_folder='templates', 
                 static_folder='static', 
