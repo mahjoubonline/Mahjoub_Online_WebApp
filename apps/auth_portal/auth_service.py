@@ -7,17 +7,19 @@ import requests
 class AdminAuthService:
     @staticmethod
     def initiate_login(phone, otp_code):
+        # 1. جلب المفتاح من متغيرات البيئة (تأكد من إضافته في Render Dashboard)
         api_key = os.environ.get('HYPERSEND_API_KEY')
         
-        # 1. تنظيف الرقم (بدون أي مسافات)
+        # 2. تنظيف الرقم (بدون أي مسافات)
         clean_phone = "".join(filter(str.isdigit, str(phone)))
         if not clean_phone.startswith('967'):
             clean_phone = '967' + clean_phone.lstrip('0')
         
-        # 2. التنسيق الدقيق المطلوب لـ HyperSender
+        # 3. التنسيق الدقيق المطلوب لـ HyperSender
         chat_id = f"{clean_phone}@c.us"
         
-        # 3. الرابط المعتمد من توثيق Postman
+        # 4. الرابط المعتمد من توثيق Postman
+        # تأكد أن هذا الرابط هو المذكور في التوثيق داخل حسابك
         url = "https://app.hypersender.com/api/whatsapp/v1/instance/send-text"
         
         headers = {
@@ -25,7 +27,7 @@ class AdminAuthService:
             "Content-Type": "application/json"
         }
         
-        # 4. الـ Payload الدقيق (مطابق لصور Postman)
+        # 5. الـ Payload الدقيق (مطابق لصور Postman)
         payload = {
             "chatId": chat_id,
             "text": f"رمز الدخول لمحجوب أونلاين هو: {otp_code}"
@@ -36,6 +38,7 @@ class AdminAuthService:
             response = requests.post(url, json=payload, headers=headers, timeout=15)
             
             if response.status_code in [200, 201]:
+                print("✅ نجاح: تم إرسال الرمز بنجاح.")
                 return True
             else:
                 print(f"CRITICAL: HyperSender Error: {response.text}")
