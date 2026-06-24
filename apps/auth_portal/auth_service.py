@@ -1,68 +1,65 @@
 # coding: utf-8
-# 📂 apps/auth_portal/auth_service.py - خدمة إرسال التحقق للإدارة العليا عبر Twilio (الإصدار المحمي)
+# 📂 apps/suppliers_auth_portal/auth_service.py - خدمة إرسال التحقق للموردين وسوبلر عبر HyperSend
 
 import os
 import re
-from twilio.rest import Client
+import requests
 
-class AdminAuthService:
+class VendorAuthService:
     @staticmethod
     def initiate_login(phone, otp_code):
         """
-        إرسال رمز التحقق الـ OTP الخاص بالإدارة العليا عبر خدمة Twilio الرسمية المستقرة.
+        إرسال رمز التحقق الـ OTP الخاص بالموردين والمسوقين عبر خدمة HyperSend (WhatsApp API).
         """
-        # 1. جلب بيانات التوثيق الصارمة من متغيرات بيئة ريندر (Render)
-        account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
-        auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
-        twilio_number = os.environ.get('TWILIO_NUMBER')
+        # 1. جلب بيانات التوثيق من متغيرات بيئة ريندر (Render)
+        api_key = os.environ.get('HYPERSEND_API_KEY', '1389|sudxqnVbeF8d1HHi1a8ogGRRzkb6LOJDXILMe0Pg70dbd12c')
+        instance_id = os.environ.get('HYPERSEND_INSTANCE_ID', 'a219739b-b1b0-4c0b-858c-45d4d309e27f')
 
-        # تحقق استباقي لمنع محاولات الإرسال الفاشلة إذا كانت المتغيرات ناقصة
-        if not all([account_sid, auth_token, twilio_number]):
-            print("🚨 [Admin Twilio Config Error] بيانات التوثيق للإدارة غير مكتملة في Render!")
-            return False
-
-        # 2. تنظيف رقم الهاتف وتجهيز الصياغة الدولية المعتمدة لـ Twilio
+        # 2. تنظيف الرقم وتجهيز الصياغة الدولية (بدون علامة + لـ HyperSend)
         clean_phone = re.sub(r'[^\d]', '', str(phone))
-        
         if clean_phone.startswith('00967'):
             clean_phone = clean_phone[2:]
         elif clean_phone.startswith('7') and len(clean_phone) == 9:
             clean_phone = '967' + clean_phone
         elif clean_phone.startswith('07') and len(clean_phone) == 10:
             clean_phone = '967' + clean_phone[1:]
-        
-        # إضافة علامة الزائد (+) الإلزامية لبروتوكول Twilio
-        destination_phone = f"+{clean_phone}"
 
-        # 3. صياغة الرسالة الرسمية الحصرية الخاصة بالإدارة العليا
+        # 3. صياغة رسالة محجوب أونلاين السيادية
         message_body = (
-            f"Mahjoub Online | Admin Access\n\n"
-            f"رمز دخول الإدارة الخاص بك هو: {otp_code}\n\n"
-            f"— محجوب أونلاين | النظام الأمني"
+            f"*Mahjoub Online | الشركاء والموردين*\n\n"
+            f"رمز التحقق الأمني الخاص بك هو: *{otp_code}*\n\n"
+            f"يرجى عدم مشاركة هذا الرمز مع أي شخص.\n"
+            f"— محجوب أونلاين | سوقك الذكي"
         )
 
+        # 4. تجهيز الطلب لـ HyperSend API
+        # الرابط المعتمد لإرسال الرسائل النصية عبر الواتساب في HyperSend
+        url = "https://hypersend.net/api/v1/messages/send-text"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        
+        payload = {
+            "instance_id": instance_id,
+            "to": clean_phone,
+            "message": message_body
+        }
+
         try:
-            # 4. بناء الجلسة البرمجية مع سيرفرات Twilio
-            client = Client(account_sid, auth_token)
+            # 5. إطلاق طلب الإرسال الفعلي
+            response = requests.post(url, json=payload, headers=headers, timeout=15)
+            res_data = response.json()
 
-            # 5. التمييز الذكي لنوع قناة الإرسال (WhatsApp أو SMS عادية) بناءً على الرقم المدخل
-            if twilio_number.startswith('whatsapp:') or "whatsapp" in twilio_number.lower():
-                from_number = twilio_number if twilio_number.startswith('whatsapp:') else f"whatsapp:{twilio_number}"
-                to_number = f"whatsapp:{destination_phone}"
+            if response.status_code == 200 and (res_data.get('status') == 'success' or res_data.get('success') is True):
+                print(f"✅ [Vendor OTP Sent via HyperSend] تم الإرسال بنجاح للرقم: {clean_phone}")
+                return True
             else:
-                from_number = twilio_number
-                to_number = destination_phone
+                print(f"❌ [HyperSend API Error] الرد: {response.text}")
+                return False
 
-            # 6. إطلاق طلب الإرسال الفعلي
-            message = client.messages.create(
-                body=message_body,
-                from_=from_number,
-                to=to_number
-            )
-
-            print(f"✅ [Admin OTP Sent via Twilio] تم إرسال رمز الإدارة بنجاح! معرف الرسالة: {message.sid}")
-            return True
-            
         except Exception as e:
-            print(f"🚨 CRITICAL [Admin Auth Twilio Error]: {str(e)}")
+            print(f"🚨 CRITICAL [Vendor HyperSend Error]: {str(e)}")
             return False
