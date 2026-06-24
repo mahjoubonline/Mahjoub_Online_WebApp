@@ -1,88 +1,45 @@
 # coding: utf-8
-# 📂 apps/auth_portal/routes.py - بوابة الدخول السيادية (النسخة النهائية المتوافقة)
+# 📂 apps/auth_portal/auth_service.py - النسخة النهائية المطابقة للتوثيق
 
-import random
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash
-from apps.auth_portal.auth_service import AdminAuthService
-from apps.models.admin_db import AdminUser
+import os
+import requests
 
-# تعريف الـ Blueprint
-auth_portal = Blueprint('auth_portal', __name__, template_folder='templates')
-
-@auth_portal.route('/m7jb_sovereign_hq_v2_99x', methods=['GET', 'POST'])
-def login():
-    """
-    المرحلة 1: التحقق من الهوية وكلمة المرور ثم إرسال الـ OTP.
-    """
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+class AdminAuthService:
+    @staticmethod
+    def initiate_login(phone, otp_code):
+        api_key = os.environ.get('HYPERSEND_API_KEY')
         
-        # البحث عن المسؤول
-        admin = AdminUser.query.filter_by(username=username).first()
+        # 1. تنظيف الرقم (بدون أي مسافات)
+        clean_phone = "".join(filter(str.isdigit, str(phone)))
+        if not clean_phone.startswith('967'):
+            clean_phone = '967' + clean_phone.lstrip('0')
         
-        # التأكد من وجود المستخدم ومطابقة كلمة المرور باستخدام الموديل
-        if admin and admin.check_password(password):
-            # إخلاء أي جلسة سابقة قبل البدء لضمان الأمان
-            session.clear() 
-            session.permanent = True # الحفاظ على الجلسة نشطة
+        # 2. التنسيق الدقيق المطلوب لـ HyperSender
+        chat_id = f"{clean_phone}@c.us"
+        
+        # 3. الرابط المعتمد من توثيق Postman
+        url = "https://app.hypersender.com/api/whatsapp/v1/instance/send-text"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # 4. الـ Payload الدقيق (مطابق لصور Postman)
+        payload = {
+            "chatId": chat_id,
+            "text": f"رمز الدخول لمحجوب أونلاين هو: {otp_code}"
+        }
+
+        try:
+            print(f"DEBUG: محاولة الإرسال لـ {chat_id}")
+            response = requests.post(url, json=payload, headers=headers, timeout=15)
             
-            # توليد رمز عشوائي
-            otp_code = str(random.randint(100000, 999999))
-            
-            # محاولة الإرسال
-            if AdminAuthService.initiate_login(admin.phone_number, otp_code):
-                session['otp_code'] = otp_code
-                session['user_id'] = admin.id
-                session['login_attempts'] = 0 # تعقب المحاولات
-                return redirect(url_for('auth_portal.verify_otp_page'))
+            if response.status_code in [200, 201]:
+                return True
             else:
-                flash("فشل الاتصال بخدمة الإرسال، حاول لاحقاً.")
-        else:
-            flash("اسم المستخدم أو كلمة المرور غير صحيحة.")
-            
-    return render_template('auth/login.html')
-
-@auth_portal.route('/verify', methods=['GET', 'POST'])
-def verify_otp_page():
-    """
-    المرحلة 2: التحقق من رمز OTP.
-    """
-    if 'otp_code' not in session:
-        return redirect(url_for('auth_portal.login'))
-
-    if request.method == 'POST':
-        user_otp = request.form.get('otp_code')
-        
-        # حماية ضد المحاولات المتكررة (تسمح بـ 3 محاولات فقط)
-        session['login_attempts'] = session.get('login_attempts', 0) + 1
-        if session['login_attempts'] > 3:
-            session.clear()
-            flash("تم تجاوز عدد المحاولات المسموح بها، يرجى إعادة تسجيل الدخول.")
-            return redirect(url_for('auth_portal.login'))
-        
-        if user_otp == session.get('otp_code'):
-            # إزالة الرمز من الجلسة بعد النجاح
-            session.pop('otp_code', None)
-            session.pop('login_attempts', None)
-            return "✅ تم الدخول بنجاح إلى النظام السيادي."
-        else:
-            flash(f"رمز التحقق غير صحيح. محاولات متبقية: {3 - session['login_attempts']}")
-            
-    return render_template('auth/verify_otp.html')
-
-@auth_portal.route('/resend', methods=['POST'])
-def resend_otp():
-    """إعادة إرسال رمز جديد."""
-    user_id = session.get('user_id')
-    admin = AdminUser.query.get(user_id) if user_id else None
-    
-    if admin:
-        new_otp = str(random.randint(100000, 999999))
-        if AdminAuthService.initiate_login(admin.phone_number, new_otp):
-            session['otp_code'] = new_otp
-            flash("تمت إعادة إرسال الرمز بنجاح.")
-        else:
-            flash("فشل إعادة الإرسال.")
-            
-    return redirect(url_for('auth_portal.verify_otp_page'))
+                print(f"CRITICAL: HyperSender Error: {response.text}")
+                return False
+        except Exception as e:
+            print(f"CRITICAL: Connection Error: {str(e)}")
+            return False
