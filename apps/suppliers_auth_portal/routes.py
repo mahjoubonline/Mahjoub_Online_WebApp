@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي (النسخة النهائية الكاملة والمصححة)
+# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي للموردين والمسوقين (نسخة Twilio الرسمية الكاملة)
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, current_user
@@ -71,10 +71,11 @@ def login():
         elif len(phone) == 10 and phone.startswith('07'):
             phone = '967' + phone[1:]
 
-        # توليد وإرسال الـ OTP
+        # توليد وإرسال الـ OTP عبر Twilio باستخدام الجسر
         new_otp = OTPVerification.generate_otp(phone, SupplierDispatcher)
         if new_otp:
-            return jsonify({"status": "success", "message": "تم إرسال رمز التحقق بنجاح عبر الواتساب"})
+            # تحديث الرسالة لتشمل الاتصال الرسمي الآمن لـ Twilio
+            return jsonify({"status": "success", "message": "تم إرسال رمز التحقق بنجاح إلى هاتفك"})
         return jsonify({"status": "error", "message": "فشل إرسال الرمز، يرجى المحاولة لاحقاً"}), 500
 
     except Exception as e:
@@ -121,7 +122,7 @@ def verify_page():
             login_user(supplier, remember=True)
             session.permanent = True
             
-            # إرجاع استجابة صريحة ومباشرة بنجاح العملية
+            # إرجاع استجابة صريحة ومباشرة بنجاح العملية وتوجيهه للوحة الموردين
             response = jsonify({"status": "success", "redirect": url_for('suppliers.dashboard')})
             return response
         
