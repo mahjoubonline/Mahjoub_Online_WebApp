@@ -1,19 +1,11 @@
 # coding: utf-8
-# 📂 apps/__init__.py - المصنع السيادي الموحد (نسخة التسجيل المباشر لتجاوز 404)
+# 📂 apps/__init__.py - المصنع السيادي الموحد
 
 import os
 from flask import Flask, redirect
 from flask_talisman import Talisman
 from config import Config
 from apps.extensions import db, login_manager, migrate
-
-# استيراد مباشر للـ Blueprints لضمان تسجيلها
-from apps.auth_portal.routes import auth_portal
-from apps.admin_dashboard.routes import admin_dashboard
-from apps.wallet.routes import wallet_app
-from apps.vault.routes import vault_bp
-from apps.orders.routes import orders_bp
-from apps.api.webhooks import webhooks_bp
 
 def create_app():
     # 1. إعداد المصنع
@@ -52,28 +44,31 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # 4. تسجيل المسارات (تسجيل صريح ومباشر)
-    app.register_blueprint(auth_portal, url_prefix='/auth')
-    app.register_blueprint(admin_dashboard, url_prefix='/admin')
-    app.register_blueprint(wallet_app, url_prefix='/wallet')
-    app.register_blueprint(vault_bp, url_prefix='/vault')
-    app.register_blueprint(orders_bp, url_prefix='/orders')
-    app.register_blueprint(webhooks_bp, url_prefix='/api')
+    # 4. تسجيل المسارات (Lazy Loading لتجنب فصل السيرفر)
+    with app.app_context():
+        from apps.auth_portal.routes import auth_portal
+        from apps.admin_dashboard.routes import admin_dashboard
+        from apps.wallet.routes import wallet_app
+        from apps.vault.routes import vault_bp
+        from apps.orders.routes import orders_bp
+        from apps.api.webhooks import webhooks_bp
+
+        app.register_blueprint(auth_portal, url_prefix='/auth')
+        app.register_blueprint(admin_dashboard, url_prefix='/admin')
+        app.register_blueprint(wallet_app, url_prefix='/wallet')
+        app.register_blueprint(vault_bp, url_prefix='/vault')
+        app.register_blueprint(orders_bp, url_prefix='/orders')
+        app.register_blueprint(webhooks_bp, url_prefix='/api')
     
     print("✅ [SYSTEM] تم تسجيل كافة المسارات (Blueprints) بنجاح.")
 
-    # 5. [DEBUG] طباعة المسارات المسجلة
-    print("📋 [DEBUG] المسارات المسجلة في السيرفر:")
-    for rule in app.url_map.iter_rules():
-        print(f"DEBUG: Rule: {rule.rule} -> Endpoint: {rule.endpoint}")
-
-    # 6. التوجيه الأساسي
+    # 5. التوجيه الأساسي
     @app.route('/')
     def index():
         login_path = os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x')
         return redirect(f'/auth{login_path}')
 
-    # 7. إعداد البيانات
+    # 6. إعداد البيانات
     with app.app_context():
         try:
             from apps.models.admin_db import AdminUser
