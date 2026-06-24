@@ -81,13 +81,15 @@
             const otpForm = document.getElementById('otp-form');
             
             otpInput.addEventListener('input', function() {
+                // التأكد من أن الإدخال رقمي فقط
+                this.value = this.value.replace(/[^0-9]/g, '');
                 if (this.value.length === 6) {
                     this.style.borderColor = "#fff";
                     otpForm.submit();
                 }
             });
 
-            // منطق المؤقت لإعادة الإرسال
+            // منطق المؤقت (Timer) لإعادة الإرسال
             const resendBtn = document.getElementById('resend-btn');
             const resendText = document.getElementById('resend-text');
             let timeLeft = 60;
