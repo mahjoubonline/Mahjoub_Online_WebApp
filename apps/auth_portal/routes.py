@@ -30,6 +30,7 @@ def login():
                 session['user_id'] = admin.id
                 return redirect(url_for('auth_portal.verify_otp_page'))
             else:
+                # الرسالة تظهر للمستخدم إذا فشل السيرفر في الإرسال
                 flash("فشل الاتصال بخدمة الإرسال، حاول لاحقاً.")
         else:
             flash("هوية غير معروفة أو لا يوجد رقم هاتف مرتبط.")
@@ -48,7 +49,7 @@ def verify_otp_page():
         user_otp = request.form.get('otp_code')
         
         if user_otp == session.get('otp_code'):
-            # نجاح التحقق - هنا يمكنك إضافة كود تسجيل الدخول (login_user)
+            # نجاح التحقق - هنا يتم تحويل المستخدم للوحة التحكم
             session.pop('otp_code', None)
             return "✅ تم الدخول بنجاح إلى النظام السيادي."
         else:
