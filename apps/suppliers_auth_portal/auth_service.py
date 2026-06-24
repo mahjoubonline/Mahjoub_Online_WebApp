@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/suppliers_auth_portal/auth_service.py - خدمة إرسال التحقق للموردين وسوبلر عبر HyperSend
+# 📂 apps/suppliers_auth_portal/auth_service.py - نسخة محصنة ضد قفل الاتصال (HyperSend Anti-Reset)
 
 import os
 import re
@@ -8,14 +8,9 @@ import requests
 class VendorAuthService:
     @staticmethod
     def initiate_login(phone, otp_code):
-        """
-        إرسال رمز التحقق الـ OTP الخاص بالموردين والمسوقين عبر خدمة HyperSend (WhatsApp API).
-        """
-        # 1. جلب بيانات التوثيق من متغيرات بيئة ريندر (Render)
         api_key = os.environ.get('HYPERSEND_API_KEY', '1389|sudxqnVbeF8d1HHi1a8ogGRRzkb6LOJDXILMe0Pg70dbd12c')
         instance_id = os.environ.get('HYPERSEND_INSTANCE_ID', 'a219739b-b1b0-4c0b-858c-45d4d309e27f')
 
-        # 2. تنظيف الرقم وتجهيز الصياغة الدولية (بدون علامة + لـ HyperSend)
         clean_phone = re.sub(r'[^\d]', '', str(phone))
         if clean_phone.startswith('00967'):
             clean_phone = clean_phone[2:]
@@ -24,7 +19,6 @@ class VendorAuthService:
         elif clean_phone.startswith('07') and len(clean_phone) == 10:
             clean_phone = '967' + clean_phone[1:]
 
-        # 3. صياغة رسالة محجوب أونلاين السيادية
         message_body = (
             f"*Mahjoub Online | الشركاء والموردين*\n\n"
             f"رمز التحقق الأمني الخاص بك هو: *{otp_code}*\n\n"
@@ -32,14 +26,14 @@ class VendorAuthService:
             f"— محجوب أونلاين | سوقك الذكي"
         )
 
-        # 4. تجهيز الطلب لـ HyperSend API
-        # الرابط المعتمد لإرسال الرسائل النصية عبر الواتساب في HyperSend
-        url = "https://hypersend.net/api/v1/messages/send-text"
+        # محاولة الإرسال باستخدام الرابط الرئيسي مع تمرير المفتاح كـ Query Parameter لحل مشكلة الـ Reset
+        url = f"https://hypersend.net/api/v1/messages/send-text?api_key={api_key}"
         
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         
         payload = {
@@ -49,15 +43,17 @@ class VendorAuthService:
         }
 
         try:
-            # 5. إطلاق طلب الإرسال الفعلي
-            response = requests.post(url, json=payload, headers=headers, timeout=15)
+            # استخدام Session لإبقاء الاتصال مستقراً
+            with requests.Session() as session:
+                session.headers.update(headers)
+                response = session.post(url, json=payload, timeout=20)
+                
             res_data = response.json()
-
             if response.status_code == 200 and (res_data.get('status') == 'success' or res_data.get('success') is True):
-                print(f"✅ [Vendor OTP Sent via HyperSend] تم الإرسال بنجاح للرقم: {clean_phone}")
+                print(f"✅ [Vendor OTP Sent] تم تسليم الرسالة بنجاح عبر HyperSend!")
                 return True
             else:
-                print(f"❌ [HyperSend API Error] الرد: {response.text}")
+                print(f"❌ [HyperSend API Response Error] الحالة: {response.status_code} - الرد: {response.text}")
                 return False
 
         except Exception as e:
