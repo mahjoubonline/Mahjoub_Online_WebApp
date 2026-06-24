@@ -21,7 +21,7 @@ class SupplierDispatcher:
     @staticmethod
     def send(phone, code):
         from apps.suppliers_auth_portal.auth_service import VendorAuthService
-        # ملاحظة: في V2 الخدمة تولد الرمز ذاتياً، لذا نمرر None للـ otp_code أو نعدل الاستدعاء
+        # في نظام HyperSender V2، يتم توليد الرمز وإرساله تلقائياً عبر السيرفر
         return VendorAuthService.initiate_login(phone)
 
 @suppliers_bp.before_request
