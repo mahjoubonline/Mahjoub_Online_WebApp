@@ -7,107 +7,41 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
             background: radial-gradient(circle, #2a114d, #1a0b2e); 
-            height: 100vh; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            font-family: 'Cairo', sans-serif; 
-            color: white; 
-            overflow: hidden;
+            height: 100vh; display: flex; justify-content: center; align-items: center; 
+            font-family: 'Cairo', sans-serif; color: white; overflow: hidden;
         }
-        .wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            height: 100%;
-        }
+        .wrapper { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
         .card { 
-            background: rgba(0,0,0,0.4); 
-            backdrop-filter: blur(25px); 
-            -webkit-backdrop-filter: blur(25px);
-            padding: 40px; 
-            border-radius: 30px; 
-            border: 1px solid #D4AF37; 
-            width: 360px; 
-            text-align: center; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(25px); 
+            padding: 40px; border-radius: 30px; border: 1px solid #D4AF37; 
+            width: 360px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5);
         }
-        .card h2 {
-            font-size: 1.6rem;
-            margin-bottom: 10px;
-            color: #fff;
-        }
+        .card h2 { font-size: 1.6rem; margin-bottom: 10px; color: #fff; }
         .input-otp { 
-            width: 100%; 
-            padding: 15px; 
-            border-radius: 10px; 
-            border: 1px solid #D4AF37; 
-            background: transparent; 
-            color: white; 
-            text-align: center; 
-            font-size: 1.6rem; 
-            letter-spacing: 8px; 
-            margin-bottom: 20px; 
-            outline: none;
-            transition: 0.3s;
+            width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #D4AF37; 
+            background: transparent; color: white; text-align: center; 
+            font-size: 1.6rem; letter-spacing: 8px; margin-bottom: 20px; outline: none; transition: 0.3s;
         }
-        .input-otp:focus {
-            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
-        }
+        .input-otp:focus { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
         .btn-verify { 
-            width: 100%; 
-            padding: 15px; 
-            background: #D4AF37; 
-            border: none; 
-            border-radius: 10px; 
-            font-weight: bold; 
-            font-size: 1rem;
-            cursor: pointer; 
-            color: #1a0b2e; 
-            margin-bottom: 15px; 
-            transition: 0.3s;
-            font-family: 'Cairo', sans-serif;
+            width: 100%; padding: 15px; background: #D4AF37; border: none; 
+            border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; 
+            color: #1a0b2e; margin-bottom: 15px; transition: 0.3s; font-family: 'Cairo', sans-serif;
         }
-        .btn-verify:hover {
-            background: #f1c40f;
-            transform: translateY(-2px);
-        }
+        .btn-verify:hover { background: #fff; transform: translateY(-2px); }
         .resend-btn { 
-            background: none; 
-            border: none; 
-            cursor: pointer; 
-            color: #a090b5; 
-            font-size: 0.85rem; 
-            margin-top: 10px; 
-            transition: 0.3s; 
-            font-family: 'Cairo', sans-serif;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            background: none; border: none; cursor: pointer; color: #a090b5; 
+            font-size: 0.85rem; margin-top: 10px; transition: 0.3s; 
+            font-family: 'Cairo', sans-serif; display: inline-flex; align-items: center; gap: 8px;
         }
-        .resend-btn:hover:not(:disabled) { 
-            color: #D4AF37; 
-        }
-        .resend-btn:disabled { 
-            color: #555; 
-            cursor: not-allowed; 
-        }
+        .resend-btn:hover:not(:disabled) { color: #D4AF37; }
+        .resend-btn:disabled { color: #555; cursor: not-allowed; }
         .flash-message { 
-            padding: 12px; 
-            border-radius: 10px; 
-            margin-bottom: 20px; 
-            font-size: 0.85rem; 
-            background: rgba(212, 175, 55, 0.1); 
-            border: 1px solid #D4AF37; 
-            color: #fff;
+            padding: 12px; border-radius: 10px; margin-bottom: 20px; font-size: 0.85rem; 
+            background: rgba(212, 175, 55, 0.1); border: 1px solid #D4AF37; color: #fff;
         }
     </style>
 </head>
@@ -115,7 +49,9 @@
     <div class="wrapper">
         <div class="card">
             <h2>التحقق الأمني</h2>
-            <p style="font-size: 0.9rem; margin-bottom: 25px; color: #ccc;">أدخل رمز التحقق (OTP) المرسل لهاتفك عبر واتساب.</p>
+            <p style="font-size: 0.9rem; margin-bottom: 25px; color: #ccc;">
+                أدخل رمز التحقق (OTP) الذي تم إرساله إلى حساب الواتساب المرتبط بهويتك.
+            </p>
             
             {% with messages = get_flashed_messages() %}
                 {% if messages %}
@@ -158,8 +94,6 @@
                     }
                 }, 1000);
             }
-
-            // بدء العداد فوراً بعد جاهزية مستند الصفحة
             startTimer();
         });
     </script>
