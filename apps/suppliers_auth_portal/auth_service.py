@@ -23,8 +23,9 @@ class VendorAuthService:
         elif clean_phone.startswith('07') and len(clean_phone) == 10:
             clean_phone = '967' + clean_phone[1:]
             
-        # جلب مفتاح الـ API الخاص بـ TextMeBot لشركاء النجاح
-        api_key = os.environ.get('TEXTMEBOT_API_KEY', 'rb3tZFnHRcsN')
+        # 💡 فصل سيادي للمفاتيح: جلب مفتاح الموردين المخصص لـ TextMeBot لمنع تداخل الحسابات مع الإدارة
+        # إذا لم يتم تعيين SUPPLIERS_TEXTMEBOT_KEY في Render، سيعود بشكل تلقائي للمفتاح الاحتياطي
+        api_key = os.environ.get('SUPPLIERS_TEXTMEBOT_KEY', os.environ.get('TEXTMEBOT_API_KEY', 'rb3tZFnHRcsN'))
         
         # صياغة رسالة مخصصة تليق بهوية محجوب أونلاين للموردين
         message = (
