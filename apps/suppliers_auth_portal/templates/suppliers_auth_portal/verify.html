@@ -14,151 +14,59 @@
             --border-color: #333333;
         }
         
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body { 
-            font-family: 'Cairo', sans-serif; 
-            background: var(--bg); 
-            color: #fff; 
-            min-height: 100vh; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            padding: 15px;
+            font-family: 'Cairo', sans-serif; background: var(--bg); color: #fff; 
+            min-height: 100vh; display: flex; align-items: center; 
+            justify-content: center; padding: 15px;
         }
 
         .wrapper { 
-            display: flex; 
-            width: 100%; 
-            max-width: 480px; 
-            background: rgba(15, 7, 28, 0.95); 
-            border: 1px solid var(--border-color); 
-            border-radius: 25px; 
-            overflow: hidden; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex; width: 100%; max-width: 480px; background: rgba(15, 7, 28, 0.95); 
+            border: 1px solid var(--border-color); border-radius: 25px; 
+            overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
 
-        .side { 
-            flex: 1; 
-            padding: 40px 30px; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-        }
-
-        h3 {
-            color: var(--gold); 
-            text-align: center;
-            font-size: 1.5rem;
-            font-weight: 900;
-            margin-bottom: 10px;
-        }
-
-        p {
-            text-align: center; 
-            color: #aaa; 
-            font-size: 0.95rem; 
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
+        .side { flex: 1; padding: 40px 30px; display: flex; flex-direction: column; justify-content: center; }
+        h3 { color: var(--gold); text-align: center; font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
+        p { text-align: center; color: #aaa; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; }
 
         .btn-gold { 
-            padding: 15px; 
-            background: linear-gradient(90deg, #ce9e49, #9e7634); 
-            border: none; 
-            border-radius: 12px; 
-            font-weight: 900; 
-            font-family: 'Cairo', sans-serif;
-            font-size: 1rem;
-            cursor: pointer; 
-            color: #000; 
-            margin: 8px 0; 
-            width: 100%; 
-            transition: all 0.3s ease; 
-            text-align: center; 
+            padding: 15px; background: linear-gradient(90deg, #ce9e49, #9e7634); 
+            border: none; border-radius: 12px; font-weight: 900; font-family: 'Cairo', sans-serif; 
+            font-size: 1rem; cursor: pointer; color: #000; margin: 8px 0; width: 100%; 
+            transition: all 0.3s ease; text-align: center; 
         }
-
-        .btn-gold:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(206, 158, 73, 0.3);
-        }
-
-        .btn-gold:disabled { 
-            background: #444 !important; 
-            color: #888;
-            cursor: not-allowed; 
-            transform: none;
-            box-shadow: none;
-        }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(206, 158, 73, 0.3); }
+        .btn-gold:disabled { background: #444 !important; color: #888; cursor: not-allowed; }
 
         .cyber-input { 
-            background: var(--input-bg); 
-            border: 1px solid var(--border-color); 
-            padding: 15px; 
-            color: #fff; 
-            border-radius: 12px; 
-            margin: 15px 0; 
-            width: 100%; 
-            font-family: 'Cairo', sans-serif;
-            text-align: center; 
-            font-size: 1.4rem; 
-            letter-spacing: 6px; 
-            font-weight: 600;
+            background: var(--input-bg); border: 1px solid var(--border-color); 
+            padding: 15px; color: #fff; border-radius: 12px; margin: 15px 0; 
+            width: 100%; font-family: 'Cairo', sans-serif; text-align: center; 
+            font-size: 1.4rem; letter-spacing: 6px; font-weight: 600; 
             transition: border-color 0.3s ease;
         }
+        .cyber-input:focus { outline: none; border-color: var(--gold); }
 
-        .cyber-input:focus {
-            outline: none;
-            border-color: var(--gold);
-        }
-
-        /* ⏳ تنسيق ذكي لرسالة الحالة يدعم التلاشي والظهور المريح */
         #status-msg { 
-            padding: 12px; 
-            margin: 10px 0; 
-            border-radius: 12px; 
-            display: none; 
-            text-align: center; 
-            font-size: 0.9rem; 
-            font-weight: 600;
-            opacity: 0;
-            transition: opacity 0.4s ease, transform 0.4s ease;
-            transform: translateY(-10px);
+            padding: 12px; margin: 10px 0; border-radius: 12px; display: none; 
+            text-align: center; font-size: 0.9rem; font-weight: 600; opacity: 0; 
+            transition: opacity 0.4s ease, transform 0.4s ease; transform: translateY(-10px); 
         }
+        #status-msg.show { display: block; opacity: 1; transform: translateY(0); }
 
-        #status-msg.show {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
+        .change-phone-btn { 
+            background: none; border: none; color: #666; font-family: 'Cairo', sans-serif; 
+            font-size: 0.9rem; cursor: pointer; margin-top: 15px; text-align: center; 
+            text-decoration: underline; transition: color 0.3s; 
         }
-
-        .change-phone-btn {
-            background: none; 
-            border: none; 
-            color: #666; 
-            font-family: 'Cairo', sans-serif;
-            font-size: 0.9rem;
-            cursor: pointer; 
-            margin-top: 15px; 
-            text-align: center;
-            text-decoration: underline;
-            transition: color 0.3s;
-        }
-
-        .change-phone-btn:hover {
-            color: #fff;
-        }
+        .change-phone-btn:hover { color: #fff; }
 
         @media (max-width: 480px) {
             .side { padding: 30px 20px; }
-            h3 { font-size: 1.3rem; }
-            p { font-size: 0.85rem; }
             .cyber-input { font-size: 1.2rem; padding: 12px; }
-            .btn-gold { padding: 13px; font-size: 0.95rem; }
         }
     </style>
 </head>
@@ -184,40 +92,26 @@
     const urlParams = new URLSearchParams(window.location.search);
     const phone = urlParams.get('phone');
 
-    if(!phone) {
-        window.location.href = '/suppliers/login';
-    }
+    if(!phone) window.location.href = '/suppliers/login';
 
-    // دمج إظهار الرسالة وتفعيل الإنميشن
     function showMessage(text, type) {
         const msgDiv = document.getElementById('status-msg');
         msgDiv.innerText = text;
-        msgDiv.className = ""; // تنظيف الكلاسات القديمة
-        
+        msgDiv.className = "";
         msgDiv.style.display = "block";
-        // تأخير بسيط لتفعيل أنيميشن الـ CSS الانتقالي
-        setTimeout(() => {
-            msgDiv.classList.add('show');
-        }, 10);
-
+        setTimeout(() => msgDiv.classList.add('show'), 10);
         msgDiv.style.background = type === 'error' ? "rgba(220, 53, 69, 0.2)" : "rgba(40, 167, 69, 0.2)";
         msgDiv.style.color = type === 'error' ? "#ff4d4d" : "#28a745";
     }
 
-    // دالة مسؤولة عن إخفاء الرسالة فوراً عند بدء عملية جديدة أو عند الكتابة
     function hideMessage() {
         const msgDiv = document.getElementById('status-msg');
         msgDiv.classList.remove('show');
-        setTimeout(() => {
-            if(!msgDiv.classList.contains('show')) {
-                msgDiv.style.display = "none";
-            }
-        }, 400); // الانتظار حتى ينتهي تأثير التلاشي
+        setTimeout(() => { if(!msgDiv.classList.contains('show')) msgDiv.style.display = "none"; }, 400);
     }
 
     async function verifyOtp() {
-        hideMessage(); // إخفاء أي رسالة سابقة قبل إرسال الطلب الجديد
-        
+        hideMessage();
         const otp = document.getElementById('otp-input').value;
         if(otp.length < 6) {
             showMessage("الرجاء إدخال الرمز المكون من 6 أرقام كاملاً", "error");
@@ -235,10 +129,10 @@
                 body: JSON.stringify({type: 'supplier', phone: phone, otp: otp})
             });
             const res = await response.json();
-            if(res.status === 'success') {
+            if(response.ok && res.status === 'success') {
                 window.location.href = res.redirect;
             } else { 
-                showMessage(res.message, 'error'); 
+                showMessage(res.message || "رمز التحقق غير صحيح", 'error'); 
                 verifyBtn.innerText = "تأكيد الدخول الملوكي";
                 verifyBtn.disabled = false;
             }
@@ -250,8 +144,7 @@
     }
 
     async function resendOtp() {
-        hideMessage(); // إخفاء أي رسالة قديمة فوراً
-        
+        hideMessage();
         const btn = document.getElementById('resend-btn');
         btn.disabled = true;
         
@@ -259,11 +152,11 @@
             const response = await fetch('/suppliers/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({type: 'supplier', phone: phone})
+                body: JSON.stringify({type: 'supplier', phone: phone, action: 'resend'})
             });
             const res = await response.json();
-            if(res.status === 'success') {
-                showMessage("تم إعادة إرسال الرمز بنجاح عبر الواتساب", 'success');
+            if(response.ok && res.status === 'success') {
+                showMessage("تم إعادة إرسال الرمز بنجاح", 'success');
                 startTimer(60);
             } else {
                 showMessage(res.message, 'error');
@@ -278,7 +171,6 @@
     function startTimer(duration) {
         let timer = duration;
         const btn = document.getElementById('resend-btn');
-        btn.disabled = true;
         const interval = setInterval(() => {
             timer--;
             btn.innerText = "إعادة إرسال (" + timer + ")";
