@@ -1,18 +1,18 @@
 # coding: utf-8
-# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول السيادي للموردين والمسوقين (نسخة Twilio الرسمية الكاملة)
+# 📂 apps/suppliers_auth_portal/routes.py - نظام الدخول للموردين والمسوقين (نسخة HyperSend الكاملة والمستقرة)
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
 from flask_login import login_user, logout_user, current_user
 from apps.extensions import db  
 import uuid
 
-# استيراد خدمة الإرسال الخاصة بالموردين لربطها بالموجه
+# استيراد خدمة الإرسال الخاصة بالموردين المربوطة بـ HyperSend
 from apps.suppliers_auth_portal.auth_service import VendorAuthService
 
 # تعريف الـ Blueprint باسم 'suppliers'
 suppliers_bp = Blueprint('suppliers', __name__, template_folder='templates')
 
-# جسر إرسال الموردين المستقل (لمنع التداخل مع الإدارة السيادية)
+# جسر إرسال الموردين المستقل (لمنع التداخل مع الإدارة العليا)
 class SupplierDispatcher:
     @staticmethod
     def send(phone, code):
@@ -65,17 +65,16 @@ def login():
         if not phone:
             return jsonify({"status": "error", "message": "رقم الهاتف مطلوب"}), 400
 
-        # تحويل الرقم للصيغة الدولية
+        # تحويل الرقم للصيغة الدولية المتوافقة مع الإرسال المحلي والدولي
         if len(phone) == 9 and phone.startswith('7'):
             phone = '967' + phone
         elif len(phone) == 10 and phone.startswith('07'):
             phone = '967' + phone[1:]
 
-        # توليد وإرسال الـ OTP عبر Twilio باستخدام الجسر
+        # توليد وإرسال الـ OTP الفوري عبر الواتساب باستخدام HyperSend وجسر الإرسال الذكي
         new_otp = OTPVerification.generate_otp(phone, SupplierDispatcher)
         if new_otp:
-            # تحديث الرسالة لتشمل الاتصال الرسمي الآمن لـ Twilio
-            return jsonify({"status": "success", "message": "تم إرسال رمز التحقق بنجاح إلى هاتفك"})
+            return jsonify({"status": "success", "message": "تم إرسال رمز التحقق بنجاح إلى حساب الواتساب الخاص بك"})
         return jsonify({"status": "error", "message": "فشل إرسال الرمز، يرجى المحاولة لاحقاً"}), 500
 
     except Exception as e:
@@ -104,6 +103,12 @@ def verify_page():
         if not phone or not otp:
             return jsonify({"status": "error", "message": "بيانات التحقق غير مكتملة"}), 400
 
+        # تنظيف الرقم وتوحيد الصيغة للفحص داخل قاعدة البيانات
+        if len(phone) == 9 and phone.startswith('7'):
+            phone = '967' + phone
+        elif len(phone) == 10 and phone.startswith('07'):
+            phone = '967' + phone[1:]
+
         if OTPVerification.verify_otp(phone, otp):
             from apps.models import Supplier
             supplier = Supplier.query.filter_by(phone=phone).first()
@@ -118,11 +123,11 @@ def verify_page():
                 db.session.add(supplier)
                 db.session.commit()
             
-            # تسجيل الدخول وتثبيت الجلسة السيادية بشكل قاطع
+            # تسجيل الدخول وتثبيت الجلسة بشكل قاطع للمورد
             login_user(supplier, remember=True)
             session.permanent = True
             
-            # إرجاع استجابة صريحة ومباشرة بنجاح العملية وتوجيهه للوحة الموردين
+            # إرجاع استجابة صريحة بنجاح العملية وتوجيهه للوحة الموردين الرئيسية
             response = jsonify({"status": "success", "redirect": url_for('suppliers.dashboard')})
             return response
         
