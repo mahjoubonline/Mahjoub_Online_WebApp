@@ -61,18 +61,20 @@
 
     <div class="sovereign-card">
         <div class="logo-section">
-            <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" alt="">
+            <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" alt="Logo">
             <h1 class="brand-name">محجوب أونلاين</h1>
             <p class="philosophy-text">بوابة الحوكمة الرقمية المشفرة</p>
         </div>
 
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}{% for message in messages %}
-                <div class="flash-message">{{ message }}</div>
-            {% endfor %}{% endif %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
         {% endwith %}
 
-        <form action="" method="POST" autocomplete="off" spellcheck="false">
+        <form method="POST" autocomplete="off" spellcheck="false" id="loginForm">
             <div class="input-box">
                 <i class="fas fa-user-shield main-icon"></i>
                 <input type="text" name="username" placeholder="الهوية الرقمية" required autocomplete="off">
@@ -99,6 +101,13 @@
             passwordField.setAttribute('type', type);
             this.classList.toggle('fa-eye-slash');
         });
+
+        // منع الإرسال المتكرر
+        document.getElementById('loginForm').onsubmit = function() {
+            const btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerText = 'جاري التحقق...';
+        };
     </script>
 </body>
 </html>
