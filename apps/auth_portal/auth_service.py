@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/auth_portal/auth_service.py - خدمة إرسال التحقق للإدارة العليا عبر HyperSend
+# 📂 apps/auth_portal/auth_service.py - خدمة إرسال التحقق للإدارة العليا عبر HyperSend (نسخة Anti-Reset المحصنة)
 
 import os
 import re
@@ -9,7 +9,7 @@ class AdminAuthService:
     @staticmethod
     def initiate_login(phone, otp_code):
         """
-        إرسال رمز التحقق الـ OTP الخاص بالإدارة العليا عبر خدمة HyperSend المستقرة.
+        إرسال رمز التحقق الـ OTP الخاص بالإدارة العليا عبر خدمة HyperSend المستقرة مع حماية ضد قفل الاتصال فجأة.
         """
         api_key = os.environ.get('HYPERSEND_API_KEY', '1389|sudxqnVbeF8d1HHi1a8ogGRRzkb6LOJDXILMe0Pg70dbd12c')
         instance_id = os.environ.get('HYPERSEND_INSTANCE_ID', 'a219739b-b1b0-4c0b-858c-45d4d309e27f')
@@ -28,12 +28,16 @@ class AdminAuthService:
             f"— محجوب أونلاين | النظام الأمني"
         )
 
-        url = "https://hypersend.net/api/v1/messages/send-text"
+        # محاولة الإرسال باستخدام الرابط الرئيسي مع تمرير المفتاح كـ Query Parameter لحل مشكلة الـ Reset
+        url = f"https://hypersend.net/api/v1/messages/send-text?api_key={api_key}"
+        
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
+        
         payload = {
             "instance_id": instance_id,
             "to": clean_phone,
@@ -41,14 +45,18 @@ class AdminAuthService:
         }
 
         try:
-            response = requests.post(url, json=payload, headers=headers, timeout=15)
+            # استخدام Session لإبقاء الاتصال مستقراً وآمناً
+            with requests.Session() as session:
+                session.headers.update(headers)
+                response = session.post(url, json=payload, timeout=20)
+                
             res_data = response.json()
 
             if response.status_code == 200 and (res_data.get('status') == 'success' or res_data.get('success') is True):
                 print(f"✅ [Admin OTP Sent via HyperSend] تم إرسال رمز المسؤول بنجاح!")
                 return True
             else:
-                print(f"❌ [Admin HyperSend API Error] الرد: {response.text}")
+                print(f"❌ [Admin HyperSend API Response Error] الحالة: {response.status_code} - الرد: {response.text}")
                 return False
                 
         except Exception as e:
