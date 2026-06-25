@@ -63,7 +63,6 @@ def create_app():
             print(f"❌ [CRITICAL] خطأ في تسجيل المسارات الأساسية: {e}")
             raise
 
-        # تسجيل مسارات الموردين
         try:
             from apps.suppliers_auth_portal.routes import suppliers_bp
             from apps.suppliers_dashboard.routes import dashboard_bp
@@ -72,7 +71,6 @@ def create_app():
         except Exception as e:
             print(f"⚠️ [Registry] تعذر تحميل وحدات الموردين: {e}")
 
-    # التوجيه الأساسي
     @app.route('/')
     def index():
         return redirect(url_for('auth_portal.login'))
@@ -81,7 +79,7 @@ def create_app():
     with app.app_context():
         db.create_all()
         
-        # 1. زرع المسؤول
+        # 1. زرع المسؤول (علي محجوب)
         try:
             from apps.models.admin_db import AdminUser
             if not AdminUser.query.filter_by(username='علي محجوب').first():
@@ -93,24 +91,24 @@ def create_app():
         except Exception as e:
             print(f"⚠️ [Database Setup] خطأ في زرع المسؤول: {e}")
 
-        # 2. زرع المورد (المتجر)
+        # 2. زرع المورد (وائل محجوب)
         try:
             from apps.models.supplier_db import Supplier
-            if not Supplier.query.filter_by(username='mahjoub_store').first():
+            # نستخدم 'وائل محجوب' كاسم مستخدم للتسجيل
+            if not Supplier.query.filter_by(username='وائل محجوب').first():
                 new_supplier = Supplier(
-                    username='mahjoub_store',
-                    trade_name='متجر محجوب أونلاين',
+                    username='وائل محجوب',
+                    trade_name='متجر وائل محجوب',
                     phone='779077746',
                     search_phone='779077746'
                 )
                 new_supplier.set_password('123')
                 db.session.add(new_supplier)
-                db.session.commit() # الحصول على ID
+                db.session.commit()
                 
-                # تفعيل توليد الكود والمحفظة تلقائياً
                 new_supplier.generate_codes()
-                db.session.commit() # الحفظ النهائي
-                print(f"✅ [Database Setup] تم زرع المورد والمحفظة بنجاح: {new_supplier.supplier_code}")
+                db.session.commit()
+                print(f"✅ [Database Setup] تم زرع المورد 'وائل محجوب' بنجاح: {new_supplier.supplier_code}")
         except Exception as e:
             print(f"⚠️ [Database Setup] خطأ في زرع المورد: {e}")
 
