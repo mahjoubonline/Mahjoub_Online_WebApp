@@ -11,13 +11,15 @@ class SupplierWallet(db.Model):
 
     # 1. المعرفات والفهرسة
     id = db.Column(db.Integer, primary_key=True)
-    # إضافة حقل الكود ليكون مطابقاً لهوية المحفظة (MAH-WEL...)
     wallet_code = db.Column(db.String(50), unique=True, nullable=False, index=True)
-    
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, unique=True, index=True)
     
-    # 2. الأرصدة (بدقة مالية عالية)
-    balance_available = db.Column(db.Numeric(15, 2), default=0.00) 
+    # 2. الأرصدة (الأعمدة الجديدة للعملات الثلاث)
+    balance_yer = db.Column(db.Numeric(15, 2), default=0.00) # ريال يمني
+    balance_usd = db.Column(db.Numeric(15, 2), default=0.00) # دولار
+    balance_sar = db.Column(db.Numeric(15, 2), default=0.00) # ريال سعودي
+    
+    # رصيد معلق عام
     balance_pending = db.Column(db.Numeric(15, 2), default=0.00)    
     total_withdrawn = db.Column(db.Numeric(15, 2), default=0.00)    
     
@@ -30,11 +32,11 @@ class SupplierWallet(db.Model):
     # 5. الربط
     supplier = db.relationship('Supplier', back_populates='wallet')
 
-    # --- خصائص إضافية مفيدة للوحة التحكم ---
+    # --- خصائص إضافية للوحة التحكم ---
     @property
-    def total_balance(self):
-        """حساب الرصيد الكلي (المتاح + المعلق)"""
-        return float(self.balance_available) + float(self.balance_pending)
+    def total_balance_yer(self):
+        """حساب إجمالي الأرصدة كقيمة مكافئة باليمني (اختياري)"""
+        return float(self.balance_yer) + (float(self.balance_usd) * 2000) # مثال تقريبي
 
     # --- نظام التشفير ---
     @staticmethod
@@ -55,4 +57,4 @@ class SupplierWallet(db.Model):
             self._bank_details_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
 
     def __repr__(self):
-        return f'<SupplierWallet {self.wallet_code} | Available: {self.balance_available}>'
+        return f'<SupplierWallet {self.wallet_code} | YER: {self.balance_yer}>'
