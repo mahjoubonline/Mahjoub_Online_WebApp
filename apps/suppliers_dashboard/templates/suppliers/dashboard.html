@@ -1,7 +1,8 @@
 {% extends 'suppliers/base.html' %}
+
+{% block title %}لوحة تحكم المورد | محجوب أونلاين{% endblock %}
+
 {% block content %}
-<h1>اختبار النجاح</h1>
-{% endblock %}
 <div class="container-fluid py-3 py-md-4 px-2 px-md-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <div>
@@ -14,6 +15,7 @@
     </div>
 
     <div class="row g-3 g-md-4">
+        {# إحصائيات المبيعات #}
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card p-3 p-md-4 shadow-sm border-0 h-100" style="border-radius: 15px;">
                 <div class="d-flex align-items-center mb-2 mb-md-3">
@@ -26,6 +28,7 @@
             </div>
         </div>
 
+        {# طلبات قيد التنفيذ #}
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card p-3 p-md-4 shadow-sm border-0 h-100" style="border-radius: 15px;">
                 <div class="d-flex align-items-center mb-2 mb-md-3">
@@ -38,6 +41,7 @@
             </div>
         </div>
 
+        {# الرصيد المتاح #}
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card p-3 p-md-4 shadow-sm border-0 h-100" style="border-radius: 15px;">
                 <div class="d-flex align-items-center mb-2 mb-md-3">
