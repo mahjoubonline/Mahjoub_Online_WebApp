@@ -15,8 +15,7 @@ class Supplier(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
     
-    # تم تغيير nullable إلى True مؤقتاً لتجنب خطأ الزرع، 
-    # وسيتم ملؤه بواسطة دالة generate_codes بعد الحصول على id
+    # supplier_code اختياري عند الإنشاء (nullable=True) ليتم توليده بعد الـ commit الأول
     supplier_code = db.Column(db.String(50), unique=True, nullable=True, index=True) 
     trade_name = db.Column(db.String(150), nullable=True)
     
@@ -43,12 +42,25 @@ class Supplier(db.Model, UserMixin):
         cascade="all, delete-orphan",
         lazy='select'
     )
+    
+    # علاقة المحفظة (Wallet)
+    wallet = db.relationship('SupplierWallet', back_populates='supplier', uselist=False, cascade="all, delete-orphan")
 
-    # --- منطق توليد الأكواد ---
+    # --- منطق توليد الأكواد التلقائي ---
     def generate_codes(self):
-        """توليد الكود بناءً على الـ ID الفريد"""
+        """توليد كود المورد والمحفظة تلقائياً"""
         if self.id and not self.supplier_code:
+            # توليد كود المورد
             self.supplier_code = f"MAH-SUP963{self.id}"
+            
+            # توليد كود المحفظة وربطها بالمورد
+            from apps.models.wallet_db import SupplierWallet
+            new_wallet = SupplierWallet(
+                wallet_code=f"MAH-WEL963{self.id}",
+                supplier_id=self.id,
+                balance=0.0
+            )
+            db.session.add(new_wallet)
 
     # --- نظام التشفير للرقم (AES) ---
     @staticmethod
