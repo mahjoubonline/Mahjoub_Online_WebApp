@@ -40,6 +40,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
+        # ملاحظة: إذا كان لديك مستخدمون متعددون، قد تحتاج لمنطق أذكى هنا
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
@@ -71,16 +72,35 @@ def create_app():
     def index():
         return redirect(url_for('auth_portal.login'))
 
-    # إعداد البيانات
+    # إعداد البيانات (Seeding)
     with app.app_context():
         try:
             from apps.models.admin_db import AdminUser
+            from apps.models.supplier_db import Supplier
+            
             db.create_all()
+            
+            # 1. إنشاء حساب المسؤول
             if not AdminUser.query.filter_by(username='علي محجوب').first():
                 admin = AdminUser(username='علي محجوب', role='Owner', phone_number='779077746')
                 admin.set_password('123')
                 db.session.add(admin)
                 db.session.commit()
+                print("✅ [Database Setup] تم إنشاء المسؤول بنجاح.")
+
+            # 2. إنشاء المورد الافتراضي: متجر محجوب أونلاين
+            if not Supplier.query.filter_by(username='mahjoub_store').first():
+                new_supplier = Supplier(
+                    username='mahjoub_store',
+                    trade_name='متجر محجوب أونلاين',
+                    phone='779077746',
+                    search_phone='779077746'
+                )
+                new_supplier.set_password('123')
+                db.session.add(new_supplier)
+                db.session.commit()
+                print("✅ [Database Setup] تم زرع المورد: متجر محجوب أونلاين بنجاح.")
+
         except Exception as e:
             print(f"⚠️ [Database Setup] خطأ: {e}")
 
