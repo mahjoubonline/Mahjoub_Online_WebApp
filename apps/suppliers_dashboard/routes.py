@@ -12,15 +12,25 @@ dashboard_bp = Blueprint('suppliers_dashboard', __name__, template_folder='templ
 @login_required
 def dashboard():
     """
-    لوحة تحكم المورد - عرض مباشر بدون قيود إضافية
+    لوحة تحكم المورد - عرض البيانات الحقيقية من قاعدة البيانات
     """
-    # إحصائيات افتراضية (يمكنك ربطها بالبيانات الحقيقية لاحقاً)
+    # حساب الطلبات قيد التنفيذ من خلال العلاقة التي عرفناها في الموديل
+    pending_orders_count = 0
+    if current_user.orders:
+        pending_orders_count = len([o for o in current_user.orders if o.status == 'pending'])
+    
+    # حساب المبيعات (مثال: مجموع القيم المالية للطلبات المكتملة)
+    total_sales = 0.00
+    if current_user.financials:
+        total_sales = sum(float(f.amount) for f in current_user.financials if f.status == 'completed')
+
+    # إعداد الإحصائيات للواجهة
     supplier_stats = {
-        'total_sales': '0.00',
-        'pending_orders': 0
+        'total_sales': "{:,.2f}".format(total_sales),
+        'pending_orders': pending_orders_count
     }
     
-    # عرض القالب المباشر
+    # تمرير current_user تلقائياً للـ template عبر Flask-Login
     return render_template('suppliers/dashboard.html', 
                            supplier_stats=supplier_stats)
 
