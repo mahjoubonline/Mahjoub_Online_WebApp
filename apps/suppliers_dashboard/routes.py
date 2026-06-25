@@ -15,29 +15,30 @@ dashboard_bp = Blueprint(
 @login_required
 def index():
     """
-    نقطة الدخول للمسار /suppliers/
-    نتأكد هنا من الصلاحية قبل التوجيه للوحة التحكم.
+    نقطة الدخول للمسار الجذري للمورد.
+    تتحقق من وجود المحفظة قبل التوجيه للوحة التحكم لتجنب الأخطاء.
     """
+    # التحقق من أن المستخدم مورد (يمتلك محفظة)
     if hasattr(current_user, 'wallet') and current_user.wallet is not None:
         return redirect(url_for('suppliers_dashboard.dashboard'))
     
-    # إذا لم يكن مورداً، نمنع الوصول أو نرسله لصفحة أخرى
-    return "عذراً، لا تملك صلاحية الوصول لهذه اللوحة."
+    # إذا لم يكن مورداً، نرسله لصفحة ترفض الدخول بدلاً من الحلقة المفرغة
+    return "عذراً، هذا القسم مخصص للموردين فقط."
 
 @dashboard_bp.route('/dashboard')
 @login_required
 def dashboard():
     """
-    لوحة تحكم المورد المحمية.
+    لوحة تحكم المورد: تعرض الإحصائيات الحية.
     """
-    # 1. التحقق من الصلاحية (أن المستخدم مورد ولديه محفظة)
+    # 1. التحقق من صلاحية الوصول (مورد + محفظة)
     if not hasattr(current_user, 'wallet') or current_user.wallet is None:
         return redirect(url_for('suppliers_dashboard.index'))
 
-    # 2. جلب البيانات بأمان
+    # 2. جلب كائن المحفظة
     wallet = current_user.wallet 
     
-    # 3. حساب الطلبات (مع التأكد من وجود العلاقة)
+    # 3. حساب الطلبات قيد التنفيذ (مع التأكد من وجود البيانات)
     pending_orders_count = 0
     if hasattr(current_user, 'orders') and current_user.orders:
         pending_orders_count = len([o for o in current_user.orders if o.status == 'pending'])
@@ -47,7 +48,7 @@ def dashboard():
     if hasattr(current_user, 'financials') and current_user.financials:
         total_sales = sum(float(f.amount) for f in current_user.financials if f.status == 'completed')
 
-    # 5. تمرير البيانات للوحة التحكم
+    # 5. تمرير البيانات للقالب
     return render_template(
         'suppliers/dashboard.html', 
         wallet=wallet,
@@ -58,5 +59,5 @@ def dashboard():
 @dashboard_bp.route('/settings')
 @login_required
 def settings():
-    """صفحة إعدادات المتجر"""
+    """صفحة إعدادات المتجر للمورد"""
     return render_template('suppliers/settings.html')
