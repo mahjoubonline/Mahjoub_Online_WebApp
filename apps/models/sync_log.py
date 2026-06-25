@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/models/sync_log_db.py - سجل المزامنة السيادي (مؤمن ومفهرس للتحمل المليوني)
+# 📂 apps/models/sync_log.py
 
 from apps.extensions import db
 from datetime import datetime
@@ -10,13 +10,19 @@ class SyncLog(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     
-    # ⚡ الفهرسة للفلترة السريعة (تصفية الناجح من الفاشل في أجزاء من الثانية)
+    # 🔗 إضافة معرف المورد لتحديد المسؤول عن الخطأ أو النجاح
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True, index=True)
+    
+    # ⚡ نوع المزامنة (مثال: 'orders', 'products', 'inventory')
+    sync_type = db.Column(db.String(50), nullable=False, index=True)
+    
+    # ⚡ الفهرسة للفلترة السريعة
     status = db.Column(db.String(20), nullable=False, index=True) 
     
-    # 🔐 تشفير رسائل الخطأ الحساسة (إن وجدت)
+    # 🔐 تشفير رسائل الخطأ الحساسة
     _error_message = db.Column('error_message', db.Text, nullable=True)
     
-    # ⚡ الفهرسة للبحث الزمني (تتبع أخطاء آخر ساعة أو يوم)
+    # ⚡ الفهرسة للبحث الزمني
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     @property
@@ -28,4 +34,4 @@ class SyncLog(db.Model):
         self._error_message = AESCipher.encrypt(str(value)) if value else None
 
     def __repr__(self):
-        return f'<SyncLog {self.status} at {self.timestamp}>'
+        return f'<SyncLog {self.sync_type} - {self.status} at {self.timestamp}>'
