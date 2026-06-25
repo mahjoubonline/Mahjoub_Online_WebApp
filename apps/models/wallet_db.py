@@ -14,29 +14,23 @@ class SupplierWallet(db.Model):
     wallet_code = db.Column(db.String(50), unique=True, nullable=False, index=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, unique=True, index=True)
     
-    # 2. الأرصدة (الأعمدة الجديدة للعملات الثلاث)
-    balance_yer = db.Column(db.Numeric(15, 2), default=0.00) # ريال يمني
-    balance_usd = db.Column(db.Numeric(15, 2), default=0.00) # دولار
-    balance_sar = db.Column(db.Numeric(15, 2), default=0.00) # ريال سعودي
+    # 2. الأرصدة (استخدام Numeric دقيق للعمليات المالية)
+    balance_yer = db.Column(db.Numeric(18, 2), default=0.00) 
+    balance_usd = db.Column(db.Numeric(18, 2), default=0.00) 
+    balance_sar = db.Column(db.Numeric(18, 2), default=0.00) 
     
-    # رصيد معلق عام
-    balance_pending = db.Column(db.Numeric(15, 2), default=0.00)    
-    total_withdrawn = db.Column(db.Numeric(15, 2), default=0.00)    
+    # رصيد معلق وسحوبات
+    balance_pending = db.Column(db.Numeric(18, 2), default=0.00)    
+    total_withdrawn = db.Column(db.Numeric(18, 2), default=0.00)    
     
     # 3. حقل اختياري مشفر للبيانات البنكية
     _bank_details_enc = db.Column(db.String(500), nullable=True)
     
-    # 4. التحديث التلقائي
+    # 4. التحديث التلقائي (مفهرس لتتبع حركات المحفظة)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
     
     # 5. الربط
     supplier = db.relationship('Supplier', back_populates='wallet')
-
-    # --- خصائص إضافية للوحة التحكم ---
-    @property
-    def total_balance_yer(self):
-        """حساب إجمالي الأرصدة كقيمة مكافئة باليمني (اختياري)"""
-        return float(self.balance_yer) + (float(self.balance_usd) * 2000) # مثال تقريبي
 
     # --- نظام التشفير ---
     @staticmethod
