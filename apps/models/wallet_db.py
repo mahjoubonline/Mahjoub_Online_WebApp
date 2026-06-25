@@ -1,24 +1,49 @@
 # coding: utf-8
-from apps import db
+# 📂 apps/models/wallet_db.py
+
+from apps.extensions import db
+from cryptography.fernet import Fernet
+import os
 from datetime import datetime
 
-class VendorWallet(db.Model):
-    __tablename__ = 'vendor_wallets'
+class SupplierWallet(db.Model):
+    __tablename__ = 'supplier_wallets'
 
+    # 1. المعرفات والفهرسة
     id = db.Column(db.Integer, primary_key=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, unique=True, index=True)
     
-    # 1. الأرصدة (محسوبة بدقة)
-    # نستخدم Numeric للتعامل مع العملات بدقة (15 خانة إجمالي، 2 خانة عشرية)
-    balance_available = db.Column(db.Numeric(15, 2), default=0.00) # متاح للسحب
-    balance_pending = db.Column(db.Numeric(15, 2), default=0.00)   # مبالغ تحت التسوية
-    total_withdrawn = db.Column(db.Numeric(15, 2), default=0.00)   # إجمالي المسحوبات
+    # 2. الأرصدة (بدقة مالية عالية)
+    balance_available = db.Column(db.Numeric(15, 2), default=0.00) 
+    balance_pending = db.Column(db.Numeric(15, 2), default=0.00)   
+    total_withdrawn = db.Column(db.Numeric(15, 2), default=0.00)   
     
-    # 2. الفهرسة للأداء السريع (للتقارير المالية)
+    # 3. حقل اختياري مشفر للبيانات البنكية (حماية سيادية)
+    _bank_details_enc = db.Column(db.String(500), nullable=True)
+    
+    # 4. الفهرسة للأداء السريع (للتقارير المالية)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
     
-    # 3. الربط
+    # 5. الربط
     supplier = db.relationship('Supplier', backref=db.backref('wallet', uselist=False))
 
+    # --- نظام التشفير للبيانات البنكية (اختياري) ---
+    @staticmethod
+    def _get_key():
+        return os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=').encode()
+
+    @property
+    def bank_details(self):
+        if not self._bank_details_enc: return None
+        try:
+            return Fernet(self._get_key()).decrypt(self._bank_details_enc.encode()).decode()
+        except:
+            return None
+
+    @bank_details.setter
+    def bank_details(self, value):
+        if value:
+            self._bank_details_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
+
     def __repr__(self):
-        return f'<Wallet SupplierID: {self.supplier_id} | Balance: {self.balance_available}>'
+        return f'<SupplierWallet SupplierID: {self.supplier_id} | Balance: {self.balance_available}>'
