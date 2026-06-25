@@ -4,11 +4,10 @@
 
 {% block content %}
 <style>
-    /* تأثيرات حركية للبطاقات */
+    /* التأكد من تحميل التنسيقات وتأثيرات الحركية */
     .dynamic-card { transition: all 0.4s ease; border-radius: 20px !important; overflow: hidden; }
     .dynamic-card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important; }
     .gradient-wallet { background: linear-gradient(135deg, #1a0b2e 0%, #4a148c 100%); color: white; }
-    .animate-number { transition: 0.5s; }
 </style>
 
 <div class="container-fluid py-4">
@@ -22,21 +21,21 @@
         <div class="col-12 col-xl-6">
             <div class="card dynamic-card gradient-wallet p-4 h-100 shadow">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="mb-0"><i class="fas fa-wallet me-2"></i> رصيد المحفظة</h5>
-                    <span class="badge bg-light text-dark">{{ current_user.wallet.wallet_code }}</span>
+                    <h5 class="mb-0 text-white"><i class="fas fa-wallet me-2"></i> رصيد المحفظة</h5>
+                    <span class="badge bg-light text-dark">{{ current_user.wallet.wallet_code if current_user.wallet else '---' }}</span>
                 </div>
                 <div class="row text-center">
                     <div class="col">
                         <div class="small text-white-50">ريال يمني</div>
-                        <h4 class="fw-bold">{{ "{:,.2f}".format(current_user.wallet.balance_yer|float) }}</h4>
+                        <h4 class="fw-bold">{{ "{:,.2f}".format(current_user.wallet.balance_yer|float) if current_user.wallet else '0.00' }}</h4>
                     </div>
                     <div class="col border-start border-white-50">
                         <div class="small text-white-50">دولار أمريكي</div>
-                        <h4 class="fw-bold">{{ "{:,.2f}".format(current_user.wallet.balance_usd|float) }}</h4>
+                        <h4 class="fw-bold">{{ "{:,.2f}".format(current_user.wallet.balance_usd|float) if current_user.wallet else '0.00' }}</h4>
                     </div>
                     <div class="col border-start border-white-50">
                         <div class="small text-white-50">ريال سعودي</div>
-                        <h4 class="fw-bold">{{ "{:,.2f}".format(current_user.wallet.balance_sar|float) }}</h4>
+                        <h4 class="fw-bold">{{ "{:,.2f}".format(current_user.wallet.balance_sar|float) if current_user.wallet else '0.00' }}</h4>
                     </div>
                 </div>
             </div>
@@ -54,7 +53,7 @@
             <div class="card dynamic-card p-4 shadow-sm h-100 border-0">
                 <div class="text-warning mb-3"><i class="fas fa-clock fa-2x"></i></div>
                 <h6 class="text-muted text-uppercase">رصيد معلق</h6>
-                <h2 class="fw-bold mt-2">{{ "{:,.2f}".format(current_user.wallet.balance_pending|float) }} <small class="fs-6">ر.س</small></h2>
+                <h2 class="fw-bold mt-2">{{ "{:,.2f}".format(current_user.wallet.balance_pending|float) if current_user.wallet else '0.00' }} <small class="fs-6">ر.س</small></h2>
             </div>
         </div>
     </div>
