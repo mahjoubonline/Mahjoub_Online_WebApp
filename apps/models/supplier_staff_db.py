@@ -8,26 +8,28 @@ from datetime import datetime
 class SupplierStaff(db.Model):
     __tablename__ = 'supplier_staff'
 
+    # 1. المعرفات
     id = db.Column(db.Integer, primary_key=True)
-    # الربط السيادي مع المورد
+    
+    # 2. الربط مع المورد (مع Index للبحث السريع)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, index=True)
     
-    # بيانات الموظف
+    # 3. بيانات الموظف (مع Index للبحث)
     username = db.Column(db.String(100), nullable=False, index=True)
     email = db.Column(db.String(150), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     
-    # الصلاحيات (Roles)
+    # 4. الصلاحيات والحالة (مع Index للتصفية السريعة)
     role = db.Column(db.String(50), default='worker', index=True) # owner, processor, accountant
     is_active = db.Column(db.Boolean, default=True, index=True)
     
-    # التوثيق
+    # 5. التوثيق
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
-    # الربط العكسي (Back-populates) لتسهيل استعلام المورد عن موظفيه
-    supplier = db.relationship('Supplier', backref='staff_members')
+    # 6. الربط العكسي (تأكد من تحديث كلاس Supplier ليحتوي على staff_members)
+    supplier = db.relationship('Supplier', back_populates='staff_members')
 
-    # دوال الأمان
+    # --- دوال الأمان ---
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
