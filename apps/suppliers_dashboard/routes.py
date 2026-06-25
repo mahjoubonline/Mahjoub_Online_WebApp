@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for
 from flask_login import login_required, current_user
 
 # تعريف الـ Blueprint مع تحديد مسار مجلد القوالب
+# تذكر أن flask سيبحث عن المجلدات داخل 'templates'
 dashboard_bp = Blueprint(
     'suppliers_dashboard', 
     __name__, 
@@ -35,7 +36,8 @@ def dashboard():
         'pending_orders': pending_orders_count
     }
     
-    # 4. تمرير البيانات لقالب dashboard.html (الموجود في مجلد templates/suppliers/)
+    # 4. تمرير البيانات لقالب dashboard.html الموجود في المسار:
+    # templates/suppliers/dashboard.html
     return render_template(
         'suppliers/dashboard.html', 
         supplier_stats=supplier_stats
