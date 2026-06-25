@@ -7,48 +7,42 @@ import os
 from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import event
+from sqlalchemy import event, update
 
 class Supplier(db.Model, UserMixin):
     __tablename__ = 'suppliers'
     
-    # 1. المعرفات الأساسية
+    # 1. المعرفات الأساسية مع الفهرسة (Indexing) للبحث السريع
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
-    
     supplier_code = db.Column(db.String(50), unique=True, nullable=True, index=True) 
-    trade_name = db.Column(db.String(150), nullable=True)
+    trade_name = db.Column(db.String(150), nullable=True, index=True)
     
     # 2. البيانات الحساسة (تشفير AES)
     _phone_enc = db.Column(db.String(255), nullable=False) 
-    search_phone = db.Column(db.String(20), index=True)
+    search_phone = db.Column(db.String(20), index=True) # مفهرس لتسريع البحث عن الرقم
     
     # 3. بيانات المصادقة
     password_hash = db.Column(db.String(255), nullable=True)
     
-    # 4. الحالات والرتب
+    # 4. الحالات والرتب مع الفهرسة
     status = db.Column(db.String(20), default='active', index=True)
     rank = db.Column(db.String(20), default='bronze', index=True)
     
-    # 5. التدقيق الزمني
+    # 5. التدقيق الزمني مع الفهرسة
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     last_login = db.Column(db.DateTime, nullable=True)
 
     # 6. العلاقات
-    supplier_profile = db.relationship(
-        'SupplierProfile', 
-        back_populates='supplier', 
-        uselist=False,
-        cascade="all, delete-orphan"
-    )
-    
+    supplier_profile = db.relationship('SupplierProfile', back_populates='supplier', uselist=False, cascade="all, delete-orphan")
     wallet = db.relationship('SupplierWallet', back_populates='supplier', uselist=False, cascade="all, delete-orphan")
     orders = db.relationship('Order', back_populates='supplier', cascade="all, delete-orphan")
     financials = db.relationship('OrderFinancial', back_populates='supplier', cascade="all, delete-orphan")
 
-    # --- نظام التشفير للرقم (AES) ---
+    # --- نظام التشفير ---
     @staticmethod
     def _get_key():
+        # يفضل دائماً جلب المفتاح من متغير بيئي سري (Environment Variable)
         return os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=').encode()
 
     @property
@@ -63,7 +57,7 @@ class Supplier(db.Model, UserMixin):
         self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
         self.search_phone = str(value)[:20]
 
-    # --- نظام المصادقة بكلمة المرور ---
+    # --- نظام المصادقة ---
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -73,16 +67,18 @@ class Supplier(db.Model, UserMixin):
     def __repr__(self):
         return f'<Supplier {self.username}>'
 
-# --- نظام إنشاء المحفظة التلقائي (Event Listener) ---
+# --- نظام إنشاء المحفظة وتحديث الكود تلقائياً ---
 @event.listens_for(Supplier, 'after_insert')
 def receive_after_insert(mapper, connection, target):
-    """توليد المحفظة والكود فور إدراج المورد في قاعدة البيانات"""
     from apps.models.wallet_db import SupplierWallet
     
-    # 1. تعيين كود المورد
-    target.supplier_code = f"MAH-SUP963{target.id}"
+    # 1. تحديث كود المورد مباشرة في قاعدة البيانات
+    new_supplier_code = f"MAH-SUP963{target.id}"
+    connection.execute(
+        update(Supplier).where(Supplier.id == target.id).values(supplier_code=new_supplier_code)
+    )
     
-    # 2. إنشاء محفظة افتراضية للمورد
+    # 2. إنشاء محفظة للمورد
     new_wallet = SupplierWallet(
         wallet_code=f"MAH-WEL963{target.id}",
         supplier_id=target.id,
@@ -95,3 +91,4 @@ def receive_after_insert(mapper, connection, target):
     # 3. إضافتها للجلسة
     session = db.session.object_session(target)
     session.add(new_wallet)
+    session.flush() # التأكد من التنفيذ قبل الالتزام
