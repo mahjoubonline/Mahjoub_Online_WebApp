@@ -5,8 +5,10 @@ from apps import db
 from cryptography.fernet import Fernet
 import os
 from datetime import datetime
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
-class Supplier(db.Model):
+class Supplier(db.Model, UserMixin):
     __tablename__ = 'suppliers'
     
     # 1. المعرفات الأساسية
@@ -18,16 +20,18 @@ class Supplier(db.Model):
     _phone_enc = db.Column(db.String(255), nullable=False) 
     search_phone = db.Column(db.String(20), index=True)
     
-    # 3. الحالات والرتب
+    # 3. بيانات المصادقة (تمت الإضافة)
+    password_hash = db.Column(db.String(255), nullable=True)
+    
+    # 4. الحالات والرتب
     status = db.Column(db.String(20), default='active', index=True)
     rank = db.Column(db.String(20), default='bronze', index=True)
     
-    # 4. التدقيق الزمني
+    # 5. التدقيق الزمني
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     last_login = db.Column(db.DateTime, nullable=True)
 
-    # 5. العلاقة مع الملف الشخصي (معدلة للتحميل المتأخر ومنع خطأ Mapper)
-    # استخدام String Reference و lazy='select' يمنع تداخل الموديلات عند التشغيل
+    # 6. العلاقات
     supplier_profile = db.relationship(
         'SupplierProfile', 
         back_populates='supplier', 
@@ -37,7 +41,7 @@ class Supplier(db.Model):
         foreign_keys='SupplierProfile.supplier_id'
     )
 
-    # --- نظام التشفير ---
+    # --- نظام التشفير للرقم ---
     @staticmethod
     def _get_key():
         return os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=').encode()
@@ -53,6 +57,15 @@ class Supplier(db.Model):
     def phone(self, value):
         self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
         self.search_phone = str(value)[:20]
+
+    # --- نظام المصادقة بكلمة المرور ---
+    def set_password(self, password):
+        """تشفير كلمة المرور قبل حفظها"""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """التحقق من تطابق كلمة المرور"""
+        return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
         return f'<Supplier {self.username}>'
