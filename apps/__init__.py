@@ -17,14 +17,14 @@ def create_app():
     
     app.config.from_object(Config)
 
-    # تحسينات الأمان
+    # 1. تحسينات أمان ملفات تعريف الارتباط
     app.config.update(
         SESSION_COOKIE_SECURE=True,
         REMEMBER_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True
     )
 
-    # 🛡️ سياسة أمان المحتوى
+    # 2. سياسة أمان المحتوى (CSP)
     Talisman(app, force_https=True, content_security_policy={
         'default-src': ["'self'"],
         'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
@@ -33,7 +33,7 @@ def create_app():
         'img-src': ["'self'", "data:", "https://*"]
     }, frame_options='SAMEORIGIN', referrer_policy='strict-origin-when-cross-origin')
 
-    # الإضافات الأساسية
+    # 3. تهيئة الإضافات
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -44,9 +44,9 @@ def create_app():
         from apps.models.admin_db import AdminUser
         return AdminUser.query.get(int(user_id))
 
-    # تسجيل المسارات
+    # 4. تسجيل المسارات (Blueprints)
     with app.app_context():
-        # 1. التسجيل اليدوي للمكونات الأساسية
+        # تسجيل المكونات الأساسية
         try:
             from apps.auth_portal.routes import auth_portal
             from apps.admin_dashboard.routes import admin_dashboard
@@ -65,8 +65,7 @@ def create_app():
             print(f"❌ [CRITICAL] خطأ في تسجيل المسارات الأساسية: {e}")
             raise
 
-        # 2. التسجيل الديناميكي لموديولات الموردين
-        # التصحيح: apps_dir هو app.root_path مباشرة لأنه يشير لمجلد apps
+        # 5. التسجيل الديناميكي لموديولات الموردين
         apps_dir = app.root_path
         for folder in os.listdir(apps_dir):
             if folder.startswith('suppliers_'):
@@ -84,25 +83,23 @@ def create_app():
     def index():
         return redirect(url_for('auth_portal.login'))
 
-    # إعداد البيانات (Seeding)
+    # 6. تهيئة قاعدة البيانات والبيانات الأولية (Seed)
     with app.app_context():
-        db.create_all()
+        # ملاحظة: في بيئة الإنتاج نعتمد على Flask-Migrate فقط
+        # db.create_all() 
         
-        # 1. زرع المسؤول
         try:
             from apps.models.admin_db import AdminUser
+            from apps.models.supplier_db import Supplier
+            
+            # زرع المسؤول
             if not AdminUser.query.filter_by(username='علي محجوب').first():
                 admin = AdminUser(username='علي محجوب', role='Owner', phone_number='779077746')
                 admin.set_password('123')
                 db.session.add(admin)
                 db.session.commit()
-                print("✅ [Database Setup] تم إنشاء المسؤول.")
-        except Exception as e:
-            print(f"⚠️ [Database Setup] خطأ في زرع المسؤول: {e}")
-
-        # 2. زرع المورد
-        try:
-            from apps.models.supplier_db import Supplier
+            
+            # زرع المورد
             if not Supplier.query.filter_by(username='وائل محجوب').first():
                 new_supplier = Supplier(
                     username='وائل محجوب',
@@ -115,8 +112,8 @@ def create_app():
                 db.session.commit()
                 new_supplier.generate_codes()
                 db.session.commit()
-                print(f"✅ [Database Setup] تم زرع المورد 'وائل محجوب' بنجاح.")
+                
         except Exception as e:
-            print(f"⚠️ [Database Setup] خطأ في زرع المورد: {e}")
+            print(f"⚠️ [Database Setup] خطأ في تهيئة البيانات الأولية: {e}")
 
     return app
