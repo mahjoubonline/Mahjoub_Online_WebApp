@@ -1,7 +1,7 @@
 # coding: utf-8
 # 📂 apps/models/supplier_db.py
 
-from apps import db
+from apps.extensions import db  # تم التعديل لضمان الاستيراد من extensions لتجنب المشاكل
 from cryptography.fernet import Fernet
 import os
 from datetime import datetime
@@ -20,10 +20,10 @@ class Supplier(db.Model, UserMixin):
     _phone_enc = db.Column(db.String(255), nullable=False) 
     search_phone = db.Column(db.String(20), index=True)
     
-    # 3. بيانات المصادقة (تمت الإضافة)
+    # 3. بيانات المصادقة
     password_hash = db.Column(db.String(255), nullable=True)
     
-    # 4. الحالات والرتب
+    # 4. الحالات والرتب (مع فهارس لتسريع الاستعلام)
     status = db.Column(db.String(20), default='active', index=True)
     rank = db.Column(db.String(20), default='bronze', index=True)
     
@@ -41,9 +41,10 @@ class Supplier(db.Model, UserMixin):
         foreign_keys='SupplierProfile.supplier_id'
     )
 
-    # --- نظام التشفير للرقم ---
+    # --- نظام التشفير للرقم (AES) ---
     @staticmethod
     def _get_key():
+        # تأكد من أن متغير البيئة ENCRYPTION_KEY موجود في إعدادات Render
         return os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=').encode()
 
     @property
@@ -56,9 +57,10 @@ class Supplier(db.Model, UserMixin):
     @phone.setter
     def phone(self, value):
         self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
+        # تخزين أول 20 رقم لتسهيل البحث
         self.search_phone = str(value)[:20]
 
-    # --- نظام المصادقة بكلمة المرور ---
+    # --- نظام المصادقة بكلمة المرور (Werkzeug) ---
     def set_password(self, password):
         """تشفير كلمة المرور قبل حفظها"""
         self.password_hash = generate_password_hash(password)
