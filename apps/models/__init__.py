@@ -10,18 +10,20 @@ from .supplier_db import Supplier
 from .supplier_profile_db import SupplierProfile
 from .supplier_staff_db import SupplierStaff
 from .sync_log import SyncLog
-from .wallet_db import SupplierWallet  # تم تحديث الاسم ليكون SupplierWallet
+from .wallet_db import SupplierWallet
 
-# القائمة الموحدة للتصدير (Export)
+# القائمة الموحدة للتصدير (Export) 
+# هذا يسهل عملية الاستيراد في الملفات الأخرى مثل:
+# from apps.models import Supplier, SupplierWallet, Order
 __all__ = [
-    'Supplier', 
-    'AdminUser', 
-    'AdminStaff', 
-    'Marketer', 
-    'SupplierProfile', 
-    'SupplierStaff', 
-    'SyncLog', 
-    'SupplierWallet',  # تم تحديث الاسم هنا أيضاً
-    'Order', 
-    'OrderFinancial'
+    'AdminUser',
+    'AdminStaff',
+    'OrderFinancial',
+    'Marketer',
+    'Order',
+    'Supplier',
+    'SupplierProfile',
+    'SupplierStaff',
+    'SyncLog',
+    'SupplierWallet'
 ]
