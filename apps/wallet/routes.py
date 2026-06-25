@@ -1,7 +1,9 @@
 # coding: utf-8
+# 📂 apps/wallet/routes.py
+
 from flask import Blueprint, render_template, request, jsonify, abort
-# تم تحديث الاستيراد ليتناسب مع الاسم الجديد VendorWallet
-from apps.models.wallet_db import VendorWallet 
+# تم تصحيح الاستيراد للاسم الجديد SupplierWallet
+from apps.models.wallet_db import SupplierWallet 
 from apps.models.supplier_db import Supplier
 from sqlalchemy import or_, cast, String
 from flask_paginate import Pagination, get_page_parameter
@@ -19,19 +21,20 @@ def dashboard():
     per_page = 15
     search = request.args.get('search', '')
     
-    query = VendorWallet.query.join(Supplier)
+    # استخدام الكلاس الجديد SupplierWallet
+    query = SupplierWallet.query.join(Supplier)
     
     if search:
         query = query.filter(or_(
-            Supplier.search_name.contains(search),
+            Supplier.username.contains(search), # تأكد من اسم الحقل هنا (سابقاً search_name)
             Supplier.search_phone.contains(search),
-            cast(VendorWallet.id, String).contains(search)
+            cast(SupplierWallet.id, String).contains(search)
         ))
     
     total = query.count()
     wallets = query.offset((page - 1) * per_page).limit(per_page).all()
     
-    # تم تعديل الإحصائيات لتطابق الأعمدة الموجودة في كلاس VendorWallet فعلياً
+    # إحصائيات المحفظة
     all_filtered = query.all()
     stats = {
         'count': total,
@@ -53,20 +56,15 @@ def dashboard():
 def search_suppliers():
     term = request.args.get('term', '')
     suppliers = Supplier.query.filter(
-        or_(Supplier.search_name.contains(term), Supplier.search_phone.contains(term))
+        or_(Supplier.username.contains(term), Supplier.search_phone.contains(term))
     ).limit(10).all()
-    results = [{'id': s.id, 'text': f"{s.trade_name} - {s.owner_phone}"} for s in suppliers]
+    # تأكد من مطابقة الحقول هنا لما هو موجود في كلاس Supplier
+    results = [{'id': s.id, 'text': f"{s.username} - {s.phone}"} for s in suppliers]
     return jsonify({'results': results})
 
 @wallet_app.route('/manage/<int:supplier_id>', methods=['GET'])
 def manage_wallet(supplier_id):
-    wallet = VendorWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
-    
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    
-    # ملاحظة: إذا كان كلاس WalletTransaction غير موجود، ستحتاج لتعريفه أو إزالته
-    # من هنا ومن ملفات الاستيراد لتفادي خطأ ImportError
-    # query = WalletTransaction.query.filter_by(wallet_id=wallet.id)
+    # استخدام الكلاس الجديد SupplierWallet
+    wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
     
     return render_template('admin/view_wallet.html', wallet=wallet)
