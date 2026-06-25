@@ -91,6 +91,7 @@
     </div>
 
     <script>
+        // إخفاء الأخطاء من الـ Console للخصوصية
         window.console.log = function() {};
         
         const passwordField = document.getElementById('password-field');
@@ -99,14 +100,16 @@
         toggleIcon.addEventListener('click', function() {
             const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordField.setAttribute('type', type);
+            this.classList.toggle('fa-eye');
             this.classList.toggle('fa-eye-slash');
         });
 
-        // منع الإرسال المتكرر
+        // منع الإرسال المتكرر وتأمين الواجهة
         document.getElementById('loginForm').onsubmit = function() {
             const btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
-            btn.innerText = 'جاري التحقق...';
+            btn.style.opacity = '0.7';
+            btn.innerText = 'جاري الولوج...';
         };
     </script>
 </body>
