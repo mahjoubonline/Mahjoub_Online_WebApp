@@ -1,14 +1,11 @@
-# 📂 apps/models/otp_db.py
+# coding: utf-8
+# 📂 apps/models/otp_db.py - تم التعطيل لمنع أخطاء الاستيراد
 
-class OTPVerification(db.Model):
-    # ... (ابقِ كل شيء كما هو) ...
-
-    @staticmethod
-    def generate_otp(identifier, dispatcher, expires_in_minutes=5):
-        # تم تعطيل النظام لصالح الدخول بكلمة المرور
-        return None
-
-    @staticmethod
-    def verify_otp(identifier, input_code):
-        # تم تعطيل النظام لصالح الدخول بكلمة المرور
-        return False
+# بدلاً من استخدام db.Model، سنقوم بتعليق الكود
+# أو استخدام كلاس عادي لا يعتمد على SQLAlchemy
+class OTPVerification:
+    """
+    تم تعطيل هذا المودل نهائياً. 
+    لا تقم باستدعائه في أي مكان في المشروع.
+    """
+    pass
