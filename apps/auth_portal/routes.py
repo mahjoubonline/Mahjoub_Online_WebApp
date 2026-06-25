@@ -1,11 +1,9 @@
 # coding: utf-8
-# 📂 apps/auth_portal/routes.py - النسخة النهائية المتكاملة
+# 📂 apps/auth_portal/routes.py - النسخة المباشرة (بدون تحقق OTP)
 
 import os
-import random
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user
-from apps.auth_portal.auth_service import AdminAuthService
 from apps.models.admin_db import AdminUser
 
 # إنشاء Blueprint للـ Auth Portal
@@ -20,44 +18,18 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
+        # البحث عن المستخدم في قاعدة البيانات
         admin = AdminUser.query.filter_by(username=username).first()
         
+        # التحقق من كلمة المرور
         if admin and admin.check_password(password):
-            otp_code = str(random.randint(100000, 999999))
-            session['otp_code'] = otp_code
-            session['phone'] = admin.phone_number
-            
-            if AdminAuthService.initiate_login(admin.phone_number, otp_code):
-                flash('تم إرسال رمز التحقق إلى واتساب الخاص بك.', 'success')
-                return redirect(url_for('auth_portal.verify_otp'))
-            else:
-                flash('حدث خطأ أثناء إرسال الرمز. يرجى التأكد من إعدادات HyperSender.', 'danger')
+            # تسجيل الدخول مباشرة بدون الحاجة لـ OTP
+            login_user(admin) 
+            flash('تم تسجيل الدخول بنجاح!', 'success')
+            return redirect(url_for('admin_dashboard.index'))
         else:
             flash('اسم المستخدم أو كلمة المرور غير صحيحة.', 'danger')
             
     return render_template('auth/login.html')
 
-@auth_portal.route('/verify-otp', methods=['GET', 'POST'])
-def verify_otp():
-    # حماية المسار: لا يمكن الدخول إلا إذا كان هناك رمز في الجلسة
-    if 'otp_code' not in session:
-        return redirect(url_for('auth_portal.login'))
-
-    if request.method == 'POST':
-        user_otp = request.form.get('otp_code')
-        
-        if user_otp == session.get('otp_code'):
-            # العثور على المستخدم وتسجيل دخوله فعلياً
-            phone = session.get('phone')
-            admin = AdminUser.query.filter_by(phone_number=phone).first()
-            
-            if admin:
-                login_user(admin) # تسجيل الدخول عبر Flask-Login
-                session.pop('otp_code', None)
-                session.pop('phone', None)
-                flash('تم تسجيل الدخول بنجاح!', 'success')
-                return redirect(url_for('admin_dashboard.index'))
-        else:
-            flash('الرمز غير صحيح، حاول مرة أخرى.', 'danger')
-            
-    return render_template('auth/verify_otp.html')
+# تمت إزالة مسار /verify-otp بالكامل لأنه لم يعد له حاجة
