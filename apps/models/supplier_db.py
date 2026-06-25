@@ -1,7 +1,7 @@
 # coding: utf-8
 # 📂 apps/models/supplier_db.py
 
-from apps.extensions import db  # تم التعديل لضمان الاستيراد من extensions لتجنب المشاكل
+from apps.extensions import db
 from cryptography.fernet import Fernet
 import os
 from datetime import datetime
@@ -15,6 +15,7 @@ class Supplier(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
     supplier_code = db.Column(db.String(50), unique=True, nullable=False, index=True) 
+    trade_name = db.Column(db.String(150), nullable=True) # تم إضافة الحقل المفقود هنا
     
     # 2. البيانات الحساسة (تشفير AES)
     _phone_enc = db.Column(db.String(255), nullable=False) 
@@ -32,13 +33,13 @@ class Supplier(db.Model, UserMixin):
     last_login = db.Column(db.DateTime, nullable=True)
 
     # 6. العلاقات
+    # تأكد من وجود الموديل SupplierProfile في ملف models/profiles.py أو المكان المخصص له
     supplier_profile = db.relationship(
         'SupplierProfile', 
         back_populates='supplier', 
         uselist=False,
         cascade="all, delete-orphan",
-        lazy='select',
-        foreign_keys='SupplierProfile.supplier_id'
+        lazy='select'
     )
 
     # --- نظام التشفير للرقم (AES) ---
@@ -57,7 +58,7 @@ class Supplier(db.Model, UserMixin):
     @phone.setter
     def phone(self, value):
         self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
-        # تخزين أول 20 رقم لتسهيل البحث
+        # تخزين أول 20 رقم لتسهيل البحث (الـ Indexing)
         self.search_phone = str(value)[:20]
 
     # --- نظام المصادقة بكلمة المرور (Werkzeug) ---
