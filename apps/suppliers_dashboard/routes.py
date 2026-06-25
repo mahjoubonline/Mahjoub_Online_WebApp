@@ -11,24 +11,33 @@ dashboard_bp = Blueprint(
     template_folder='templates'
 )
 
+@dashboard_bp.route('/')
+@login_required
+def index():
+    """
+    نقطة الدخول للمسار /suppliers/
+    نتأكد هنا من الصلاحية قبل التوجيه للوحة التحكم.
+    """
+    if hasattr(current_user, 'wallet') and current_user.wallet is not None:
+        return redirect(url_for('suppliers_dashboard.dashboard'))
+    
+    # إذا لم يكن مورداً، نمنع الوصول أو نرسله لصفحة أخرى
+    return "عذراً، لا تملك صلاحية الوصول لهذه اللوحة."
+
 @dashboard_bp.route('/dashboard')
 @login_required
 def dashboard():
     """
-    لوحة تحكم المورد مع حماية ضد الخطأ في حال لم يكن المستخدم مورداً.
+    لوحة تحكم المورد المحمية.
     """
-    
-    # 1. حماية: التحقق من أن المستخدم لديه علاقة محفظة (يعني أنه مورد)
-    # ملاحظة: إذا كان المستخدم 'AdminUser' فإنه لا يمتلك 'wallet'، وهذا سيمنع الخطأ 500
+    # 1. التحقق من الصلاحية (أن المستخدم مورد ولديه محفظة)
     if not hasattr(current_user, 'wallet') or current_user.wallet is None:
-        flash("عذراً، هذه الصفحة مخصصة للموردين فقط.", "danger")
-        # التوجيه هنا تم تصحيحه ليتجنب خطأ BuildError
-        return redirect(url_for('suppliers_dashboard.index')) 
+        return redirect(url_for('suppliers_dashboard.index'))
 
-    # 2. جلب البيانات بأمان بعد التأكد من وجودها
+    # 2. جلب البيانات بأمان
     wallet = current_user.wallet 
     
-    # 3. حساب الطلبات (مع التأكد من وجود البيانات)
+    # 3. حساب الطلبات (مع التأكد من وجود العلاقة)
     pending_orders_count = 0
     if hasattr(current_user, 'orders') and current_user.orders:
         pending_orders_count = len([o for o in current_user.orders if o.status == 'pending'])
@@ -51,10 +60,3 @@ def dashboard():
 def settings():
     """صفحة إعدادات المتجر"""
     return render_template('suppliers/settings.html')
-
-@dashboard_bp.route('/')
-@login_required
-def index():
-    """المسار الجذري لـ Blueprint الموردين"""
-    # هنا نتأكد من توجيه المورد للوحة تحكمه
-    return redirect(url_for('suppliers_dashboard.dashboard'))
