@@ -4,8 +4,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 
-# تعريف البلوبرينت بوضوح
-# الاسم 'suppliers_dashboard' هو الذي سنستخدمه في url_for
+# تعريف البلوبرينت
+# تأكد أن هذا الاسم 'suppliers_dashboard' هو المستخدم في الـ Registry
 dashboard_bp = Blueprint(
     'suppliers_dashboard', 
     __name__, 
@@ -16,10 +16,14 @@ dashboard_bp = Blueprint(
 @login_required
 def dashboard():
     """
-    لوحة التحكم الرئيسية للمورد:
-    - يتم الوصول إليها عبر /suppliers/dashboard
+    لوحة التحكم الرئيسية للمورد.
+    يتم الوصول إليها عبر: /suppliers/dashboard
     """
-    # مثال لجلب البيانات (سنقوم بتحديثه لاحقاً حسب موديل الطلبات لديك)
+    # التحقق من أن المستخدم الحالي هو مورد (اختياري، لزيادة الأمان)
+    # if not hasattr(current_user, 'supplier_id'):
+    #     return redirect(url_for('suppliers_auth.login'))
+
+    # جلب بيانات الطلبات (سيتم تحديثها لاحقاً)
     pending_orders_count = 0 
     
     return render_template(
@@ -31,6 +35,6 @@ def dashboard():
 @login_required
 def settings():
     """
-    صفحة إعدادات المتجر.
+    صفحة إعدادات المتجر الخاصة بالمورد.
     """
     return render_template('suppliers/settings.html')
