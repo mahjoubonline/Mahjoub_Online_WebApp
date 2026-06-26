@@ -3,40 +3,34 @@
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
-from apps.models.supplier_staff_db import SupplierStaff # الموديل المعتمد للموردين
 
-# تعريف البلوبرينت
+# تعريف البلوبرينت بوضوح
+# الاسم 'suppliers_dashboard' هو الذي سنستخدمه في url_for
 dashboard_bp = Blueprint(
     'suppliers_dashboard', 
     __name__, 
     template_folder='templates'
 )
 
-@dashboard_bp.route('/dashboard')
+@dashboard_bp.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
     """
     لوحة التحكم الرئيسية للمورد:
-    - تعرض رصيد المحفظة.
-    - تعرض عدد الطلبات المعلقة.
+    - يتم الوصول إليها عبر /suppliers/dashboard
     """
-    # التحقق من صلاحية الوصول (يمكن إضافة شرط إذا كان المورد موقوفاً)
-    
-    # جلب الطلبات (بافتراض وجود علاقة أو استعلام)
-    # ملاحظة: استبدل `pending_orders_count` بالاستعلام الفعلي من قاعدة بيانات الطلبات لديك
-    pending_orders_count = 0 # يمكنك إضافة: Order.query.filter_by(supplier_id=current_user.id, status='pending').count()
+    # مثال لجلب البيانات (سنقوم بتحديثه لاحقاً حسب موديل الطلبات لديك)
+    pending_orders_count = 0 
     
     return render_template(
         'suppliers/dashboard.html',
         pending_orders_count=pending_orders_count
     )
 
-@dashboard_bp.route('/settings')
+@dashboard_bp.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
     """
-    صفحة إعدادات المتجر الخاصة بالمورد.
+    صفحة إعدادات المتجر.
     """
     return render_template('suppliers/settings.html')
-
-# يمكنك إضافة المزيد من المسارات هنا (كشف الحساب، الطلبات، إلخ)
