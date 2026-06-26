@@ -7,10 +7,10 @@
 بالتسلسل الصحيح لتجنب أخطاء العلاقات (Foreign Key Constraints).
 """
 
-# استيراد الموديلات الأساسية (التي لا تعتمد على غيرها)
+# استيراد الموديلات الأساسية
 from .supplier_db import Supplier
 from .admin_db import AdminUser
-from .marketers_db import Marketer
+from .marketer_db import Marketer  # تم تعديل الاسم هنا ليطابق اسم الملف المفرد
 from .sync_log import SyncLog
 
 # استيراد الموديلات المعتمدة (التي تحتوي على Foreign Keys)
