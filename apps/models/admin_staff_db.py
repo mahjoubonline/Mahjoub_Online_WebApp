@@ -7,6 +7,9 @@ from datetime import datetime
 
 class AdminStaff(db.Model):
     __tablename__ = 'admin_staff'
+    
+    # صمام الأمان: يمنع فصل السيرفر إذا تم إعادة تحميل الموديول أو تعريف الموديل
+    __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), nullable=False, index=True)
