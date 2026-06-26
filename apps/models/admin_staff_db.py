@@ -1,20 +1,20 @@
 # coding: utf-8
 # 📂 apps/models/admin_staff_db.py
 
-from apps.extensions import db
-from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+from apps.extensions import db
 
 class AdminStaff(db.Model):
     __tablename__ = 'admin_staff'
 
-    # استراتيجية الاندكس (Index) والشفر (Encryption)
+    # [صمام الأمان السيادي]: الفهرسة المسمّاة + منع تكرار التعريف
     __table_args__ = (
         db.Index('idx_admin_username', 'username'),
         db.Index('idx_admin_email', 'email'),
         db.Index('idx_admin_role', 'role'),
         db.Index('idx_admin_active', 'is_active'),
-        {'extend_existing': True} # صمام الأمان لمنع فصل السيرفر
+        {'extend_existing': True} 
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -25,7 +25,7 @@ class AdminStaff(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # استراتيجية الشفر (Encryption): تشفير بمستوى pbkdf2
+    # [التشفير السيادي]: ترقية خوارزمية التشفير لـ PBKDF2:SHA256
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
