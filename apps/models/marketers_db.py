@@ -9,10 +9,10 @@ from apps.extensions import db
 class Marketer(db.Model):
     __tablename__ = 'marketers'
 
-    # [صمام الأمان]: فهرسة مسمّاة ومنع تكرار التعريف
+    # [التصحيح]: تم حذف الفهرس 'phone' لأنه لا يمكن فهرسة الـ property
+    # تم إبقاء الفهارس للأعمدة الحقيقية فقط
     __table_args__ = (
         db.Index('idx_mkt_name', 'full_name'),
-        db.Index('idx_mkt_phone', 'phone'),
         db.Index('idx_mkt_code', 'marketing_code'),
         db.Index('idx_mkt_active', 'is_active'),
         db.Index('idx_mkt_refs', 'total_referrals'),
@@ -21,21 +21,14 @@ class Marketer(db.Model):
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    
-    # 1. البيانات الأساسية
     full_name = db.Column(db.String(150), nullable=False)
     
-    # [تشفير سيادي]: تشفير الهاتف بـ AES
+    # [ملاحظة]: هذا العمود هو الذي يُخزن في قاعدة البيانات
     _phone_enc = db.Column(db.String(255), nullable=True) 
     
-    # 2. كود التسويق
     marketing_code = db.Column(db.String(50), unique=True, nullable=False)
-    
-    # 3. الحالة والإحصائيات
     is_active = db.Column(db.Boolean, default=True)
     total_referrals = db.Column(db.Integer, default=0)
-    
-    # 4. التوثيق
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # --- نظام التشفير (AES) ---
