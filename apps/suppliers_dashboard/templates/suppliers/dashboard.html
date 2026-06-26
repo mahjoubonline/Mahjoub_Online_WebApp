@@ -4,40 +4,59 @@
 
 {% block content %}
 <style>
-    /* تحسينات التصميم */
-    .dynamic-card { transition: all 0.4s ease; border-radius: 20px !important; overflow: hidden; }
-    .dynamic-card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important; }
-    .gradient-wallet { background: linear-gradient(135deg, #1a0b2e 0%, #4a148c 100%); color: white; }
-    .balance-val { font-size: 1.25rem; font-weight: 700; }
-    .balance-label { font-size: 0.75rem; text-transform: uppercase; opacity: 0.8; }
+    /* تحسينات التصميم الملكي */
+    .dynamic-card { 
+        transition: var(--transition); 
+        border-radius: 20px !important; 
+        overflow: hidden; 
+        border: 1px solid rgba(212, 175, 55, 0.1);
+    }
+    .dynamic-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; 
+        border-color: var(--mahjoub-gold);
+    }
+    
+    /* تدرج المحفظة الملكي */
+    .gradient-wallet { 
+        background: linear-gradient(135deg, var(--royal-purple) 0%, #36175e 100%); 
+        color: white; 
+    }
+    
+    .balance-val { font-size: 1.5rem; font-weight: 800; color: var(--mahjoub-gold); }
+    .balance-label { font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 5px; }
+    
+    .stat-card-icon { color: var(--mahjoub-gold); }
+    
+    /* تصميم البطاقات البيضاء */
+    .white-glass-card { background: #fff; }
 </style>
 
 <div class="container-fluid py-4">
-    <div class="mb-4">
-        <h3 class="fw-bold text-dark">مرحباً مجدداً، <span style="color: var(--mahjoub-gold);">{{ current_user.trade_name }}</span></h3>
-        <p class="text-muted">نظرة عامة على أداء متجرك اليوم.</p>
+    <div class="mb-5">
+        <h3 class="fw-bold text-dark">أهلاً بك، <span style="color: var(--mahjoub-gold);">{{ current_user.trade_name }}</span></h3>
+        <p class="text-muted">مرحباً بك في لوحة تحكمك الحصرية. هذه نظرة سريعة على أداء متجرك.</p>
     </div>
 
     <div class="row g-4 mb-5">
-        
         <div class="col-12 col-xl-6">
             <div class="card dynamic-card gradient-wallet p-4 h-100 shadow">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="mb-0 text-white"><i class="fas fa-wallet me-2"></i> رصيد المحفظة</h5>
-                    <span class="badge bg-light text-dark">{{ current_user.wallet.wallet_code if current_user.wallet else '---' }}</span>
+                    <h5 class="mb-0"><i class="fas fa-wallet me-2" style="color: var(--mahjoub-gold);"></i> رصيد المحفظة</h5>
+                    <span class="badge bg-dark border border-gold">{{ current_user.wallet.wallet_code if current_user.wallet else '---' }}</span>
                 </div>
                 
                 <div class="row text-center row-cols-3">
                     <div class="col">
-                        <div class="balance-label">يمني</div>
-                        <div class="balance-val">{{ "{:,.2f}".format(current_user.wallet.balance_yer|float) if current_user.wallet else '0.00' }}</div>
+                        <div class="balance-label">الريال اليمني</div>
+                        <div class="balance-val">{{ "{:,.0f}".format(current_user.wallet.balance_yer|float) if current_user.wallet else '0' }}</div>
                     </div>
-                    <div class="col border-start border-white-50">
-                        <div class="balance-label">دولار</div>
+                    <div class="col border-end border-light border-opacity-25">
+                        <div class="balance-label">الدولار</div>
                         <div class="balance-val">{{ "{:,.2f}".format(current_user.wallet.balance_usd|float) if current_user.wallet else '0.00' }}</div>
                     </div>
-                    <div class="col border-start border-white-50">
-                        <div class="balance-label">سعودي</div>
+                    <div class="col border-end border-light border-opacity-25">
+                        <div class="balance-label">السعودي</div>
                         <div class="balance-val">{{ "{:,.2f}".format(current_user.wallet.balance_sar|float) if current_user.wallet else '0.00' }}</div>
                     </div>
                 </div>
@@ -45,20 +64,20 @@
         </div>
 
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card dynamic-card p-4 shadow-sm h-100 border-0">
-                <div class="text-primary mb-3"><i class="fas fa-box-open fa-2x"></i></div>
-                <h6 class="text-muted text-uppercase">طلبات قيد التنفيذ</h6>
-                <h2 class="fw-bold mt-2">{{ pending_orders_count }}</h2>
+            <div class="card dynamic-card white-glass-card p-4 shadow-sm h-100 d-flex flex-column justify-content-center">
+                <div class="stat-card-icon mb-3"><i class="fas fa-box-open fa-2x"></i></div>
+                <h6 class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">طلبات قيد التنفيذ</h6>
+                <h2 class="fw-bold mt-2 mb-0">{{ pending_orders_count }}</h2>
             </div>
         </div>
 
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card dynamic-card p-4 shadow-sm h-100 border-0">
-                <div class="text-warning mb-3"><i class="fas fa-clock fa-2x"></i></div>
-                <h6 class="text-muted text-uppercase">رصيد معلق</h6>
-                <h2 class="fw-bold mt-2">
+            <div class="card dynamic-card white-glass-card p-4 shadow-sm h-100 d-flex flex-column justify-content-center">
+                <div class="stat-card-icon mb-3 text-warning"><i class="fas fa-clock fa-2x"></i></div>
+                <h6 class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">رصيد معلق</h6>
+                <h2 class="fw-bold mt-2 mb-0">
                     {{ "{:,.2f}".format(current_user.wallet.balance_pending|float) if current_user.wallet else '0.00' }} 
-                    <small class="fs-6 text-muted">ر.س</small>
+                    <span class="fs-6 text-muted fw-normal">ر.س</span>
                 </h2>
             </div>
         </div>
