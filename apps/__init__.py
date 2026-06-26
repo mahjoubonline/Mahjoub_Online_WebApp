@@ -4,7 +4,7 @@ import os
 import importlib
 from flask import Flask
 from apps.extensions import db, login_manager, migrate
-from apps.models import AdminUser, Supplier, SupplierStaff # استيراد الموديلات الأساسية
+# حذفنا استيراد الموديلات من هنا تماماً لمنع التضارب
 
 def create_app():
     app = Flask(__name__)
@@ -23,12 +23,14 @@ def create_app():
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
             
-            # إذا كان المجلد يحتوي على ملف registry.py، اعتبره موديول قابل للتسجيل
+            # استثناء المجلدات غير الموديولية (مثل __pycache__ أو models)
+            if item in ['__pycache__', 'models', 'extensions', 'static', 'templates']:
+                continue
+
             registry_file = os.path.join(item_path, 'registry.py')
             
             if os.path.isdir(item_path) and os.path.exists(registry_file):
                 try:
-                    # بناء المسار الديناميكي للاستيراد
                     module_path = f"apps.{item}.registry"
                     module = importlib.import_module(module_path)
                     
@@ -38,7 +40,7 @@ def create_app():
                 except Exception as e:
                     print(f"⚠️ [Auto-Discovery] فشل تسجيل {item}: {e}")
 
-        # تثبيت الـ Mappers بعد تسجيل كل شيء ديناميكياً
+        # تثبيت الـ Mappers بعد التسجيل الكامل
         db.configure_mappers()
 
     return app
