@@ -1,10 +1,10 @@
+# coding: utf-8
 # 📂 apps/__init__.py
 
 import os
 import importlib
 from flask import Flask
 from apps.extensions import db, login_manager, migrate
-# حذفنا استيراد الموديلات من هنا تماماً لمنع التضارب
 
 def create_app():
     app = Flask(__name__)
@@ -16,6 +16,10 @@ def create_app():
     login_manager.init_app(app)
 
     with app.app_context():
+        # [تعديل جوهري]: استيراد الموديلات لضمان تسجيل الجداول في SQLAlchemy
+        # هذا يضمن أن نظام الـ Registry في apps/models/__init__.py يعمل
+        import apps.models
+        
         # --- نظام الاكتشاف التلقائي (Auto-Discovery) ---
         apps_dir = app.root_path
         
@@ -23,8 +27,8 @@ def create_app():
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
             
-            # استثناء المجلدات غير الموديولية (مثل __pycache__ أو models)
-            if item in ['__pycache__', 'models', 'extensions', 'static', 'templates']:
+            # استثناء المجلدات غير الموديولية
+            if item in ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations']:
                 continue
 
             registry_file = os.path.join(item_path, 'registry.py')
@@ -40,7 +44,7 @@ def create_app():
                 except Exception as e:
                     print(f"⚠️ [Auto-Discovery] فشل تسجيل {item}: {e}")
 
-        # تثبيت الـ Mappers بعد التسجيل الكامل
+        # تثبيت الـ Mappers بعد تسجيل الموديلات والـ Blueprints
         db.configure_mappers()
 
     return app
