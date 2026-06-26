@@ -3,25 +3,25 @@
 
 """
 مركز التحكم في الموديلات (Model Registry)
-تنبيه: تم ترتيب الاستيراد لضمان تعيين العلاقات (Relationships) 
-بشكل صحيح في بيئة SQLAlchemy Registry.
+تنبيه: ترتيب الاستيراد هنا يضمن تهيئة الموديلات (Declaration) 
+بالتسلسل الصحيح لتجنب أخطاء العلاقات (Foreign Key Constraints).
 """
 
-# 1. الموديلات الأساسية (التي تعتمد عليها باقي الجداول)
+# استيراد الموديلات الأساسية (التي لا تعتمد على غيرها)
 from .supplier_db import Supplier
-from .orders_db import Order
-
-# 2. الموديلات المرتبطة
 from .admin_db import AdminUser
+from .marketers_db import Marketer
+from .sync_log import SyncLog
+
+# استيراد الموديلات المعتمدة (التي تحتوي على Foreign Keys)
 from .admin_staff_db import AdminStaff
 from .supplier_staff_db import SupplierStaff
 from .supplier_profile_db import SupplierProfile
 from .wallet_db import SupplierWallet
+from .orders_db import Order
 from .financials_db import OrderFinancial
-from .marketers_db import Marketer
-from .sync_log import SyncLog
 
-# القائمة الموحدة للتصدير - تضمن وصول SQLAlchemy لكل الموديلات عند استخدام db.Model
+# القائمة الموحدة للتصدير
 __all__ = [
     'AdminUser',
     'AdminStaff',
