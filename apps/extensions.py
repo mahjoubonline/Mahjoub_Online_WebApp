@@ -6,7 +6,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from sqlalchemy import MetaData
 
-# تعريف الـ Naming Convention (اتفاقية التسمية) - صمام أمان لقاعدة البيانات
+# تعريف الـ Naming Convention
 metadata = MetaData(
     naming_convention={
         "ix": "ix_%(column_0_label)s",
@@ -26,21 +26,23 @@ login_manager = LoginManager()
 def load_user(user_id):
     """
     دالة موحدة لتحميل المستخدمين من الموديلات المختلفة.
-    يتم استيراد الموديلات هنا (Lazy Import) لمنع الـ Circular Imports.
     """
     from apps.models.admin_db import AdminUser
     from apps.models.supplier_staff_db import SupplierStaff
-    from apps.models.marketers_db import Marketer
+    from apps.models.marketer_db import Marketer  # <-- تم التصحيح هنا (المفرد)
     
     # محاولة البحث في كل موديول على حدة
-    user = AdminUser.query.get(int(user_id))
-    if user: return user
-    
-    user = SupplierStaff.query.get(int(user_id))
-    if user: return user
-    
-    user = Marketer.query.get(int(user_id))
-    if user: return user
+    try:
+        user = AdminUser.query.get(int(user_id))
+        if user: return user
+        
+        user = SupplierStaff.query.get(int(user_id))
+        if user: return user
+        
+        user = Marketer.query.get(int(user_id))
+        if user: return user
+    except:
+        return None
     
     return None
 
