@@ -32,11 +32,12 @@ def create_app():
                 db.session.add(admin)
                 print("✅ [Admin]: تم إنشاء المدير 'علي محجوب'.")
             
-            # إضافة مورد: وائل محجوب
+            # إضافة مورد: وائل محجوب (مع إضافة رقم هاتف لتجنب خطأ Null)
             if not Supplier.query.filter_by(username='وائل محجوب').first():
                 supplier = Supplier(
                     username='وائل محجوب', 
-                    trade_name='محجوب أونلاين'
+                    trade_name='محجوب أونلاين',
+                    phone='0000000000' # حل خطأ [NotNullViolation]
                 )
                 supplier.set_password('123')
                 db.session.add(supplier)
@@ -69,7 +70,7 @@ def create_app():
                 except Exception as e:
                     print(f"⚠️ [Auto-Discovery] فشل تسجيل {item}: {e}")
 
-        # ضبط العلاقات (Mappers) بعد تسجيل كافة الموديلات والموديولات
+        # ضبط العلاقات بعد تسجيل كافة الموديولات
         db.configure_mappers()
 
     return app
