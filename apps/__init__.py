@@ -30,4 +30,46 @@ def create_app():
                 admin = AdminUser(username='علي محجوب', role='Owner')
                 admin.set_password('123')
                 db.session.add(admin)
-                print("✅ [Admin]: تم إنشاء
+                print("✅ [Admin]: تم إنشاء المدير 'علي محجوب'.")
+            
+            # إضافة مورد: وائل محجوب
+            if not Supplier.query.filter_by(username='وائل محجوب').first():
+                supplier = Supplier(
+                    username='وائل محجوب', 
+                    trade_name='محجوب أونلاين'
+                )
+                supplier.set_password('123')
+                db.session.add(supplier)
+                print("✅ [Supplier]: تم إنشاء المورد 'وائل محجوب'.")
+            
+            db.session.commit()
+            print("✅ [Users]: تم التحقق من المستخدمين بنجاح.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"⚠️ [Users]: خطأ أثناء إنشاء المستخدمين: {e}")
+        
+        # 3. --- نظام الاكتشاف التلقائي (Auto-Discovery) ---
+        apps_dir = app.root_path
+        for item in os.listdir(apps_dir):
+            item_path = os.path.join(apps_dir, item)
+            
+            # قائمة المجلدات المستثناة من الاكتشاف
+            if item in ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations']:
+                continue
+
+            registry_file = os.path.join(item_path, 'registry.py')
+            
+            # التحقق من وجود ملف registry.py لتسجيل الموديول
+            if os.path.isdir(item_path) and os.path.exists(registry_file):
+                try:
+                    module = importlib.import_module(f"apps.{item}.registry")
+                    if hasattr(module, 'register_module'):
+                        module.register_module(app)
+                        print(f"✅ [Auto-Discovery] تم تسجيل الموديول: {item}")
+                except Exception as e:
+                    print(f"⚠️ [Auto-Discovery] فشل تسجيل {item}: {e}")
+
+        # ضبط العلاقات (Mappers) بعد تسجيل كافة الموديلات والموديولات
+        db.configure_mappers()
+
+    return app
