@@ -3,50 +3,31 @@
 
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
-from apps.models.orders_db import Order # استيراد الموديل للتحقق منه
+from apps.models.supplier_staff_db import SupplierStaff # الموديل المعتمد للموردين
 
-# تعريف الـ Blueprint
+# تعريف البلوبرينت
 dashboard_bp = Blueprint(
     'suppliers_dashboard', 
     __name__, 
     template_folder='templates'
 )
 
-@dashboard_bp.route('/')
-@login_required
-def index():
-    """
-    نقطة الدخول للمسار الجذري (/suppliers/).
-    إعادة توجيه ذكية للمستخدم المعتمد.
-    """
-    # التحقق من أن المستخدم لديه محفظة (يعني أنه مورد مسجل ومفعل)
-    if hasattr(current_user, 'wallet') and current_user.wallet:
-        return redirect(url_for('suppliers_dashboard.dashboard'))
-    
-    return "عذراً، هذا الحساب غير مخصص للوصول إلى لوحة الموردين."
-
 @dashboard_bp.route('/dashboard')
 @login_required
 def dashboard():
     """
-    لوحة تحكم المورد الرئيسية.
-    تعرض الأرصدة المالية وإحصائيات الطلبات.
+    لوحة التحكم الرئيسية للمورد:
+    - تعرض رصيد المحفظة.
+    - تعرض عدد الطلبات المعلقة.
     """
-    # 1. التحقق من صلاحية الوصول للمحفظة
-    if not hasattr(current_user, 'wallet') or current_user.wallet is None:
-        flash("يجب ربط محفظة بحسابك للوصول للوحة التحكم.", "warning")
-        return redirect(url_for('suppliers_dashboard.index'))
-
-    # 2. حساب الطلبات قيد التنفيذ باستخدام الاستعلام المباشر (أسرع من معالجة القائمة برمجياً)
-    # ملاحظة: إذا كان current_user هو المورد، فلديه علاقة 'orders' مباشرة
-    pending_orders_count = Order.query.filter_by(
-        supplier_id=current_user.id, 
-        status='pending'
-    ).count()
+    # التحقق من صلاحية الوصول (يمكن إضافة شرط إذا كان المورد موقوفاً)
     
-    # 3. عرض البيانات
+    # جلب الطلبات (بافتراض وجود علاقة أو استعلام)
+    # ملاحظة: استبدل `pending_orders_count` بالاستعلام الفعلي من قاعدة بيانات الطلبات لديك
+    pending_orders_count = 0 # يمكنك إضافة: Order.query.filter_by(supplier_id=current_user.id, status='pending').count()
+    
     return render_template(
-        'suppliers/dashboard.html', 
+        'suppliers/dashboard.html',
         pending_orders_count=pending_orders_count
     )
 
@@ -54,6 +35,8 @@ def dashboard():
 @login_required
 def settings():
     """
-    صفحة إعدادات المتجر وبيانات الحساب.
+    صفحة إعدادات المتجر الخاصة بالمورد.
     """
     return render_template('suppliers/settings.html')
+
+# يمكنك إضافة المزيد من المسارات هنا (كشف الحساب، الطلبات، إلخ)
