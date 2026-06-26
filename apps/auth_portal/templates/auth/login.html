@@ -15,10 +15,10 @@
         }
 
         body {
-            margin: 0; padding: 0; font-family: 'Cairo', sans-serif;
+            margin: 0; padding: 20px; font-family: 'Cairo', sans-serif;
             background: radial-gradient(circle at center, #2a114d 0%, var(--deep-space) 100%);
-            height: 100vh; display: flex; justify-content: center; align-items: center;
-            overflow: hidden; color: #fff; user-select: none;
+            min-height: 100vh; display: flex; justify-content: center; align-items: center;
+            color: #fff; user-select: none;
         }
 
         .sovereign-card {
@@ -41,20 +41,31 @@
         .input-box input {
             width: 100%; padding: 15px 50px; background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px;
-            color: #fff; outline: none; box-sizing: border-box; text-align: center;
+            color: #fff !important; outline: none; box-sizing: border-box; text-align: center;
+            transition: border 0.3s;
+        }
+        
+        /* إزالة لون خلفية المتصفح المزعج */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.05) inset !important;
+            -webkit-text-fill-color: #fff !important;
+            border: 1px solid var(--sovereign-gold) !important;
         }
 
         .main-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--sovereign-gold); }
-        .toggle-password { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666; }
+        .toggle-password { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666; transition: 0.3s; }
+        .toggle-password:hover { color: var(--sovereign-gold); }
 
         .btn-access {
             width: 100%; padding: 15px; background: var(--sovereign-gold);
             border: none; border-radius: 15px; color: var(--deep-space);
-            font-weight: 900; cursor: pointer; transition: 0.3s;
+            font-weight: 900; cursor: pointer; transition: 0.3s; margin-top: 10px;
         }
 
         .btn-access:hover { background: #fff; transform: scale(1.02); }
-        .flash-message { padding: 10px; border-radius: 10px; margin-bottom: 15px; font-size: 0.8rem; background: rgba(255, 215, 0, 0.1); border: 1px solid var(--sovereign-gold); color: var(--sovereign-gold); }
+        .flash-message { padding: 12px; border-radius: 10px; margin-bottom: 20px; font-size: 0.85rem; background: rgba(255, 215, 0, 0.1); border: 1px solid var(--sovereign-gold); color: var(--sovereign-gold); }
     </style>
 </head>
 <body>
@@ -77,12 +88,12 @@
         <form method="POST" action="{{ url_for('auth_portal.login') }}" autocomplete="off" spellcheck="false" id="loginForm">
             <div class="input-box">
                 <i class="fas fa-user-shield main-icon"></i>
-                <input type="text" name="username" placeholder="الهوية الرقمية" required autocomplete="off">
+                <input type="text" name="username" placeholder="الهوية الرقمية" required>
             </div>
 
             <div class="input-box">
                 <i class="fas fa-lock main-icon"></i>
-                <input type="password" name="password" id="password-field" placeholder="مفتاح التشفير" required autocomplete="off">
+                <input type="password" name="password" id="password-field" placeholder="مفتاح التشفير" required>
                 <i class="fas fa-eye toggle-password" id="password-toggle-icon"></i>
             </div>
 
@@ -91,20 +102,19 @@
     </div>
 
     <script>
-        // إخفاء الأخطاء من الـ Console للخصوصية
+        // حماية الخصوصية
         window.console.log = function() {};
         
         const passwordField = document.getElementById('password-field');
         const toggleIcon = document.getElementById('password-toggle-icon');
 
         toggleIcon.addEventListener('click', function() {
-            const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordField.setAttribute('type', type);
+            const isPassword = passwordField.getAttribute('type') === 'password';
+            passwordField.setAttribute('type', isPassword ? 'text' : 'password');
             this.classList.toggle('fa-eye');
             this.classList.toggle('fa-eye-slash');
         });
 
-        // منع الإرسال المتكرر وتأمين الواجهة
         document.getElementById('loginForm').onsubmit = function() {
             const btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
