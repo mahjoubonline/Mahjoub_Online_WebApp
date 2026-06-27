@@ -1,70 +1,62 @@
 # coding: utf-8
 # 📂 apps/wallet/routes.py
 
-from flask import Blueprint, render_template, request, jsonify, abort
-# تم تصحيح الاستيراد للاسم الجديد SupplierWallet
-from apps.models.wallet_db import SupplierWallet 
+from flask import Blueprint, render_template, request, abort, flash
+from flask_login import login_required
+from apps.models.wallet_db import SupplierWallet
 from apps.models.supplier_db import Supplier
-from sqlalchemy import or_, cast, String
-from flask_paginate import Pagination, get_page_parameter
+from apps import db
+from sqlalchemy import or_
 
-# تعريف الـ Blueprint
-wallet_app = Blueprint('wallet_app', __name__, template_folder='templates')
+wallet_bp = Blueprint(
+    'wallet_app', 
+    __name__, 
+    template_folder='templates'
+)
 
-@wallet_app.route('/', methods=['GET'])
+@wallet_bp.route('/admin/dashboard', methods=['GET'])
+@login_required
+# @admin_required  <-- تأكد من إضافة دالة التحقق من صلاحيات الأدمن هنا
 def dashboard():
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        if not request.referrer or "mahjoub.online" not in request.referrer:
-            abort(403)
-
-    page = request.args.get(get_page_parameter(), type=int, default=1)
-    per_page = 15
+    """
+    لوحة تحكم المحافظ للإدارة: عرض أرصدة الموردين مع البحث المباشر
+    """
     search = request.args.get('search', '')
-    
-    # استخدام الكلاس الجديد SupplierWallet
+    page = request.args.get('page', 1, type=int)
+
+    # بناء استعلام البحث
     query = SupplierWallet.query.join(Supplier)
     
     if search:
         query = query.filter(or_(
-            Supplier.username.contains(search), # تأكد من اسم الحقل هنا (سابقاً search_name)
-            Supplier.search_phone.contains(search),
-            cast(SupplierWallet.id, String).contains(search)
+            Supplier.trade_name.ilike(f'%{search}%'),
+            SupplierWallet.wallet_code.ilike(f'%{search}%'),
+            Supplier.search_phone.ilike(f'%{search}%')
         ))
+
+    # التصفح (Pagination)
+    wallets = query.paginate(page=page, per_page=20)
     
-    total = query.count()
-    wallets = query.offset((page - 1) * per_page).limit(per_page).all()
-    
-    # إحصائيات المحفظة
-    all_filtered = query.all()
+    # حساب الإحصائيات (يمكن تحسين هذا بجدول إحصائيات منفصل لاحقاً)
     stats = {
-        'count': total,
-        'available': sum(float(w.balance_available) for w in all_filtered),
-        'pending': sum(float(w.balance_pending) for w in all_filtered),
-        'withdrawn': sum(float(w.total_withdrawn) for w in all_filtered)
+        'count': SupplierWallet.query.count(),
+        'sar': db.session.query(db.func.sum(SupplierWallet.balance_sar)).scalar() or 0,
+        'yer': db.session.query(db.func.sum(SupplierWallet.balance_yer)).scalar() or 0,
+        'usd': db.session.query(db.func.sum(SupplierWallet.balance_usd)).scalar() or 0
     }
-    
-    pagination = Pagination(page=page, total=total, per_page=per_page, css_framework='bootstrap5')
-    
+
+    # إذا كان الطلب Ajax (للبحث المباشر) نعيد الجزء الخاص بالجدول فقط
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render_template('admin/partials/wallet_table_body.html', 
-                               wallets=wallets, pagination=pagination, stats=stats)
-    
-    return render_template('admin/wallet_app.html', 
-                           wallets=wallets, pagination=pagination, stats=stats)
+        return render_template('admin/wallet_table_partial.html', wallets=wallets.items, stats=stats)
 
-@wallet_app.route('/search_suppliers', methods=['GET'])
-def search_suppliers():
-    term = request.args.get('term', '')
-    suppliers = Supplier.query.filter(
-        or_(Supplier.username.contains(term), Supplier.search_phone.contains(term))
-    ).limit(10).all()
-    # تأكد من مطابقة الحقول هنا لما هو موجود في كلاس Supplier
-    results = [{'id': s.id, 'text': f"{s.username} - {s.phone}"} for s in suppliers]
-    return jsonify({'results': results})
+    return render_template('admin/wallet_app.html', wallets=wallets.items, stats=stats, pagination=wallets)
 
-@wallet_app.route('/manage/<int:supplier_id>', methods=['GET'])
+@wallet_bp.route('/admin/manage/<int:supplier_id>', methods=['GET'])
+@login_required
 def manage_wallet(supplier_id):
-    # استخدام الكلاس الجديد SupplierWallet
+    """
+    عرض كشف حركة محفظة مورد محدد
+    """
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
-    
-    return render_template('admin/view_wallet.html', wallet=wallet)
+    # هنا سنعرض سجل العمليات (Transactions) لاحقاً
+    return render_template('admin/wallet_details.html', wallet=wallet)
