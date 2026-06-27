@@ -13,11 +13,10 @@ suppliers_bp = Blueprint('suppliers_auth', __name__, template_folder='templates'
 def login():
     """
     بوابة تسجيل دخول الموردين والمسوقين.
-    تستخدم session['user_type'] للتمييز بين أنواع المستخدمين في النظام.
     """
     if request.method == 'GET':
-        # إذا كان المستخدم مسجلاً بالفعل، يتم توجيهه للداشبورد مباشرة
-        if current_user.is_authenticated:
+        # التحقق من أن المستخدم غير مسجل دخول بالفعل لمنع التوجيه الخاطئ
+        if current_user.is_authenticated and session.get('user_type') == 'supplier':
             return redirect(url_for('suppliers_dashboard.dashboard'))
         return render_template('suppliers_auth_portal/login.html')
 
@@ -35,7 +34,6 @@ def login():
             user = Marketer.query.filter_by(marketing_code=username).first()
             if user and user.check_password(password):
                 login_user(user, remember=True)
-                # تخزين نوع المستخدم في الجلسة للفصل الأمني
                 session['user_type'] = 'supplier' 
                 session.modified = True
                 return jsonify({"status": "success", "redirect": url_for('suppliers_dashboard.dashboard')})
@@ -49,7 +47,6 @@ def login():
             
             if supplier and supplier.check_password(password):
                 login_user(supplier, remember=True)
-                # تخزين نوع المستخدم في الجلسة للفصل الأمني
                 session['user_type'] = 'supplier'
                 session.modified = True
                 return jsonify({"status": "success", "redirect": url_for('suppliers_dashboard.dashboard')})
@@ -63,22 +60,21 @@ def login():
 @suppliers_bp.route('/logout')
 def logout():
     """
-    تسجيل خروج آمن: إزالة كافة بيانات الجلسة وإخبار المتصفح بإلغاء التخزين المؤقت.
-    هذا يمنع ظهور خطأ 403 عند محاولة العودة لصفحات محمية بعد الخروج.
+    تسجيل خروج آمن: يقوم بمسح الجلسة تماماً وإجبار المتصفح على عدم التخزين المؤقت.
     """
     # 1. تسجيل الخروج من Flask-Login
     logout_user()
     
-    # 2. مسح كامل للجلسة من السيرفر
+    # 2. إفراغ محتويات الجلسة
     session.clear() 
     
-    # 3. إنشاء استجابة مع إعدادات منع التخزين المؤقت
+    # 3. إعداد الاستجابة لمنع التخزين المؤقت (Cache) في المتصفح
     response = make_response(redirect(url_for('suppliers_auth.login')))
     
-    # 4. إخبار المتصفح بمسح الكوكي
-    response.set_cookie('session', '', expires=0)
+    # 4. مسح الكوكي الخاص بالجلسة نهائياً من المتصفح
+    response.set_cookie('session', '', expires=0, path='/')
     
-    # 5. رؤوس أمنية لمنع المتصفح من تخزين الصفحة
+    # 5. تعيين رؤوس أمنية صارمة لمنع التخزين المؤقت
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
