@@ -7,11 +7,11 @@ from flask_login import login_user, logout_user, login_required, current_user
 from apps.models.admin_db import AdminUser
 
 # تعريف الـ Blueprint الخاص ببوابة الإدارة فقط
+# تم إزالة url_prefix من هنا لضمان عدم حدوث تداخل (يتم تحديده في registry.py)
 auth_portal = Blueprint(
     'auth_portal', 
     __name__, 
-    template_folder='templates',
-    url_prefix='/auth'
+    template_folder='templates'
 )
 
 # الرابط السري للإدارة
@@ -21,7 +21,7 @@ LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x')
 def login():
     """
     بوابة دخول الإدارة حصراً.
-    تخزن نوع المستخدم في الجلسة لضمان الفصل عن الموردين.
+    تخزن نوع المستخدم في الجلسة لضمان الفصل التام.
     """
     if current_user.is_authenticated:
         return redirect(url_for('admin_dashboard.dashboard'))
@@ -35,8 +35,8 @@ def login():
         
         if admin and admin.check_password(password):
             login_user(admin, remember=True)
-            # --- التعديل الهام هنا ---
-            session['user_type'] = 'admin' # تحديد نوع الجلسة كإدارة
+            # تحديد نوع الجلسة كإدارة لمنع التداخل مع الموردين
+            session['user_type'] = 'admin' 
             
             flash('مرحباً بك يا مدير النظام.', 'success')
             return redirect(url_for('admin_dashboard.dashboard'))
@@ -48,6 +48,10 @@ def login():
 @auth_portal.route('/logout')
 @login_required
 def logout():
+    """
+    تسجيل الخروج مع مسح شامل للجلسة لمنع أي تداخل في الصلاحيات.
+    """
     logout_user()
-    session.clear() # مسح الجلسة بالكامل عند الخروج
+    session.clear() 
+    # التوجيه للرابط المباشر للمسؤول باستخدام البادئة التي تم تسجيلها في registry
     return redirect(url_for('auth_portal.login'))
