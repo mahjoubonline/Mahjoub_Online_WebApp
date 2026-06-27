@@ -28,4 +28,59 @@
                         <input type="text" class="form-control bg-light" value="{{ current_user.trade_name }}" disabled>
                     </div>
                     <div class="mb-3">
-                        <label class
+                        <label class="form-label text-muted">اسم المستخدم</label>
+                        <input type="text" class="form-control bg-light" value="{{ current_user.username }}" disabled>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-muted">الرتبة الحالية</label>
+                            <input type="text" class="form-control bg-light fw-bold text-primary" value="{{ current_user.rank | upper }}" disabled>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-muted">كود المورد</label>
+                            <input type="text" class="form-control bg-light font-monospace" value="{{ current_user.supplier_code }}" disabled>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0 p-4 h-100">
+                    <h5 class="mb-4 fw-bold card-header-custom pb-2"><i class="fas fa-address-card me-2"></i> بيانات الملف الشخصي</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">اسم المالك</label>
+                            <input type="text" name="owner_name" class="form-control" value="{{ current_user.supplier_profile.owner_name or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">البريد الإلكتروني</label>
+                            <input type="email" name="email" class="form-control" value="{{ current_user.supplier_profile.email or '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">المحافظة</label>
+                            <input type="text" name="governorate" class="form-control" value="{{ current_user.supplier_profile.governorate or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">المدينة</label>
+                            <input type="text" name="city" class="form-control" value="{{ current_user.supplier_profile.city or '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted">العنوان التفصيلي</label>
+                        <input type="text" name="address" class="form-control" value="{{ current_user.supplier_profile.address or '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 text-center">
+                <button type="submit" class="btn btn-mahjoub-gold px-5 py-2 shadow">حفظ كافة التغييرات</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
