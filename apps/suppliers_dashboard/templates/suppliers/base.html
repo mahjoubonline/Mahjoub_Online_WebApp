@@ -57,7 +57,7 @@
                 <i class="fas fa-cog me-3"></i> <span>إعدادات المتجر</span>
             </a>
             <hr class="text-white my-3">
-            <a href="{{ url_for('suppliers_auth.logout') }}" class="nav-link text-danger">
+            <a href="{{ url_for('suppliers_auth.logout') }}" id="logout-btn" class="nav-link text-danger">
                 <i class="fas fa-sign-out-alt me-3"></i> <span>تسجيل الخروج</span>
             </a>
         </nav>
@@ -83,17 +83,11 @@
                     <i class="fas fa-user text-dark"></i>
                 </div>
                 
-                <!-- أيقونة الإشعارات -->
                 <a href="#" class="btn btn-link notification-btn ms-3" title="الإشعارات">
                     <i class="fas fa-bell fa-lg"></i>
                     <span class="notification-badge">0</span>
                 </a>
-
-                <a href="{{ url_for('suppliers_dashboard.settings') }}" class="btn btn-link text-dark ms-2" title="إعدادات المتجر">
-                    <i class="fas fa-cog fa-lg"></i>
-                </a>
             </div>
-
             <div class="badge p-2 d-none d-sm-block" style="background-color: var(--mahjoub-gold); color: #000;">بوابة المورد</div>
         </header>
 
@@ -104,12 +98,19 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // إغلاق القائمة الجانبية عند النقر خارجها في الشاشات الصغيرة
         document.addEventListener('click', function(e) {
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.querySelector('.d-lg-none');
             if (window.innerWidth < 992 && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
                 sidebar.classList.remove('active');
             }
+        });
+
+        // تنظيف الجلسة قبل تسجيل الخروج لمنع أي تداخل 403
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            sessionStorage.clear();
+            localStorage.clear();
         });
     </script>
 </body>
