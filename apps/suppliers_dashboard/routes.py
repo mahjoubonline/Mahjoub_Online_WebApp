@@ -16,10 +16,10 @@ dashboard_bp = Blueprint(
 def supplier_required():
     """
     دالة تحقق أمني: تضمن أن المستخدم الحالي مورد أو مسوق فقط.
-    إذا حاول مدير الوصول هنا، سيتم منعه فوراً.
+    إذا حاول مدير الوصول هنا، سيتم منعه فوراً بـ 403 Forbidden.
     """
     if session.get('user_type') != 'supplier':
-        abort(403) # خطأ 403: ممنوع الوصول
+        abort(403)
 
 @dashboard_bp.route('/dashboard', methods=['GET'])
 @login_required
@@ -28,7 +28,8 @@ def dashboard():
     لوحة التحكم الرئيسية للمورد.
     يتم جلب عدد الطلبات المعلقة فعلياً من قاعدة البيانات.
     """
-    supplier_required() # تفعيل الحماية الأمنية
+    # تفعيل الحماية الأمنية
+    supplier_required() 
     
     # جلب عدد الطلبات التي حالتها 'pending' والتابعة لهذا المورد
     pending_orders_count = Order.query.filter_by(
@@ -48,7 +49,8 @@ def withdraw():
     """
     مسار طلب سحب الرصيد.
     """
-    supplier_required() # تفعيل الحماية الأمنية
+    # تفعيل الحماية الأمنية
+    supplier_required() 
     
     flash("سيتم تفعيل خدمة السحب قريباً، يرجى التواصل مع الإدارة.", "info")
     return redirect(url_for('suppliers_dashboard.dashboard'))
@@ -59,5 +61,7 @@ def settings():
     """
     صفحة إعدادات المتجر الخاصة بالمورد.
     """
-    supplier_required() # تفعيل الحماية الأمنية
+    # تفعيل الحماية الأمنية
+    supplier_required() 
+    
     return render_template('suppliers/settings.html')
