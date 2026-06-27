@@ -28,6 +28,9 @@
         .nav-link:hover, .nav-link.active { background: rgba(212, 175, 55, 0.2); color: var(--mahjoub-gold); }
         .main-wrapper { margin-right: var(--sidebar-width); transition: var(--transition); min-height: 100vh; }
         .top-navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .notification-btn { position: relative; color: #555; transition: var(--transition); }
+        .notification-btn:hover { color: var(--mahjoub-gold); }
+        .notification-badge { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; font-size: 0.6rem; padding: 2px 6px; }
         @media (max-width: 992px) {
             .sidebar { right: calc(-1 * var(--sidebar-width)); }
             .sidebar.active { right: 0; }
@@ -76,10 +79,17 @@
                     </div>
                 </div>
                 <div class="avatar-circle bg-light d-flex align-items-center justify-content-center" 
-                     style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--mahjoub-gold);">
+                       style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--mahjoub-gold);">
                     <i class="fas fa-user text-dark"></i>
                 </div>
-                <a href="{{ url_for('suppliers_dashboard.settings') }}" class="btn btn-link text-dark ms-3" title="إعدادات المتجر">
+                
+                <!-- أيقونة الإشعارات -->
+                <a href="#" class="btn btn-link notification-btn ms-3" title="الإشعارات">
+                    <i class="fas fa-bell fa-lg"></i>
+                    <span class="notification-badge">0</span>
+                </a>
+
+                <a href="{{ url_for('suppliers_dashboard.settings') }}" class="btn btn-link text-dark ms-2" title="إعدادات المتجر">
                     <i class="fas fa-cog fa-lg"></i>
                 </a>
             </div>
