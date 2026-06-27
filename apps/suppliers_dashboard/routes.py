@@ -55,7 +55,7 @@ def settings():
     """
     supplier_required() 
     
-    # جلب المورد مع بيانات الملف الشخصي والمحفظة المرتبطة به
+    # جلب المورد مع بيانات الملف الشخصي والمحفظة المرتبطة به لضمان الدقة
     supplier_data = Supplier.query.options(
         joinedload(Supplier.supplier_profile),
         joinedload(Supplier.wallet)
@@ -74,10 +74,11 @@ def update_settings():
     """
     supplier_required()
     
+    # الحصول على ملف المورد الشخصي
     profile = current_user.supplier_profile
     
     if profile:
-        # تحديث البيانات بناءً على الـ name في ملف settings.html
+        # تحديث البيانات بناءً على مدخلات النموذج في settings.html
         profile.owner_name = request.form.get('owner_name')
         profile.email = request.form.get('email')
         profile.phone_secondary = request.form.get('secondary_phone')
@@ -85,9 +86,10 @@ def update_settings():
         profile.city = request.form.get('city')
         profile.address = request.form.get('address')
         
+        # حفظ التغييرات في قاعدة البيانات
         db.session.commit()
-        flash("تم تحديث بياناتك بنجاح!", "success")
+        flash("تم تحديث بيانات ملفك الشخصي بنجاح!", "success")
     else:
-        flash("خطأ: تعذر الوصول إلى بيانات الملف الشخصي.", "danger")
+        flash("خطأ: تعذر الوصول إلى بيانات الملف الشخصي لتحديثها.", "danger")
     
     return redirect(url_for('suppliers_dashboard.settings'))
