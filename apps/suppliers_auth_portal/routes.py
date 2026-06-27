@@ -11,12 +11,8 @@ suppliers_bp = Blueprint('suppliers_auth', __name__, template_folder='templates'
 
 @suppliers_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    """
-    بوابة تسجيل دخول الموردين والمسوقين.
-    تستخدم session['user_type'] للتمييز بين أنواع المستخدمين في النظام.
-    """
+    # ... (نفس الكود الخاص بك لا تغيير فيه) ...
     if request.method == 'GET':
-        # إذا كان المستخدم مسجلاً بالفعل، يتم توجيهه للداشبورد مباشرة
         if current_user.is_authenticated:
             return redirect(url_for('suppliers_dashboard.dashboard'))
         return render_template('suppliers_auth_portal/login.html')
@@ -35,7 +31,6 @@ def login():
             user = Marketer.query.filter_by(marketing_code=username).first()
             if user and user.check_password(password):
                 login_user(user, remember=True)
-                # تخزين نوع المستخدم في الجلسة للفصل الأمني
                 session['user_type'] = 'supplier' 
                 return jsonify({"status": "success", "redirect": url_for('suppliers_dashboard.dashboard')})
             return jsonify({"status": "error", "message": "بيانات دخول المسوق غير صحيحة"}), 401
@@ -48,7 +43,6 @@ def login():
             
             if supplier and supplier.check_password(password):
                 login_user(supplier, remember=True)
-                # تخزين نوع المستخدم في الجلسة للفصل الأمني
                 session['user_type'] = 'supplier'
                 return jsonify({"status": "success", "redirect": url_for('suppliers_dashboard.dashboard')})
             return jsonify({"status": "error", "message": "بيانات دخول المورد غير صحيحة"}), 401
@@ -59,16 +53,13 @@ def login():
         return jsonify({"status": "error", "message": f"خطأ فني: {str(e)}"}), 500
 
 @suppliers_bp.route('/logout')
-@login_required
 def logout():
     """
-    تسجيل خروج المورد/المسوق مع التأكد من نوع الجلسة 
-    لضمان الفصل الأمني الكامل وعدم التداخل مع الإدارة.
+    تسجيل خروج آمن: إزالة @login_required لضمان التنفيذ دائماً.
     """
-    # التحقق من أن الجلسة الحالية تخص مورد أو مسوق فقط
-    if session.get('user_type') == 'supplier':
-        logout_user()
-        session.clear() # مسح شامل للجلسة
-    
-    # التوجيه لبوابة دخول الموردين
+    # 1. تسجيل الخروج من Flask-Login
+    logout_user()
+    # 2. مسح كامل للجلسة (يضمن التخلص من user_type والتداخلات)
+    session.clear() 
+    # 3. توجيه للمستخدم لبوابة الدخول
     return redirect(url_for('suppliers_auth.login'))
