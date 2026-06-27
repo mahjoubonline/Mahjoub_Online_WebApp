@@ -5,57 +5,22 @@
 {% block content %}
 <meta name="robots" content="noindex, nofollow, noarchive">
 
-<div class="container-fluid py-4">
-    <h2 class="mb-4">إدارة محافظ الموردين</h2>
+<div class="container-fluid py-4" id="mainWrapper">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">إدارة محافظ الموردين</h2>
+        <a href="#" class="btn btn-primary"><i class="fas fa-file-export me-2"></i> تصدير التقرير</a>
+    </div>
 
     <div class="card mb-4 p-3 shadow-sm border-0">
-        <input type="text" id="liveSearch" class="form-control form-control-lg" 
-               placeholder="🔍 ابحث بالاسم، الهاتف، أو رقم المحفظة..." autocomplete="off">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-0"><i class="fas fa-search"></i></span>
+            <input type="text" id="liveSearch" class="form-control border-0" 
+                   placeholder="ابحث بالاسم التجاري، أو رقم المحفظة..." autocomplete="off">
+        </div>
     </div>
 
     <div id="tableContainer">
-        <div class="row mb-4">
-            <div class="col-md-3"><div class="card p-3 text-center border-0 shadow-sm" style="background:#2d1b4e; color:white;">إجمالي المحافظ: <h5 class="mb-0">{{ stats.count }}</h5></div></div>
-            <div class="col-md-3"><div class="card p-3 text-center border-0 shadow-sm" style="background:#27ae60; color:white;">إجمالي SAR: <h5 class="mb-0">{{ "{:,.2f}".format(stats.sar|float) }}</h5></div></div>
-            <div class="col-md-3"><div class="card p-3 text-center border-0 shadow-sm" style="background:#c5a059; color:white;">إجمالي YER: <h5 class="mb-0">{{ "{:,.2f}".format(stats.yer|float) }}</h5></div></div>
-            <div class="col-md-3"><div class="card p-3 text-center border-0 shadow-sm" style="background:#3498db; color:white;">إجمالي USD: <h5 class="mb-0">{{ "{:,.2f}".format(stats.usd|float) }}</h5></div></div>
-        </div>
-
-        <div class="card p-3 shadow-sm border-0">
-            <table class="table table-hover align-middle mb-0" id="walletTable">
-                <thead class="table-light">
-                    <tr>
-                        <th>المعرف</th>
-                        <th>اسم المورد</th>
-                        <th>SAR</th>
-                        <th>YER</th>
-                        <th>USD</th>
-                        <th class="text-center">إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="walletBody">
-                    {% for wallet in wallets %}
-                    <tr>
-                        <td>{{ wallet.id }}</td>
-                        <td class="fw-bold">{{ wallet.supplier.trade_name if wallet.supplier else 'غير معرف' }}</td>
-                        <td class="font-monospace">{{ "{:,.2f}".format(wallet.balance_sar|float) }}</td>
-                        <td class="font-monospace">{{ "{:,.2f}".format(wallet.balance_yer|float) }}</td>
-                        <td class="font-monospace">{{ "{:,.2f}".format(wallet.balance_usd|float) }}</td>
-                        <td class="text-center">
-                            <a href="{{ url_for('wallet_app.manage_wallet', supplier_id=wallet.supplier_id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-list-ul"></i> حركة المحفظة
-                            </a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="6" class="text-center py-4 text-muted">لا توجد نتائج مطابقة.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div class="d-flex justify-content-center mt-4" id="paginationLinks">
-                {{ pagination.links }}
-            </div>
-        </div>
+        {% include 'admin/wallet_table_partial.html' %}
     </div>
 </div>
 
@@ -63,19 +28,32 @@
 <script>
 $(document).ready(function() {
     let timer;
-    $('#liveSearch').on('keyup', function() {
+    
+    // وظيفة البحث
+    $(document).on('keyup', '#liveSearch', function() {
         clearTimeout(timer);
-        let query = $(this).val().replace(/[<>]/g, ""); 
+        let query = $(this).val();
         timer = setTimeout(function() {
             $.ajax({
                 url: "{{ url_for('wallet_app.dashboard') }}",
                 data: { 'search': query },
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 success: function(response) {
                     $('#tableContainer').html(response);
                 }
             });
-        }, 300);
+        }, 400);
+    });
+
+    // دعم التنقل بين الصفحات (Pagination)
+    $(document).on('click', '.pagination a', function(e) {
+        e.preventDefault();
+        let url = $(this).attr('href');
+        $.ajax({
+            url: url,
+            success: function(response) {
+                $('#tableContainer').html(response);
+            }
+        });
     });
 });
 </script>
