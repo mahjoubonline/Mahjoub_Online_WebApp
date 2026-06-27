@@ -107,10 +107,12 @@
             }
         });
 
-        // تنظيف الجلسة قبل تسجيل الخروج لمنع أي تداخل 403
-        document.getElementById('logout-btn').addEventListener('click', function() {
+        // تنظيف الجلسة قبل تسجيل الخروج لضمان عدم ظهور 403
+        document.getElementById('logout-btn').addEventListener('click', function(e) {
+            e.preventDefault(); // منع الانتقال المباشر
             sessionStorage.clear();
             localStorage.clear();
+            window.location.href = this.href; // الانتقال بعد التنظيف
         });
     </script>
 </body>
