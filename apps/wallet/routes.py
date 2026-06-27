@@ -1,13 +1,14 @@
 # coding: utf-8
 # 📂 apps/wallet/routes.py
 
-from flask import Blueprint, render_template, request, abort, flash
+from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 from apps.models.wallet_db import SupplierWallet
 from apps.models.supplier_db import Supplier
-from apps import db
+from apps.extensions import db
 from sqlalchemy import or_
 
+# تعريف البلوبرينت
 wallet_bp = Blueprint(
     'wallet_app', 
     __name__, 
@@ -16,7 +17,6 @@ wallet_bp = Blueprint(
 
 @wallet_bp.route('/admin/dashboard', methods=['GET'])
 @login_required
-# @admin_required  <-- تأكد من إضافة دالة التحقق من صلاحيات الأدمن هنا
 def dashboard():
     """
     لوحة تحكم المحافظ للإدارة: عرض أرصدة الموردين مع البحث المباشر
@@ -37,7 +37,7 @@ def dashboard():
     # التصفح (Pagination)
     wallets = query.paginate(page=page, per_page=20)
     
-    # حساب الإحصائيات (يمكن تحسين هذا بجدول إحصائيات منفصل لاحقاً)
+    # حساب الإحصائيات العامة
     stats = {
         'count': SupplierWallet.query.count(),
         'sar': db.session.query(db.func.sum(SupplierWallet.balance_sar)).scalar() or 0,
@@ -45,7 +45,7 @@ def dashboard():
         'usd': db.session.query(db.func.sum(SupplierWallet.balance_usd)).scalar() or 0
     }
 
-    # إذا كان الطلب Ajax (للبحث المباشر) نعيد الجزء الخاص بالجدول فقط
+    # التحقق مما إذا كان الطلب Ajax لتحديث الجدول فقط
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('admin/wallet_table_partial.html', wallets=wallets.items, stats=stats)
 
@@ -55,8 +55,7 @@ def dashboard():
 @login_required
 def manage_wallet(supplier_id):
     """
-    عرض كشف حركة محفظة مورد محدد
+    عرض تفاصيل محفظة مورد محدد
     """
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
-    # هنا سنعرض سجل العمليات (Transactions) لاحقاً
     return render_template('admin/wallet_details.html', wallet=wallet)
