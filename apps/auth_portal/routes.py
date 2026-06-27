@@ -2,7 +2,7 @@
 # 📂 apps/auth_portal/routes.py
 
 import os
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 from apps.models.admin_db import AdminUser
 
@@ -21,10 +21,9 @@ LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x')
 def login():
     """
     بوابة دخول الإدارة حصراً.
-    أي محاولة دخول هنا يجب أن تكون لمسؤول فقط.
+    تخزن نوع المستخدم في الجلسة لضمان الفصل عن الموردين.
     """
     if current_user.is_authenticated:
-        # إذا كان المدير مسجلاً بالفعل، توجه للوحة الإدارة
         return redirect(url_for('admin_dashboard.dashboard'))
 
     if request.method == 'POST':
@@ -36,6 +35,9 @@ def login():
         
         if admin and admin.check_password(password):
             login_user(admin, remember=True)
+            # --- التعديل الهام هنا ---
+            session['user_type'] = 'admin' # تحديد نوع الجلسة كإدارة
+            
             flash('مرحباً بك يا مدير النظام.', 'success')
             return redirect(url_for('admin_dashboard.dashboard'))
         else:
@@ -47,4 +49,5 @@ def login():
 @login_required
 def logout():
     logout_user()
+    session.clear() # مسح الجلسة بالكامل عند الخروج
     return redirect(url_for('auth_portal.login'))
