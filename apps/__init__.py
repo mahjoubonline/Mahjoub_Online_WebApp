@@ -3,19 +3,23 @@
 
 import os
 import importlib
-from flask import Flask
+from flask import Flask, session
 from apps.extensions import db, login_manager, migrate
 from apps.models.admin_db import AdminUser
 from apps.models import Supplier
 
-# دالة لتحميل المستخدم (ضرورية لـ Flask-Login)
+# دالة لتحميل المستخدم (تعتمد الآن على نوع المستخدم في الجلسة)
 @login_manager.user_loader
 def load_user(user_id):
-    # نتحقق أولاً إذا كان مديراً، ثم مورداً
-    user = AdminUser.query.get(int(user_id))
-    if not user:
-        user = Supplier.query.get(int(user_id))
-    return user
+    user_type = session.get('user_type')
+    
+    if user_type == 'admin':
+        return AdminUser.query.get(int(user_id))
+    elif user_type == 'supplier':
+        return Supplier.query.get(int(user_id))
+    
+    # محاولة استرداد تلقائي إذا لم تكن الجلسة محددة
+    return AdminUser.query.get(int(user_id)) or Supplier.query.get(int(user_id))
 
 def create_app():
     app = Flask(__name__)
