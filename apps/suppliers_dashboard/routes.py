@@ -1,10 +1,12 @@
 # coding: utf-8
 # 📂 apps/suppliers_dashboard/routes.py
 
-from flask import Blueprint, render_template, redirect, url_for, flash, session, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, session, abort, request
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
-# استيراد النماذج
+
+# استيراد قاعدة البيانات والنماذج
+from apps import db 
 from apps.models.orders_db import Order 
 from apps.models.supplier_db import Supplier
 
@@ -53,15 +55,39 @@ def settings():
     """
     supplier_required() 
     
-    # جلب المورد مع بيانات الملف الشخصي والمحفظة المرتبطة به لضمان عدم وجود أخطاء في القالب
+    # جلب المورد مع بيانات الملف الشخصي والمحفظة المرتبطة به
     supplier_data = Supplier.query.options(
         joinedload(Supplier.supplier_profile),
         joinedload(Supplier.wallet)
     ).get(current_user.id)
     
-    # إضافة تحقق بسيط للتأكد من وجود المورد
     if not supplier_data:
         abort(404)
-    
-    # تمرير supplier_data كـ current_user للقالب كما طلبت
+        
     return render_template('suppliers/settings.html', current_user=supplier_data)
+
+@dashboard_bp.route('/settings/update', methods=['POST'])
+@login_required
+def update_settings():
+    """
+    تحديث بيانات الملف الشخصي للمورد.
+    """
+    supplier_required()
+    
+    profile = current_user.supplier_profile
+    
+    if profile:
+        # تحديث البيانات بناءً على الـ name في ملف settings.html
+        profile.owner_name = request.form.get('owner_name')
+        profile.email = request.form.get('email')
+        profile.phone_secondary = request.form.get('secondary_phone')
+        profile.governorate = request.form.get('governorate')
+        profile.city = request.form.get('city')
+        profile.address = request.form.get('address')
+        
+        db.session.commit()
+        flash("تم تحديث بياناتك بنجاح!", "success")
+    else:
+        flash("خطأ: تعذر الوصول إلى بيانات الملف الشخصي.", "danger")
+    
+    return redirect(url_for('suppliers_dashboard.settings'))
