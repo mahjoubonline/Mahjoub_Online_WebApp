@@ -11,7 +11,12 @@ suppliers_bp = Blueprint('suppliers_auth', __name__, template_folder='templates'
 
 @suppliers_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    """
+    بوابة تسجيل دخول الموردين والمسوقين.
+    تستخدم session['user_type'] للتمييز بين أنواع المستخدمين في النظام.
+    """
     if request.method == 'GET':
+        # إذا كان المستخدم مسجلاً بالفعل، يتم توجيهه للداشبورد مباشرة
         if current_user.is_authenticated:
             return redirect(url_for('suppliers_dashboard.dashboard'))
         return render_template('suppliers_auth_portal/login.html')
@@ -30,7 +35,8 @@ def login():
             user = Marketer.query.filter_by(marketing_code=username).first()
             if user and user.check_password(password):
                 login_user(user, remember=True)
-                session['user_type'] = 'supplier' # المسوق يُعامل تقنياً في نفس مجموعة الموردين
+                # تخزين نوع المستخدم في الجلسة للفصل الأمني
+                session['user_type'] = 'supplier' 
                 return jsonify({"status": "success", "redirect": url_for('suppliers_dashboard.dashboard')})
             return jsonify({"status": "error", "message": "بيانات دخول المسوق غير صحيحة"}), 401
 
@@ -42,7 +48,8 @@ def login():
             
             if supplier and supplier.check_password(password):
                 login_user(supplier, remember=True)
-                session['user_type'] = 'supplier' # <--- هذا السطر هو مفتاح الحل
+                # تخزين نوع المستخدم في الجلسة للفصل الأمني
+                session['user_type'] = 'supplier'
                 return jsonify({"status": "success", "redirect": url_for('suppliers_dashboard.dashboard')})
             return jsonify({"status": "error", "message": "بيانات دخول المورد غير صحيحة"}), 401
 
@@ -53,6 +60,10 @@ def login():
 
 @suppliers_bp.route('/logout')
 def logout():
+    """
+    تسجيل خروج المورد/المسوق مع مسح كامل لكافة بيانات الجلسة 
+    لضمان عدم تداخل هويات المستخدمين.
+    """
     logout_user()
-    session.clear() # <--- مسح كامل للجلسة عند الخروج يضمن عدم تداخل البيانات لاحقاً
+    session.clear() # مسح شامل للجلسة والكوكيز المؤقتة
     return redirect(url_for('suppliers_auth.login'))
