@@ -10,78 +10,106 @@
     </div>
 
     <div class="row">
+        {% for balance, currency, color in [
+            (wallet.balance_sar, 'SAR', 'bg-primary'),
+            (wallet.balance_yer, 'YER', 'bg-success'),
+            (wallet.balance_usd, 'USD', 'bg-warning')
+        ] %}
         <div class="col-md-4">
-            <div class="card text-white bg-primary mb-3 shadow">
+            <div class="card text-white {{ color }} mb-3 shadow">
                 <div class="card-body">
-                    <h5 class="card-title">الرصيد بالريال السعودي</h5>
-                    <h2 class="fw-bold">{{ "{:,.2f}".format(wallet.balance_sar) }} <small class="fs-6">SAR</small></h2>
+                    <h5 class="card-title">الرصيد بـ {{ currency }}</h5>
+                    <h2 class="fw-bold">{{ "{:,.2f}".format(balance) }} <small class="fs-6">{{ currency }}</small></h2>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card text-white bg-success mb-3 shadow">
-                <div class="card-body">
-                    <h5 class="card-title">الرصيد بالريال اليمني</h5>
-                    <h2 class="fw-bold">{{ "{:,.2f}".format(wallet.balance_yer) }} <small class="fs-6">YER</small></h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-white bg-warning mb-3 shadow">
-                <div class="card-body">
-                    <h5 class="card-title">الرصيد بالدولار الأمريكي</h5>
-                    <h2 class="fw-bold">{{ "{:,.2f}".format(wallet.balance_usd) }} <small class="fs-6">USD</small></h2>
-                </div>
-            </div>
-        </div>
+        {% endfor %}
     </div>
 
     <div class="card mt-4 border-0 shadow-sm">
-        <div class="card-header bg-white fw-bold">معلومات إضافية</div>
+        <div class="card-header bg-white fw-bold">معلومات المحفظة</div>
         <div class="card-body">
             <p><strong>كود المحفظة:</strong> {{ wallet.wallet_code }}</p>
-            <p><strong>تاريخ آخر تحديث:</strong> {{ wallet.updated_at.strftime('%Y-%m-%d %H:%M') if wallet.updated_at else 'غير متوفر' }}</p>
-            <button class="btn btn-outline-primary">إضافة حركة مالية يدوية</button>
+            <p><strong>آخر تحديث:</strong> {{ wallet.updated_at.strftime('%Y-%m-%d %H:%M') if wallet.updated_at else 'غير متوفر' }}</p>
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#transactionModal">
+                <i class="fas fa-plus"></i> إضافة حركة مالية يدوية (سند)
+            </button>
         </div>
     </div>
 
     <div class="card mt-4 border-0 shadow-sm">
-        <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-            <span>سجل الحركات المالية (الطلبات)</span>
-            <span class="badge bg-secondary">{{ wallet.supplier.financials|length }} حركة</span>
-        </div>
+        <div class="card-header bg-white fw-bold">سجل الحركات المالية (دفتر الأستاذ)</div>
         <div class="card-body table-responsive">
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>رقم الطلب</th>
-                        <th>التكلفة (SAR)</th>
-                        <th>العمولة (SAR)</th>
-                        <th>الحالة</th>
                         <th>التاريخ</th>
+                        <th>البيان (رقم السند)</th>
+                        <th>مدين (-)</th>
+                        <th>دائن (+)</th>
+                        <th>العملة</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for fin in wallet.supplier.financials %}
+                    {% for trans in wallet.transactions|sort(attribute='created_at', reverse=True) %}
                     <tr>
-                        <td>{{ fin.order.order_reference }}</td>
-                        <td>{{ "{:,.2f}".format(fin.supplier_cost) }}</td>
-                        <td>{{ "{:,.2f}".format(fin.mahjoub_commission) }}</td>
-                        <td>
-                            <span class="badge {{ 'bg-success' if fin.settlement_status == 'settled' else 'bg-warning' }}">
-                                {{ fin.settlement_status }}
-                            </span>
-                        </td>
-                        <td>{{ fin.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ trans.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ trans.description }} <br><small class="text-muted">سند: {{ trans.reference_number }}</small></td>
+                        <td class="text-danger">{{ trans.amount if trans.trans_type == 'debit' else '-' }}</td>
+                        <td class="text-success">{{ trans.amount if trans.trans_type == 'credit' else '-' }}</td>
+                        <td><span class="badge bg-dark">{{ trans.currency }}</span></td>
                     </tr>
                     {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">لا توجد حركات مالية مرتبطة بهذا المورد.</td>
-                    </tr>
+                    <tr><td colspan="5" class="text-center text-muted">لا توجد حركات مالية مسجلة.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+
+<div class="modal fade" id="transactionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="{{ url_for('wallet_app.add_transaction', supplier_id=wallet.supplier_id) }}" method="POST" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إضافة سند حركة مالية</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label>نوع الحركة</label>
+                    <select name="type" class="form-select" required>
+                        <option value="credit">إيداع (دائن)</option>
+                        <option value="debit">سحب (مدين)</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>العملة</label>
+                        <select name="currency" class="form-select">
+                            <option value="SAR">SAR</option>
+                            <option value="YER">YER</option>
+                            <option value="USD">USD</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label>المبلغ</label>
+                        <input type="number" step="0.01" name="amount" class="form-control" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label>رقم سند التسوية</label>
+                    <input type="text" name="reference_number" class="form-control" placeholder="مثال: REF-2026-001" required>
+                </div>
+                <div class="mb-3">
+                    <label>البيان</label>
+                    <textarea name="description" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">حفظ السند</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
