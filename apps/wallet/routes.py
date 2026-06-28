@@ -19,12 +19,12 @@ wallet_bp = Blueprint(
 @login_required
 def dashboard():
     """
-    لوحة تحكم المحافظ للإدارة: عرض أرصدة الموردين مع البحث المباشر
+    لوحة تحكم المحافظ: تدعم البحث، التصفح، والطلبات الجزئية (Ajax)
     """
     search = request.args.get('search', '')
     page = request.args.get('page', 1, type=int)
 
-    # بناء استعلام البحث: استخدام التعبير الواضح للـ Join لمنع أي أخطاء في الموديلات
+    # بناء استعلام البحث
     query = SupplierWallet.query.join(Supplier, SupplierWallet.supplier_id == Supplier.id)
     
     if search:
@@ -34,10 +34,10 @@ def dashboard():
             Supplier.search_phone.ilike(f'%{search}%')
         ))
 
-    # التصفح (Pagination)
+    # التصفح (20 عنصراً لكل صفحة)
     wallets = query.paginate(page=page, per_page=20, error_out=False)
     
-    # حساب الإحصائيات العامة (استخدام الدوال المباشرة للـ Session)
+    # حساب الإحصائيات العامة (تُحسب دائماً لتحديث البطاقات العلوية إذا لزم الأمر)
     stats = {
         'count': SupplierWallet.query.count(),
         'sar': db.session.query(db.func.sum(SupplierWallet.balance_sar)).scalar() or 0,
@@ -45,17 +45,24 @@ def dashboard():
         'usd': db.session.query(db.func.sum(SupplierWallet.balance_usd)).scalar() or 0
     }
 
-    # التحقق مما إذا كان الطلب Ajax
+    # التحقق مما إذا كان الطلب Ajax لتحديث الجدول فقط
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render_template('admin/wallet_table_partial.html', wallets=wallets.items, stats=stats)
+        return render_template('admin/wallet_table_partial.html', 
+                               wallets=wallets.items, 
+                               pagination=wallets)
 
-    return render_template('admin/wallet_app.html', wallets=wallets.items, stats=stats, pagination=wallets)
+    # الطلب العادي (تحميل الصفحة كاملة)
+    return render_template('admin/wallet_app.html', 
+                           wallets=wallets.items, 
+                           stats=stats, 
+                           pagination=wallets)
 
 @wallet_bp.route('/admin/manage/<int:supplier_id>', methods=['GET'])
 @login_required
 def manage_wallet(supplier_id):
     """
-    عرض تفاصيل محفظة مورد محدد
+    عرض تفاصيل محفظة مورد محدد مع كشف الحساب
     """
+    # جلب المحفظة مع المورد المرتبط بها في استعلام واحد (Eager loading للأداء)
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
     return render_template('admin/view_wallet.html', wallet=wallet)
