@@ -1,3 +1,20 @@
+<style>
+    .table thead { background-color: #2e003e !important; color: #d4af37 !important; }
+    .btn-royal-outline {
+        border: 1px solid #2e003e;
+        color: #2e003e;
+    }
+    .btn-royal-outline:hover {
+        background-color: #2e003e;
+        color: #d4af37;
+    }
+    .page-item.active .page-link {
+        background-color: #2e003e;
+        border-color: #2e003e;
+        color: #d4af37;
+    }
+</style>
+
 <table class="table table-hover align-middle">
     <thead class="table-light">
         <tr>
@@ -16,29 +33,29 @@
             <td>
                 <div class="fw-bold text-dark">{{ wallet.supplier.trade_name }}</div>
             </td>
-            <td><code class="text-secondary">{{ wallet.wallet_code }}</code></td>
+            <td><code class="text-secondary fw-bold">{{ wallet.wallet_code }}</code></td>
             
-            <td class="{{ 'text-danger fw-bold' if wallet.balance_sar < 0 else '' }}">
+            <td class="{{ 'text-danger fw-bold' if wallet.balance_sar < 0 else 'text-dark' }}">
                 {{ "{:,.2f}".format(wallet.balance_sar) }}
             </td>
-            <td class="{{ 'text-danger fw-bold' if wallet.balance_yer < 0 else '' }}">
+            <td class="{{ 'text-danger fw-bold' if wallet.balance_yer < 0 else 'text-dark' }}">
                 {{ "{:,.0f}".format(wallet.balance_yer) }}
             </td>
-            <td class="{{ 'text-danger fw-bold' if wallet.balance_usd < 0 else '' }}">
+            <td class="{{ 'text-danger fw-bold' if wallet.balance_usd < 0 else 'text-dark' }}">
                 {{ "{:,.2f}".format(wallet.balance_usd) }}
             </td>
 
             <td>
                 {% if wallet.balance_sar < 0 or wallet.balance_yer < 0 or wallet.balance_usd < 0 %}
-                    <span class="badge bg-danger-subtle text-danger">مدين</span>
+                    <span class="badge" style="background-color: #dc3545;">مدين</span>
                 {% else %}
-                    <span class="badge bg-success-subtle text-success">دائن</span>
+                    <span class="badge" style="background-color: #2e003e; color: #d4af37;">دائن</span>
                 {% endif %}
             </td>
 
             <td class="text-center">
                 <a href="{{ url_for('wallet_app.manage_wallet', supplier_id=wallet.supplier_id) }}" 
-                   class="btn btn-sm btn-outline-primary shadow-sm">
+                   class="btn btn-sm btn-royal-outline">
                    <i class="fas fa-eye me-1"></i> كشف الحساب
                 </a>
             </td>
