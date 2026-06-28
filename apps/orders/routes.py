@@ -7,7 +7,7 @@ from flask_login import login_required
 from apps.extensions import db
 from apps.models.orders_db import Order
 from apps.models.financials_db import OrderFinancial
-# استيراد محرك المزامنة المحدث
+# استيراد محرك المزامنة
 from apps.api.sync_engine import SyncEngine
 
 # تعريف الـ Blueprint
@@ -22,13 +22,13 @@ def dashboard():
     page = request.args.get('page', 1, type=int)
     per_page = 20
     
-    # 2. بناء الاستعلام الأساسي مع الربط
+    # 2. بناء الاستعلام الأساسي مع الربط (outerjoin ضروري لعدم ضياع الطلبات بدون بيانات مالية)
     query = db.session.query(Order, OrderFinancial).outerjoin(OrderFinancial)
     
     # 3. تطبيق الفلاتر (إذا وُجدت)
     q = request.args.get('q', '').strip()
     if q:
-        # البحث في رقم الطلب أو اسم العميل (ملاحظة: البحث بالاسم قد يتأثر بالتشفير)
+        # البحث في رقم الطلب أو اسم العميل المشفر (ملاحظة: _customer_name مخزن مشفر)
         query = query.filter(Order.id.contains(q) | Order._customer_name.contains(q))
     
     status = request.args.get('status', '').strip()
@@ -38,7 +38,7 @@ def dashboard():
     # 4. الترتيب والتنفيذ (Pagination)
     pagination = query.order_by(Order.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
-    # 5. حساب إحصائيات عامة (للعرض في الأعلى)
+    # 5. حساب إحصائيات عامة
     stats = {
         'cancelled': Order.query.filter_by(status='cancelled').count(),
         'completed': Order.query.filter_by(status='completed').count(),
@@ -51,14 +51,12 @@ def dashboard():
 @login_required
 def sync_all():
     """دالة المزامنة مع التقاط الأخطاء التفصيلي."""
-    
     try:
         success = SyncEngine.fetch_and_sync_order()
         if success:
             flash("تمت المزامنة وتحديث البيانات بنجاح", "success")
         else:
             flash("فشلت عملية المزامنة. يرجى مراجعة سجلات النظام (Logs).", "danger")
-            
     except Exception as e:
         flash(f"حدث خطأ تقني غير متوقع: {str(e)}", "danger")
         traceback.print_exc()
