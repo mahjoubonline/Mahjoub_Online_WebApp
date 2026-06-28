@@ -1,83 +1,58 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - المحرك السيادي لمعالجة الطلبات (نسخة أداء عالٍ)
+# 📂 apps/orders/routes.py
 
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
-from apps.extensions import db
-# تم تحديث الاستيراد من ProcessedOrder إلى Order
-from apps.models import Order 
-from apps.api.sync_engine import SyncEngine
-from sqlalchemy import func
-import logging
+from flask import Blueprint, render_template, redirect, url_for, flash
+from flask_login import login_required
+from apps.models.orders_db import Order  # تأكد من تطابق مسار الموديل لديك
+from apps.orders.services import OrderService
+from apps import db
 
-orders_bp = Blueprint('orders', __name__, url_prefix='/orders', template_folder='templates')
-logger = logging.getLogger(__name__)
+# تعريف الـ Blueprint
+# هذا الـ Blueprint سيتم تسجيله تلقائياً بواسطة الـ registry.py الخاص بك
+orders_bp = Blueprint('orders', __name__, template_folder='templates')
 
-# 1. لوحة تحكم الطلبات
 @orders_bp.route('/dashboard')
-def orders_dashboard():
-    page = request.args.get('page', 1, type=int)
-    search = request.args.get('search', '', type=str)
+@login_required
+def dashboard():
+    """
+    عرض لوحة تحكم الطلبات مع الإحصائيات الحية
+    """
+    # 1. حساب الإحصائيات (Stats) من قاعدة البيانات مباشرة
+    # نستخدم db.func.sum لحساب الإجمالي بدقة من قاعدة البيانات
+    total_sales = db.session.query(db.func.sum(Order.total_price)).scalar() or 0
     
-    # تم تحديث الاستعلام ليستخدم Order بدلاً من ProcessedOrder
-    stats = db.session.query(
-        func.sum(Order.total_price).label('total_sales'),
-        func.count(Order.id).filter(Order.order_status == 'delivered').label('completed'),
-        func.count(Order.id).filter(Order.order_status == 'cancelled').label('cancelled')
-    ).first()
+    stats = {
+        'cancelled': Order.query.filter_by(order_status='cancelled').count(),
+        'completed': Order.query.filter_by(order_status='completed').count(),
+        'total_sales': total_sales
+    }
     
-    # بناء استعلام البحث
-    query = Order.query.order_by(Order.id.desc())
-    if search:
-        search_filter = f"%{search}%"
-        query = query.filter(
-            (Order.order_id.ilike(search_filter)) | 
-            (Order.customer_name.ilike(search_filter))
-        )
+    # 2. جلب قائمة الطلبات لعرضها في الجدول (مرتبة من الأحدث للأقدم)
+    items = Order.query.order_by(Order.id.desc()).all()
     
-    # التقسيم (Pagination)
-    pagination = query.paginate(page=page, per_page=10, error_out=False)
-    
-    return render_template('admin/orders_dashboard.html', 
-                           items=pagination.items,
-                           total_pages=pagination.pages,
-                           current_page=page,
-                           stats={
-                               'total_sales': stats.total_sales or 0, 
-                               'completed': stats.completed or 0, 
-                               'cancelled': stats.cancelled or 0
-                           }, 
-                           search=search)
+    return render_template('admin/orders_dashboard.html', stats=stats, items=items)
 
-# 2. المزامنة
 @orders_bp.route('/sync-all', methods=['POST'])
+@login_required
 def sync_all():
-    if SyncEngine.fetch_and_sync_order():
-        flash("✅ تمت المزامنة بنجاح!", "success")
+    """
+    دالة تشغيل المزامنة اليدوية عند الضغط على زر "مزامنة البيانات"
+    """
+    # هنا يتم استدعاء "المصنع" أو المحرك الذي برمجناه
+    # تأكد من تمرير مفتاح الـ API الصحيح ومعرف المورد
+    success = OrderService.fetch_and_sync_orders(api_key="YOUR_API_KEY", supplier_id=1)
+    
+    if success:
+        flash("تمت المزامنة وتحديث البيانات بنجاح", "success")
     else:
-        flash("⚠️ فشلت المزامنة، يرجى مراجعة سجلات الأخطاء.", "danger")
-    return redirect(url_for('orders.orders_dashboard'))
+        flash("حدث خطأ أثناء المزامنة، يرجى مراجعة سجلات الخطأ", "danger")
+        
+    # العودة إلى لوحة التحكم لرؤية النتائج
+    return redirect(url_for('orders.dashboard'))
 
-# 3. تحديث الحقول لحظياً (AJAX)
-@orders_bp.route('/update-order-field/<order_id>', methods=['POST'])
-def update_order_field(order_id):
-    data = request.json
-    order = Order.query.get(order_id) # تحديث للكلاس Order
-    if order and hasattr(order, data.get('field')):
-        try:
-            setattr(order, data['field'], data['value'])
-            db.session.commit()
-            return jsonify({'status': 'success'})
-        except Exception as e:
-            logger.error(f"Error updating field: {e}")
-            return jsonify({'status': 'error', 'message': 'فشل تحديث البيانات'}), 500
-    return jsonify({'status': 'error', 'message': 'الطلب غير موجود أو الحقل غير مسموح'}), 404
-
-# 4. حذف طلب
-@orders_bp.route('/delete-order/<order_id>', methods=['POST'])
-def delete_order(order_id):
-    order = Order.query.get(order_id) # تحديث للكلاس Order
-    if order:
-        db.session.delete(order)
-        db.session.commit()
-        return jsonify({'status': 'success'})
-    return jsonify({'status': 'error', 'message': 'الطلب غير موجود'}), 404
+@orders_bp.route('/view-order/<int:order_id>')
+@login_required
+def view_order(order_id):
+    """عرض تفاصيل طلب محدد"""
+    order = Order.query.get_or_404(order_id)
+    return render_template('admin/order_details.html', order=order)
