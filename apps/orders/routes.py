@@ -1,9 +1,10 @@
 # coding: utf-8
 # 📂 apps/orders/routes.py
 
+import os
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required
-from apps.extensions import db  # استخدام المسار الآمن لمنع Circular Import
+from apps.extensions import db
 from apps.models.orders_db import Order
 from apps.models.financials_db import OrderFinancial
 from apps.orders.services import OrderService
@@ -14,15 +15,10 @@ orders_bp = Blueprint('orders', __name__, template_folder='templates')
 @orders_bp.route('/dashboard')
 @login_required
 def dashboard():
-    """
-    عرض لوحة تحكم الطلبات مع الإحصائيات الحية.
-    تم إصلاح عملية حساب total_sales لتتم برمجياً بعد فك التشفير.
-    """
+    """عرض لوحة تحكم الطلبات مع الإحصائيات."""
     
-    # 1. جلب كافة السجلات المالية لفك تشفيرها وجمعها برمجياً
+    # 1. جلب كافة السجلات المالية لحساب الإجمالي
     all_financials = OrderFinancial.query.all()
-    
-    # حساب الإجمالي باستخدام خاصية total_paid (التي تفك التشفير تلقائياً)
     total_sales = sum(f.total_paid for f in all_financials)
     
     # 2. حساب إحصائيات الطلبات
@@ -33,7 +29,7 @@ def dashboard():
     }
     
     # 3. جلب قائمة الطلبات مع بياناتها المالية (Join)
-    # النتيجة ستكون قائمة من tuples (Order, OrderFinancial)
+    # نستخدم join للحصول على البيانات المالية المرتبطة بكل طلب
     items = db.session.query(Order, OrderFinancial)\
         .join(OrderFinancial, Order.id == OrderFinancial.order_id)\
         .order_by(Order.id.desc()).all()
@@ -43,8 +39,17 @@ def dashboard():
 @orders_bp.route('/sync-all', methods=['POST'])
 @login_required
 def sync_all():
-    """دالة تشغيل المزامنة اليدوية."""
-    success = OrderService.fetch_and_sync_orders(api_key="YOUR_API_KEY", supplier_id=1)
+    """دالة تشغيل المزامنة اليدوية باستخدام مفتاح البيئة الآمن."""
+    
+    # جلب المفتاح من إعدادات Render (المتغير الذي أضفناه سابقاً)
+    api_key = os.environ.get("QUMRA_API_KEY")
+    
+    if not api_key:
+        flash("خطأ: مفتاح الـ API غير معرف في إعدادات النظام", "danger")
+        return redirect(url_for('orders.dashboard'))
+
+    # استدعاء الخدمة
+    success = OrderService.fetch_and_sync_orders(api_key=api_key, supplier_id=1)
     
     if success:
         flash("تمت المزامنة وتحديث البيانات بنجاح", "success")
@@ -53,16 +58,12 @@ def sync_all():
         
     return redirect(url_for('orders.dashboard'))
 
-@orders_bp.route('/view-order/<int:order_id>')
+@orders_bp.route('/view-order/<string:order_id>') # تم تغييرها لـ string لأن معرفات قمرة قد تكون نصوصاً
 @login_required
 def view_order(order_id):
-    """عرض تفاصيل طلب محدد مع بياناته المالية"""
-    
-    # جلب الطلب مع بياناته المالية باستخدام Join
+    """عرض تفاصيل طلب محدد."""
     result = db.session.query(Order, OrderFinancial)\
         .filter(Order.id == order_id)\
         .join(OrderFinancial, Order.id == OrderFinancial.order_id).first_or_404()
         
-    # result[0] هو كائن الطلب (Order)
-    # result[1] هو كائن المالية (OrderFinancial)
     return render_template('admin/order_details.html', order=result[0], financial=result[1])
