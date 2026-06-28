@@ -11,7 +11,7 @@
     </div>
 
     <div id="tableContainer" class="table-responsive">
-        {% include 'admin/wallet_table_partial.html' %}
+        {% include 'admin/partials/wallet_table_body.html' %}
     </div>
 </div>
 
@@ -20,7 +20,7 @@
 $(document).ready(function() {
     let timer;
 
-    // وظيفة البحث مع تأخير (Debounce) لتقليل الضغط على السيرفر
+    // وظيفة البحث
     $('#liveSearch').on('keyup', function() {
         clearTimeout(timer);
         let query = $(this).val();
@@ -28,19 +28,21 @@ $(document).ready(function() {
             $.ajax({
                 url: "{{ url_for('wallet_app.dashboard') }}",
                 data: { 'search': query },
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 success: function(response) {
                     $('#tableContainer').html(response);
                 }
             });
-        }, 400); // ينتظر 400ms بعد التوقف عن الكتابة
+        }, 400);
     });
 
-    // دعم التنقل بين الصفحات (Pagination)
+    // دعم التنقل بين الصفحات
     $(document).on('click', '.pagination a', function(e) {
         e.preventDefault();
         let url = $(this).attr('href');
         $.ajax({
             url: url,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
             success: function(response) {
                 $('#tableContainer').html(response);
             }
