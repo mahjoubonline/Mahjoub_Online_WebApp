@@ -7,10 +7,8 @@ from flask_login import login_required
 from apps.extensions import db
 from apps.models.orders_db import Order
 from apps.models.financials_db import OrderFinancial
-# استيراد محرك المزامنة
 from apps.api.sync_engine import SyncEngine
 
-# تعريف الـ Blueprint
 orders_bp = Blueprint('orders', __name__, template_folder='templates')
 
 @orders_bp.route('/dashboard')
@@ -18,17 +16,15 @@ orders_bp = Blueprint('orders', __name__, template_folder='templates')
 def dashboard():
     """عرض لوحة تحكم الطلبات مع الفلاتر والتصفح."""
     
-    # 1. إعدادات التصفح
     page = request.args.get('page', 1, type=int)
     per_page = 20
     
-    # 2. بناء الاستعلام مع الربط
+    # بناء الاستعلام مع الربط
     query = db.session.query(Order, OrderFinancial).outerjoin(OrderFinancial)
     
-    # 3. تطبيق الفلاتر
+    # تطبيق الفلاتر
     q = request.args.get('q', '').strip()
     if q:
-        # البحث باستخدام الحقول المتاحة (Order.id هو الـ _id من قمرة)
         query = query.filter(
             Order.order_id_display.contains(q) | 
             Order.customer_name.contains(q)
@@ -36,17 +32,19 @@ def dashboard():
     
     status = request.args.get('status', '').strip()
     if status:
-        # تم التصحيح: استخدام Order.status بدلاً من Order.order_status
         query = query.filter(Order.status == status)
         
-    # 4. الترتيب والتنفيذ (Pagination)
+    # التنفيذ
     pagination = query.order_by(Order.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
-    # 5. حساب إحصائيات عامة
+    # إحصائيات آمنة (تم معالجة التشفير بحساب المجموع برمجياً)
+    all_financials = OrderFinancial.query.all()
+    total_sales = sum(fin.total_paid for fin in all_financials)
+    
     stats = {
         'cancelled': Order.query.filter_by(status='cancelled').count(),
         'completed': Order.query.filter_by(status='completed').count(),
-        'total_sales': db.session.query(db.func.sum(OrderFinancial.total_paid)).scalar() or 0.0
+        'total_sales': total_sales
     }
     
     return render_template('admin/orders_dashboard.html', pagination=pagination, stats=stats)
