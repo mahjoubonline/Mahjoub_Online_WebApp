@@ -7,7 +7,6 @@ from flask_login import login_required, current_user
 from apps.supplier_wallet.services import WalletService
 
 # تعريف الـ Blueprint الخاص بالمورد
-# الربط يتم عبر registry.py باستخدام الاسم 'supplier_wallet'
 supplier_wallet_bp = Blueprint(
     'supplier_wallet', 
     __name__, 
@@ -19,25 +18,22 @@ supplier_wallet_bp = Blueprint(
 def view_my_wallet():
     """
     عرض خزانة المورد الخاصة بالمستخدم المسجل حالياً.
-    نستخدم معرف المورد من current_user لضمان الخصوصية التامة.
+    نعتمد هنا على العلاقة المباشرة بين المورد والمحفظة.
     """
-    # جلب معرف المورد من المستخدم الحالي
-    # تأكد أن كائن الـ current_user يحتوي على خاصية supplier_id
-    supplier_id = getattr(current_user, 'supplier_id', None)
+    # استخدام العلاقة 'wallet' المعرفة في موديل Supplier
+    # هذا يغنينا عن البحث عن supplier_id يدوياً
+    wallet = current_user.wallet
     
-    if not supplier_id:
-        # إيقاف الوصول إذا كان المستخدم لا يملك صلاحية المورد
-        abort(403, description="عذراً، لا تملك صلاحية الوصول إلى هذه الخزانة.")
-
-    # جلب بيانات المحفظة من خلال خدمة المورد
-    wallet = WalletService.get_supplier_wallet(supplier_id)
+    # إذا لم يجد علاقة مباشرة، نحاول جلبها باستخدام معرف المورد (احتياطاً)
+    if not wallet:
+        wallet = WalletService.get_supplier_wallet(current_user.id)
     
     if not wallet:
-        # في حال لم يتم العثور على محفظة مرتبطة بحساب المورد
+        # إذا لم تكن المحفظة موجودة، نرجع خطأ 404
         abort(404, description="لم يتم العثور على محفظة مرتبطة بحسابك.")
 
     # عرض القالب مع تمرير كائن المحفظة
     return render_template('supplier_wallet/supplier_wallet.html', wallet=wallet)
 
-# ملاحظة: يمكنك إضافة مسارات أخرى هنا (مثل طلب سحب رصيد) 
-# واستخدام WalletService.process_transaction للعمليات المالية.
+# ملاحظة: تم تعديل المنطق ليعتمد على current_user.wallet 
+# الذي يربط المورد بمحفظته تلقائياً عبر SQLAlchemy.
