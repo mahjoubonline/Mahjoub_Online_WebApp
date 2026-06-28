@@ -8,6 +8,7 @@ from apps.models.supplier_db import Supplier
 from apps.extensions import db
 from sqlalchemy import or_
 
+# تأكد أن اسم الـ Blueprint هنا يطابق ما يتم استدعاؤه في القوالب
 wallet_bp = Blueprint('wallet_app', __name__, template_folder='templates')
 
 @wallet_bp.route('/admin/dashboard', methods=['GET'])
@@ -26,7 +27,6 @@ def dashboard():
 
     wallets = query.paginate(page=page, per_page=20, error_out=False)
     
-    # حساب إجمالي الأرصدة للنظام
     stats = {
         'count': SupplierWallet.query.count(),
         'sar': db.session.query(db.func.sum(SupplierWallet.balance_sar)).scalar() or 0,
