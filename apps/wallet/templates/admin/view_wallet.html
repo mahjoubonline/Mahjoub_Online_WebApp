@@ -37,12 +37,50 @@
     </div>
 
     <div class="card mt-4 border-0 shadow-sm">
-        <div class="card-header bg-white fw-bold">معلومات المحفظة</div>
+        <div class="card-header bg-white fw-bold">معلومات إضافية</div>
         <div class="card-body">
             <p><strong>كود المحفظة:</strong> {{ wallet.wallet_code }}</p>
             <p><strong>تاريخ آخر تحديث:</strong> {{ wallet.updated_at.strftime('%Y-%m-%d %H:%M') if wallet.updated_at else 'غير متوفر' }}</p>
-            <hr>
-            <button class="btn btn-outline-primary">إضافة حركة مالية</button>
+            <button class="btn btn-outline-primary">إضافة حركة مالية يدوية</button>
+        </div>
+    </div>
+
+    <div class="card mt-4 border-0 shadow-sm">
+        <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+            <span>سجل الحركات المالية (الطلبات)</span>
+            <span class="badge bg-secondary">{{ wallet.supplier.financials|length }} حركة</span>
+        </div>
+        <div class="card-body table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>التكلفة (SAR)</th>
+                        <th>العمولة (SAR)</th>
+                        <th>الحالة</th>
+                        <th>التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fin in wallet.supplier.financials %}
+                    <tr>
+                        <td>{{ fin.order.order_reference }}</td>
+                        <td>{{ "{:,.2f}".format(fin.supplier_cost) }}</td>
+                        <td>{{ "{:,.2f}".format(fin.mahjoub_commission) }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-success' if fin.settlement_status == 'settled' else 'bg-warning' }}">
+                                {{ fin.settlement_status }}
+                            </span>
+                        </td>
+                        <td>{{ fin.created_at.strftime('%Y-%m-%d') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">لا توجد حركات مالية مرتبطة بهذا المورد.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
