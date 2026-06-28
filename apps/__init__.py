@@ -10,7 +10,7 @@ from apps.models import Supplier
 from apps.models.supplier_staff_db import SupplierStaff
 from apps.models.supplier_profile_db import SupplierProfile
 
-# دالة لتحميل المستخدم (تعتمد الآن على نوع المستخدم في الجلسة)
+# دالة لتحميل المستخدم
 @login_manager.user_loader
 def load_user(user_id):
     user_type = session.get('user_type')
@@ -36,45 +36,33 @@ def create_app():
     login_manager.login_view = 'suppliers_auth.login' 
 
     with app.app_context():
-        # 1. بناء الجداول
+        # 1. بناء الجداول وتحديث الأعمدة الجديدة تلقائياً
         try:
+            # db.create_all() ستقوم بإضافة أي أعمدة جديدة (مثل order_id_display) 
+            # دون حذف البيانات الموجودة
             db.create_all()
             print("✅ [Database]: تم فحص وبناء الجداول بنجاح.")
         except Exception as e:
             print(f"⚠️ [Database]: خطأ أثناء محاولة بناء الجداول: {e}")
 
-        # 2. إنشاء المستخدمين الافتراضيين (المالك والموظف)
+        # 2. إنشاء المستخدمين الافتراضيين
         try:
-            # إنشاء الإداري
             if not AdminUser.query.filter_by(username='علي محجوب').first():
                 admin = AdminUser(username='علي محجوب', role='Owner')
                 admin.set_password('123')
                 db.session.add(admin)
             
-            # إنشاء المورد (المالك)
             supplier = Supplier.query.filter_by(username='وائل محجوب').first()
             if not supplier:
-                supplier = Supplier(
-                    username='وائل محجوب', 
-                    trade_name='محجوب أونلاين',
-                    phone='0000000000'
-                )
+                supplier = Supplier(username='وائل محجوب', trade_name='محجوب أونلاين', phone='0000000000')
                 supplier.set_password('123')
                 db.session.add(supplier)
-                db.session.flush() # تثبيت مؤقت للحصول على ID
-                
-                # إنشاء البروفايل تلقائياً للمورد
+                db.session.flush() 
                 profile = SupplierProfile(supplier_id=supplier.id, trade_name='محجوب أونلاين')
                 db.session.add(profile)
 
-            # إنشاء موظف افتراضي تابع للمورد
             if not SupplierStaff.query.filter_by(username='موظف_1').first():
-                staff = SupplierStaff(
-                    supplier_id=supplier.id,
-                    username='موظف_1',
-                    email='staff1@mahjoub.com',
-                    role='worker'
-                )
+                staff = SupplierStaff(supplier_id=supplier.id, username='موظف_1', email='staff1@mahjoub.com', role='worker')
                 staff.set_password('123')
                 db.session.add(staff)
             
@@ -84,7 +72,7 @@ def create_app():
             db.session.rollback()
             print(f"⚠️ [Users]: خطأ أثناء إنشاء المستخدمين: {e}")
 
-        # 3. --- نظام الاكتشاف التلقائي (Auto-Discovery) ---
+        # 3. نظام الاكتشاف التلقائي (Auto-Discovery)
         apps_dir = app.root_path
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
