@@ -11,50 +11,41 @@
     </div>
 
     <div id="tableContainer" class="table-responsive">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>اسم المورد</th>
-                    <th>رقم المحفظة</th>
-                    <th>الرصيد (SAR)</th>
-                    <th>الرصيد (YER)</th>
-                    <th>الرصيد (USD)</th>
-                    <th>الإجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for wallet in wallets %}
-                <tr>
-                    <td>{{ wallet.supplier.trade_name }}</td>
-                    <td>{{ wallet.wallet_code }}</td>
-                    <td>{{ "{:,.2f}".format(wallet.balance_sar) }}</td>
-                    <td>{{ "{:,.2f}".format(wallet.balance_yer) }}</td>
-                    <td>{{ "{:,.2f}".format(wallet.balance_usd) }}</td>
-                    <td>
-                        <a href="{{ url_for('wallet_app.manage_wallet', supplier_id=wallet.supplier_id) }}" class="btn btn-sm btn-info">إدارة</a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center">لا توجد محافظ لعرضها.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% include 'admin/wallet_table_partial.html' %}
     </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+$(document).ready(function() {
+    let timer;
+
+    // وظيفة البحث مع تأخير (Debounce) لتقليل الضغط على السيرفر
     $('#liveSearch').on('keyup', function() {
+        clearTimeout(timer);
         let query = $(this).val();
+        timer = setTimeout(function() {
+            $.ajax({
+                url: "{{ url_for('wallet_app.dashboard') }}",
+                data: { 'search': query },
+                success: function(response) {
+                    $('#tableContainer').html(response);
+                }
+            });
+        }, 400); // ينتظر 400ms بعد التوقف عن الكتابة
+    });
+
+    // دعم التنقل بين الصفحات (Pagination)
+    $(document).on('click', '.pagination a', function(e) {
+        e.preventDefault();
+        let url = $(this).attr('href');
         $.ajax({
-            url: "{{ url_for('wallet_app.dashboard') }}",
-            data: { 'search': query },
+            url: url,
             success: function(response) {
                 $('#tableContainer').html(response);
             }
         });
     });
+});
 </script>
 {% endblock %}
