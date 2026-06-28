@@ -4,22 +4,28 @@
 
 {% block content %}
 <style>
-    /* هوية بصرية ملكية متوافقة */
     :root {
-        --royal-purple: #2e003e; /* نفس لون القائمة الجانبية */
+        --royal-purple: #2e003e; 
         --royal-gold: #d4af37;
     }
     .text-royal-purple { color: var(--royal-purple) !important; }
+    
     .btn-royal-back {
         background-color: transparent;
-        border: 1px solid var(--royal-purple);
+        border: 2px solid var(--royal-purple);
         color: var(--royal-purple);
+        font-weight: 600;
+        transition: all 0.3s;
     }
     .btn-royal-back:hover {
         background-color: var(--royal-purple);
         color: #fff;
+        border-color: var(--royal-purple);
     }
-    .search-card { border-right: 5px solid var(--royal-gold) !important; }
+    .search-card { 
+        border-right: 5px solid var(--royal-gold) !important; 
+        background-color: #fcfcfc;
+    }
 </style>
 
 <div class="container-fluid py-4">
@@ -29,7 +35,7 @@
             <p class="text-muted">نظرة عامة على أرصدة الموردين وحركات التسوية</p>
         </div>
         
-        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-royal-back px-4">
+        <a href="/admin/dashboard" class="btn btn-royal-back px-4">
             <i class="fas fa-arrow-left me-2"></i>العودة للقيادة المركزية
         </a>
     </div>
@@ -54,13 +60,11 @@
 $(document).ready(function() {
     let timer;
 
-    // بحث متقدم مع مؤقت
     $('#liveSearch').on('keyup', function() {
         clearTimeout(timer);
         let query = $(this).val();
         timer = setTimeout(function() {
             $('#tableContainer').css('opacity', '0.5');
-            
             $.ajax({
                 url: "{{ url_for('wallet_app.dashboard') }}",
                 data: { 'search': query },
@@ -70,17 +74,15 @@ $(document).ready(function() {
                 },
                 error: function() {
                     $('#tableContainer').css('opacity', '1');
-                    alert("تعذر الاتصال بالسيرفر، يرجى المحاولة لاحقاً.");
+                    alert("تعذر الاتصال بالسيرفر.");
                 }
             });
         }, 500);
     });
 
-    // معالجة التنقل (Pagination)
     $(document).on('click', '.pagination a', function(e) {
         e.preventDefault();
         let url = $(this).attr('href');
-        
         $('#tableContainer').css('opacity', '0.5');
         $.ajax({
             url: url,
