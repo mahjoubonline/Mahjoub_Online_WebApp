@@ -1,10 +1,14 @@
 # coding: utf-8
 # 📂 apps/models/orders_db.py
 
-import os
 from datetime import datetime
 from cryptography.fernet import Fernet
 from apps.extensions import db
+import os
+
+# تهيئة مفتاح التشفير (يجب أن يكون مخزناً في متغيرات البيئة)
+# تأكد من وجود مفتاح تشفير صالح في CONFIG
+cipher = Fernet(os.getenv('ENCRYPTION_KEY', Fernet.generate_key()))
 
 class Order(db.Model):
     __tablename__ = 'orders'
@@ -25,9 +29,9 @@ class Order(db.Model):
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
     order_reference = db.Column(db.String(100), unique=True, nullable=False)
     
-    # 3. بيانات الشحن اللوجستية (تم الحفاظ على التوافق)
-    customer_name = db.Column(db.String(150))
-    customer_phone = db.Column(db.String(20))
+    # 3. بيانات الشحن (تم تفعيل التشفير للأعمدة الحساسة)
+    _customer_name = db.Column('customer_name', db.Text)
+    _customer_phone = db.Column('customer_phone', db.Text)
     customer_address = db.Column(db.Text) 
     
     # 4. حالة الطلب
@@ -37,23 +41,28 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # 6. الربط السيادي (تجنب أخطاء Multiple classes found)
-    supplier = db.relationship(
-        'apps.models.supplier_db.Supplier', 
-        back_populates='orders'
-    )
+    # 6. الربط السيادي (استخدام اسم الكلاس لكسر حلقة الـ Import)
+    supplier = db.relationship('Supplier', back_populates='orders')
     
-    # الربط مع المالية (One-to-One)
-    financials = db.relationship(
-        'apps.models.financials_db.OrderFinancial', 
-        back_populates='order', 
-        uselist=False, 
-        cascade="all, delete-orphan"
-    )
+    # الربط مع المالية
+    financials = db.relationship('OrderFinancial', back_populates='order', uselist=False, cascade="all, delete-orphan")
 
-    # --- ملاحظة حول التشفير ---
-    # إذا كنت تحتاج لتشفير customer_name أو phone، نتبع نفس نهج التشفير في Wallet.
-    # حالياً أبقينا البيانات بنص واضح لسهولة الفرز، لكن الهيكل جاهز للتشفير.
+    # --- منطق التشفير ---
+    @property
+    def customer_name(self):
+        return cipher.decrypt(self._customer_name.encode()).decode()
+
+    @customer_name.setter
+    def customer_name(self, value):
+        self._customer_name = cipher.encrypt(value.encode()).decode()
+
+    @property
+    def customer_phone(self):
+        return cipher.decrypt(self._customer_phone.encode()).decode()
+
+    @customer_phone.setter
+    def customer_phone(self, value):
+        self._customer_phone = cipher.encrypt(value.encode()).decode()
 
     def __repr__(self):
         return f'<Order {self.order_reference} | Status: {self.status}>'
