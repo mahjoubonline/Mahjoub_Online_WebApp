@@ -7,6 +7,8 @@ from flask import Flask, session
 from apps.extensions import db, login_manager, migrate
 from apps.models.admin_db import AdminUser
 from apps.models import Supplier
+from apps.models.supplier_staff_db import SupplierStaff
+from apps.models.supplier_profile_db import SupplierProfile
 
 # دالة لتحميل المستخدم (تعتمد الآن على نوع المستخدم في الجلسة)
 @login_manager.user_loader
@@ -17,8 +19,9 @@ def load_user(user_id):
         return AdminUser.query.get(int(user_id))
     elif user_type == 'supplier':
         return Supplier.query.get(int(user_id))
+    elif user_type == 'staff':
+        return SupplierStaff.query.get(int(user_id))
     
-    # محاولة استرداد تلقائي إذا لم تكن الجلسة محددة
     return AdminUser.query.get(int(user_id)) or Supplier.query.get(int(user_id))
 
 def create_app():
@@ -30,7 +33,6 @@ def create_app():
     migrate.init_app(app, db)
     login_manager.init_app(app)
     
-    # توجيه Flask-Login إلى مسار تسجيل دخول الموردين كافتراضي
     login_manager.login_view = 'suppliers_auth.login' 
 
     with app.app_context():
@@ -41,14 +43,17 @@ def create_app():
         except Exception as e:
             print(f"⚠️ [Database]: خطأ أثناء محاولة بناء الجداول: {e}")
 
-        # 2. إنشاء المستخدمين الافتراضيين
+        # 2. إنشاء المستخدمين الافتراضيين (المالك والموظف)
         try:
+            # إنشاء الإداري
             if not AdminUser.query.filter_by(username='علي محجوب').first():
                 admin = AdminUser(username='علي محجوب', role='Owner')
                 admin.set_password('123')
                 db.session.add(admin)
             
-            if not Supplier.query.filter_by(username='وائل محجوب').first():
+            # إنشاء المورد (المالك)
+            supplier = Supplier.query.filter_by(username='وائل محجوب').first()
+            if not supplier:
                 supplier = Supplier(
                     username='وائل محجوب', 
                     trade_name='محجوب أونلاين',
@@ -56,9 +61,25 @@ def create_app():
                 )
                 supplier.set_password('123')
                 db.session.add(supplier)
+                db.session.flush() # تثبيت مؤقت للحصول على ID
+                
+                # إنشاء البروفايل تلقائياً للمورد
+                profile = SupplierProfile(supplier_id=supplier.id, trade_name='محجوب أونلاين')
+                db.session.add(profile)
+
+            # إنشاء موظف افتراضي تابع للمورد
+            if not SupplierStaff.query.filter_by(username='موظف_1').first():
+                staff = SupplierStaff(
+                    supplier_id=supplier.id,
+                    username='موظف_1',
+                    email='staff1@mahjoub.com',
+                    role='worker'
+                )
+                staff.set_password('123')
+                db.session.add(staff)
             
             db.session.commit()
-            print("✅ [Users]: تم التحقق من المستخدمين بنجاح.")
+            print("✅ [Users]: تم زرع المالك والموظف والبروفايل بنجاح.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ [Users]: خطأ أثناء إنشاء المستخدمين: {e}")
@@ -68,7 +89,6 @@ def create_app():
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
             
-            # تم حذف 'auth_portal' من قائمة الاستثناءات أدناه
             if item in ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations']:
                 continue
 
