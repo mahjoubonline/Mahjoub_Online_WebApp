@@ -16,33 +16,36 @@ orders_bp = Blueprint('orders', __name__, template_folder='templates')
 @orders_bp.route('/dashboard')
 @login_required
 def dashboard():
-    """عرض لوحة تحكم الطلبات مع الفلاتر والتصفح (20 طلب لكل صفحة)."""
+    """عرض لوحة تحكم الطلبات مع الفلاتر والتصفح."""
     
     # 1. إعدادات التصفح
     page = request.args.get('page', 1, type=int)
     per_page = 20
     
-    # 2. بناء الاستعلام الأساسي مع الربط (outerjoin ضروري لعدم ضياع الطلبات بدون بيانات مالية)
+    # 2. بناء الاستعلام مع الربط
     query = db.session.query(Order, OrderFinancial).outerjoin(OrderFinancial)
     
-    # 3. تطبيق الفلاتر (إذا وُجدت)
+    # 3. تطبيق الفلاتر
     q = request.args.get('q', '').strip()
     if q:
-        # البحث في رقم الطلب أو اسم العميل المشفر (ملاحظة: _customer_name مخزن مشفر)
-        query = query.filter(Order.id.contains(q) | Order._customer_name.contains(q))
+        # البحث باستخدام الحقول المحدثة
+        query = query.filter(
+            Order.order_id_display.contains(q) | 
+            Order.customer_name.contains(q)
+        )
     
     status = request.args.get('status', '').strip()
     if status:
-        query = query.filter(Order.status == status)
+        query = query.filter(Order.order_status == status)
         
     # 4. الترتيب والتنفيذ (Pagination)
     pagination = query.order_by(Order.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
     # 5. حساب إحصائيات عامة
     stats = {
-        'cancelled': Order.query.filter_by(status='cancelled').count(),
-        'completed': Order.query.filter_by(status='completed').count(),
-        'total_sales': float(sum(f.total_paid for f in OrderFinancial.query.all()))
+        'cancelled': Order.query.filter_by(order_status='cancelled').count(),
+        'completed': Order.query.filter_by(order_status='completed').count(),
+        'total_sales': db.session.query(db.func.sum(OrderFinancial.total_paid)).scalar() or 0.0
     }
     
     return render_template('admin/orders_dashboard.html', pagination=pagination, stats=stats)
@@ -68,7 +71,7 @@ def sync_all():
 def view_order(order_id):
     """عرض تفاصيل طلب محدد."""
     result = db.session.query(Order, OrderFinancial)\
-        .filter(Order.id == order_id)\
-        .outerjoin(OrderFinancial, Order.id == OrderFinancial.order_id).first_or_404()
+        .outerjoin(OrderFinancial, Order.id == OrderFinancial.order_id)\
+        .filter(Order.id == order_id).first_or_404()
         
     return render_template('admin/order_details.html', order=result[0], financial=result[1])
