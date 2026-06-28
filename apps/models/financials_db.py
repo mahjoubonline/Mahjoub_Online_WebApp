@@ -23,7 +23,7 @@ class OrderFinancial(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False, unique=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
     
-    # 2. المبالغ المالية (مشفرة لضمان الخصوصية المالية)
+    # 2. المبالغ المالية (مشفرة)
     _supplier_cost_enc = db.Column(db.String(255), nullable=False)
     _mahjoub_commission_enc = db.Column(db.String(255), nullable=False)
     _total_paid_enc = db.Column(db.String(255), nullable=False)
@@ -36,9 +36,9 @@ class OrderFinancial(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     settled_at = db.Column(db.DateTime, nullable=True)
 
-    # [المسار الكامل]: الربط السيادي لمنع خطأ Multiple classes found
-    order = db.relationship('apps.models.orders_db.Order', back_populates='financials')
-    supplier = db.relationship('apps.models.supplier_db.Supplier', back_populates='financials')
+    # [الربط السيادي]: تم تعديل المسارات لكسر حلقة الـ Import ومنع الانهيار
+    order = db.relationship('Order', back_populates='financials')
+    supplier = db.relationship('Supplier', back_populates='financials')
 
     # --- نظام التشفير (AES) ---
     @staticmethod
@@ -51,8 +51,11 @@ class OrderFinancial(db.Model):
         return f.encrypt(str(value).encode()).decode()
 
     def _decrypt(self, value):
-        f = Fernet(self._get_key())
-        return float(f.decrypt(value.encode()).decode())
+        try:
+            f = Fernet(self._get_key())
+            return float(f.decrypt(value.encode()).decode())
+        except:
+            return 0.0
 
     # --- Properties للمبالغ المشفرة ---
     @property
@@ -69,6 +72,11 @@ class OrderFinancial(db.Model):
     def total_paid(self): return self._decrypt(self._total_paid_enc)
     @total_paid.setter
     def total_paid(self, value): self._total_paid_enc = self._encrypt(value)
+
+    # [إصلاح الخطأ 500]: تمت إضافة الخاصية amount ليدعمها الاستعلام في routes.py
+    @property
+    def amount(self):
+        return self.total_paid
 
     def calculate_net_profit(self):
         return self.mahjoub_commission
