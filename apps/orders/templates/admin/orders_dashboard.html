@@ -39,7 +39,7 @@
 
     <div class="card">
         <div class="card-body">
-            <table class="table table-hover">
+            <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>رقم الطلب</th>
@@ -52,24 +52,24 @@
                 <tbody>
                     {% for item in pagination.items %}
                     <tr>
-                        <td>{{ item[0].id }}</td>
+                        <td>{{ item[0].order_id_display }}</td>
                         <td>{{ item[0].customer_name }}</td>
-                        <td><span class="badge bg-info">{{ item[0].status }}</span></td>
-                        <td>{{ item[1].total_paid if item[1] else '0.00' }}</td>
+                        <td><span class="badge bg-info">{{ item[0].order_status }}</span></td>
+                        <td>{{ "{:,.2f}".format(item[1].total_paid) if item[1] and item[1].total_paid else '0.00' }}</td>
                         <td>
                             <a href="{{ url_for('orders.view_order', order_id=item[0].id) }}" class="btn btn-sm btn-outline-primary">عرض</a>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center">لا توجد طلبات تطابق بحثك.</td>
+                        <td colspan="5" class="text-center py-4">لا توجد طلبات لعرضها حالياً.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
 
             <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
+                <ul class="pagination justify-content-center mt-3">
                     {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                         {% if page_num %}
                             <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
