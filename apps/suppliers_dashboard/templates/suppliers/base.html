@@ -1,4 +1,3 @@
-{# 📂 apps/suppliers_dashboard/templates/suppliers/base.html #}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -53,7 +52,12 @@
             </a>
             <a href="#" class="nav-link"><i class="fas fa-box-open me-3"></i> <span>إدارة منتجاتي</span></a>
             <a href="#" class="nav-link"><i class="fas fa-shopping-cart me-3"></i> <span>طلبات الزبائن</span></a>
-            <a href="#" class="nav-link"><i class="fas fa-file-invoice-dollar me-3"></i> <span>كشف الحساب المالي</span></a>
+            
+            <!-- الرابط الجديد: خزانة المورد -->
+            <a href="{{ url_for('supplier_wallet.view_my_wallet') }}" class="nav-link {% if request.endpoint == 'supplier_wallet.view_my_wallet' %}active{% endif %}">
+                <i class="fas fa-vault me-3"></i> <span>خزانة المورد</span>
+            </a>
+
             <a href="{{ url_for('suppliers_dashboard.settings') }}" class="nav-link {% if request.endpoint == 'suppliers_dashboard.settings' %}active{% endif %}">
                 <i class="fas fa-cog me-3"></i> <span>إعدادات المتجر</span>
             </a>
@@ -74,9 +78,6 @@
                 <div class="text-end me-3 d-none d-md-block">
                     <div class="fw-bold text-dark" style="font-size: 0.9rem;">
                         {{ current_user.trade_name if current_user.is_authenticated else 'المورد' }}
-                    </div>
-                    <div class="text-muted" style="font-size: 0.75rem;">
-                        {{ current_user.username if current_user.is_authenticated else '---' }}
                     </div>
                 </div>
                 <div class="avatar-circle bg-light d-flex align-items-center justify-content-center" 
