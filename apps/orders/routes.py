@@ -19,6 +19,7 @@ def dashboard():
     
     # 1. جلب كافة السجلات المالية لحساب الإجمالي
     all_financials = OrderFinancial.query.all()
+    # حساب الإجمالي برمجياً
     total_sales = sum(f.total_paid for f in all_financials)
     
     # 2. حساب إحصائيات الطلبات
@@ -29,7 +30,7 @@ def dashboard():
     }
     
     # 3. جلب قائمة الطلبات مع بياناتها المالية (Join)
-    # نستخدم join للحصول على البيانات المالية المرتبطة بكل طلب
+    # تستخدم .all() لجلب كل البيانات، وستظهر في القالب كقائمة من Tuples
     items = db.session.query(Order, OrderFinancial)\
         .join(OrderFinancial, Order.id == OrderFinancial.order_id)\
         .order_by(Order.id.desc()).all()
@@ -41,14 +42,14 @@ def dashboard():
 def sync_all():
     """دالة تشغيل المزامنة اليدوية باستخدام مفتاح البيئة الآمن."""
     
-    # جلب المفتاح من إعدادات Render (المتغير الذي أضفناه سابقاً)
+    # جلب المفتاح من إعدادات البيئة في Render
     api_key = os.environ.get("QUMRA_API_KEY")
     
     if not api_key:
         flash("خطأ: مفتاح الـ API غير معرف في إعدادات النظام", "danger")
         return redirect(url_for('orders.dashboard'))
 
-    # استدعاء الخدمة
+    # استدعاء الخدمة مع تمرير المفتاح ومعرف المورد
     success = OrderService.fetch_and_sync_orders(api_key=api_key, supplier_id=1)
     
     if success:
@@ -58,7 +59,7 @@ def sync_all():
         
     return redirect(url_for('orders.dashboard'))
 
-@orders_bp.route('/view-order/<string:order_id>') # تم تغييرها لـ string لأن معرفات قمرة قد تكون نصوصاً
+@orders_bp.route('/view-order/<string:order_id>') 
 @login_required
 def view_order(order_id):
     """عرض تفاصيل طلب محدد."""
