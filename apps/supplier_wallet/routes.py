@@ -3,7 +3,7 @@
 
 from flask import Blueprint, render_template, abort
 from flask_login import login_required, current_user
-# استيراد الخدمة مباشرة لتجنب الاستيراد الدائري (Circular Import)
+# استيراد الخدمة مباشرة لتجنب الاستيراد الدائري
 from apps.supplier_wallet.services import WalletService
 
 # تعريف الـ Blueprint الخاص بالمورد
@@ -20,20 +20,20 @@ def view_my_wallet():
     عرض خزانة المورد الخاصة بالمستخدم المسجل حالياً.
     نعتمد هنا على العلاقة المباشرة بين المورد والمحفظة.
     """
-    # استخدام العلاقة 'wallet' المعرفة في موديل Supplier
-    # هذا يغنينا عن البحث عن supplier_id يدوياً
-    wallet = current_user.wallet
+    # 1. جلب المحفظة من خلال العلاقة المعرفة في الموديل
+    wallet = getattr(current_user, 'wallet', None)
     
-    # إذا لم يجد علاقة مباشرة، نحاول جلبها باستخدام معرف المورد (احتياطاً)
+    # 2. إذا لم يجد علاقة مباشرة، نحاول جلبها عبر الخدمة كإجراء احتياطي
     if not wallet:
         wallet = WalletService.get_supplier_wallet(current_user.id)
     
+    # 3. التحقق من وجود المحفظة
     if not wallet:
-        # إذا لم تكن المحفظة موجودة، نرجع خطأ 404
         abort(404, description="لم يتم العثور على محفظة مرتبطة بحسابك.")
 
-    # عرض القالب مع تمرير كائن المحفظة
+    # 4. عرض القالب مع تمرير كائن المحفظة
+    # ملاحظة: كائن wallet يحتوي الآن على transactions مرتبة عبر القالب
     return render_template('supplier_wallet/supplier_wallet.html', wallet=wallet)
 
-# ملاحظة: تم تعديل المنطق ليعتمد على current_user.wallet 
-# الذي يربط المورد بمحفظته تلقائياً عبر SQLAlchemy.
+# ملاحظة: النظام يعتمد الآن على العلاقات المباشرة (Relationships) في SQLAlchemy،
+# مما يضمن دقة البيانات وسرعة الاستعلام.
