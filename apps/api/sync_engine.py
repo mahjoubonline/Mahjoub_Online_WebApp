@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة (وضع الاستكشاف الذاتي)
+# 📂 apps/api/sync_engine.py - محرك المزامنة (النسخة المباشرة)
 
 import os
 import requests
@@ -14,7 +14,6 @@ class SyncEngine:
 
     @staticmethod
     def _get_headers():
-        # استخدام الـ API Key المعتمد في البيئة أو القيمة الافتراضية
         api_key = os.environ.get("QUMRA_API_KEY", "qmr_e063f7f4-ed44-4c86-b105-8405326b9eb9")
         return {
             "Authorization": f"Bearer {api_key}",
@@ -25,22 +24,18 @@ class SyncEngine:
     @staticmethod
     def fetch_and_sync_order():
         """
-        دالة استكشاف Schema الـ API عبر GraphQL Introspection
+        دالة سحب الطلبات المباشرة
         """
-        logger.info("🔄 بدء عملية الاستكشاف الذاتي للـ Schema...")
+        logger.info("🚀 محاولة سحب الطلبات مباشرة...")
         
-        # استعلام Introspection لطلب وصف جميع الحقول المتاحة تحت PaginatedOrdersResponse
+        # استعلام يستهدف حقول الطلبات المباشرة الأكثر شيوعاً
         query = """
         query {
-            __type(name: "PaginatedOrdersResponse") {
-                fields {
-                    name
-                    type {
-                        name
-                        kind
-                        ofType { name }
-                    }
-                }
+            findAllOrders {
+                id
+                totalPrice
+                createdAt
+                status
             }
         }
         """
@@ -53,22 +48,21 @@ class SyncEngine:
                 timeout=60
             )
             
-            # طباعة الرد في الـ Logs (هذا الرد هو المفتاح لحل مشكلة الاتصال)
-            response_text = response.text
-            logger.info(f"💡 رد الاستكشاف (الخريطة): {response_text}")
+            # طباعة الرد لنرى هل نجح السحب أم لا (سيكون المفتاح الأخير)
+            logger.info(f"🎯 رد سحب الطلبات: {response.text}")
             
             if response.status_code == 200:
-                SyncEngine._log_sync('orders', 'success', "تم جلب خريطة الـ Schema بنجاح.")
+                SyncEngine._log_sync('orders', 'success', "تم تنفيذ عملية السحب بنجاح.")
                 return True
             else:
-                error_msg = f"فشل الاستكشاف: {response.status_code} - {response_text}"
+                error_msg = f"فشل السحب: {response.status_code} - {response.text}"
                 logger.error(f"❌ {error_msg}")
                 SyncEngine._log_sync('orders', 'failed', error_msg)
                 return False
                 
         except Exception as e:
             err_str = str(e)
-            logger.error(f"❌ خطأ فني أثناء الاستكشاف: {err_str}")
+            logger.error(f"❌ خطأ فني أثناء السحب: {err_str}")
             SyncEngine._log_sync('orders', 'failed', err_str)
             return False
 
