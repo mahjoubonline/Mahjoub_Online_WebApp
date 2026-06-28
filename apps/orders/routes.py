@@ -16,22 +16,24 @@ orders_bp = Blueprint('orders', __name__, template_folder='templates')
 def dashboard():
     """
     عرض لوحة تحكم الطلبات مع الإحصائيات الحية.
-    يتم استخدام Join للربط بين الطلبات والمالية لجلب البيانات كاملة في استعلام واحد.
+    تم إصلاح عملية حساب total_sales لتتم برمجياً بعد فك التشفير.
     """
     
-    # 1. حساب الإحصائيات (Stats)
-    # نستخدم الموديل المالي OrderFinancial لحساب إجمالي المبيعات
-    # ملاحظة: تم استدعاء amount وهي Property قمنا بتعريفها في الموديل للوصول للقيمة المشفرة
-    total_sales = db.session.query(db.func.sum(OrderFinancial.amount)).scalar() or 0
+    # 1. جلب كافة السجلات المالية لفك تشفيرها وجمعها برمجياً
+    all_financials = OrderFinancial.query.all()
     
+    # حساب الإجمالي باستخدام خاصية total_paid (التي تفك التشفير تلقائياً)
+    total_sales = sum(f.total_paid for f in all_financials)
+    
+    # 2. حساب إحصائيات الطلبات
     stats = {
         'cancelled': Order.query.filter_by(status='cancelled').count(),
         'completed': Order.query.filter_by(status='completed').count(),
         'total_sales': float(total_sales)
     }
     
-    # 2. جلب قائمة الطلبات مع بياناتها المالية (Join)
-    # النتيجة ستكون قائمة من (Order, OrderFinancial)
+    # 3. جلب قائمة الطلبات مع بياناتها المالية (Join)
+    # النتيجة ستكون قائمة من tuples (Order, OrderFinancial)
     items = db.session.query(Order, OrderFinancial)\
         .join(OrderFinancial, Order.id == OrderFinancial.order_id)\
         .order_by(Order.id.desc()).all()
@@ -41,10 +43,7 @@ def dashboard():
 @orders_bp.route('/sync-all', methods=['POST'])
 @login_required
 def sync_all():
-    """
-    دالة تشغيل المزامنة اليدوية.
-    تأكد من تحديث الـ API_KEY لاحقاً.
-    """
+    """دالة تشغيل المزامنة اليدوية."""
     success = OrderService.fetch_and_sync_orders(api_key="YOUR_API_KEY", supplier_id=1)
     
     if success:
