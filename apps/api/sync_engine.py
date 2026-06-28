@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - نسخة مصححة لتتوافق مع GraphQL Schema
+# 📂 apps/api/sync_engine.py - محرك المزامنة المدعوم بالتصفح (Pagination)
 
 import os
 import requests
@@ -23,63 +23,80 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        logger.info("🔄 بدء عملية المزامنة مع متجر قمرة...")
+        logger.info("🔄 بدء عملية المزامنة الشاملة (جميع الصفحات)...")
         
-        # تم تحديث الاستعلام بناءً على أخطاء التحقق (Validation Errors)
-        query = """
-        query {
-            findAllOrders {
-                data {
-                    _id
-                    totalPrice
-                    createdAt
-                    status { code }
-                    account { lastSeen }
-                    items { _id }
+        page = 1
+        total_synced = 0
+        has_more = True
+        
+        while has_more:
+            # استعلام يدعم التصفح (Pagination) - تأكد أن الـ API الخاص بك يدعم page و limit
+            query = """
+            query($page: Int!) {
+                findAllOrders(page: $page, limit: 50) {
+                    data {
+                        _id
+                        orderId
+                        totalPrice
+                        createdAt
+                        status { code }
+                        account { firstName lastName }
+                        items { _id }
+                    }
+                    pagination {
+                        hasNextPage
+                    }
                 }
             }
-        }
-        """
-        
-        try:
-            response = requests.post(
-                SyncEngine.API_URL, 
-                json={'query': query}, 
-                headers=SyncEngine._get_headers(), 
-                timeout=60
-            )
+            """
             
-            if response.status_code != 200:
-                logger.error(f"❌ خطأ اتصال ({response.status_code}): {response.text}")
-                return False
+            try:
+                response = requests.post(
+                    SyncEngine.API_URL, 
+                    json={'query': query, 'variables': {'page': page}}, 
+                    headers=SyncEngine._get_headers(), 
+                    timeout=60
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"❌ خطأ اتصال في الصفحة {page}: {response.text}")
+                    break
 
-            result = response.json()
-            orders_data = result.get('data', {}).get('findAllOrders', {}).get('data', [])
-            
-            sync_count = 0
-            for item in orders_data:
-                unique_id = str(item.get('_id'))
-                if not unique_id: continue
+                result = response.json()
+                data_wrapper = result.get('data', {}).get('findAllOrders', {})
+                orders_data = data_wrapper.get('data', [])
+                has_more = data_wrapper.get('pagination', {}).get('hasNextPage', False)
                 
-                order = Order.query.filter_by(id=unique_id).first() or Order(id=unique_id)
+                for item in orders_data:
+                    unique_id = str(item.get('_id'))
+                    if not unique_id: continue
+                    
+                    order = Order.query.filter_by(id=unique_id).first() or Order(id=unique_id)
+                    
+                    # استخدام الحقول الصحيحة التي ذكرتها
+                    order.order_id_display = str(item.get('orderId', ''))
+                    order.total_price = float(item.get('totalPrice') or 0.0)
+                    order.created_at = item.get('createdAt')
+                    order.order_status = item.get('status', {}).get('code', 'pending')
+                    order.items_count = len(item.get('items', []))
+                    
+                    # دمج الاسم بشكل صحيح
+                    acc = item.get('account') or {}
+                    order.customer_name = f"{acc.get('firstName', '')} {acc.get('lastName', '')}".strip() or "عميل"
+                    
+                    db.session.add(order)
+                    total_synced += 1
                 
-                order.total_price = float(item.get('totalPrice') or 0.0)
-                order.created_at = item.get('createdAt')
-                order.order_status = item.get('status', {}).get('code', 'pending')
-                order.items_count = len(item.get('items', []))
+                db.session.commit()
+                logger.info(f"✅ تمت مزامنة الصفحة {page} بنجاح.")
                 
-                # استخدام lastSeen كبديل للاسم إذا كان هو المتاح حالياً
-                acc = item.get('account') or {}
-                order.customer_name = acc.get('lastSeen', 'عميل')
+                if has_more:
+                    page += 1
                 
-                db.session.add(order)
-                sync_count += 1
-            
-            db.session.commit()
-            logger.info(f"✅ تمت المزامنة بنجاح لعدد {sync_count} طلب.")
-            return True
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"❌ خطأ فني أثناء المزامنة: {str(e)}")
-            return False
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"❌ خطأ فني أثناء المزامنة في الصفحة {page}: {str(e)}")
+                break
+        
+        logger.info(f"🏁 انتهت عملية المزامنة. إجمالي الطلبات المحدثة: {total_synced}")
+        return True
