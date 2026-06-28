@@ -1,11 +1,12 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المدعوم بالتصفح (Pagination)
+# 📂 apps/api/sync_engine.py - محرك المزامنة المدعوم بالتصفح (Pagination) وتسجيل السجلات
 
 import os
 import requests
 import logging
 from apps.extensions import db
 from apps.models.orders_db import Order
+from apps.models.sync_log import SyncLog
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class SyncEngine:
         has_more = True
         
         while has_more:
-            # استعلام يدعم التصفح (Pagination) - تأكد أن الـ API الخاص بك يدعم page و limit
+            # استعلام الـ GraphQL
             query = """
             query($page: Int!) {
                 findAllOrders(page: $page, limit: 50) {
@@ -59,7 +60,9 @@ class SyncEngine:
                 )
                 
                 if response.status_code != 200:
-                    logger.error(f"❌ خطأ اتصال في الصفحة {page}: {response.text}")
+                    error_msg = f"خطأ اتصال في الصفحة {page}: {response.text}"
+                    logger.error(f"❌ {error_msg}")
+                    SyncEngine._log_sync('orders', 'failed', error_msg)
                     break
 
                 result = response.json()
@@ -73,14 +76,12 @@ class SyncEngine:
                     
                     order = Order.query.filter_by(id=unique_id).first() or Order(id=unique_id)
                     
-                    # استخدام الحقول الصحيحة التي ذكرتها
                     order.order_id_display = str(item.get('orderId', ''))
                     order.total_price = float(item.get('totalPrice') or 0.0)
                     order.created_at = item.get('createdAt')
-                    order.order_status = item.get('status', {}).get('code', 'pending')
+                    order.status = item.get('status', {}).get('code', 'pending')
                     order.items_count = len(item.get('items', []))
                     
-                    # دمج الاسم بشكل صحيح
                     acc = item.get('account') or {}
                     order.customer_name = f"{acc.get('firstName', '')} {acc.get('lastName', '')}".strip() or "عميل"
                     
@@ -95,8 +96,22 @@ class SyncEngine:
                 
             except Exception as e:
                 db.session.rollback()
-                logger.error(f"❌ خطأ فني أثناء المزامنة في الصفحة {page}: {str(e)}")
+                err_str = str(e)
+                logger.error(f"❌ خطأ فني أثناء المزامنة في الصفحة {page}: {err_str}")
+                SyncEngine._log_sync('orders', 'failed', err_str)
                 break
         
+        # تسجيل نجاح العملية النهائية
+        SyncEngine._log_sync('orders', 'success', f"تم مزامنة {total_synced} طلب بنجاح.")
         logger.info(f"🏁 انتهت عملية المزامنة. إجمالي الطلبات المحدثة: {total_synced}")
         return True
+
+    @staticmethod
+    def _log_sync(sync_type, status, message):
+        """دالة مساعدة لتسجيل الأحداث في SyncLog"""
+        try:
+            log = SyncLog(sync_type=sync_type, status=status, error_message=message)
+            db.session.add(log)
+            db.session.commit()
+        except:
+            db.session.rollback()
