@@ -9,7 +9,6 @@ from apps.models.financials_db import OrderFinancial
 from apps.supplier_wallet.services import WalletService
 
 class OrderService:
-    # الرابط ثابت، بينما المفتاح سيتم جلبه من البيئة (Environment Variable)
     API_URL = "https://mahjoub.online/admin/graphql"
     
     @staticmethod
@@ -21,10 +20,6 @@ class OrderService:
 
     @staticmethod
     def fetch_and_sync_orders(api_key, supplier_id):
-        """
-        جلب الطلبات من API قمرة ومزامنتها مع النظام الداخلي والمحفظة.
-        """
-        # استعلام GraphQL المحدث ليشمل كافة الحقول المطلوبة
         query = """
         query GetCompletedOrders {
             orders(status: "COMPLETED") {
@@ -44,45 +39,47 @@ class OrderService:
             )
             
             if response.status_code != 200:
-                raise Exception(f"خطأ في الاتصال بالـ API: {response.status_code}")
+                raise Exception(f"خطأ في الاتصال: {response.status_code}")
 
             data = response.json().get('data', {}).get('orders', [])
             
-            # معالجة الطلبات
-            for order_data in data:
-                # 1. التحقق من عدم تكرار الطلب
-                if not Order.query.filter_by(id=order_data['orderId']).first():
+            for item in data:
+                # استخدام .get() مع مفاتيح المتجر لتجنب أخطاء عدم وجود الحقل
+                order_id = item.get('orderId')
+                if not order_id: continue # تخطي الطلب إذا لم يحتوي على معرف
+                
+                # التحقق من عدم التكرار
+                if not Order.query.filter_by(id=str(order_id)).first():
                     
-                    # 2. إنشاء الطلب في قاعدة البيانات
+                    # 1. إنشاء الطلب
                     new_order = Order(
-                        id=order_data['orderId'],
-                        customer_name=order_data.get('customerName', 'عميل'),
-                        status=order_data.get('status', 'completed')
+                        id=str(order_id),
+                        customer_name=item.get('customerName', 'عميل'),
+                        status=item.get('status', 'completed')
                     )
                     db.session.add(new_order)
                     
-                    # 3. إنشاء السجل المالي
+                    # 2. إنشاء السجل المالي
                     new_financial = OrderFinancial(
-                        order_id=new_order.id,
+                        order_id=str(order_id),
                         supplier_id=supplier_id,
-                        total_paid=order_data['total'],
+                        total_paid=float(item.get('total', 0)),
                         supplier_cost=0, 
-                        mahjoub_commission=order_data['total'],
+                        mahjoub_commission=float(item.get('total', 0)),
                         settlement_status='pending'
                     )
                     db.session.add(new_financial)
                 
-                # 4. تحديث المحفظة (الارتباط المالي)
+                # 3. تحديث المحفظة
                 WalletService.sync_order_payment(
                     supplier_id=supplier_id,
-                    order_id=order_data['orderId'],
-                    amount=order_data['total'],
-                    currency=order_data['currency']
+                    order_id=str(order_id),
+                    amount=float(item.get('total', 0)),
+                    currency=item.get('currency', 'SAR')
                 )
             
-            # حفظ كافة التغييرات
             db.session.commit()
-            OrderService.log_sync(supplier_id, 'orders', 'SUCCESS', "تمت المزامنة بنجاح وجلب كافة البيانات")
+            OrderService.log_sync(supplier_id, 'orders', 'SUCCESS', "تمت المزامنة بنجاح")
             return True
 
         except Exception as e:
@@ -92,7 +89,6 @@ class OrderService:
 
     @staticmethod
     def log_sync(supplier_id, sync_type, status, error_message=None):
-        """تسجيل حالة العملية في قاعدة البيانات"""
         log = SyncLog(
             supplier_id=supplier_id,
             sync_type=sync_type,
