@@ -15,6 +15,8 @@
     .table-head-custom { background-color: var(--royal-purple) !important; color: var(--royal-gold) !important; }
     .summary-footer { background-color: var(--royal-purple) !important; color: var(--royal-gold) !important; }
     .search-box { border: 2px solid var(--royal-purple); border-radius: 20px; }
+    .text-success { color: #28a745 !important; font-weight: bold; }
+    .text-danger { color: #ff6b6b !important; font-weight: bold; }
 </style>
 
 <div class="container py-4">
@@ -28,7 +30,9 @@
         <div class="col-md-4">
             <div class="card balance-card p-3 shadow">
                 <small class="text-white-50">رصيد {{curr}}</small>
-                <h3 class="fw-bold mb-0">{{ "{:,.2f}".format(bal) }} <span class="fs-6">{{curr}}</span></h3>
+                <h3 class="fw-bold mb-0 {{ 'text-success' if bal >= 0 else 'text-danger' }}">
+                    {{ "{:,.2f}".format(bal) }} <span class="fs-6 text-white">{{curr}}</span>
+                </h3>
             </div>
         </div>
         {% endfor %}
@@ -75,17 +79,20 @@
                                 {{ trans.voucher_number }}
                             </a>
                         </td>
-                        <td class="text-danger fw-bold">{{ trans.amount if trans.trans_type == 'debit' else '-' }}</td>
-                        <td class="text-success fw-bold">{{ trans.amount if trans.trans_type == 'credit' else '-' }}</td>
+                        <td class="text-danger fw-bold">{{ "{:,.2f}".format(trans.amount) if trans.trans_type == 'debit' else '-' }}</td>
+                        <td class="text-success fw-bold">{{ "{:,.2f}".format(trans.amount) if trans.trans_type == 'credit' else '-' }}</td>
                         <td class="text-center"><span class="badge bg-dark">{{ trans.currency }}</span></td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="6" class="text-center py-4">لا توجد حركات مالية مطابقة.</td></tr>
+                    <tr><td colspan="6" class="text-center py-4">لا توجد حركات مطابقة للفترة المحددة.</td></tr>
                     {% endfor %}
                 </tbody>
                 <tfoot class="bg-light fw-bold">
                     <tr class="summary-footer text-white">
-                        <td colspan="6" class="text-center">إجمالي المحفظة الكلي (الموقف المالي)</td>
+                        <td colspan="3" class="text-start px-4">الإجمالي للفترة المحددة:</td>
+                        <td class="text-danger">م: {{ "{:,.2f}".format(total_debit) }}</td>
+                        <td class="text-success">د: {{ "{:,.2f}".format(total_credit) }}</td>
+                        <td class="text-center">SAR</td>
                     </tr>
                 </tfoot>
             </table>
