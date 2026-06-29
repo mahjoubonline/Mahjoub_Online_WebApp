@@ -26,6 +26,13 @@
         border-right: 5px solid var(--royal-gold) !important; 
         background-color: #fcfcfc;
     }
+    /* تنسيق بطاقات الإجمالي */
+    .summary-card {
+        background: linear-gradient(135deg, var(--royal-purple), #4a0060);
+        color: var(--royal-gold);
+        border: none;
+        border-bottom: 4px solid var(--royal-gold);
+    }
 </style>
 
 <div class="container-fluid py-4">
@@ -38,6 +45,17 @@
         <a href="/admin/dashboard" class="btn btn-royal-back px-4">
             <i class="fas fa-arrow-left me-2"></i>العودة للقيادة المركزية
         </a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        {% for label, val, color in [('إجمالي SAR', total_sar, '#fff'), ('إجمالي YER', total_yer, '#fff'), ('إجمالي USD', total_usd, '#fff')] %}
+        <div class="col-md-4">
+            <div class="card summary-card p-3 shadow-sm">
+                <small class="text-white-50">{{ label }}</small>
+                <h3 class="fw-bold mb-0 text-white">{{ "{:,.2f}".format(val or 0) }} <span class="fs-6 text-gold">{{ label.split()[-1] }}</span></h3>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 
     <div class="card shadow-sm border-0 mb-4 search-card">
