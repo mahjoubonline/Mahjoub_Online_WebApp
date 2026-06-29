@@ -27,10 +27,10 @@
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">اسم الشريك</th>
-                            <th>الموقع (المحافظة/المدينة)</th>
+                            <th>الموقع</th>
                             <th>البريد الإلكتروني</th>
-                            <th>رقم الهاتف</th>
-                            <th>تاريخ الانضمام</th>
+                            <th>الهاتف</th>
+                            <th>طاقم العمل</th>
                             <th class="text-center">إجراءات</th>
                         </tr>
                     </thead>
@@ -50,7 +50,27 @@
                             </td>
                             <td>{{ s.supplier_profile.email if s.supplier_profile else '---' }}</td>
                             <td><span dir="ltr">{{ s.phone }}</span></td>
-                            <td>{{ s.created_at.strftime('%Y-%m-%d') }}</td>
+                            
+                            <td>
+                                {% if s.staff_members %}
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-users me-1"></i> {{ s.staff_members|length }}
+                                        </button>
+                                        <ul class="dropdown-menu p-2 shadow-sm" style="min-width: 220px;">
+                                            {% for staff in s.staff_members %}
+                                            <li class="mb-2 border-bottom pb-1">
+                                                <div class="fw-bold small">{{ staff.username }}</div>
+                                                <div class="text-muted small"><i class="fas fa-phone-alt me-1"></i> {{ staff.phone or 'لا يوجد هاتف' }}</div>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted small">لا يوجد</span>
+                                {% endif %}
+                            </td>
+
                             <td class="text-center">
                                 <a href="{{ url_for('wallet_app.manage_wallet', supplier_id=s.id) }}" 
                                    class="btn btn-sm btn-primary shadow-sm" title="عرض المحفظة">
