@@ -21,6 +21,25 @@
 </tr>
 {% else %}
 <tr>
-    <td colspan="6" class="text-center py-4 text-muted">لا توجد حركات.</td>
+    <td colspan="6" class="text-center py-4 text-muted">لا توجد حركات تطابق معايير البحث الحالية.</td>
 </tr>
 {% endfor %}
+
+<tr class="summary-footer fw-bold" style="background-color: #2e003e; color: #d4af37;">
+    <td colspan="3" class="text-start px-4">إجمالي الفترة:</td>
+    <td class="text-danger">م: {{ "{:,.2f}".format(total_debit) }}</td>
+    <td class="text-success">د: {{ "{:,.2f}".format(total_credit) }}</td>
+    <td></td>
+</tr>
+<tr class="table-light fw-bold">
+    <td colspan="3" class="text-end px-4 text-royal-purple fs-5">صافي الموقف المالي:</td>
+    <td colspan="3" class="text-center fs-4">
+        {% set net = total_credit - total_debit %}
+        <span class="{{ 'text-success' if net >= 0 else 'text-danger' }}">
+            {{ "{:,.2f}".format(net) }}
+        </span>
+        <span class="badge {{ 'bg-success' if net >= 0 else 'bg-danger' }} fs-6 ms-2">
+            {{ 'لكم' if net >= 0 else 'عليكم' }}
+        </span>
+    </td>
+</tr>
