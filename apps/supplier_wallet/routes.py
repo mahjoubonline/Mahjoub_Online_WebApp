@@ -29,7 +29,7 @@ def view_my_wallet():
     if currency_filter:
         all_transactions = [t for t in all_transactions if t.currency == currency_filter]
 
-    # ب. فلتر البحث اللحظي (يبحث في جميع الحركات المفلترة)
+    # ب. فلتر البحث اللحظي (يبحث في كامل السجلات المفلترة)
     search_query = request.args.get('search', '').lower()
     if search_query:
         all_transactions = [
@@ -51,14 +51,17 @@ def view_my_wallet():
     elif filter_type == 'month':
         all_transactions = [t for t in all_transactions if t.created_at.month == now.month and t.created_at.year == now.year]
     elif start_date and end_date:
-        s = datetime.strptime(start_date, '%Y-%m-%d')
-        e = datetime.strptime(end_date, '%Y-%m-%d')
-        all_transactions = [t for t in all_transactions if s.date() <= t.created_at.date() <= e.date()]
+        try:
+            s = datetime.strptime(start_date, '%Y-%m-%d')
+            e = datetime.strptime(end_date, '%Y-%m-%d')
+            all_transactions = [t for t in all_transactions if s.date() <= t.created_at.date() <= e.date()]
+        except ValueError:
+            pass # تجاهل التاريخ في حال وجود صيغة خاطئة
 
     # الترتيب حسب الأحدث
     all_transactions = sorted(all_transactions, key=lambda x: x.created_at, reverse=True)
     
-    # 3. إعداد الترقيم (Pagination) - 20 عملية لكل صفحة
+    # 3. إعداد الترقيم (20 عملية لكل صفحة)
     page = request.args.get(get_page_parameter(), type=int, default=1)
     per_page = 20
     offset = (page - 1) * per_page
@@ -73,7 +76,7 @@ def view_my_wallet():
         record_name='حركة'
     )
 
-    # 4. حساب الإجماليات (بناءً على الحركات المفلترة كلياً)
+    # 4. حساب الإجماليات (للحركات المفلترة كلياً)
     total_debit = sum(t.amount for t in all_transactions if t.trans_type == 'debit')
     total_credit = sum(t.amount for t in all_transactions if t.trans_type == 'credit')
 
@@ -84,6 +87,7 @@ def view_my_wallet():
             transactions=transactions_paginated
         )
 
+    # العرض العادي للصفحة
     return render_template(
         'supplier_wallet/supplier_wallet.html', 
         wallet=wallet,
