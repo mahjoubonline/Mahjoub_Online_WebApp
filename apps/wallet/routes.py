@@ -26,7 +26,6 @@ def dashboard():
 
     wallets = query.paginate(page=page, per_page=20, error_out=False)
     
-    # حساب الإجماليات للمنصة (ستظهر في البطاقات الجديدة في wallet_app.html)
     stats = {
         'total_sar': db.session.query(db.func.sum(SupplierWallet.balance_sar)).scalar() or 0,
         'total_yer': db.session.query(db.func.sum(SupplierWallet.balance_yer)).scalar() or 0,
@@ -58,7 +57,6 @@ def add_transaction(supplier_id):
     trans_type = request.form.get('type')  # 'credit' أو 'debit'
     currency = request.form.get('currency')
     ref = request.form.get('reference_number') # رقم الطلب/السند
-    desc = request.form.get('description')
 
     if amount <= 0:
         flash("يجب أن يكون المبلغ أكبر من صفر.", "danger")
@@ -78,7 +76,7 @@ def add_transaction(supplier_id):
         elif currency == 'YER': wallet.balance_yer += amount if trans_type == 'credit' else -amount
         elif currency == 'USD': wallet.balance_usd += amount if trans_type == 'credit' else -amount
 
-        # إنشاء قيد الحركة
+        # إنشاء قيد الحركة مع بيان موحد
         new_trans = WalletTransaction(
             wallet_id=wallet.id,
             trans_type=trans_type,
@@ -86,7 +84,7 @@ def add_transaction(supplier_id):
             amount=amount,
             currency=currency,
             reference_number=ref,
-            description=desc
+            description=f"مبيعات رقم الطلب {ref}"
         )
         
         db.session.add(new_trans)
