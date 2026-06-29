@@ -1,109 +1,60 @@
-{# 📂 apps/supplier_wallet/templates/supplier_wallet/supplier_wallet.html #}
-{% extends 'suppliers/base.html' %} 
+# coding: utf-8
+# 📂 apps/supplier_wallet/routes.py
 
-{% block title %}خزانة المورد | محجوب أونلاين{% endblock %}
+from flask import Blueprint, render_template, abort, request
+from flask_login import login_required, current_user
+from flask_paginate import Pagination, get_page_parameter
+from apps.supplier_wallet.services import WalletService
 
-{% block content %}
-<style>
-    :root { 
-        --royal-purple: #2e003e; 
-        --royal-gold: #d4af37; 
-        --light-purple: #5a0077; 
-    }
-    .text-royal-purple { color: var(--royal-purple) !important; }
-    .balance-card { 
-        cursor: pointer; 
-        transition: all 0.3s ease; 
-        color: white; 
-        background: linear-gradient(135deg, var(--royal-purple), var(--light-purple)); 
-        border-bottom: 4px solid var(--royal-gold); 
-    }
-    .table-head-custom { background-color: var(--royal-purple) !important; color: var(--royal-gold) !important; }
-    .summary-footer { background-color: var(--royal-purple) !important; color: var(--royal-gold) !important; }
-    .search-box { border: 2px solid var(--royal-purple); border-radius: 20px; }
-</style>
+supplier_wallet_bp = Blueprint(
+    'supplier_wallet', 
+    __name__, 
+    template_folder='templates'
+)
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-royal-purple"><i class="fas fa-vault"></i> خزانة المورد</h2>
-        <button class="btn btn-dark" onclick="window.print()"><i class="fas fa-file-pdf"></i> تصدير (PDF)</button>
-    </div>
+@supplier_wallet_bp.route('/my-wallet', methods=['GET'])
+@login_required
+def view_my_wallet():
+    # 1. جلب المحفظة الخاصة بالمورد الحالي
+    wallet = getattr(current_user, 'wallet', None)
+    if not wallet:
+        wallet = WalletService.get_supplier_wallet(current_user.id)
+    
+    if not wallet:
+        abort(404, description="لم يتم العثور على محفظة مرتبطة بحسابك.")
 
-    <div class="row mb-4 g-2">
-        <div class="col-md-8">
-            <input type="text" id="searchInput" class="form-control search-box px-3" placeholder="ابحث برقم السند أو تفاصيل الحركة...">
-        </div>
-        <div class="col-md-4">
-            <select class="form-select search-box" onchange="filterTable(this.value)">
-                <option value="ALL">جميع العملات</option>
-                <option value="SAR">SAR</option>
-                <option value="YER">YER</option>
-                <option value="USD">USD</option>
-            </select>
-        </div>
-    </div>
+    # 2. إعداد الترقيم (Pagination)
+    # جلب كافة حركات المحفظة مرتبة حسب التاريخ (الأحدث أولاً)
+    all_transactions = sorted(wallet.transactions, key=lambda x: x.created_at, reverse=True)
+    
+    # تحديد الصفحة الحالية وعدد العناصر في كل صفحة
+    page = request.args.get(get_page_parameter(), type=int, default=1)
+    per_page = 10  # عرض 10 حركات لكل صفحة
+    offset = (page - 1) * per_page
+    
+    # استخراج الحركات الخاصة بالصفحة الحالية فقط (لضمان سرعة الأداء)
+    transactions_paginated = all_transactions[offset : offset + per_page]
+    
+    # تهيئة كائن الترقيم
+    pagination = Pagination(
+        page=page, 
+        total=len(all_transactions), 
+        per_page=per_page, 
+        css_framework='bootstrap5',
+        record_name='حركات'
+    )
 
-    <div class="card shadow-sm border-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-head-custom">
-                    <tr>
-                        <th class="px-4">التاريخ</th>
-                        <th>البيان</th>
-                        <th>رقم السند</th>
-                        <th>مدين</th>
-                        <th>دائن</th>
-                        <th class="text-center">العملة</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    {% for trans in transactions %}
-                    <tr class="trans-row" data-currency="{{ trans.currency }}" data-search="{{ trans.voucher_number }} {{ trans.description }}">
-                        <td class="px-4">{{ trans.created_at.strftime('%Y-%m-%d') }}</td>
-                        <td><strong>{{ trans.description }}</strong></td>
-                        <td>
-                            <a href="{{ url_for('orders.view_order', order_id=trans.reference_number) }}" class="text-decoration-none fw-bold text-primary">
-                                {{ trans.voucher_number }}
-                            </a>
-                        </td>
-                        <td class="text-danger fw-bold">{{ trans.amount if trans.trans_type == 'debit' else '-' }}</td>
-                        <td class="text-success fw-bold">{{ trans.amount if trans.trans_type == 'credit' else '-' }}</td>
-                        <td class="text-center"><span class="badge bg-dark">{{ trans.currency }}</span></td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="6" class="text-center py-4">لا توجد حركات مالية حالياً.</td></tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot class="bg-light fw-bold">
-                    <tr class="summary-footer">
-                        <td colspan="6" class="text-center">
-                            إجمالي الرصيد المتاح: {{ "{:,.2f}".format(wallet.balance_sar) }} SAR
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        {# الترقيم الديناميكي #}
-        <div class="d-flex justify-content-center py-3 bg-light border-top">
-            {{ pagination.links }}
-        </div>
-    </div>
-</div>
+    # 3. حساب الإجماليات (محرك المحاسبة)
+    # يتم حسابها بناءً على كامل حركات المحفظة وليس فقط الحركات المعروضة في الصفحة الحالية
+    total_debit = sum(t.amount for t in wallet.transactions if t.trans_type == 'debit')
+    total_credit = sum(t.amount for t in wallet.transactions if t.trans_type == 'credit')
 
-<script>
-    // فلتر العملات
-    function filterTable(currency) {
-        document.querySelectorAll('.trans-row').forEach(row => {
-            row.style.display = (currency === 'ALL' || row.dataset.currency === currency) ? '' : 'none';
-        });
-    }
-
-    // فلتر البحث النصي المباشر
-    document.getElementById('searchInput').addEventListener('keyup', function() {
-        let filter = this.value.toLowerCase();
-        document.querySelectorAll('.trans-row').forEach(row => {
-            row.style.display = row.dataset.search.toLowerCase().includes(filter) ? '' : 'none';
-        });
-    });
-</script>
-{% endblock %}
+    # 4. تمرير البيانات للقالب
+    return render_template(
+        'supplier_wallet/supplier_wallet.html', 
+        wallet=wallet,
+        transactions=transactions_paginated, 
+        pagination=pagination,
+        total_debit=total_debit,
+        total_credit=total_credit
+    )
