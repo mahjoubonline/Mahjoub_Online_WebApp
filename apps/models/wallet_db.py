@@ -69,16 +69,22 @@ class WalletTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     wallet_id = db.Column(db.Integer, db.ForeignKey('supplier_wallets.id'), nullable=False)
     
-    trans_type = db.Column(db.String(20), nullable=False) # 'credit', 'debit'
+    # أنواع الحركات: withdrawal, adjustment_credit, adjustment_debit, sale_revenue
+    trans_type = db.Column(db.String(20), nullable=False) 
     source_type = db.Column(db.String(20), default='manual')
     amount = db.Column(db.Numeric(18, 2), nullable=False)
     currency = db.Column(db.String(5), nullable=False)
+    
+    # حقول التدقيق المالي
+    balance_before = db.Column(db.Numeric(18, 2), nullable=False)
+    balance_after = db.Column(db.Numeric(18, 2), nullable=False)
     
     description = db.Column(db.String(255))
     reference_number = db.Column(db.String(50)) 
     voucher_number = db.Column(db.String(20), unique=True, nullable=True) 
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True)
 
     wallet = db.relationship('SupplierWallet', back_populates='transactions')
 
@@ -86,17 +92,13 @@ class WalletTransaction(db.Model):
 @event.listens_for(WalletTransaction, 'before_insert')
 def set_voucher_number(mapper, connection, target):
     if not target.voucher_number:
-        # البحث عن أعلى رقم سند حالي
         last_trans = db.session.query(func.max(WalletTransaction.voucher_number)).scalar()
-        
         if last_trans:
             try:
-                # MJ-2026-0012328
                 last_num = int(last_trans.split('-')[-1])
             except:
                 last_num = 12327
             new_num = last_num + 1
         else:
             new_num = 12328
-            
         target.voucher_number = f"MJ-2026-{new_num:07d}"
