@@ -77,6 +77,7 @@ def add_transaction(supplier_id):
         elif currency == 'USD': wallet.balance_usd += amount if trans_type == 'credit' else -amount
 
         # إنشاء قيد الحركة مع بيان موحد (مبيعات رقم الطلب)
+        # تم ضبطه ليكون البيان هو "مبيعات رقم الطلب" يليه الرقم فقط
         new_trans = WalletTransaction(
             wallet_id=wallet.id,
             trans_type=trans_type,
