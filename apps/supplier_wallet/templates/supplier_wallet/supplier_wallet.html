@@ -12,7 +12,6 @@
     }
     .text-royal-purple { color: var(--royal-purple) !important; }
     
-    /* هوية البطاقات البنفسجية */
     .balance-card { 
         cursor: pointer; 
         transition: all 0.3s ease; 
@@ -58,7 +57,7 @@
                     <tr>
                         <th class="px-4">التاريخ</th>
                         <th>البيان</th>
-                        <th>مدين</th>
+                        <th>رقم السند</th> <th>مدين</th>
                         <th>دائن</th>
                         <th class="text-center">العملة</th>
                     </tr>
@@ -69,16 +68,25 @@
                         <td class="px-4">{{ trans.created_at.strftime('%Y-%m-%d') }}</td>
                         <td>
                             <strong>{{ trans.description }}</strong><br>
-                            <small class="text-muted">طلب: {{ trans.order_id|default('---') }} | مرجع: {{ trans.reference_number }}</small>
+                            <small class="text-muted">طلب: {{ trans.order_id|default('---') }}</small>
                         </td>
-                        <td class="text-danger fw-bold">{{ trans.amount if trans.trans_type == 'debit' else '-' }}</td>
+                        <td class="text-muted small">{{ trans.voucher_number|default('---') }}</td> <td class="text-danger fw-bold">{{ trans.amount if trans.trans_type == 'debit' else '-' }}</td>
                         <td class="text-success fw-bold">{{ trans.amount if trans.trans_type == 'credit' else '-' }}</td>
                         <td class="text-center"><span class="badge bg-dark">{{ trans.currency }}</span></td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="5" class="text-center py-4">لا توجد حركات مالية حالياً.</td></tr>
+                    <tr><td colspan="6" class="text-center py-4">لا توجد حركات مالية حالياً.</td></tr>
                     {% endfor %}
                 </tbody>
+                
+                <tfoot class="bg-light fw-bold">
+                    <tr>
+                        <td colspan="3" class="text-end px-4">إجمالي الحركة</td>
+                        <td class="text-danger">{{ "{:,.2f}".format(wallet.transactions|selectattr('trans_type','equalto','debit')|map(attribute='amount')|sum) }}</td>
+                        <td class="text-success">{{ "{:,.2f}".format(wallet.transactions|selectattr('trans_type','equalto','credit')|map(attribute='amount')|sum) }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
