@@ -76,7 +76,7 @@ def add_transaction(supplier_id):
         elif currency == 'YER': wallet.balance_yer += amount if trans_type == 'credit' else -amount
         elif currency == 'USD': wallet.balance_usd += amount if trans_type == 'credit' else -amount
 
-        # إنشاء قيد الحركة مع بيان موحد
+        # إنشاء قيد الحركة مع بيان موحد (مبيعات رقم الطلب)
         new_trans = WalletTransaction(
             wallet_id=wallet.id,
             trans_type=trans_type,
