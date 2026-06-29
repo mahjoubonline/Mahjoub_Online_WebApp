@@ -3,22 +3,22 @@
 
 """
 مركز التحكم في الموديلات (Model Registry)
-تنبيه: تم ترتيب الاستيراد لضمان تهيئة الموديلات بالتسلسل الصحيح للعلاقات.
 """
 
-# أولاً: الموديلات الأساسية (التي لا تعتمد على غيرها)
+# أولاً: الموديلات الأساسية
 from .supplier_db import Supplier
 from .admin_db import AdminUser
 from .marketer_db import Marketer
 from .sync_log import SyncLog
 
-# ثانياً: الموديلات المعتمدة (التي تحتوي على Foreign Keys)
+# ثانياً: الموديلات المعتمدة
 from .admin_staff_db import AdminStaff
 from .supplier_staff_db import SupplierStaff
 from .supplier_profile_db import SupplierProfile
 
-# ثالثاً: موديلات المحفظة (الارتباط بين المحفظة والحركات)
+# ثالثاً: موديلات المحفظة والطلبات المالية
 from .wallet_db import SupplierWallet, WalletTransaction
+from .withdrawal_db import WithdrawalRequest  # استيراد الموديل الجديد
 
 # رابعاً: الموديلات المرتبطة بالطلبات والماليات
 from .orders_db import Order
@@ -32,7 +32,8 @@ __all__ = [
     'SupplierStaff',
     'SupplierProfile',
     'SupplierWallet',
-    'WalletTransaction', # إضافة الموديل الجديد هنا
+    'WalletTransaction',
+    'WithdrawalRequest', # تصدير الموديل الجديد
     'Order',
     'OrderFinancial',
     'Marketer',
