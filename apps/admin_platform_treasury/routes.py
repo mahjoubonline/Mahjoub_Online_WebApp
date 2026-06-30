@@ -6,29 +6,33 @@ from flask_login import login_required
 from apps.extensions import db
 from .utils import get_treasury_stats, get_filtered_transactions
 
-# تعريف الـ Blueprint
-treasury_bp = Blueprint('treasury', __name__, template_folder='templates')
+# تعريف الـ Blueprint مع تحديد المسار الأساسي
+treasury_bp = Blueprint('treasury', __name__, template_folder='templates', url_prefix='/admin/treasury')
 
 @treasury_bp.route('/dashboard', methods=['GET'])
 @login_required
 def treasury_dashboard():
     """
-    عرض لوحة تحكم الخزينة (الأستاذ العام) مع فلترة دقيقة زمنياً.
+    لوحة تحكم الخزينة: عرض الأرصدة العامة وسجل الحركات المالية الموحد.
+    تعتمد على الفلاتر الديناميكية لضمان سرعة الاستعلام.
     """
-    # 1. استقبال المدخلات (الفلاتر) من الرابط
+    # 1. التقاط المدخلات من الفلاتر (UI Filtering)
     currency = request.args.get('currency', 'all')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     page = request.args.get('page', 1, type=int)
     
-    # 2. استدعاء الإحصائيات العامة (الأرصدة) مع تمرير db كما يتطلب الـ utils
+    # 2. استدعاء الإحصائيات (تعتمد على كود الـ Utils)
     stats = get_treasury_stats(db)
     
-    # 3. استدعاء الحركات المفلترة (باستخدام المرجع الزمني الموحد في الـ utils)
-    # نمرر التاريخ والوقت لضمان دقة التقارير
-    query = get_filtered_transactions(currency=currency, start_date=start_date, end_date=end_date)
+    # 3. استدعاء الحركات المفلترة (تستخدم الفهارس (Indexes) التي وضعناها في wallet_db.py)
+    query = get_filtered_transactions(
+        currency=currency, 
+        start_date=start_date, 
+        end_date=end_date
+    )
     
-    # 4. نظام التقسيم (Pagination) - عرض 15 حركة لكل صفحة
+    # 4. تقسيم الصفحات (Pagination) لضمان عدم ثقل التحميل
     pagination = query.paginate(page=page, per_page=15, error_out=False)
     
     return render_template(
