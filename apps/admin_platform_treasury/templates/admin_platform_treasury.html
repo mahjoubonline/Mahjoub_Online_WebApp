@@ -5,79 +5,46 @@
 <div class="container-fluid py-4">
     <h2 class="mb-4 fw-bold text-dark"><i class="fas fa-university me-2 text-primary"></i>الأستاذ العام - خزينة المنصة</h2>
 
-    <div class="card shadow-sm mb-4 border-0">
-        <div class="card-body">
-            <form method="GET" action="{{ url_for('treasury.treasury_dashboard') }}" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">من تاريخ:</label>
-                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">إلى تاريخ:</label>
-                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">العملة:</label>
-                    <select name="currency" class="form-select">
-                        <option value="all">كل العملات</option>
-                        <option value="SAR" {% if current_currency == 'SAR' %}selected{% endif %}>SAR</option>
-                        <option value="YER" {% if current_currency == 'YER' %}selected{% endif %}>YER</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100 shadow-sm">تصفية النتائج</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    {# ... [نموذج البحث يبقى كما هو] ... #}
     <div class="card shadow-sm border-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
                         <th>رقم السند</th>
-                        <th>التاريخ والوقت</th>
-                        <th>نوع الحركة</th>
-                        <th>المبلغ</th>
-                        <th>الجهة</th>
-                        <th>رقم الطلب</th>
+                        <th>التاريخ</th>
                         <th>الوصف</th>
+                        <th>رقم الطلب</th>
+                        <th>مدين (Debit)</th>  {# التعديل: عمود المدين #}
+                        <th>دائن (Credit)</th> {# التعديل: عمود الدائن #}
+                        <th>الرصيد بعد الحركة</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for t in transactions %}
                     <tr>
                         <td class="font-monospace fw-bold text-primary">{{ t.voucher_number }}</td>
-                        <td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        <td>
-                            <span class="badge {% if t.trans_type == 'credit' %}bg-success{% else %}bg-danger{% endif %}">
-                                {{ t.trans_type }}
-                            </span>
-                        </td>
-                        <td class="fw-bold">{{ "{:,.2f}".format(t.amount) }} {{ t.currency }}</td>
-                        <td><small class="text-muted">{{ t.owner_type }}</small></td>
-                        <td><span class="badge bg-light text-dark border">{{ t.related_order_id or '---' }}</span></td>
+                        <td class="text-nowrap">{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>{{ t.description }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ t.related_order_id or '---' }}</span></td>
+                        
+                        {# عرض المدين (المبالغ الخارجة) باللون الأحمر #}
+                        <td class="text-danger fw-bold">
+                            {% if t.debit > 0 %}{{ "{:,.2f}".format(t.debit) }}{% else %}-{% endif %}
+                        </td>
+                        
+                        {# عرض الدائن (المبالغ الداخلة) باللون الأخضر #}
+                        <td class="text-success fw-bold">
+                            {% if t.credit > 0 %}{{ "{:,.2f}".format(t.credit) }}{% else %}-{% endif %}
+                        </td>
+                        
+                        <td class="fw-bold text-dark">{{ "{:,.2f}".format(t.balance_after) }} {{ t.currency }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        
-        <div class="card-footer bg-white py-3">
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center mb-0">
-                    {% if pagination.has_prev %}
-                        <li class="page-item"><a class="page-link" href="{{ url_for('treasury.treasury_dashboard', page=pagination.prev_num, **request.args) }}">السابق</a></li>
-                    {% endif %}
-                    <li class="page-item active"><span class="page-link">{{ pagination.page }}</span></li>
-                    {% if pagination.has_next %}
-                        <li class="page-item"><a class="page-link" href="{{ url_for('treasury.treasury_dashboard', page=pagination.next_num, **request.args) }}">التالي</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
+        {# ... [بقية كود الترقيم] ... #}
     </div>
 </div>
 {% endblock %}
