@@ -63,26 +63,24 @@ class WalletTransaction(db.Model):
         db.Index('idx_trans_date', 'created_at'),
         db.Index('idx_trans_source', 'source_type'),
         db.Index('idx_trans_voucher', 'voucher_number'),
-        db.Index('idx_trans_order', 'related_order_id'), # الفهرس لزيادة سرعة البحث عن الطلبات
+        db.Index('idx_trans_order', 'related_order_id'),
         {'extend_existing': True}
     )
 
     id = db.Column(db.Integer, primary_key=True)
     wallet_id = db.Column(db.Integer, db.ForeignKey('supplier_wallets.id'), nullable=False)
     
-    # أنواع الحركات: withdrawal, adjustment_credit, adjustment_debit, sale_revenue
     trans_type = db.Column(db.String(20), nullable=False) 
     source_type = db.Column(db.String(20), default='manual')
     amount = db.Column(db.Numeric(18, 2), nullable=False)
     currency = db.Column(db.String(5), nullable=False)
     
-    # حقول التدقيق المالي
     balance_before = db.Column(db.Numeric(18, 2), nullable=False)
     balance_after = db.Column(db.Numeric(18, 2), nullable=False)
     
     description = db.Column(db.String(255))
     reference_number = db.Column(db.String(50)) 
-    related_order_id = db.Column(db.String(50), nullable=True) # الرابط الصريح للطلب
+    related_order_id = db.Column(db.String(50), nullable=True)
     voucher_number = db.Column(db.String(20), unique=True, nullable=True) 
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -90,17 +88,31 @@ class WalletTransaction(db.Model):
 
     wallet = db.relationship('SupplierWallet', back_populates='transactions')
 
-# --- محرك الترقيم التلقائي ---
+# --- محرك الترقيم التلقائي وتعبئة الأرصدة ---
+
 @event.listens_for(WalletTransaction, 'before_insert')
 def set_voucher_number(mapper, connection, target):
+    # 1. الترقيم التلقائي للسندات
     if not target.voucher_number:
         last_trans = db.session.query(func.max(WalletTransaction.voucher_number)).scalar()
         if last_trans:
-            try:
-                last_num = int(last_trans.split('-')[-1])
-            except:
-                last_num = 12327
+            try: last_num = int(last_trans.split('-')[-1])
+            except: last_num = 12327
             new_num = last_num + 1
         else:
             new_num = 12328
         target.voucher_number = f"MJ-2026-{new_num:07d}"
+
+    # 2. تعبئة الأرصدة تلقائياً (منع خطأ NotNullViolation)
+    if target.balance_before is None or target.balance_after is None:
+        wallet = SupplierWallet.query.get(target.wallet_id)
+        if wallet:
+            current = wallet.balance_sar or 0.00
+            target.balance_before = current
+            # حساب الرصيد الجديد بناءً على نوع الحركة
+            if target.trans_type in ['credit', 'adjustment_credit', 'sale_revenue']:
+                target.balance_after = current + target.amount
+            else:
+                target.balance_after = current - target.amount
+            # تحديث المحفظة
+            wallet.balance_sar = target.balance_after
