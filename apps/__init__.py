@@ -1,15 +1,16 @@
 # coding: utf-8
-# 📂 apps/__init__.py (الكود النهائي المحدث والمصحح)
+# 📂 apps/__init__.py (الكود النهائي المدمج مع المرجع الزمني)
 
 import os
 import importlib
-from decimal import Decimal  # تم إضافة الاستيراد لحل خطأ الـ Decimal
+from decimal import Decimal
 from flask import Flask, session
 from apps.extensions import db, login_manager, migrate
 from apps.models.admin_db import AdminUser
 from apps.models import Supplier
 from apps.models.supplier_staff_db import SupplierStaff
 from apps.models.supplier_profile_db import SupplierProfile
+from apps.utils.time_utils import format_full_timestamp # استيراد المرجع الزمني
 
 # دالة تحميل المستخدم
 @login_manager.user_loader
@@ -23,6 +24,9 @@ def load_user(user_id):
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
+
+    # تسجيل الفلتر الزمني الموحد ليعمل في جميع صفحات النظام
+    app.jinja_env.filters['full_time'] = format_full_timestamp
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -56,15 +60,12 @@ def create_app():
             
             custom_id = 'MAH-WEL9631'
             if not Order.query.filter_by(id=custom_id).first():
-                # أ. الطلب
                 real_order = Order(id=custom_id, order_id_display='MJ-2026-001', customer_name='عميل تجربة', status='completed', supplier_id=supplier.id, total_price=1250.50)
                 db.session.add(real_order)
                 
-                # ب. البيانات المالية
                 financial = OrderFinancial(order_id=custom_id, supplier_id=supplier.id, total_paid=1250.50, mahjoub_commission=62.25, supplier_cost=1188.25, settlement_status='paid')
                 db.session.add(financial)
                 
-                # ج. تسجيل الحركة وتحديث المحفظة (تم استخدام Decimal لتجنب خطأ التوافق)
                 wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
                 if wallet:
                     amount_to_add = Decimal('1188.25')
@@ -91,7 +92,7 @@ def create_app():
         apps_dir = app.root_path
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
-            if item in ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations']: continue
+            if item in ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils']: continue
             registry_file = os.path.join(item_path, 'registry.py')
             if os.path.isdir(item_path) and os.path.exists(registry_file):
                 try:
