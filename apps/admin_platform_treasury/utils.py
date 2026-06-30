@@ -4,7 +4,6 @@
 from datetime import datetime
 from sqlalchemy import func
 from apps.models.wallet_db import WalletTransaction, SupplierWallet
-from apps.utils.time_utils import format_full_timestamp
 from apps.extensions import db
 
 def get_filtered_transactions(currency=None, start_date=None, end_date=None):
@@ -28,16 +27,22 @@ def get_filtered_transactions(currency=None, start_date=None, end_date=None):
 
 def get_treasury_stats(db_session):
     """
-    إحصائيات الخزينة العامة.
+    إحصائيات الخزينة المحدثة بناءً على دفتر الأستاذ (القيد المزدوج).
     """
+    # حساب إجمالي المدين (الخارج) والدائن (الداخل) لكل العملات
     stats = db_session.session.query(
-        func.sum(SupplierWallet.balance_sar).label('total_sar'),
-        func.sum(SupplierWallet.balance_usd).label('total_usd'),
-        func.sum(SupplierWallet.balance_yer).label('total_yer')
-    ).first()
+        func.sum(WalletTransaction.credit).label('total_credit'),
+        func.sum(WalletTransaction.debit).label('total_debit')
+    ).filter(WalletTransaction.currency == 'SAR').first()
+    
+    # رصيد الخزينة الفعلي = إجمالي الدائن - إجمالي المدين
+    credit = stats[0] or 0
+    debit = stats[1] or 0
+    net_balance = credit - debit
     
     return {
-        'total_sar': stats[0] or 0,
-        'total_usd': stats[1] or 0,
-        'total_yer': stats[2] or 0
+        'total_credit': credit,
+        'total_debit': debit,
+        'net_balance': net_balance,
+        'total_sar': net_balance # المرجع الأساسي للخزينة
     }
