@@ -41,57 +41,38 @@ def manage_wallet(supplier_id):
 @wallet_bp.route('/admin/manage/<int:supplier_id>/add_transaction', methods=['POST'])
 @login_required
 def add_transaction(supplier_id):
+    """إضافة حركة مالية باستخدام المحرك الرشيق الموحد."""
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
     
     try:
-        # استخدام Decimal للدقة المحاسبية
         amount = Decimal(request.form.get('amount', 0))
-        trans_type = request.form.get('type')
-        currency = request.form.get('currency')
-        order_ref = request.form.get('reference_number', '').strip() # رقم الطلب الفعلي (MJ-...)
-
+        trans_type = request.form.get('type') # credit / debit
+        order_ref = request.form.get('reference_number', '').strip()
+        
         if amount <= 0:
             flash("يجب أن يكون المبلغ أكبر من صفر.", "danger")
             return redirect(url_for('wallet_app.manage_wallet', supplier_id=supplier_id))
 
-        # تحديد الرصيد قبل العملية
-        if currency == 'SAR': balance_before = wallet.balance_sar
-        elif currency == 'YER': balance_before = wallet.balance_yer
-        else: balance_before = wallet.balance_usd
-
-        # التأكد من كفاية الرصيد للعمليات المدينة
-        if trans_type == 'debit' and balance_before < amount:
-            flash("رصيد العملة غير كافٍ للعملية.", "danger")
-            return redirect(url_for('wallet_app.manage_wallet', supplier_id=supplier_id))
-
-        # تحديث رصيد المحفظة
-        adjustment = amount if trans_type == 'credit' else -amount
-        if currency == 'SAR': wallet.balance_sar += adjustment
-        elif currency == 'YER': wallet.balance_yer += adjustment
-        elif currency == 'USD': wallet.balance_usd += adjustment
-        
-        balance_after = balance_before + adjustment
-
-        # إنشاء القيد المالي
-        new_trans = WalletTransaction(
+        # تنفيذ العملية عبر المحرك المالي في wallet_db.py
+        new_trans = WalletTransaction.execute_transfer(
             wallet_id=wallet.id,
-            trans_type=trans_type,
-            source_type='voucher', # أو 'sale_revenue' حسب طبيعة الحركة
             amount=amount,
-            currency=currency,
-            reference_number=order_ref,      # سند التسوية
-            related_order_id=order_ref,      # الربط المباشر برقم الطلب (قمره)
-            balance_before=balance_before,
-            balance_after=balance_after,
+            trans_type=trans_type,
+            owner_type='supplier',
+            owner_id=wallet.supplier_id,
             description=f"عملية مالية للطلب رقم {order_ref}"
         )
         
-        db.session.add(new_trans)
+        # تحديث بيانات إضافية للحركة
+        new_trans.currency = request.form.get('currency', 'SAR')
+        new_trans.related_order_id = order_ref
+        new_trans.reference_number = order_ref
+        
         db.session.commit()
         flash(f"تم تسجيل العملية للطلب {order_ref} بنجاح.", "success")
         
     except Exception as e:
         db.session.rollback()
-        flash("حدث خطأ تقني أثناء معالجة السند.", "danger")
+        flash(f"حدث خطأ تقني: {str(e)}", "danger")
 
     return redirect(url_for('wallet_app.manage_wallet', supplier_id=supplier_id))
