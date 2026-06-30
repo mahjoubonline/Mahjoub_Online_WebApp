@@ -1,59 +1,27 @@
-{% extends "admin/admin_base.html" %}
+{# 📂 apps/admin_platform_treasury/templates/admin_platform_treasury.html #}
+{% extends 'admin/admin_base.html' %}
+
+{% block title %}خزينة المنصة السيادية{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h2 class="mb-4">الأستاذ العام - خزينة المنصة</h2>
-
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" action="{{ url_for('treasury.treasury_dashboard') }}" class="row g-3">
-                <div class="col-md-3">
-                    <label>من تاريخ:</label>
-                    <input type="date" name="start_date" class="form-control" value="{{ request.args.get('start_date') }}">
-                </div>
-                <div class="col-md-3">
-                    <label>إلى تاريخ:</label>
-                    <input type="date" name="end_date" class="form-control" value="{{ request.args.get('end_date') }}">
-                </div>
-                <div class="col-md-3">
-                    <label>العملة:</label>
-                    <select name="currency" class="form-select">
-                        <option value="all">كل العملات</option>
-                        <option value="SAR" {% if request.args.get('currency') == 'SAR' %}selected{% endif %}>SAR</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">تصفية النتائج</button>
-                </div>
-            </form>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark"><i class="fas fa-university me-2 text-gold"></i>الخزينة العامة</h2>
+            <p class="text-muted">نظام الأستاذ العام وتتبع السيولة النقدية</p>
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-hover table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th>رقم السند</th>
-                    <th>التاريخ والوقت</th>
-                    <th>نوع الحركة</th>
-                    <th>المبلغ</th>
-                    <th>الوصف</th>
-                    <th>رقم الطلب</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in transactions %}
-                <tr>
-                    <td>{{ t.voucher }}</td>
-                    <td>{{ t.created_at | full_time }}</td>
-                    <td>{{ t.type }}</td>
-                    <td>{{ t.amount }}</td>
-                    <td>{{ t.description }}</td>
-                    <td>{{ t.order_id or '---' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="row g-3 mb-4">
+        {% for label, val, icon in [('إجمالي SAR', stats.total_sar, 'fa-money-bill-wave'), ('إجمالي YER', stats.total_yer, 'fa-coins'), ('إجمالي USD', stats.total_usd, 'fa-dollar-sign')] %}
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm border-0 bg-dark text-white">
+                <div class="d-flex justify-content-between">
+                    <span>{{ label }}</span>
+                    <i class="fas {{ icon }} text-gold"></i>
+                </div>
+                <h3 class="fw-bold mt-2">{{ "{:,.2f}".format(val or 0) }}</h3>
+            </div>
+        </div>
+        {% endfor %}
     </div>
-</div>
-{% endblock %}
