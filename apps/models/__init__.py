@@ -3,38 +3,31 @@
 
 """
 مركز التحكم في الموديلات (Model Registry)
+يضمن هذا الملف أن جميع الموديلات يتم تسجيلها في SQLAlchemy 
+قبل أي عملية اتصال بقاعدة البيانات.
 """
 
-# أولاً: الموديلات الأساسية
-from .supplier_db import Supplier
 from .admin_db import AdminUser
+from .admin_staff_db import AdminStaff
+from .financials_db import OrderFinancial
 from .marketer_db import Marketer
+from .orders_db import Order
+from .supplier_db import Supplier
+from .supplier_profile_db import SupplierProfile
+from .supplier_staff_db import SupplierStaff
+from .supplier_wallet_db import SupplierWallet, WalletTransaction # تأكد من مطابقة اسم الملف
 from .sync_log import SyncLog
 
-# ثانياً: الموديلات المعتمدة
-from .admin_staff_db import AdminStaff
-from .supplier_staff_db import SupplierStaff
-from .supplier_profile_db import SupplierProfile
-
-# ثالثاً: موديلات المحفظة
-from .wallet_db import SupplierWallet, WalletTransaction
-# تم حذف سطر withdrawal_db مؤقتاً حتى ننشئ الملف
-
-# رابعاً: الموديلات المرتبطة بالطلبات والماليات
-from .orders_db import Order
-from .financials_db import OrderFinancial
-
-# القائمة الموحدة للتصدير
 __all__ = [
-    'AdminUser',
     'AdminStaff',
-    'Supplier',
-    'SupplierStaff',
-    'SupplierProfile',
-    'SupplierWallet',
-    'WalletTransaction',
+    'AdminUser',
+    'Marketer',
     'Order',
     'OrderFinancial',
-    'Marketer',
-    'SyncLog'
+    'Supplier',
+    'SupplierProfile',
+    'SupplierStaff',
+    'SupplierWallet',
+    'SyncLog',
+    'WalletTransaction'
 ]
