@@ -63,6 +63,7 @@ class WalletTransaction(db.Model):
         db.Index('idx_trans_date', 'created_at'),
         db.Index('idx_trans_source', 'source_type'),
         db.Index('idx_trans_voucher', 'voucher_number'),
+        db.Index('idx_trans_order', 'related_order_id'), # الفهرس لزيادة سرعة البحث عن الطلبات
         {'extend_existing': True}
     )
 
@@ -81,6 +82,7 @@ class WalletTransaction(db.Model):
     
     description = db.Column(db.String(255))
     reference_number = db.Column(db.String(50)) 
+    related_order_id = db.Column(db.String(50), nullable=True) # الرابط الصريح للطلب
     voucher_number = db.Column(db.String(20), unique=True, nullable=True) 
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
