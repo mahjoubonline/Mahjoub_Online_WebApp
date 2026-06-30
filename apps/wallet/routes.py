@@ -7,11 +7,10 @@ from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.models.supplier_db import Supplier
 from apps.extensions import db
 from sqlalchemy import or_
-import re  # تم استيراد مكتبة التعبيرات النمطية لتنظيف الأرقام
+from decimal import Decimal
 
 wallet_bp = Blueprint('wallet_app', __name__, template_folder='templates')
 
-# ... (دالة dashboard بقيت كما هي دون تغيير) ...
 @wallet_bp.route('/admin/dashboard', methods=['GET'])
 @login_required
 def dashboard():
@@ -44,46 +43,52 @@ def manage_wallet(supplier_id):
 def add_transaction(supplier_id):
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first_or_404()
     
-    amount = float(request.form.get('amount', 0))
-    trans_type = request.form.get('type')
-    currency = request.form.get('currency')
-    raw_ref = request.form.get('reference_number') # الرقم الخام المدخل
-
-    # تنظيف رقم الطلب لاستخراج الأرقام فقط (مثال: MAH-WEL9631 تصبح 9631)
-    clean_ref = re.sub(r'\D', '', raw_ref) if raw_ref else "0"
-
-    if amount <= 0:
-        flash("يجب أن يكون المبلغ أكبر من صفر.", "danger")
-        return redirect(url_for('wallet_app.manage_wallet', supplier_id=supplier_id))
-
     try:
-        # التأكد من الرصيد
-        if trans_type == 'debit':
-            if (currency == 'SAR' and wallet.balance_sar < amount) or \
-               (currency == 'YER' and wallet.balance_yer < amount) or \
-               (currency == 'USD' and wallet.balance_usd < amount):
-                flash("رصيد العملة غير كافٍ للعملية.", "danger")
-                return redirect(url_for('wallet_app.manage_wallet', supplier_id=supplier_id))
+        # استخدام Decimal للدقة المحاسبية
+        amount = Decimal(request.form.get('amount', 0))
+        trans_type = request.form.get('type')
+        currency = request.form.get('currency')
+        order_ref = request.form.get('reference_number', '').strip() # رقم الطلب الفعلي (MJ-...)
+
+        if amount <= 0:
+            flash("يجب أن يكون المبلغ أكبر من صفر.", "danger")
+            return redirect(url_for('wallet_app.manage_wallet', supplier_id=supplier_id))
+
+        # تحديد الرصيد قبل العملية
+        if currency == 'SAR': balance_before = wallet.balance_sar
+        elif currency == 'YER': balance_before = wallet.balance_yer
+        else: balance_before = wallet.balance_usd
+
+        # التأكد من كفاية الرصيد للعمليات المدينة
+        if trans_type == 'debit' and balance_before < amount:
+            flash("رصيد العملة غير كافٍ للعملية.", "danger")
+            return redirect(url_for('wallet_app.manage_wallet', supplier_id=supplier_id))
 
         # تحديث رصيد المحفظة
-        if currency == 'SAR': wallet.balance_sar += amount if trans_type == 'credit' else -amount
-        elif currency == 'YER': wallet.balance_yer += amount if trans_type == 'credit' else -amount
-        elif currency == 'USD': wallet.balance_usd += amount if trans_type == 'credit' else -amount
+        adjustment = amount if trans_type == 'credit' else -amount
+        if currency == 'SAR': wallet.balance_sar += adjustment
+        elif currency == 'YER': wallet.balance_yer += adjustment
+        elif currency == 'USD': wallet.balance_usd += adjustment
+        
+        balance_after = balance_before + adjustment
 
-        # إنشاء قيد الحركة باستخدام الرقم المنظف
+        # إنشاء القيد المالي
         new_trans = WalletTransaction(
             wallet_id=wallet.id,
             trans_type=trans_type,
-            source_type='voucher',
+            source_type='voucher', # أو 'sale_revenue' حسب طبيعة الحركة
             amount=amount,
             currency=currency,
-            reference_number=clean_ref,
-            description=f"مبيعات رقم الطلب {clean_ref}"
+            reference_number=order_ref,      # سند التسوية
+            related_order_id=order_ref,      # الربط المباشر برقم الطلب (قمره)
+            balance_before=balance_before,
+            balance_after=balance_after,
+            description=f"عملية مالية للطلب رقم {order_ref}"
         )
         
         db.session.add(new_trans)
         db.session.commit()
-        flash(f"تم تسجيل العملية رقم {clean_ref} بنجاح.", "success")
+        flash(f"تم تسجيل العملية للطلب {order_ref} بنجاح.", "success")
         
     except Exception as e:
         db.session.rollback()
