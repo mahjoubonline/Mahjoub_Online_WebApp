@@ -1,19 +1,21 @@
 # coding: utf-8
 # 📂 apps/admin_platform_treasury/routes.py
 
-from flask import render_template
+from flask import Blueprint, render_template
 from flask_login import login_required
 from apps.extensions import db
 from apps.models.wallet_db import WalletTransaction
 from sqlalchemy import func
-from . import treasury_bp 
+
+# تعريف الـ Blueprint هنا مباشرةً لضمان رؤيته من قِبل أي مستورد
+treasury_bp = Blueprint('treasury', __name__, template_folder='templates')
 
 @treasury_bp.route('/dashboard', methods=['GET'])
 @login_required
 def treasury_dashboard():
     """
     لوحة تحكم خزينة المنصة
-    المسار النهائي بعد تسجيل الـ Blueprint سيكون: /admin/treasury/dashboard
+    المسار النهائي: /admin/treasury/dashboard
     """
     # 1. إجمالي ما دخل للمنصة (العمولات فقط)
     total_revenue = db.session.query(func.sum(WalletTransaction.amount))\
