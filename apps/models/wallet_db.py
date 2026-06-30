@@ -62,7 +62,7 @@ class WalletTransaction(db.Model):
         db.Index('idx_trans_wallet', 'wallet_id'),
         db.Index('idx_trans_date', 'created_at'),
         db.Index('idx_trans_type', 'trans_type'),
-        db.Index('idx_trans_owner', 'owner_type', 'owner_id'), # فهرس للأرشفة السريعة لكل جهة
+        db.Index('idx_trans_owner', 'owner_type', 'owner_id'),
         db.Index('idx_trans_voucher', 'voucher_number'),
         {'extend_existing': True}
     )
@@ -70,9 +70,8 @@ class WalletTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     wallet_id = db.Column(db.Integer, db.ForeignKey('supplier_wallets.id'), nullable=False)
     
-    # حقول الأرشفة والربط الموحد
-    owner_type = db.Column(db.String(20), default='supplier') # 'supplier', 'marketer', 'treasury'
-    owner_id = db.Column(db.Integer, nullable=False)          # معرف صاحب المحفظة
+    owner_type = db.Column(db.String(20), default='supplier') 
+    owner_id = db.Column(db.Integer, nullable=False)
     
     trans_type = db.Column(db.String(20), nullable=False) 
     source_type = db.Column(db.String(20), default='manual')
@@ -92,9 +91,24 @@ class WalletTransaction(db.Model):
 
     wallet = db.relationship('SupplierWallet', back_populates='transactions')
 
+    @classmethod
+    def execute_transfer(cls, wallet_id, amount, trans_type, owner_type='supplier', owner_id=0, description=''):
+        """المحرك المالي الرشيق: سطر كود واحد لتنفيذ أي عملية مالية."""
+        new_trans = cls(
+            wallet_id=wallet_id,
+            amount=amount,
+            trans_type=trans_type,
+            owner_type=owner_type,
+            owner_id=owner_id,
+            description=description,
+            currency='SAR' # العملة الافتراضية للتعاملات
+        )
+        db.session.add(new_trans)
+        db.session.commit()
+        return new_trans
+
 @event.listens_for(WalletTransaction, 'before_insert')
 def set_voucher_number(mapper, connection, target):
-    # 1. الترقيم التلقائي للسندات
     if not target.voucher_number:
         last_trans = db.session.query(func.max(WalletTransaction.voucher_number)).scalar()
         if last_trans and '-' in last_trans:
@@ -103,14 +117,11 @@ def set_voucher_number(mapper, connection, target):
         else: last_num = 12327
         target.voucher_number = f"MJ-2026-{last_num + 1:07d}"
 
-    # 2. تعبئة الأرصدة تلقائياً
     if target.balance_before is None or target.balance_after is None:
         wallet = SupplierWallet.query.get(target.wallet_id)
         if wallet:
-            # نعتمد الرصيد الحالي للمحفظة كمرجع (يمكن تطويره ليكون رصيد محفظة محددة)
             current = wallet.balance_sar or 0.00
             target.balance_before = current
-            # تحديد الاتجاه المالي
             if target.trans_type in ['credit', 'adjustment_credit', 'sale_revenue']:
                 target.balance_after = current + target.amount
             else:
