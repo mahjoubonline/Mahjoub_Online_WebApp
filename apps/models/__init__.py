@@ -15,7 +15,7 @@ from .orders_db import Order
 from .supplier_db import Supplier
 from .supplier_profile_db import SupplierProfile
 from .supplier_staff_db import SupplierStaff
-from .supplier_wallet_db import SupplierWallet, WalletTransaction # تأكد من مطابقة اسم الملف
+from .wallet_db import SupplierWallet, WalletTransaction  # تم تصحيح الاسم هنا ليطابق الملف الفعلي
 from .sync_log import SyncLog
 
 __all__ = [
