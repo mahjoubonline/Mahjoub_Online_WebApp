@@ -1,52 +1,80 @@
 {% extends 'admin/admin_base.html' %}
 
-{% block title %}خزينة المنصة{% endblock %}
+{% block title %}الأستاذ العام - الخزينة المركزية{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold text-dark">خزينة المنصة</h4>
+        <h3 class="fw-bold text-dark">الأستاذ العام (سجل الحركات المالية)</h3>
+        <button onclick="window.print()" class="btn btn-outline-primary">
+            <i class="fas fa-print"></i> طباعة التقرير
+        </button>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-md-6">
-            <div class="card p-4 shadow-sm border-0 bg-white">
-                <h6 class="text-muted">أرباح المنصة (العمولات)</h6>
-                <h3 class="fw-bold text-primary">{{ "{:,.2f}".format(total_revenue) }}</h3>
+    <div class="row g-3 mb-4">
+        {% for curr in ['SAR', 'YER', 'USD'] %}
+        <div class="col-md-4">
+            <div class="card p-3 border-0 shadow-sm" style="background-color: #f8f9fa;">
+                <h6 class="text-muted mb-2">رصيد {{ curr }}</h6>
+                <div class="d-flex justify-content-between">
+                    <span>الداخل (عمولات):</span>
+                    <span class="fw-bold text-success">{{ "{:,.2f}".format(stats['revenue_' ~ curr.lower()]) }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>الخارج (مدفوعات):</span>
+                    <span class="fw-bold text-danger">{{ "{:,.2f}".format(stats['payouts_' ~ curr.lower()]) }}</span>
+                </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card p-4 shadow-sm border-0 bg-white">
-                <h6 class="text-muted">إجمالي مدفوعات الموردين</h6>
-                <h3 class="fw-bold text-success">{{ "{:,.2f}".format(total_payouts) }}</h3>
-            </div>
-        </div>
+        {% endfor %}
     </div>
 
-    <div class="card shadow-sm border-0 p-4 bg-white">
-        <h5 class="fw-bold mb-3">سجل العمليات المالية</h5>
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-bottom-0 pt-4">
+            <h5 class="fw-bold">جميع الحركات المالية للمنصة</h5>
+        </div>
         <div class="table-responsive">
-            <table class="table align-middle table-hover">
+            <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>التاريخ</th>
-                        <th>البيان</th>
-                        <th>المبلغ</th>
+                        <th class="ps-4">التاريخ</th>
+                        <th>البيان (رقم المرجع)</th>
                         <th>النوع</th>
+                        <th>العملة</th>
+                        <th class="pe-4 text-end">المبلغ</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for t in transactions %}
                     <tr>
-                        <td>{{ t.created_at.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ t.description }}</td>
-                        <td>{{ t.amount }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ t.trans_type }}</span></td>
+                        <td class="ps-4 text-muted">{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="fw-bold">{{ t.description }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-success-subtle text-success' if t.trans_type == 'platform_commission' else 'bg-danger-subtle text-danger' }}">
+                                {{ t.trans_type }}
+                            </span>
+                        </td>
+                        <td><span class="badge bg-secondary">{{ t.currency }}</span></td>
+                        <td class="pe-4 text-end fw-bold {{ 'text-success' if t.trans_type == 'platform_commission' else 'text-danger' }}">
+                            {{ "{:,.2f}".format(t.amount) }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">لا توجد حركات مالية مسجلة حالياً.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        <div class="card-footer bg-light py-3 text-center">
+            <small class="text-muted">نهاية التقرير المالي - تم التوليد بتاريخ {{ now }}</small>
+        </div>
     </div>
 </div>
+
+<style>
+    .table thead th { text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+    .badge { font-size: 0.75rem; padding: 0.4em 0.8em; }
+</style>
 {% endblock %}
