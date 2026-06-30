@@ -1,7 +1,10 @@
-# 📂 apps/admin_platform_treasury/registry.py
-from .routes import treasury_bp
+# coding: utf-8
+"""
+مركز تسجيل خدمات الخزينة (Treasury Service Registry)
+يربط عمليات الخزينة ببقية أجزاء النظام (مثل المزامنة أو المحافظ).
+"""
 
-def register_module(app):
-    # تسجيل موديول الخزينة
-    app.register_blueprint(treasury_bp, url_prefix='/admin/treasury')
-    print("✅ [Registry]: تم تسجيل موديول 'admin_platform_treasury' بنجاح.")
+def register_treasury_services(app):
+    # هنا يمكنك إضافة مهام مجدولة (Celery) أو ربط إشارات (Signals)
+    # للتأكد من تحديث رصيد الخزينة عند كل عملية مالية.
+    pass
