@@ -25,6 +25,7 @@
         .dropdown-content { display: none; list-style: none; padding-right: 35px; border-right: 2px solid var(--mahjoub-gold); margin: 5px 0; }
         .dropdown-content a { color: rgba(255,255,255,0.8); display: block; padding: 8px 10px; font-size: 0.9rem; border-radius: 5px; text-decoration: none; }
         .dropdown-content a:hover { background: rgba(212, 175, 55, 0.1); color: var(--mahjoub-gold); }
+        .dropdown-content a.active { color: var(--mahjoub-gold); font-weight: bold; }
         .main-wrapper { margin-right: var(--sidebar-width); transition: 0.3s; }
         .top-navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .menu-toggle { display: none; background: none; border: none; font-size: 1.5rem; color: var(--royal-purple); }
@@ -58,9 +59,9 @@
             </div>
 
             <div class="nav-item">
-                <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-wallet me-3"></i> <span>الرقابة المالية</span> <i class="fas fa-chevron-down ms-auto"></i></div>
-                <ul class="dropdown-content">
-                    <li><a href="{{ url_for('treasury.treasury_dashboard') }}"><i class="fas fa-vault me-2"></i> خزينة المنصة</a></li>
+                <div class="nav-link" id="finance-nav" onclick="toggleSub(this)"><i class="fas fa-wallet me-3"></i> <span>الرقابة المالية</span> <i class="fas fa-chevron-down ms-auto"></i></div>
+                <ul class="dropdown-content" id="finance-dropdown">
+                    <li><a href="{{ url_for('treasury.treasury_dashboard') }}" class="{{ 'active' if request.endpoint == 'treasury.treasury_dashboard' }}"><i class="fas fa-vault me-2"></i> خزينة المنصة</a></li>
                     <li><a href="{{ url_for('wallet_app.dashboard') }}"><i class="fas fa-money-check-alt me-2"></i> محفظة الموردين</a></li>
                 </ul>
             </div>
@@ -92,6 +93,16 @@
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('active');
         }
+        
+        // فتح قائمة المالية تلقائياً إذا كان المستخدم داخل مسار الخزينة
+        document.addEventListener("DOMContentLoaded", function() {
+            if (window.location.href.includes('treasury')) {
+                let drop = document.getElementById('finance-dropdown');
+                drop.style.display = "block";
+                let icon = document.getElementById('finance-nav').querySelector('.fa-chevron-down');
+                icon.style.transform = "rotate(180deg)";
+            }
+        });
     </script>
 </body>
 </html>
