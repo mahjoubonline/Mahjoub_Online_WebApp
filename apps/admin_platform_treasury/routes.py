@@ -7,7 +7,7 @@ from apps.extensions import db
 from apps.models.wallet_db import WalletTransaction
 from sqlalchemy import func
 
-# تعريف الـ Blueprint هنا مباشرةً لضمان رؤيته من قِبل أي مستورد
+# تعريف الـ Blueprint
 treasury_bp = Blueprint('treasury', __name__, template_folder='templates')
 
 @treasury_bp.route('/dashboard', methods=['GET'])
@@ -28,7 +28,8 @@ def treasury_dashboard():
     # 3. آخر الحركات المالية للتدقيق
     transactions = WalletTransaction.query.order_by(WalletTransaction.created_at.desc()).limit(100).all()
     
-    return render_template('admin/treasury/admin_platform_treasury.html',
+    # ملاحظة: تم تحديث اسم الملف ليطابق المسار الموجود في مجلد templates
+    return render_template('admin_platform_treasury.html',
                            total_revenue=abs(float(total_revenue)),
                            total_payouts=abs(float(total_payouts)),
                            transactions=transactions)
