@@ -1,62 +1,87 @@
-{# تم تحديث سطر الوراثة ليطابق الاسم الفعلي للملف #}
+{# 📂 apps/admin_suppliers_add/templates/admin_suppliers_add/admin_suppliers_add.html #}
 {% extends "admin/admin_base.html" %}
 
-{% block title %}إضافة شريك جديد | القيادة المركزية{% endblock %}
+{% block title %}إضافة شريك جديد | محجوب أونلاين{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h3 class="fw-bold text-dark mb-1">إضافة شريك جديد</h3>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard.dashboard') }}" class="text-decoration-none">الرئيسية</a></li>
-                    <li class="breadcrumb-item text-secondary">إدارة الموردين</li>
-                    <li class="breadcrumb-item active" aria-current="page">إضافة شريك</li>
-                </ol>
-            </nav>
-        </div>
-        <a href="#" class="btn btn-outline-secondary rounded-pill">
-            <i class="fas fa-arrow-right me-2"></i> العودة للقائمة
-        </a>
-    </div>
-
     <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body p-4 p-md-5">
-                    <form method="POST" action="{{ url_for('admin_suppliers_add.add_supplier') }}">
-                        <div class="row g-4">
-                            <div class="col-12">
-                                <h5 class="text-primary mb-3"><i class="fas fa-store me-2"></i> معلومات المتجر</h5>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-muted">اسم المتجر (الاسم التجاري)</label>
-                                <input type="text" name="trade_name" class="form-control form-control-lg bg-light" required placeholder="مثال: متجر محجوب للإلكترونيات">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-muted">اسم المستخدم (للدخول)</label>
-                                <input type="text" name="username" class="form-control form-control-lg bg-light" required placeholder="اسم فريد بدون مسافات">
-                            </div>
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="text-primary mb-0"><i class="fas fa-user-plus me-2"></i>إضافة شريك جديد</h4>
+                <a href="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-right me-1"></i> العودة للوحة الإدارة
+                </a>
+            </div>
 
-                            <div class="col-12 mt-4">
-                                <h5 class="text-primary mb-3"><i class="fas fa-phone-alt me-2"></i> معلومات التواصل والأمان</h5>
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted">نوع الحساب:</label>
+                        <select id="actionTypeSelector" class="form-select form-select-lg" onchange="toggleForm()">
+                            <option value="owner">مورد جديد (مالك)</option>
+                            <option value="staff">موظف تابع لمورد</option>
+                        </select>
+                    </div>
+
+                    <form action="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" method="POST">
+                        <input type="hidden" name="action_type" id="actionTypeInput" value="owner">
+                        
+                        <div id="ownerFields">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">اسم المستخدم:</label>
+                                    <input type="text" name="username" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">الاسم التجاري:</label>
+                                    <input type="text" name="trade_name" class="form-control">
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-muted">رقم الهاتف</label>
-                                <input type="tel" name="phone" class="form-control form-control-lg bg-light" required placeholder="مثال: 967XXXXXXXXX">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-muted">كلمة المرور الابتدائية</label>
-                                <input type="password" name="password" class="form-control form-control-lg bg-light" required placeholder="********">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">رقم الهاتف:</label>
+                                    <input type="text" name="phone" class="form-control" placeholder="05XXXXXXXX">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">رتبة المورد:</label>
+                                    <select name="rank" class="form-select">
+                                        <option value="bronze">برونزي</option>
+                                        <option value="silver">فضي</option>
+                                        <option value="gold">ذهبي</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mt-5 pt-3 border-top text-end">
-                            <button type="reset" class="btn btn-outline-danger px-4 py-2 me-2">إلغاء</button>
-                            <button type="submit" class="btn btn-primary px-5 py-2 fw-bold" style="background-color: #1a0b2e; border: none;">
-                                <i class="fas fa-user-check me-2"></i> اعتماد وإضافة الشريك
-                            </button>
+                        <div id="staffFields" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">المورد التابع له:</label>
+                                <select name="supplier_id" class="form-select">
+                                    {% for s in suppliers %}
+                                    <option value="{{ s.id }}">{{ s.trade_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">اسم مستخدم الموظف:</label>
+                                    <input type="text" name="staff_username" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">رقم هاتف الموظف:</label>
+                                    <input type="text" name="staff_phone" class="form-control" placeholder="05XXXXXXXX">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">كلمة المرور:</label>
+                            <input type="password" name="password" class="form-control" placeholder="يترك فارغاً للتوليد التلقائي" disabled>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">تثبيت الشريك في النظام</button>
                         </div>
                     </form>
                 </div>
@@ -64,4 +89,13 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleForm() {
+    const type = document.getElementById('actionTypeSelector').value;
+    document.getElementById('actionTypeInput').value = type;
+    document.getElementById('ownerFields').style.display = (type === 'owner') ? 'block' : 'none';
+    document.getElementById('staffFields').style.display = (type === 'staff') ? 'block' : 'none';
+}
+</script>
 {% endblock %}
