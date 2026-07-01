@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/models/financials_db.py (النسخة النهائية مع الربط السيادي)
+# 📂 apps/models/financials_db.py
 
 import os
 from datetime import datetime
@@ -15,8 +15,8 @@ class OrderFinancial(db.Model):
         db.Index('idx_fin_supplier_id', 'supplier_id'),
         db.Index('idx_fin_settlement', 'settlement_status'),
         db.Index('idx_fin_created', 'created_at'),
-        # الربط السيادي للفهرسة
         db.Index('idx_fin_transaction', 'transaction_id'),
+        db.Index('idx_fin_currency', 'currency'), # إندكس جديد للعملة لتسريع الفلترة
         {'extend_existing': True}
     )
 
@@ -25,19 +25,22 @@ class OrderFinancial(db.Model):
     order_id = db.Column(db.String(100), db.ForeignKey('orders.id'), nullable=False, unique=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
     
-    # ربط سيادي بجدول الخزينة (دفتر الأستاذ العام)
+    # ربط سيادي بجدول الخزينة
     transaction_id = db.Column(db.Integer, db.ForeignKey('wallet_transactions.id'), nullable=True)
     
-    # 2. المبالغ المالية (مشفرة لحماية الخصوصية التجارية)
+    # 2. حقل العملة (غير مشفر لتسهيل البحث والفلترة المالية)
+    currency = db.Column(db.String(5), default='SAR', nullable=False)
+    
+    # 3. المبالغ المالية (مشفرة لحماية الخصوصية التجارية)
     _supplier_cost_enc = db.Column(db.String(255), nullable=False)
     _mahjoub_commission_enc = db.Column(db.String(255), nullable=False)
     _total_paid_enc = db.Column(db.String(255), nullable=False)
     shipping_fees = db.Column(db.Numeric(18, 2), default=0.00)
     
-    # 3. حالة التسوية
-    settlement_status = db.Column(db.String(20), default='pending') # pending, settled, failed
+    # 4. حالة التسوية
+    settlement_status = db.Column(db.String(20), default='pending') 
     
-    # 4. توثيق زمني
+    # 5. توثيق زمني
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     settled_at = db.Column(db.DateTime, nullable=True)
 
@@ -85,4 +88,4 @@ class OrderFinancial(db.Model):
         return self.mahjoub_commission
 
     def __repr__(self):
-        return f'<OrderFinancial OrderID: {self.order_id} | Status: {self.settlement_status}>'
+        return f'<OrderFinancial OrderID: {self.order_id} | Currency: {self.currency} | Status: {self.settlement_status}>'
