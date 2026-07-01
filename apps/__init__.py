@@ -33,12 +33,24 @@ def create_app():
     login_manager.login_view = 'suppliers_auth.login'
 
     with app.app_context():
-        # 1. إعادة بناء الجداول بالهيكل الجديد (سيتم تنفيذ هذا بعد حذف الجداول من القاعدة)
+        # 1. تحديث إجباري لهيكل الجداول (حل مشكلة Unconsumed columns)
+        try:
+            with db.engine.connect() as conn:
+                # هذه الأعمدة هي التي يشتكي منها الخطأ
+                cols = ['wallet_code VARCHAR(50)', 'supplier_id INTEGER', 'balance_yer NUMERIC(18,2)', 
+                        'balance_usd NUMERIC(18,2)', 'balance_sar NUMERIC(18,2)', 'balance_pending NUMERIC(18,2)']
+                for col in cols:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE supplier_wallets ADD COLUMN {col} DEFAULT 0.00"))
+                        conn.commit()
+                    except: pass # العمود موجود مسبقاً
+        except: pass
+
+        # 2. إنشاء الجداول التي لم تُنشأ بعد
         db.create_all()
 
-        # 2. سكريبت زرع البيانات (Data Seed)
+        # 3. سكريبت زرع البيانات (Data Seed)
         try:
-            # التأكد من وجود المورد الأساسي
             supplier = Supplier.query.filter_by(username='وائل محجوب').first()
             if not supplier:
                 if not AdminUser.query.filter_by(username='علي محجوب').first():
@@ -53,7 +65,6 @@ def create_app():
                 db.session.add(SupplierProfile(supplier_id=supplier.id, trade_name='محجوب أونلاين'))
                 db.session.commit()
 
-            # التأكد من وجود محفظة للمورد بالكود المعياري الجديد
             wallet_code = f"MAH-WEL{supplier.id}"
             wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
             if not wallet:
@@ -61,7 +72,6 @@ def create_app():
                 db.session.add(wallet)
                 db.session.commit()
 
-            # زرع طلب تجريبي
             order_ref = "QAMRA-2026-001"
             if not Order.query.filter_by(order_reference=order_ref).first():
                 new_order = Order(
@@ -76,28 +86,22 @@ def create_app():
                 db.session.flush()
 
                 financial = OrderFinancial(
-                    order_id=new_order.id,
-                    supplier_id=supplier.id,
-                    currency='SAR',
-                    supplier_cost=400.00,
-                    mahjoub_commission=100.00,
-                    total_paid=500.00,
-                    settlement_status='settled'
+                    order_id=new_order.id, supplier_id=supplier.id, currency='SAR',
+                    supplier_cost=400.00, mahjoub_commission=100.00, total_paid=500.00, settlement_status='settled'
                 )
                 db.session.add(financial)
 
-                # إضافة الحركات المالية
-                db.session.add(WalletTransaction(wallet_id=wallet.id, owner_id=supplier.id, trans_type='supplier_cost', amount=400.00, currency='SAR'))
-                db.session.add(WalletTransaction(wallet_id=wallet.id, owner_id=1, trans_type='platform_commission', amount=100.00, currency='SAR'))
+                db.session.add(WalletTransaction(wallet_id=wallet.id, owner_id=supplier.id, trans_type='supplier_cost', amount=400.00, currency='SAR', balance_before=0, balance_after=400))
+                db.session.add(WalletTransaction(wallet_id=wallet.id, owner_id=1, trans_type='platform_commission', amount=100.00, currency='SAR', balance_before=0, balance_after=100))
                 
                 db.session.commit()
-                print("🚀 [الخزينة]: تم إعادة بناء الجداول وتسجيل الحركات المالية بنجاح!")
+                print("🚀 [الخزينة]: تم تهيئة النظام بنجاح!")
 
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ [Data Seed Error]: {e}")
 
-        # 3. الاكتشاف التلقائي للموديولات
+        # 4. الاكتشاف التلقائي للموديولات
         apps_dir = app.root_path
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
