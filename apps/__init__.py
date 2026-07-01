@@ -15,6 +15,7 @@ def load_user(user_id):
     user_type = session.get('user_type')
     if user_type == 'admin': return AdminUser.query.get(int(user_id))
     elif user_type == 'supplier': return Supplier.query.get(int(user_id))
+    elif user_type == 'staff': return SupplierStaff.query.get(int(user_id))
     return AdminUser.query.get(int(user_id)) or Supplier.query.get(int(user_id))
 
 def create_app():
@@ -31,30 +32,50 @@ def create_app():
         # 1. إنشاء الجداول (دع SQLAlchemy يقوم بعمله)
         db.create_all()
 
-        # 2. سكريبت زرع البيانات (Data Seed) المحمي
+        # 2. سكريبت زرع البيانات (Data Seed) المحمي والمجزأ لمنع التراجع الكلي (Rollback)
+        
+        # --- الجزء الأول: إنشاء المسؤول ---
         try:
-            # التأكد من وجود المسؤول
             admin = AdminUser.query.filter_by(username='علي محجوب').first()
             if not admin:
                 admin = AdminUser(username='علي محجوب')
                 admin.set_password('123')
                 db.session.add(admin)
-            
-            # التأكد من وجود المورد
+                db.session.commit() # حفظ نهائي
+                print("✅ [Seed]: تم إنشاء المسؤول بنجاح.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"⚠️ [Admin Seed Error]: {e}")
+
+        # --- الجزء الثاني: إنشاء المورد والملف الشخصي ---
+        try:
             supplier = Supplier.query.filter_by(username='وائل محجوب').first()
             if not supplier:
                 supplier = Supplier(username='وائل محجوب', trade_name='محجوب أونلاين', phone='0500000000')
                 supplier.set_password('123')
                 db.session.add(supplier)
-                db.session.flush() # الحصول على ID المورد
+                db.session.commit() # حفظ نهائي لضمان وجود الـ ID
+                
                 db.session.add(SupplierProfile(supplier_id=supplier.id, trade_name='محجوب أونلاين'))
-                db.session.add(SupplierWallet(wallet_code=f"MAH-WEL{supplier.id}", supplier_id=supplier.id))
-            
-            db.session.commit()
-            print("✅ [System]: تم التأكد من سلامة المستخدمين والبيانات.")
+                db.session.commit() # حفظ الملف الشخصي
+                print("✅ [Seed]: تم إنشاء المورد وملفه الشخصي بنجاح.")
         except Exception as e:
             db.session.rollback()
-            print(f"⚠️ [Data Seed Error]: {e}")
+            print(f"⚠️ [Supplier Seed Error]: {e}")
+
+        # --- الجزء الثالث: إنشاء المحفظة (معزول تماماً عن البقية) ---
+        try:
+            # نبحث عن المورد مرة أخرى لضمان وجوده في الجلسة الحالية
+            current_supplier = Supplier.query.filter_by(username='وائل محجوب').first()
+            if current_supplier:
+                wallet = SupplierWallet.query.filter_by(supplier_id=current_supplier.id).first()
+                if not wallet:
+                    db.session.add(SupplierWallet(wallet_code=f"MAH-WEL{current_supplier.id}", supplier_id=current_supplier.id))
+                    db.session.commit()
+                    print("✅ [Seed]: تم إنشاء المحفظة بنجاح.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"⚠️ [Wallet Seed Error]: خطأ في المحفظة (لن يمنع الدخول) - {e}")
 
         # 3. الاكتشاف التلقائي للموديولات
         apps_dir = app.root_path
