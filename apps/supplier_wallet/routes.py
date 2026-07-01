@@ -48,10 +48,14 @@ def view_my_wallet():
         )
 
     # 5. حساب الإجماليات (لكل الفترة المفلترة)
-    # نستخدم func.sum للحصول على دقة عالية وسرعة من قاعدة البيانات مباشرة
+    # استخدام دالة التجميع لضمان دقة التقارير المالية
     stats = query.with_entities(
-        func.sum(WalletTransaction.amount).filter(WalletTransaction.trans_type.in_(['sale_revenue', 'adjustment_credit'])).label('total_credit'),
-        func.sum(WalletTransaction.amount).filter(WalletTransaction.trans_type.in_(['withdrawal', 'adjustment_debit'])).label('total_debit')
+        func.sum(WalletTransaction.amount).filter(
+            WalletTransaction.trans_type.in_(['credit', 'adjustment_credit', 'sale_revenue'])
+        ).label('total_credit'),
+        func.sum(WalletTransaction.amount).filter(
+            WalletTransaction.trans_type.in_(['withdrawal', 'adjustment_debit'])
+        ).label('total_debit')
     ).first()
     
     total_credit = stats.total_credit or 0
@@ -60,23 +64,34 @@ def view_my_wallet():
     # 6. الترقيم (Pagination)
     page = request.args.get(get_page_parameter(), type=int, default=1)
     per_page = 20
-    pagination = Pagination(page=page, total=query.count(), per_page=per_page, css_framework='bootstrap5')
+    total_records = query.count()
+    pagination = Pagination(page=page, total=total_records, per_page=per_page, css_framework='bootstrap5')
     
-    transactions = query.order_by(WalletTransaction.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    transactions = query.order_by(WalletTransaction.created_at.desc())\
+                        .offset((page - 1) * per_page)\
+                        .limit(per_page).all()
 
-    # 7. استجابة الـ AJAX
+    # 7. استجابة الـ AJAX (لتحديث الجدول دون إعادة تحميل الصفحة)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('supplier_wallet/_table_partial.html', 
-                               transactions=transactions, total_debit=total_debit, total_credit=total_credit)
+                               transactions=transactions, 
+                               total_debit=total_debit, 
+                               total_credit=total_credit)
 
     return render_template('supplier_wallet/supplier_wallet.html', 
-                           wallet=wallet, transactions=transactions, pagination=pagination,
-                           total_debit=total_debit, total_credit=total_credit)
+                           wallet=wallet, 
+                           transactions=transactions, 
+                           pagination=pagination,
+                           total_debit=total_debit, 
+                           total_credit=total_credit)
 
 @supplier_wallet_bp.route('/test-sync', methods=['GET'])
 @login_required
 def test_sync():
-    if not current_user.is_admin: abort(403)
+    # التحقق من صلاحيات المدير فقط لتشغيل المزامنة
+    if not hasattr(current_user, 'is_admin') or not current_user.is_admin: 
+        abort(403)
+    
     if SyncEngine.fetch_and_sync_order():
-        return "✅ تم تنفيذ المزامنة."
-    return "❌ فشل المزامنة."
+        return "✅ تم تنفيذ المزامنة بنجاح."
+    return "❌ فشل عملية المزامنة."
