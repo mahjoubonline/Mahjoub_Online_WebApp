@@ -22,7 +22,7 @@ def add_supplier_or_staff():
     
     if request.method == 'POST':
         action_type = request.form.get('action_type') # 'owner' or 'staff'
-        temp_password = secrets.token_hex(4) # توليد كلمة مرور مؤقتة احترافية
+        temp_password = secrets.token_hex(4) # كلمة مرور مؤقتة احترافية
         
         try:
             if action_type == 'owner':
@@ -30,39 +30,40 @@ def add_supplier_or_staff():
                 new_supplier = Supplier(
                     username=request.form.get('username'),
                     trade_name=request.form.get('trade_name'),
-                    rank=request.form.get('rank', 'bronze'), # التعامل مع الرتبة
+                    rank=request.form.get('rank', 'bronze'),
                     status='active'
                 )
-                new_supplier.phone = request.form.get('phone') 
+                new_supplier.phone = request.form.get('phone') # يتم التشفير عبر الـ Setter
                 new_supplier.set_password(temp_password)
                 
                 db.session.add(new_supplier)
-                db.session.commit() # الـ Auto-Discovery ينشئ المحفظة هنا
+                db.session.commit()
                 
-                db.session.refresh(new_supplier) # لجلب بيانات المحفظة بعد الإنشاء
-                wallet_code = new_supplier.wallet.wallet_code if new_supplier.wallet else "قيد الإنشاء"
+                db.session.refresh(new_supplier)
+                wallet_code = new_supplier.wallet.wallet_code if new_supplier.wallet else "تم الإنشاء"
                 
-                flash(f"✅ تم تسجيل المورد بنجاح! | المورد: {new_supplier.trade_name} | المحفظة: {wallet_code} | كلمة المرور المؤقتة: {temp_password} | محجوب اونلاين | سوقك الذكي", "success")
+                flash(f"✅ تم تسجيل المورد: {new_supplier.trade_name} | المحفظة: {wallet_code} | كلمة المرور: {temp_password} | محجوب اونلاين | سوقك الذكي", "success")
                 
             elif action_type == 'staff':
-                # 2. إضافة الموظف وربطه بالمورد
+                # 2. إنشاء الموظف
                 new_staff = SupplierStaff(
                     supplier_id=request.form.get('supplier_id'),
-                    username=request.form.get('username'),
-                    email=request.form.get('email'),
-                    role=request.form.get('role', 'worker')
+                    username=request.form.get('staff_username'),
+                    phone=request.form.get('staff_phone'),
+                    role='worker'
                 )
                 new_staff.set_password(temp_password)
                 
                 db.session.add(new_staff)
                 db.session.commit()
-                flash(f"✅ تم إضافة الموظف بنجاح! | اسم المستخدم: {new_staff.username} | كلمة المرور المؤقتة: {temp_password} | محجوب اونلاين | سوقك الذكي", "success")
+                
+                flash(f"✅ تم إضافة الموظف: {new_staff.username} | كلمة المرور: {temp_password} | محجوب اونلاين | سوقك الذكي", "success")
             
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
         except IntegrityError:
             db.session.rollback()
-            flash("❌ خطأ: اسم المستخدم أو البريد الإلكتروني مسجل مسبقاً في النظام.", "danger")
+            flash("❌ خطأ: اسم المستخدم أو الهاتف مسجل مسبقاً في النظام.", "danger")
         except Exception as e:
             db.session.rollback()
             flash(f"⚠️ حدث خطأ تقني: {str(e)}", "danger")
