@@ -3,48 +3,78 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <h2 class="mb-4 fw-bold text-dark"><i class="fas fa-university me-2 text-primary"></i>الأستاذ العام - خزينة المنصة</h2>
+    <!-- Header with Breadcrumbs -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="fas fa-university me-2 text-primary"></i>الخزينة المركزية (الأستاذ العام)</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb text-muted small">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">الرئيسية</a></li>
+                    <li class="breadcrumb-item active">الخزينة</li>
+                </ol>
+            </nav>
+        </div>
+        <button class="btn btn-outline-primary" onclick="window.print()">
+            <i class="fas fa-file-pdf me-2"></i>تصدير كشف حساب
+        </button>
+    </div>
 
-    {# ... [نموذج البحث يبقى كما هو] ... #}
-    <div class="card shadow-sm border-0">
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm bg-primary text-white">
+                <span class="small opacity-75">إجمالي الرصيد الحالي</span>
+                <h3 class="fw-bold mt-1">{{ "{:,.2f}".format(total_balance) }} <small class="fs-6">SAR</small></h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-header bg-white border-0 py-3">
+            <h5 class="card-title fw-bold m-0 text-secondary">سجل الحركات المالية</h5>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-dark">
+                <thead class="bg-light">
                     <tr>
-                        <th>رقم السند</th>
+                        <th class="ps-4">رقم السند</th>
                         <th>التاريخ</th>
-                        <th>الوصف</th>
-                        <th>رقم الطلب</th>
-                        <th>مدين (Debit)</th>  {# التعديل: عمود المدين #}
-                        <th>دائن (Credit)</th> {# التعديل: عمود الدائن #}
-                        <th>الرصيد بعد الحركة</th>
+                        <th>البيان</th>
+                        <th>الطلب</th>
+                        <th class="text-danger">مدين (Debit)</th>
+                        <th class="text-success">دائن (Credit)</th>
+                        <th class="pe-4">الرصيد التراكمي</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for t in transactions %}
-                    <tr>
-                        <td class="font-monospace fw-bold text-primary">{{ t.voucher_number }}</td>
-                        <td class="text-nowrap">{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        <td>{{ t.description }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ t.related_order_id or '---' }}</span></td>
-                        
-                        {# عرض المدين (المبالغ الخارجة) باللون الأحمر #}
-                        <td class="text-danger fw-bold">
-                            {% if t.debit > 0 %}{{ "{:,.2f}".format(t.debit) }}{% else %}-{% endif %}
+                    <tr class="{% if t.debit > 0 %}bg-danger-subtle{% endif %}">
+                        <td class="ps-4 font-monospace fw-bold text-primary">{{ t.voucher_number }}</td>
+                        <td class="text-nowrap text-muted">{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="text-truncate" style="max-width: 250px;">{{ t.description }}</td>
+                        <td>
+                            <span class="badge bg-light border text-dark font-monospace">
+                                {{ t.related_order_id if t.related_order_id else '---' }}
+                            </span>
                         </td>
-                        
-                        {# عرض الدائن (المبالغ الداخلة) باللون الأخضر #}
-                        <td class="text-success fw-bold">
-                            {% if t.credit > 0 %}{{ "{:,.2f}".format(t.credit) }}{% else %}-{% endif %}
+                        <td class="fw-bold text-danger">
+                            {{ "{:,.2f}".format(t.debit) if t.debit > 0 else '-' }}
                         </td>
-                        
-                        <td class="fw-bold text-dark">{{ "{:,.2f}".format(t.balance_after) }} {{ t.currency }}</td>
+                        <td class="fw-bold text-success">
+                            {{ "{:,.2f}".format(t.credit) if t.credit > 0 else '-' }}
+                        </td>
+                        <td class="pe-4 fw-bold text-dark font-monospace">{{ "{:,.2f}".format(t.balance_after) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {# ... [بقية كود الترقيم] ... #}
     </div>
 </div>
+
+<style>
+    .font-monospace { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
+    .bg-danger-subtle { --bs-bg-opacity: 0.05; }
+</style>
 {% endblock %}
