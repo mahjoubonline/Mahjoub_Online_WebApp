@@ -1,6 +1,7 @@
-# 📂 apps/supplier_wallet/services.py (مُعدل)
+# 📂 apps/supplier_wallet/services.py (مُعدل ومجهز)
 
-from apps.models import SupplierWallet, WalletTransaction
+from decimal import Decimal, InvalidOperation
+from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.extensions import db
 
 class WalletService:
@@ -14,27 +15,34 @@ class WalletService:
         if not wallet:
             raise ValueError("المحفظة غير موجودة")
 
-        # تسجيل القيد فقط، الـ event listener في wallet_db سيقوم بتحديث الرصيد تلقائياً
+        # معالجة الرقم لضمان كونه Decimal (حل جذري لمشكلة الـ Data Seed)
+        try:
+            decimal_amount = Decimal(str(amount))
+        except (InvalidOperation, ValueError):
+            decimal_amount = Decimal('0.00')
+
+        # تسجيل القيد
         transaction = WalletTransaction(
             wallet_id=wallet.id,
             trans_type=trans_type,
             source_type=source_type,
-            amount=amount,
+            amount=decimal_amount, # استخدام القيمة المحولة
             currency=currency,
             description=description,
             reference_number=reference_number,
-            owner_id=supplier_id # إضافة owner_id لضمان تكامل السجلات
+            owner_id=supplier_id 
         )
         
         db.session.add(transaction)
-        db.session.commit() # هنا سيتم تفعيل event listener وتحديث الرصيد
+        db.session.commit() # تفعيل event listener لتحديث الرصيد
         return transaction
 
     @staticmethod
     def sync_order_payment(supplier_id, order_id, amount, currency):
+        # التحويل هنا يضمن أن القيمة المرسلة من الـ API (غالباً float) تصبح Decimal فوراً
         return WalletService.process_transaction(
             supplier_id=supplier_id,
-            amount=amount,
+            amount=amount, 
             trans_type='credit',
             currency=currency,
             description=f"تسوية مالية تلقائية للطلب رقم {order_id}",
