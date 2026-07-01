@@ -26,31 +26,27 @@ login_manager = LoginManager()
 def load_user(user_id):
     """
     دالة موحدة لتحميل المستخدمين من الموديلات المختلفة.
-    تم تعديل الترتيب لمنع تداخل صلاحيات الإدارة مع الموردين.
+    تمت إضافة المورد (Supplier) لضمان ربطه بالمحفظة.
     """
     from apps.models.admin_db import AdminUser
+    from apps.models.supplier_db import Supplier
     from apps.models.supplier_staff_db import SupplierStaff
     from apps.models.marketer_db import Marketer
     
     try:
         uid = int(user_id)
         
-        # 1. البحث عن المورد أولاً (لأننا نعمل على لوحة المورد)
-        user = SupplierStaff.query.get(uid)
-        if user: return user
-        
-        # 2. البحث عن المسوق
-        user = Marketer.query.get(uid)
-        if user: return user
-
-        # 3. البحث عن الإدارة أخيراً
-        user = AdminUser.query.get(uid)
-        if user: return user
+        # الترتيب: المورد -> موظف المورد -> المسوق -> الإدارة
+        # يتم البحث بالتسلسل حتى نجد المستخدم المطابق
+        user = Supplier.query.get(uid) or \
+               SupplierStaff.query.get(uid) or \
+               Marketer.query.get(uid) or \
+               AdminUser.query.get(uid)
+               
+        return user
         
     except (ValueError, Exception):
         return None
-    
-    return None
 
 # إعداد مسار تسجيل الدخول الموحد
 login_manager.login_view = 'auth_portal.login'
