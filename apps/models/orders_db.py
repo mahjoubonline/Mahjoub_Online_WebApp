@@ -7,8 +7,6 @@ from apps.extensions import db
 # تهيئة آمنة لمفتاح التشفير
 def get_cipher():
     key = os.getenv('ENCRYPTION_KEY')
-    # إذا لم يوجد مفتاح في البيئة، نستخدم مفتاحاً افتراضياً (للتطوير فقط)
-    # في بيئة الإنتاج يجب أن يكون لديك مفتاح ثابت في إعدادات Render
     return Fernet(key.encode()) if key else Fernet(b'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
 
 cipher = get_cipher()
@@ -16,9 +14,11 @@ cipher = get_cipher()
 class Order(db.Model):
     __tablename__ = 'orders'
 
-    # تحسين الأداء: فهارس للبحث السريع عن الطلبات حسب المورد، الحالة، أو المرجع
+    # تحسين الأداء: فهارس للبحث السريع عن الطلبات حسب المورد، الحالة، أو المسوق ووسم التتبع
     __table_args__ = (
         db.Index('idx_ord_supplier_id', 'supplier_id'),
+        db.Index('idx_ord_marketer_id', 'marketer_id'),
+        db.Index('idx_ord_tracking_tag', 'tracking_tag'),
         db.Index('idx_ord_ref', 'order_reference'),
         db.Index('idx_ord_status', 'status'),
         db.Index('idx_ord_created', 'created_at'),
@@ -29,8 +29,11 @@ class Order(db.Model):
     id = db.Column(db.String(100), primary_key=True) 
     order_id_display = db.Column(db.String(50), nullable=True)
     
-    # الربط السيادي
+    # الربط السيادي (تتبع المورد والمسوق)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
+    marketer_id = db.Column(db.Integer, db.ForeignKey('marketers.id'), nullable=True) # ربط المسوق
+    tracking_tag = db.Column(db.String(100), nullable=True) # وسم التتبع الذكي
+    
     order_reference = db.Column(db.String(100), unique=True, nullable=True) 
     
     # بيانات ظاهرة (بدون تشفير) للتقارير والفلترة المالية السريعة
@@ -49,6 +52,7 @@ class Order(db.Model):
 
     # العلاقات
     supplier = db.relationship('Supplier', back_populates='orders')
+    marketer = db.relationship('Marketer', back_populates='orders') # علاقة جديدة مع المسوق
     financials = db.relationship('OrderFinancial', back_populates='order', uselist=False, cascade="all, delete-orphan")
 
     # --- منطق التشفير الاحترافي ---
