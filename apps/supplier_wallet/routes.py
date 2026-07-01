@@ -6,83 +6,77 @@ from flask_login import login_required, current_user
 from flask_paginate import Pagination, get_page_parameter
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.api.sync_engine import SyncEngine
-from datetime import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import func
 
-# تعريف البلوبرنت الخاص بمحفظة المورد
 supplier_wallet_bp = Blueprint('supplier_wallet', __name__, template_folder='templates')
 
 @supplier_wallet_bp.route('/my-wallet', methods=['GET'])
 @login_required
 def view_my_wallet():
-    """عرض كشف حساب المورد مع الفلترة والترقيم ودعم الـ AJAX."""
-    
-    # 1. جلب محفظة المورد (ضمان حماية المسار: المورد لا يرى إلا محفظته)
+    # 1. جلب محفظة المورد
     wallet = SupplierWallet.query.filter_by(supplier_id=current_user.id).first()
     if not wallet:
         abort(404, description="لم يتم العثور على محفظة مرتبطة بحسابك.")
 
-    # 2. فلتر العملة (افتراضياً SAR)
+    # 2. الفلاتر الأساسية
     currency = request.args.get('currency', 'SAR')
+    filter_type = request.args.get('filter_type', 'all')
+    search = request.args.get('search', '').strip()
+    
     query = WalletTransaction.query.filter_by(wallet_id=wallet.id, currency=currency)
 
-    # 3. البحث المرن (عن سند أو وصف)
-    search = request.args.get('search', '').strip()
+    # 3. الفلترة الزمنية
+    if filter_type == 'day':
+        query = query.filter(WalletTransaction.created_at >= datetime.utcnow().date())
+    elif filter_type == 'week':
+        query = query.filter(WalletTransaction.created_at >= (datetime.utcnow() - timedelta(days=7)))
+    elif filter_type == 'month':
+        query = query.filter(WalletTransaction.created_at >= (datetime.utcnow() - timedelta(days=30)))
+    
+    # فلترة بالتاريخ المخصص
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    if start_date: query = query.filter(WalletTransaction.created_at >= start_date)
+    if end_date: query = query.filter(WalletTransaction.created_at <= end_date)
+
+    # 4. البحث المرن
     if search:
         query = query.filter(
             (WalletTransaction.voucher_number.ilike(f'%{search}%')) | 
             (WalletTransaction.description.ilike(f'%{search}%'))
         )
 
-    # 4. الترتيب الزمني للأحدث
-    all_transactions = query.order_by(WalletTransaction.created_at.desc()).all()
+    # 5. حساب الإجماليات (لكل الفترة المفلترة)
+    # نستخدم func.sum للحصول على دقة عالية وسرعة من قاعدة البيانات مباشرة
+    stats = query.with_entities(
+        func.sum(WalletTransaction.amount).filter(WalletTransaction.trans_type.in_(['sale_revenue', 'adjustment_credit'])).label('total_credit'),
+        func.sum(WalletTransaction.amount).filter(WalletTransaction.trans_type.in_(['withdrawal', 'adjustment_debit'])).label('total_debit')
+    ).first()
     
-    # 5. حساب الإجماليات (دائن/مدين) بناءً على العملة المختارة
-    # ملاحظة: نستخدم منطق تصنيف العمليات لضمان دقة الحساب
-    total_credit = sum(t.amount for t in all_transactions if t.trans_type in ['sale_revenue', 'adjustment_credit'])
-    total_debit = sum(t.amount for t in all_transactions if t.trans_type in ['withdrawal', 'adjustment_debit'])
-    
+    total_credit = stats.total_credit or 0
+    total_debit = stats.total_debit or 0
+
     # 6. الترقيم (Pagination)
     page = request.args.get(get_page_parameter(), type=int, default=1)
     per_page = 20
-    offset = (page - 1) * per_page
-    transactions_paginated = all_transactions[offset : offset + per_page]
+    pagination = Pagination(page=page, total=query.count(), per_page=per_page, css_framework='bootstrap5')
     
-    pagination = Pagination(
-        page=page, 
-        total=len(all_transactions), 
-        per_page=per_page, 
-        css_framework='bootstrap5',
-        record_name='عملية'
-    )
+    transactions = query.order_by(WalletTransaction.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
 
-    # 7. استجابة الـ AJAX (لتحديث الجدول فقط عند تغيير الفلتر أو الصفحة)
+    # 7. استجابة الـ AJAX
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render_template(
-            'supplier_wallet/_table_partial.html', 
-            transactions=transactions_paginated,
-            total_debit=total_debit,
-            total_credit=total_credit
-        )
+        return render_template('supplier_wallet/_table_partial.html', 
+                               transactions=transactions, total_debit=total_debit, total_credit=total_credit)
 
-    # 8. الاستجابة العادية (تحميل الصفحة كاملة)
-    return render_template(
-        'supplier_wallet/supplier_wallet.html', 
-        wallet=wallet,
-        transactions=transactions_paginated, 
-        pagination=pagination,
-        total_debit=total_debit,
-        total_credit=total_credit,
-        now=datetime.utcnow()
-    )
+    return render_template('supplier_wallet/supplier_wallet.html', 
+                           wallet=wallet, transactions=transactions, pagination=pagination,
+                           total_debit=total_debit, total_credit=total_credit)
 
 @supplier_wallet_bp.route('/test-sync', methods=['GET'])
 @login_required
 def test_sync():
-    """مسار إداري لاختبار المزامنة اليدوية."""
-    if not current_user.is_admin: # فرضاً أن هناك خاصية للتحقق من الأدمن
-        abort(403)
-        
-    success = SyncEngine.fetch_and_sync_order()
-    if success:
-        return "✅ تم تنفيذ عملية المزامنة بنجاح، تحقق من المحفظة."
-    return "❌ فشلت عملية المزامنة، تحقق من سجلات النظام (Logs)."
+    if not current_user.is_admin: abort(403)
+    if SyncEngine.fetch_and_sync_order():
+        return "✅ تم تنفيذ المزامنة."
+    return "❌ فشل المزامنة."
