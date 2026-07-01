@@ -19,16 +19,17 @@ def index():
     """عرض الأستاذ العام (كشف حساب المنصة)."""
     
     # 1. جلب كافة الحركات المالية بترتيب زمني تنازلي
+    # استخدام استعلام آمن لجلب البيانات
     transactions = WalletTransaction.query.order_by(WalletTransaction.created_at.desc()).all()
 
-    # 2. تحضير الحركات للعرض (استخدام قاموس لتجنب أخطاء SQLAlchemy)
+    # 2. تحضير الحركات للعرض (المدين والدائن)
+    # استخدام قاموس لتجنب تمرير سمات غير موجودة في نموذج قاعدة البيانات
     processed_transactions = []
     for t in transactions:
-        # تحديد نوع الحركة
+        # تحديد المدين والدائن بناءً على نوع الحركة
         is_credit = t.trans_type in ['credit', 'adjustment_credit', 'sale_revenue']
         
-        # إنشاء قاموس يحتوي على البيانات لعرضها في القالب
-        # هذا يحل مشكلة 'invalid keyword argument' لأننا لا نعدل كائن قاعدة البيانات
+        # إنشاء قاموس بيانات مؤقت للعرض فقط
         tx_data = {
             'voucher_number': t.voucher_number,
             'created_at': t.created_at,
@@ -40,7 +41,7 @@ def index():
         }
         processed_transactions.append(tx_data)
 
-    # 3. حساب إجمالي رصيد الخزينة (الرصيد الأخير)
+    # 3. حساب إجمالي رصيد الخزينة (الرصيد الأخير في آخر حركة)
     last_trans = WalletTransaction.query.order_by(WalletTransaction.id.desc()).first()
     total_balance = last_trans.balance_after if last_trans else 0.00
 
@@ -56,9 +57,9 @@ def filter_treasury():
     """دالة البحث المتقدم"""
     voucher = request.args.get('voucher')
     if voucher:
-        # ملاحظة: في حال البحث، يفضل أيضاً تحويل البيانات لقواميس بنفس الطريقة المذكورة أعلاه
         transactions = WalletTransaction.query.filter(
             WalletTransaction.voucher_number.like(f"%{voucher}%")
         ).all()
+        # ملاحظة: في حال استخدام الفلتر، تأكد من معالجة البيانات هنا أيضاً كقاموس إذا لزم الأمر
         return render_template('admin_platform_treasury.html', transactions=transactions)
     return index()
