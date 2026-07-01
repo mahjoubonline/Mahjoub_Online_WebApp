@@ -4,7 +4,8 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required
 from apps.extensions import db
-from apps.models.suppliers_db import Supplier
+# تم التصحيح: استيراد الموديل بالمفرد ليتطابق مع اسم الملف
+from apps.models.supplier_db import Supplier
 from apps.models.supplier_staff_db import SupplierStaff
 from sqlalchemy.exc import IntegrityError
 import secrets
@@ -42,7 +43,7 @@ def add_supplier_or_staff():
                 db.session.refresh(new_supplier)
                 wallet_code = new_supplier.wallet.wallet_code if new_supplier.wallet else "تم الإنشاء"
                 
-                flash(f"✅ تم تسجيل المورد: {new_supplier.trade_name} | المحفظة: {wallet_code} | كلمة المرور: {temp_password} | محجوب اونلاين | سوقك الذكي", "success")
+                flash(f"✅ تم تسجيل المورد: {new_supplier.trade_name} | المحفظة: {wallet_code} | كلمة المرور: {temp_password}", "success")
                 
             elif action_type == 'staff':
                 # 2. إنشاء الموظف
@@ -57,7 +58,7 @@ def add_supplier_or_staff():
                 db.session.add(new_staff)
                 db.session.commit()
                 
-                flash(f"✅ تم إضافة الموظف: {new_staff.username} | كلمة المرور: {temp_password} | محجوب اونلاين | سوقك الذكي", "success")
+                flash(f"✅ تم إضافة الموظف: {new_staff.username} | كلمة المرور: {temp_password}", "success")
             
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
