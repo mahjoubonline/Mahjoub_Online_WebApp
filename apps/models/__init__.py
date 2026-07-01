@@ -3,10 +3,11 @@
 
 """
 مركز التحكم في الموديلات (Model Registry)
-تم ترتيب الاستيراد لضمان تحميل الموديلات الأم قبل التابعة.
+تم ترتيب الاستيراد لضمان تحميل الموديلات الأم قبل التابعة 
+لتجنب أخطاء الاعتمادات الدائرية (Circular Imports).
 """
 
-# 1. الموديلات الأساسية (التي تعتمد عليها باقي الجداول)
+# 1. الموديلات الأساسية (التي لا تعتمد على غيرها)
 from .supplier_db import Supplier
 from .admin_db import AdminUser
 from .marketer_db import Marketer
@@ -21,6 +22,7 @@ from .orders_db import Order
 from .sync_log import SyncLog
 
 # 3. القائمة المصدرة (Export Registry)
+# تسمح هذه القائمة باستيراد أي موديل مباشرة من حزمة apps.models
 __all__ = [
     'AdminStaff',
     'AdminUser',
