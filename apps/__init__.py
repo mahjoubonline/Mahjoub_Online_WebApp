@@ -31,7 +31,7 @@ def create_app():
     login_manager.login_view = 'suppliers_auth.login'
 
     with app.app_context():
-        # [إصلاح طوارئ]: التأكد من وجود عمود العملة قبل الزرع لمنع خطأ UndefinedColumn
+        # [إصلاح طوارئ]: التأكد من وجود عمود العملة
         try:
             with db.engine.connect() as conn:
                 conn.execute(db.text("ALTER TABLE order_financials ADD COLUMN IF NOT EXISTS currency VARCHAR(5) DEFAULT 'SAR'"))
@@ -41,7 +41,6 @@ def create_app():
 
         db.create_all()
         
-        # 1. زرع البيانات الأساسية (المالك والمورد)
         try:
             admin = AdminUser.query.filter_by(username='علي محجوب').first()
             if not admin:
@@ -49,7 +48,6 @@ def create_app():
                 admin.set_password('123')
                 db.session.add(admin)
                 db.session.commit()
-                print("✅ [Seed]: تم زرع المالك علي محجوب بنجاح.")
 
             supplier = Supplier.query.filter_by(username='وائل محجوب').first()
             if not supplier:
@@ -59,9 +57,8 @@ def create_app():
                 db.session.flush()
                 db.session.add(SupplierProfile(supplier_id=supplier.id, trade_name='محجوب أونلاين'))
                 db.session.commit()
-                print("✅ [Seed]: تم زرع المورد وائل محجوب بنجاح.")
 
-            # 2. سكريبت زرع العجب: تجربة طلب قمرة (SAR)
+            # 2. سكريبت زرع العمليات المالية المفصلة
             order_ref = "QAMRA-2026-001"
             if not Order.query.filter_by(order_reference=order_ref).first():
                 new_order = Order(
@@ -75,6 +72,7 @@ def create_app():
                 db.session.add(new_order)
                 db.session.flush()
 
+                # حفظ المالي المشفر
                 financial = OrderFinancial(
                     order_id=new_order.id,
                     supplier_id=supplier.id,
@@ -86,19 +84,18 @@ def create_app():
                 )
                 db.session.add(financial)
 
+                # إضافة الحركات المالية التفصيلية للوحة التحكم (كما طلبت)
                 wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
                 if wallet:
-                    transaction = WalletTransaction(
-                        wallet_id=wallet.id,
-                        owner_id=supplier.id,
-                        trans_type='sale_revenue',
-                        amount=100.00,
-                        currency='SAR'
-                    )
-                    db.session.add(transaction)
+                    # الحركة الأولى: تكلفة المورد
+                    db.session.add(WalletTransaction(wallet_id=wallet.id, owner_id=supplier.id, trans_type='supplier_cost', amount=400.00, currency='SAR'))
+                    # الحركة الثانية: عمولة المنصة
+                    db.session.add(WalletTransaction(wallet_id=wallet.id, owner_id=1, trans_type='platform_commission', amount=100.00, currency='SAR'))
+                    # الحركة الثالثة: عمولة مسوق (اختياري)
+                    # db.session.add(WalletTransaction(wallet_id=wallet.id, owner_id=2, trans_type='marketer_commission', amount=20.00, currency='SAR'))
                 
                 db.session.commit()
-                print("🚀 [العجب]: تم زرع طلب قمرة وتحديث رصيد المورد بـ SAR بنجاح!")
+                print("🚀 [الخزينة]: تم تسجيل الحركات المالية المفصلة بنجاح!")
 
         except Exception as e:
             db.session.rollback()
@@ -109,7 +106,6 @@ def create_app():
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
             if item in ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'suppliers_auth']: continue
-            
             registry_file = os.path.join(item_path, 'registry.py')
             if os.path.isdir(item_path) and os.path.exists(registry_file):
                 try:
