@@ -3,19 +3,25 @@
 
 """
 مركز التحكم في الموديلات (Model Registry)
+- تم ترتيب الاستيراد لضمان تحميل الموديلات الأم (Parents) قبل التابعة (Children)
+  لتجنب أخطاء "Table not found" أثناء الترحيل أو التشغيل.
 """
 
-from .admin_db import AdminUser
-from .admin_staff_db import AdminStaff
+# 1. الموديلات الأساسية والأم (تحمل الـ Foreign Keys الأساسية)
 from .supplier_db import Supplier
+from .admin_db import AdminUser
+from .marketer_db import Marketer
+
+# 2. الموديلات التابعة (تعتمد على الموديلات أعلاه)
+from .admin_staff_db import AdminStaff
 from .supplier_profile_db import SupplierProfile
 from .supplier_staff_db import SupplierStaff
 from .wallet_db import SupplierWallet, WalletTransaction
 from .financials_db import OrderFinancial
 from .orders_db import Order
-from .marketer_db import Marketer
 from .sync_log import SyncLog
 
+# 3. القائمة المصدرة (Export Registry)
 __all__ = [
     'AdminStaff',
     'AdminUser',
