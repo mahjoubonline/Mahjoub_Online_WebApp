@@ -92,16 +92,16 @@ class WalletTransaction(db.Model):
     wallet = db.relationship('SupplierWallet', back_populates='transactions')
 
     @classmethod
-    def execute_transfer(cls, wallet_id, amount, trans_type, owner_type='supplier', owner_id=0, description=''):
+    def execute_transfer(cls, wallet_id, amount, trans_type, currency='SAR', owner_type='supplier', owner_id=0, description=''):
         """المحرك المالي الرشيق: سطر كود واحد لتنفيذ أي عملية مالية."""
         new_trans = cls(
             wallet_id=wallet_id,
             amount=amount,
             trans_type=trans_type,
+            currency=currency,
             owner_type=owner_type,
             owner_id=owner_id,
-            description=description,
-            currency='SAR' # العملة الافتراضية للتعاملات
+            description=description
         )
         db.session.add(new_trans)
         db.session.commit()
@@ -109,6 +109,7 @@ class WalletTransaction(db.Model):
 
 @event.listens_for(WalletTransaction, 'before_insert')
 def set_voucher_number(mapper, connection, target):
+    # توليد رقم القسيمة
     if not target.voucher_number:
         last_trans = db.session.query(func.max(WalletTransaction.voucher_number)).scalar()
         if last_trans and '-' in last_trans:
@@ -117,13 +118,30 @@ def set_voucher_number(mapper, connection, target):
         else: last_num = 12327
         target.voucher_number = f"MJ-2026-{last_num + 1:07d}"
 
+    # تحديث الأرصدة بناءً على العملة
     if target.balance_before is None or target.balance_after is None:
         wallet = SupplierWallet.query.get(target.wallet_id)
         if wallet:
-            current = wallet.balance_sar or 0.00
+            # تحديد الرصيد الحالي بناءً على العملة
+            if target.currency == 'YER':
+                current = wallet.balance_yer or 0.00
+            elif target.currency == 'USD':
+                current = wallet.balance_usd or 0.00
+            else: # SAR افتراضياً
+                current = wallet.balance_sar or 0.00
+            
             target.balance_before = current
+            
+            # حساب الحركة (إيداع أو سحب)
             if target.trans_type in ['credit', 'adjustment_credit', 'sale_revenue']:
                 target.balance_after = current + target.amount
             else:
                 target.balance_after = current - target.amount
-            wallet.balance_sar = target.balance_after
+            
+            # حفظ الرصيد الجديد في العمود الصحيح
+            if target.currency == 'YER':
+                wallet.balance_yer = target.balance_after
+            elif target.currency == 'USD':
+                wallet.balance_usd = target.balance_after
+            else:
+                wallet.balance_sar = target.balance_after
