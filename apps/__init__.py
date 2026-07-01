@@ -31,6 +31,14 @@ def create_app():
     login_manager.login_view = 'suppliers_auth.login'
 
     with app.app_context():
+        # [إصلاح طوارئ]: التأكد من وجود عمود العملة قبل الزرع لمنع خطأ UndefinedColumn
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(db.text("ALTER TABLE order_financials ADD COLUMN IF NOT EXISTS currency VARCHAR(5) DEFAULT 'SAR'"))
+                conn.commit()
+        except Exception as e:
+            print(f"⚠️ [Database Fix Alert]: {e}")
+
         db.create_all()
         
         # 1. زرع البيانات الأساسية (المالك والمورد)
@@ -54,7 +62,6 @@ def create_app():
                 print("✅ [Seed]: تم زرع المورد وائل محجوب بنجاح.")
 
             # 2. سكريبت زرع العجب: تجربة طلب قمرة (SAR)
-            # يعمل فقط إذا لم يكن الطلب موجوداً مسبقاً لمنع التكرار
             order_ref = "QAMRA-2026-001"
             if not Order.query.filter_by(order_reference=order_ref).first():
                 new_order = Order(
@@ -68,7 +75,6 @@ def create_app():
                 db.session.add(new_order)
                 db.session.flush()
 
-                # إضافة المركز المالي المشفر
                 financial = OrderFinancial(
                     order_id=new_order.id,
                     supplier_id=supplier.id,
@@ -80,7 +86,6 @@ def create_app():
                 )
                 db.session.add(financial)
 
-                # إضافة الحركة المالية (التي ستُفعل التحديث التلقائي لرصيد SAR في المحفظة)
                 wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
                 if wallet:
                     transaction = WalletTransaction(
