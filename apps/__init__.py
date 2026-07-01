@@ -3,7 +3,6 @@ import os
 import importlib
 from decimal import Decimal
 from flask import Flask, session
-from werkzeug.security import generate_password_hash
 from apps.extensions import db, login_manager, migrate
 from apps.models import AdminUser, Supplier, SupplierProfile, SupplierWallet, WalletTransaction, Order, OrderFinancial
 from apps.models.supplier_staff_db import SupplierStaff
@@ -35,7 +34,9 @@ def create_app():
             # زرع المالك: علي محجوب
             admin = AdminUser.query.filter_by(username='Ali Mahjoub').first()
             if not admin:
-                admin = AdminUser(username='Ali Mahjoub', password=generate_password_hash('123'))
+                admin = AdminUser(username='Ali Mahjoub')
+                # استخدام دالة set_password المعتمدة في الموديل لتفادي خطأ keyword argument
+                admin.set_password('123')
                 db.session.add(admin)
                 db.session.commit()
                 print("✅ [Seed]: تم زرع المالك علي محجوب بنجاح.")
@@ -65,7 +66,6 @@ def create_app():
                 wallet = SupplierWallet.query.filter_by(supplier_id=supplier.id).first()
                 if wallet:
                     amount = Decimal('1188.25')
-                    # تم إصلاح الخطأ هنا: إزالة credit= و debit= واستخدام الحقول المتاحة فقط
                     transaction = WalletTransaction(
                         wallet_id=wallet.id, owner_type='supplier', owner_id=supplier.id,
                         amount=amount, trans_type='credit', 
