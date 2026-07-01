@@ -9,7 +9,8 @@
             <h2 class="fw-bold text-dark mb-1"><i class="fas fa-university me-2 text-primary"></i>الخزينة المركزية (الأستاذ العام)</h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb text-muted small">
-                    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">الرئيسية</a></li>
+                    {# تم تعديل الرابط ليتوافق مع الـ Blueprint الرئيسي للإدارة #}
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard.dashboard') }}">الرئيسية</a></li>
                     <li class="breadcrumb-item active">الخزينة</li>
                 </ol>
             </nav>
