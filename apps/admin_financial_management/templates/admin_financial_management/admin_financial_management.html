@@ -1,77 +1,76 @@
 {% extends 'admin/admin_base.html' %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>إدارة طلبات سحب الرصيد</h2>
-    </div>
+<style>
+    :root {
+        --royal-purple: #4b0082;
+        --deep-dark: #1a1a2e;
+        --gold: #d4af37;
+    }
+    .card { border: 1px solid var(--royal-purple); border-radius: 12px; overflow: hidden; }
+    .card-header { background: linear-gradient(to right, var(--deep-dark), var(--royal-purple)); color: white; padding: 1.5rem; }
+    .table thead { background-color: var(--deep-dark); color: white; }
+    .status-credit { color: #28a745; font-weight: bold; } /* دائن */
+    .status-debit { color: #dc3545; font-weight: bold; } /* مدين */
+    .clickable-row { cursor: pointer; transition: 0.3s; }
+    .clickable-row:hover { background-color: #f8f9fa; }
+</style>
 
-    <div class="card shadow-sm">
+<div class="container-fluid py-4">
+    <div class="card shadow mb-4">
+        <div class="card-header">
+            <h2 class="mb-0">سجل الحركة المالية العام</h2>
+            <p class="mb-0 opacity-75">كشف حساب دائن ومدين لجميع عمليات المنصة</p>
+        </div>
         <div class="card-body">
+            <!-- الفلاتر والعملات -->
+            <div class="d-flex gap-2 mb-4">
+                <a href="?currency=SAR" class="btn btn-outline-dark">SAR</a>
+                <a href="?currency=USD" class="btn btn-outline-dark">USD</a>
+                <a href="?currency=YER" class="btn btn-outline-dark">YER</a>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
-                            <th>المورد</th>
-                            <th>المبلغ</th>
-                            <th>طريقة الدفع</th>
                             <th>التاريخ</th>
-                            <th>الإجراءات</th>
+                            <th>رقم العملية/الطلب</th>
+                            <th>البيان</th>
+                            <th>مدين (مصروف)</th>
+                            <th>دائن (إيراد)</th>
+                            <th>الرصيد التراكمي</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for req in requests %}
-                        <tr>
-                            <td>
-                                <strong>{{ req.supplier.trade_name }}</strong><br>
-                                <small class="text-muted">{{ req.supplier.username }}</small>
-                            </td>
-                            <td><span class="badge bg-success">{{ "{:,.2f}".format(req.amount) }} SAR</span></td>
-                            <td>
-                                {{ req.payment_method }}<br>
-                                <small>{{ req.payment_details }}</small>
-                            </td>
-                            <td>{{ req.requested_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>
-                                <form action="{{ url_for('admin_financial.process_withdrawal', req_id=req.id) }}" method="POST" class="d-inline">
-                                    <input type="hidden" name="action" value="approve">
-                                    <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('هل أنت متأكد من الموافقة على تحويل المبلغ؟')">
-                                        <i class="fas fa-check"></i> قبول
-                                    </button>
-                                </form>
-
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ req.id }}">
-                                    <i class="fas fa-times"></i> رفض
-                                </button>
-                            </td>
+                        {% for t in transactions %}
+                        <tr class="clickable-row" onclick="window.location.href='{{ url_for('orders_bp.view_order', order_id=t.related_order_id) }}';">
+                            <td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td><code>{{ t.related_order_id or '---' }}</code></td>
+                            <td>{{ t.description }}</td>
+                            <td class="status-debit">{{ "{:,.2f}".format(t.debit) if t.debit > 0 else '-' }}</td>
+                            <td class="status-credit">{{ "{:,.2f}".format(t.credit) if t.credit > 0 else '-' }}</td>
+                            <td><strong>{{ "{:,.2f}".format(t.balance_after) }}</strong></td>
                         </tr>
-
-                        <div class="modal fade" id="rejectModal{{ req.id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <form action="{{ url_for('admin_financial.process_withdrawal', req_id=req.id) }}" method="POST" class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">رفض طلب السحب</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <input type="hidden" name="action" value="reject">
-                                        <label class="form-label">سبب الرفض:</label>
-                                        <textarea name="notes" class="form-control" required></textarea>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="submit" class="btn btn-danger">تأكيد الرفض</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
                         {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-4">لا توجد طلبات سحب معلقة حالياً.</td>
-                        </tr>
+                        <tr><td colspan="6" class="text-center py-4 text-muted">لا توجد حركات مالية مسجلة.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            
+            <!-- أزرار التقليب -->
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ pagination.prev_num }}">السابق</a>
+                    </li>
+                    <li class="page-item disabled"><span class="page-link">صفحة {{ pagination.page }}</span></li>
+                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ pagination.next_num }}">التالي</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
 </div>
