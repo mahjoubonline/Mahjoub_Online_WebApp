@@ -1,4 +1,5 @@
-# 📂 apps/supplier_wallet/routes.py
+# 📂 apps/supplier_wallet/routes.py (مُعدل)
+
 from flask import Blueprint, render_template, abort, request
 from flask_login import login_required, current_user
 from flask_paginate import Pagination, get_page_parameter
@@ -10,18 +11,14 @@ supplier_wallet_bp = Blueprint('supplier_wallet', __name__, template_folder='tem
 @supplier_wallet_bp.route('/my-wallet', methods=['GET'])
 @login_required
 def view_my_wallet():
-    # جلب المحفظة
+    # جلب محفظة المورد
     wallet = SupplierWallet.query.filter_by(supplier_id=current_user.id).first()
     if not wallet:
         abort(404, description="لم يتم العثور على محفظة.")
 
-    # الاستعلام الأساسي
-    query = WalletTransaction.query.filter_by(wallet_id=wallet.id)
-
-    # 1. فلتر العملة
-    currency = request.args.get('currency')
-    if currency:
-        query = query.filter_by(currency=currency)
+    # 1. فلتر العملة (افتراضياً SAR إذا لم يختر المورد)
+    currency = request.args.get('currency', 'SAR')
+    query = WalletTransaction.query.filter_by(wallet_id=wallet.id, currency=currency)
 
     # 2. البحث المرن
     search = request.args.get('search', '').strip()
@@ -31,14 +28,14 @@ def view_my_wallet():
             (WalletTransaction.description.ilike(f'%{search}%'))
         )
 
-    # ترتيب النتائج (نحتاج كل النتائج للحسابات الصحيحة)
+    # 3. ترتيب النتائج
     all_transactions = query.order_by(WalletTransaction.created_at.desc()).all()
     
-    # حساب الإجماليات بناءً على النتائج المفلترة فقط
+    # 4. حساب الإجماليات (بناءً على العملة المختارة فقط)
     total_debit = sum(t.amount for t in all_transactions if t.trans_type == 'debit')
     total_credit = sum(t.amount for t in all_transactions if t.trans_type == 'credit')
     
-    # الترقيم
+    # 5. الترقيم
     page = request.args.get(get_page_parameter(), type=int, default=1)
     per_page = 20
     offset = (page - 1) * per_page
@@ -46,7 +43,7 @@ def view_my_wallet():
     
     pagination = Pagination(page=page, total=len(all_transactions), per_page=per_page, css_framework='bootstrap5')
 
-    # إذا كان الطلب AJAX (بحث)، نرسل الإجماليات أيضاً لتعريف الجدول بها
+    # 6. استجابة الـ AJAX
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template(
             'supplier_wallet/_table_partial.html', 
