@@ -6,10 +6,8 @@ import requests
 import logging
 from decimal import Decimal
 from apps.extensions import db
-from apps.models.sync_log import SyncLog
 from apps.models.wallet_db import WalletTransaction, SupplierWallet
-from apps.models.orders_db import Order
-from apps.api.tracker_service import TrackerService # استيراد محرك التتبع
+from apps.api.tracker_service import TrackerService
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +25,13 @@ class SyncEngine:
 
     @staticmethod
     def process_financials(order_id, supplier_id, total_price, tracking_tag=None):
-        """توزيع مالي ذكي للحصص مع دعم التتبع المشفر"""
+        """توزيع مالي ذكي للحصص مع دعم التتبع المشفر والربط المحاسبي"""
         try:
             total_price = Decimal(str(total_price))
             
-            # 1. فك تشفير بيانات المسوق إذا وجد وسم تتبع
+            # 1. فك تشفير بيانات المسوق
             marketer_id = None
             if tracking_tag and '|' in tracking_tag:
-                # نفترض أن التاج يحتوي على بيانات تتبع (سنقوم بتطوير التوافق لاحقاً)
                 data = TrackerService.verify_and_resolve(tracking_tag.split('|')[0], tracking_tag.split('|')[1])
                 if data: marketer_id = data.get('marketer_id')
 
@@ -42,27 +39,33 @@ class SyncEngine:
             wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first()
             if not wallet: return False
 
-            # 3. منطق الحسابات (محاسبة دقيقة)
+            # 3. منطق الحسابات
             supplier_cost = total_price * Decimal('0.80')
             platform_profit = total_price * Decimal('0.20')
             
-            # خصم حصة المسوق من ربح المنصة
+            # خصم حصة المسوق
             if marketer_id:
                 marketer_share = platform_profit * Decimal('0.50')
                 platform_profit -= marketer_share
                 db.session.add(WalletTransaction(
-                    wallet_id=wallet.id, owner_id=int(marketer_id), trans_type='marketer_commission', 
-                    amount=marketer_share, currency='SAR', reference_number=f"MKT-{order_id}"
+                    wallet_id=wallet.id, 
+                    amount=marketer_share, 
+                    trans_type='adjustment_debit', # خصم من المنصة أو عمولة
+                    currency='SAR',
+                    description=f"عمولة مسوق للطلب {order_id}",
+                    voucher_number=f"MKT-{order_id}",
+                    reference_number=order_id
                 ))
 
-            # تسجيل الحركات المالية
+            # تسجيل إيراد المبيعات للمورد (دائن)
             db.session.add(WalletTransaction(
-                wallet_id=wallet.id, owner_id=supplier_id, trans_type='credit', 
-                amount=supplier_cost, currency='SAR', reference_number=f"SUP-{order_id}"
-            ))
-            db.session.add(WalletTransaction(
-                wallet_id=wallet.id, owner_id=1, trans_type='platform_commission', 
-                amount=platform_profit, currency='SAR', reference_number=f"PLAT-{order_id}"
+                wallet_id=wallet.id, 
+                amount=supplier_cost, 
+                trans_type='sale_revenue', # متوافق مع الفلترة في routes.py
+                currency='SAR',
+                description=f"إيراد مبيعات الطلب {order_id}",
+                voucher_number=f"SUP-{order_id}",
+                reference_number=order_id
             ))
             
             db.session.commit()
@@ -74,10 +77,7 @@ class SyncEngine:
 
     @staticmethod
     def fetch_and_sync_order():
-        """جلب ومزامنة الطلبات من قمرة"""
-        # (هنا يوضع كود الـ requests.post لـ GraphQL)
-        # عند الحصول على الطلبات:
-        # if not Order.query.filter_by(id=order['id']).first():
-        #     if SyncEngine.process_financials(order['id'], order['supplierId'], order['totalPrice'], order.get('trackingTag')):
-        #         logger.info(f"✅ تمت التسوية المالية للطلب {order['id']}")
-        pass
+        """جلب ومزامنة الطلبات من قمرة (هيكل تجريبي)"""
+        # عند جلب الطلبات من الـ GraphQL API:
+        # success = SyncEngine.process_financials(order['id'], order['supplierId'], order['totalPrice'], order.get('trackingTag'))
+        return True
