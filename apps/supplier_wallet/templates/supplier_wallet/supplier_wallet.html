@@ -70,26 +70,6 @@
                 <tbody id="tableBody">
                     {% include 'supplier_wallet/_table_partial.html' %}
                 </tbody>
-                <tfoot class="bg-light fw-bold">
-                    <tr class="summary-footer">
-                        <td colspan="3" class="text-start px-4">إجمالي الفترة المفلترة:</td>
-                        <td class="text-danger">م: {{ "{:,.2f}".format(total_debit) }}</td>
-                        <td class="text-success">د: {{ "{:,.2f}".format(total_credit) }}</td>
-                        <td></td>
-                    </tr>
-                    <tr class="table-light">
-                        <td colspan="3" class="text-end px-4 text-royal-purple fs-5">صافي الموقف المالي:</td>
-                        <td colspan="3" class="text-center fw-bold fs-4">
-                            {% set net = total_credit - total_debit %}
-                            <span class="{{ 'text-success' if net >= 0 else 'text-danger' }}">
-                                {{ "{:,.2f}".format(net) }}
-                            </span>
-                            <span class="badge {{ 'bg-success' if net >= 0 else 'bg-danger' }} fs-6 ms-2">
-                                {{ 'لكم' if net >= 0 else 'عليكم' }}
-                            </span>
-                        </td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
         <div class="d-flex justify-content-center py-3 bg-light border-top">{{ pagination.links }}</div>
@@ -99,7 +79,7 @@
 <script>
     document.getElementById('searchInput').oninput = e => {
         const urlParams = new URLSearchParams(window.location.search);
-        const currency = urlParams.get('currency') || '';
+        const currency = urlParams.get('currency') || 'SAR';
         fetch(`/my-wallet?search=${encodeURIComponent(e.target.value)}&currency=${encodeURIComponent(currency)}`, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
