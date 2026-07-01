@@ -1,19 +1,19 @@
 # coding: utf-8
-# 📂 apps/models/supplier_db.py
+# 📂 apps/models/suppliers_db.py (تم تغيير الاسم للجمع لتوافق Auto-Discovery)
 
 import os
 from datetime import datetime
 from cryptography.fernet import Fernet
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import event, update
+from sqlalchemy import event, update, insert
 from apps.extensions import db
 
 class Supplier(db.Model, UserMixin):
     """موديل المورد: البيانات الأساسية مع التشفير الأمني والربط المالي التلقائي."""
     __tablename__ = 'suppliers'
     
-    # [فهرسة متقدمة]: لسرعة الاستعلام في جداول البيانات الضخمة
+    # [فهرسة متقدمة]: لسرعة الاستعلام
     __table_args__ = (
         db.Index('idx_sup_username', 'username'),
         db.Index('idx_sup_code', 'supplier_code'),
@@ -25,7 +25,6 @@ class Supplier(db.Model, UserMixin):
         {'extend_existing': True}
     )
 
-    # الأعمدة الأساسية
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     supplier_code = db.Column(db.String(50), unique=True, nullable=True) 
@@ -66,7 +65,6 @@ class Supplier(db.Model, UserMixin):
             self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
             self.search_phone = str(value)[:20]
 
-    # --- نظام أمن كلمات المرور ---
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
@@ -79,21 +77,19 @@ class Supplier(db.Model, UserMixin):
 # --- نظام المحرك التلقائي (Auto-Discovery) ---
 @event.listens_for(Supplier, 'after_insert')
 def receive_after_insert(mapper, connection, target):
-    from apps.models.wallet_db import SupplierWallet
+    # استخدام connection.execute لتجنب خطأ SAWarning (Session conflict)
     
-    # 1. تحديث كود المورد الفريد (توليد كود تلقائي بعد الإنشاء)
+    # 1. تحديث الكود
     new_supplier_code = f"MAH-SUP963{target.id}"
     connection.execute(
         update(Supplier).where(Supplier.id == target.id).values(supplier_code=new_supplier_code)
     )
     
-    # 2. إنشاء محفظة مالية مرتبطة تلقائياً للمورد الجديد
-    new_wallet = SupplierWallet(
-        wallet_code=f"MAH-WEL963{target.id}",
-        supplier_id=target.id,
-        balance_yer=0.00, balance_usd=0.00, balance_sar=0.00, balance_pending=0.00
+    # 2. إنشاء المحفظة باستخدام SQL مباشر (أسرع وأكثر استقراراً)
+    connection.execute(
+        db.table('supplier_wallets').insert().values(
+            wallet_code=f"MAH-WEL963{target.id}",
+            supplier_id=target.id,
+            balance_yer=0.00, balance_usd=0.00, balance_sar=0.00, balance_pending=0.00
+        )
     )
-    
-    session = db.session.object_session(target)
-    if session:
-        session.add(new_wallet)
