@@ -6,13 +6,12 @@ from datetime import datetime
 from decimal import Decimal
 from cryptography.fernet import Fernet
 from apps.extensions import db
-from sqlalchemy import event, func
+from sqlalchemy import event, func, select
 
 class SupplierWallet(db.Model):
     """محفظة الموردين: الأرصدة والبيانات المشفرة."""
     __tablename__ = 'supplier_wallets'
 
-    # الفهرسة لضمان سرعة الاستعلامات المالية
     __table_args__ = (
         db.Index('idx_wall_code', 'wallet_code'),
         db.Index('idx_wall_supplier_id', 'supplier_id'),
@@ -24,14 +23,13 @@ class SupplierWallet(db.Model):
     wallet_code = db.Column(db.String(50), unique=True, nullable=False)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, unique=True)
     
-    # أرصدة العملات بدقة مالية عالية
+    # أرصدة العملات
     balance_yer = db.Column(db.Numeric(18, 2), default=0.00) 
     balance_usd = db.Column(db.Numeric(18, 2), default=0.00) 
     balance_sar = db.Column(db.Numeric(18, 2), default=0.00) 
     balance_pending = db.Column(db.Numeric(18, 2), default=0.00)    
     total_withdrawn = db.Column(db.Numeric(18, 2), default=0.00)    
     
-    # حقل مشفر لبيانات الحساب البنكي
     _bank_details_enc = db.Column(db.String(500), nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -47,19 +45,18 @@ class SupplierWallet(db.Model):
     def bank_details(self):
         if not self._bank_details_enc: return None
         try:
-            f = Fernet(self._get_key())
-            return f.decrypt(self._bank_details_enc.encode()).decode()
+            return Fernet(self._get_key()).decrypt(self._bank_details_enc.encode()).decode()
         except: return None
 
     @bank_details.setter
     def bank_details(self, value):
         if value:
-            f = Fernet(self._get_key())
-            self._bank_details_enc = f.encrypt(str(value).encode()).decode()
-        else: self._bank_details_enc = None
+            self._bank_details_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
+        else: 
+            self._bank_details_enc = None
 
 class WalletTransaction(db.Model):
-    """سجل الحركات المالية الموحد (دفتر الأستاذ)."""
+    """سجل الحركات المالية الموحد."""
     __tablename__ = 'wallet_transactions'
     
     __table_args__ = (
@@ -73,57 +70,56 @@ class WalletTransaction(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     wallet_id = db.Column(db.Integer, db.ForeignKey('supplier_wallets.id'), nullable=False)
-    
     owner_type = db.Column(db.String(20), default='supplier') 
     owner_id = db.Column(db.Integer, nullable=False)
-    
     trans_type = db.Column(db.String(20), nullable=False) 
     source_type = db.Column(db.String(20), default='manual')
     amount = db.Column(db.Numeric(18, 2), nullable=False)
     currency = db.Column(db.String(5), nullable=False)
-    
     balance_before = db.Column(db.Numeric(18, 2), nullable=False)
     balance_after = db.Column(db.Numeric(18, 2), nullable=False)
-    
     description = db.Column(db.String(255))
     reference_number = db.Column(db.String(50)) 
     related_order_id = db.Column(db.String(50), nullable=True)
     voucher_number = db.Column(db.String(20), unique=True, nullable=True) 
-    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, nullable=True)
 
     wallet = db.relationship('SupplierWallet', back_populates='transactions')
 
-# معالج أحداث لضمان دقة العمليات المحاسبية وتوليد رقم القسيمة
 @event.listens_for(WalletTransaction, 'before_insert')
 def set_voucher_number(mapper, connection, target):
-    # 1. توليد رقم القسيمة التسلسلي
+    # 1. توليد رقم القسيمة باستخدام الاتصال المباشر (أكثر أماناً في Events)
     if not target.voucher_number:
-        last_trans = db.session.query(func.max(WalletTransaction.voucher_number)).scalar()
+        last_trans = connection.execute(
+            select(func.max(WalletTransaction.voucher_number))
+        ).scalar()
+        
         last_num = 12327
         if last_trans and '-' in last_trans:
             try: last_num = int(last_trans.split('-')[-1])
             except: pass
         target.voucher_number = f"MJ-2026-{last_num + 1:07d}"
 
-    # 2. التحديث الحسابي للأرصدة (Atomic Update)
+    # 2. التحديث الحسابي للأرصدة
     if target.balance_before is None or target.balance_after is None:
-        wallet = SupplierWallet.query.get(target.wallet_id)
+        wallet = connection.execute(
+            select(SupplierWallet).filter_by(id=target.wallet_id)
+        ).scalar_one_or_none()
+        
         if wallet:
             amount_dec = Decimal(str(target.amount or 0))
-            
-            if target.currency == 'YER': current = Decimal(str(wallet.balance_yer or 0))
-            elif target.currency == 'USD': current = Decimal(str(wallet.balance_usd or 0))
-            else: current = Decimal(str(wallet.balance_sar or 0))
+            # اختيار العملة
+            attr = f'balance_{target.currency.lower()}'
+            current = Decimal(str(getattr(wallet, attr, 0) or 0))
             
             target.balance_before = current
             
+            # حساب الرصيد
             if target.trans_type in ['credit', 'adjustment_credit', 'sale_revenue']:
                 target.balance_after = current + amount_dec
             else:
                 target.balance_after = current - amount_dec
             
-            if target.currency == 'YER': wallet.balance_yer = target.balance_after
-            elif target.currency == 'USD': wallet.balance_usd = target.balance_after
-            else: wallet.balance_sar = target.balance_after
+            # تحديث المحفظة
+            setattr(wallet, attr, target.balance_after)
