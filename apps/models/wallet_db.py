@@ -12,6 +12,7 @@ class SupplierWallet(db.Model):
     """محفظة الموردين: الأرصدة والبيانات المشفرة."""
     __tablename__ = 'supplier_wallets'
 
+    # الفهرسة (Indexing) لضمان سرعة الاستعلام
     __table_args__ = (
         db.Index('idx_wall_code', 'wallet_code'),
         db.Index('idx_wall_supplier_id', 'supplier_id'),
@@ -23,20 +24,23 @@ class SupplierWallet(db.Model):
     wallet_code = db.Column(db.String(50), unique=True, nullable=False)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, unique=True)
     
+    # استخدام Numeric(18, 2) لضمان دقة العملات (بما فيها الهللات)
     balance_yer = db.Column(db.Numeric(18, 2), default=0.00) 
     balance_usd = db.Column(db.Numeric(18, 2), default=0.00) 
     balance_sar = db.Column(db.Numeric(18, 2), default=0.00) 
     balance_pending = db.Column(db.Numeric(18, 2), default=0.00)    
     total_withdrawn = db.Column(db.Numeric(18, 2), default=0.00)    
     
+    # تشفير بيانات البنك
     _bank_details_enc = db.Column(db.String(500), nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    supplier = db.relationship('apps.models.supplier_db.Supplier', back_populates='wallet')
+    supplier = db.relationship('Supplier', back_populates='wallet')
     transactions = db.relationship('WalletTransaction', back_populates='wallet', cascade="all, delete-orphan")
 
     @staticmethod
     def _get_key():
+        # استخدام مفتاح البيئة أو مفتاح افتراضي للتشفير
         key = os.environ.get('ENCRYPTION_KEY')
         return key.encode() if key else b'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq='
 
@@ -59,6 +63,7 @@ class WalletTransaction(db.Model):
     """سجل الحركات المالية الموحد (دفتر الأستاذ)."""
     __tablename__ = 'wallet_transactions'
     
+    # فهرسة الحقول الأكثر استخداماً في البحث والتقارير
     __table_args__ = (
         db.Index('idx_trans_wallet', 'wallet_id'),
         db.Index('idx_trans_date', 'created_at'),
@@ -88,47 +93,41 @@ class WalletTransaction(db.Model):
     voucher_number = db.Column(db.String(20), unique=True, nullable=True) 
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True)
+    created_by = db.Column(db.Integer, nullable=True)
 
     wallet = db.relationship('SupplierWallet', back_populates='transactions')
 
 @event.listens_for(WalletTransaction, 'before_insert')
 def set_voucher_number(mapper, connection, target):
-    # 1. توليد رقم القسيمة
+    # 1. توليد رقم القسيمة التسلسلي
     if not target.voucher_number:
         last_trans = db.session.query(func.max(WalletTransaction.voucher_number)).scalar()
+        last_num = 12327
         if last_trans and '-' in last_trans:
             try: last_num = int(last_trans.split('-')[-1])
-            except: last_num = 12327
-        else: last_num = 12327
+            except: pass
         target.voucher_number = f"MJ-2026-{last_num + 1:07d}"
 
-    # 2. تحديث الأرصدة (فرض Decimal لتجنب أخطاء float+Decimal)
+    # 2. التحديث الحسابي للأرصدة بدقة Decimal لمنع أخطاء الـ Float
     if target.balance_before is None or target.balance_after is None:
         wallet = SupplierWallet.query.get(target.wallet_id)
         if wallet:
-            # تحويل القيم لـ Decimal
             amount_dec = Decimal(str(target.amount or 0))
             
-            if target.currency == 'YER':
-                current = Decimal(str(wallet.balance_yer or 0))
-            elif target.currency == 'USD':
-                current = Decimal(str(wallet.balance_usd or 0))
-            else: # SAR
-                current = Decimal(str(wallet.balance_sar or 0))
+            # تحديد الرصيد الحالي
+            if target.currency == 'YER': current = Decimal(str(wallet.balance_yer or 0))
+            elif target.currency == 'USD': current = Decimal(str(wallet.balance_usd or 0))
+            else: current = Decimal(str(wallet.balance_sar or 0))
             
             target.balance_before = current
             
-            # العمليات الحسابية الآن بين Decimal و Decimal
+            # العمليات الحسابية
             if target.trans_type in ['credit', 'adjustment_credit', 'sale_revenue']:
                 target.balance_after = current + amount_dec
             else:
                 target.balance_after = current - amount_dec
             
-            # حفظ النتائج
-            if target.currency == 'YER':
-                wallet.balance_yer = target.balance_after
-            elif target.currency == 'USD':
-                wallet.balance_usd = target.balance_after
-            else:
-                wallet.balance_sar = target.balance_after
+            # حفظ النتائج في المحفظة
+            if target.currency == 'YER': wallet.balance_yer = target.balance_after
+            elif target.currency == 'USD': wallet.balance_usd = target.balance_after
+            else: wallet.balance_sar = target.balance_after
