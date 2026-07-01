@@ -7,7 +7,7 @@ from cryptography.fernet import Fernet
 from apps.extensions import db
 
 class OrderFinancial(db.Model):
-    """المركز المالي للطلبات: يربط الطلب بالمورد ويشفر البيانات الحساسة."""
+    """المركز المالي للطلبات: المحرك المحاسبي للمنصة والموردين."""
     __tablename__ = 'order_financials'
 
     __table_args__ = (
@@ -16,7 +16,7 @@ class OrderFinancial(db.Model):
         db.Index('idx_fin_settlement', 'settlement_status'),
         db.Index('idx_fin_created', 'created_at'),
         db.Index('idx_fin_transaction', 'transaction_id'),
-        db.Index('idx_fin_currency', 'currency'), # إندكس جديد للعملة لتسريع الفلترة
+        db.Index('idx_fin_currency', 'currency'),
         {'extend_existing': True}
     )
 
@@ -25,19 +25,19 @@ class OrderFinancial(db.Model):
     order_id = db.Column(db.String(100), db.ForeignKey('orders.id'), nullable=False, unique=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
     
-    # ربط سيادي بجدول الخزينة
+    # ربط سيادي بجدول الخزينة (العمليات المالية)
     transaction_id = db.Column(db.Integer, db.ForeignKey('wallet_transactions.id'), nullable=True)
     
-    # 2. حقل العملة (غير مشفر لتسهيل البحث والفلترة المالية)
+    # 2. حقل العملة (غير مشفر للفلترة السريعة)
     currency = db.Column(db.String(5), default='SAR', nullable=False)
     
-    # 3. المبالغ المالية (مشفرة لحماية الخصوصية التجارية)
+    # 3. المبالغ المالية (مشفرة بـ Fernet/AES لحماية الخصوصية التجارية)
     _supplier_cost_enc = db.Column(db.String(255), nullable=False)
     _mahjoub_commission_enc = db.Column(db.String(255), nullable=False)
     _total_paid_enc = db.Column(db.String(255), nullable=False)
     shipping_fees = db.Column(db.Numeric(18, 2), default=0.00)
     
-    # 4. حالة التسوية
+    # 4. حالة التسوية (pending, settled, cancelled)
     settlement_status = db.Column(db.String(20), default='pending') 
     
     # 5. توثيق زمني
@@ -49,7 +49,7 @@ class OrderFinancial(db.Model):
     supplier = db.relationship('Supplier', back_populates='financials')
     transaction = db.relationship('WalletTransaction', backref='order_financials')
 
-    # --- نظام التشفير (AES) ---
+    # --- منطق التشفير الاحترافي ---
     @staticmethod
     def _get_key():
         key = os.environ.get('ENCRYPTION_KEY')
@@ -63,9 +63,10 @@ class OrderFinancial(db.Model):
         try:
             f = Fernet(self._get_key())
             return float(f.decrypt(value.encode()).decode())
-        except: return 0.0
+        except Exception: 
+            return 0.0
 
-    # --- Properties للمبالغ المشفرة ---
+    # --- Properties للوصول للمبالغ ---
     @property
     def supplier_cost(self): return self._decrypt(self._supplier_cost_enc)
     @supplier_cost.setter
@@ -81,11 +82,5 @@ class OrderFinancial(db.Model):
     @total_paid.setter
     def total_paid(self, value): self._total_paid_enc = self._encrypt(value)
 
-    @property
-    def amount(self): return self.total_paid
-
-    def calculate_net_profit(self):
-        return self.mahjoub_commission
-
     def __repr__(self):
-        return f'<OrderFinancial OrderID: {self.order_id} | Currency: {self.currency} | Status: {self.settlement_status}>'
+        return f'<OrderFinancial OrderID: {self.order_id} | Status: {self.settlement_status}>'
