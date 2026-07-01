@@ -14,6 +14,7 @@
 </style>
 
 <div class="container-fluid py-4">
+    <!-- الرأس والتفاصيل -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="fw-bold text-royal-purple"><i class="fas fa-wallet me-2"></i> {{ wallet.supplier.trade_name }}</h3>
@@ -22,6 +23,7 @@
         <a href="{{ url_for('wallet_app.dashboard') }}" class="btn btn-royal-back px-4"><i class="fas fa-arrow-left me-2"></i>العودة للقائمة</a>
     </div>
 
+    <!-- بطاقات الأرصدة -->
     <div class="row">
         {% for balance, currency, color in [(wallet.balance_sar, 'SAR', 'bg-primary'), (wallet.balance_yer, 'YER', 'bg-success'), (wallet.balance_usd, 'USD', 'bg-warning')] %}
         <div class="col-md-4">
@@ -37,6 +39,7 @@
         {% endfor %}
     </div>
 
+    <!-- جدول الحركات -->
     <div class="card mt-4 border-0 shadow-sm">
         <div class="card-header card-header-royal fw-bold d-flex justify-content-between align-items-center">
             <span>سجل الحركات (الفلتر: <span id="currentFilter" class="text-warning">الكل</span>)</span>
@@ -55,11 +58,14 @@
                 </thead>
                 <tbody id="transBody">
                     {% for trans in wallet.transactions|sort(attribute='created_at', reverse=True) %}
-                    <tr class="trans-row" data-currency="{{ trans.currency }}" data-debit="{{ trans.amount if trans.trans_type == 'debit' else 0 }}" data-credit="{{ trans.amount if trans.trans_type == 'credit' else 0 }}">
+                    {% set is_debit = trans.trans_type in ['debit', 'adjustment_debit', 'marketer_commission'] %}
+                    <tr class="trans-row" data-currency="{{ trans.currency }}" 
+                        data-debit="{{ trans.amount if is_debit else 0 }}" 
+                        data-credit="{{ trans.amount if not is_debit else 0 }}">
                         <td>{{ trans.created_at.strftime('%Y-%m-%d') }}</td>
-                        <td class="fw-bold">مبيعات رقم الطلب {{ trans.reference_number }}</td>
-                        <td class="text-danger fw-bold">{{ trans.amount if trans.trans_type == 'debit' else '-' }}</td>
-                        <td class="text-success fw-bold">{{ trans.amount if trans.trans_type == 'credit' else '-' }}</td>
+                        <td class="fw-bold">{{ trans.description or 'حركة مالية رقم ' ~ trans.reference_number }}</td>
+                        <td class="text-danger fw-bold">{{ trans.amount if is_debit else '-' }}</td>
+                        <td class="text-success fw-bold">{{ trans.amount if not is_debit else '-' }}</td>
                         <td><span class="badge bg-dark">{{ trans.currency }}</span></td>
                     </tr>
                     {% endfor %}
@@ -70,16 +76,6 @@
                         <td id="totalDebit" class="text-danger">0.00</td>
                         <td id="totalCredit" class="text-success">0.00</td>
                         <td></td>
-                    </tr>
-                    <tr>
-                        <td colspan="5" class="text-center pt-3 pb-3">
-                            {% set net = (wallet.balance_sar + wallet.balance_yer + wallet.balance_usd) %}
-                            صافي الموقف المالي: 
-                            <span class="{{ 'text-danger' if net < 0 else 'text-success' }} fw-bold fs-5">
-                                {{ "{:,.2f}".format(net|abs) }}
-                            </span>
-                            <span class="fw-bold">{{ 'عليكم (مدين)' if net < 0 else 'لكم (دائن)' }}</span>
-                        </td>
                     </tr>
                 </tfoot>
             </table>
