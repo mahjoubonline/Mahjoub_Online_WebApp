@@ -10,10 +10,10 @@ from sqlalchemy import event, update
 from apps.extensions import db
 
 class Supplier(db.Model, UserMixin):
-    """موديل المورد: بيانات المورد مع التشفير الأمني والفهرسة المحسنة."""
+    """موديل المورد: البيانات الأساسية مع التشفير الأمني والربط المالي التلقائي."""
     __tablename__ = 'suppliers'
     
-    # [فهرسة متقدمة]: لضمان سرعة الاستعلام في جداول البيانات الضخمة
+    # [فهرسة متقدمة]: لسرعة الاستعلام في جداول البيانات الضخمة
     __table_args__ = (
         db.Index('idx_sup_username', 'username'),
         db.Index('idx_sup_code', 'supplier_code'),
@@ -28,12 +28,12 @@ class Supplier(db.Model, UserMixin):
     # الأعمدة الأساسية
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
-    supplier_code = db.Column(db.String(50), unique=True, nullable=True) # الكود المولد تلقائياً
+    supplier_code = db.Column(db.String(50), unique=True, nullable=True) 
     trade_name = db.Column(db.String(150), nullable=True)
     
-    # [تشفير حساس]: رقم الهاتف مشفر بالكامل
+    # [تشفير حساس]: الهاتف مشفر مع نسخة للبحث السريع
     _phone_enc = db.Column(db.String(255), nullable=False) 
-    search_phone = db.Column(db.String(20)) # نسخة غير مشفرة للبحث السريع
+    search_phone = db.Column(db.String(20)) 
     
     password_hash = db.Column(db.String(255), nullable=True)
     status = db.Column(db.String(20), default='active')
@@ -42,29 +42,26 @@ class Supplier(db.Model, UserMixin):
     last_login = db.Column(db.DateTime, nullable=True)
 
     # العلاقات (Relationships)
-    supplier_profile = db.relationship('apps.models.supplier_profile_db.SupplierProfile', back_populates='supplier', uselist=False, cascade="all, delete-orphan")
-    wallet = db.relationship('apps.models.wallet_db.SupplierWallet', back_populates='supplier', uselist=False, cascade="all, delete-orphan")
-    orders = db.relationship('apps.models.orders_db.Order', back_populates='supplier', cascade="all, delete-orphan")
-    financials = db.relationship('apps.models.financials_db.OrderFinancial', back_populates='supplier', cascade="all, delete-orphan")
-    staff_members = db.relationship('apps.models.supplier_staff_db.SupplierStaff', back_populates='supplier', cascade="all, delete-orphan")
+    supplier_profile = db.relationship('SupplierProfile', back_populates='supplier', uselist=False, cascade="all, delete-orphan")
+    wallet = db.relationship('SupplierWallet', back_populates='supplier', uselist=False, cascade="all, delete-orphan")
+    orders = db.relationship('Order', back_populates='supplier', cascade="all, delete-orphan")
+    financials = db.relationship('OrderFinancial', back_populates='supplier', cascade="all, delete-orphan")
+    staff_members = db.relationship('SupplierStaff', back_populates='supplier', cascade="all, delete-orphan")
 
     # --- نظام التشفير (AES) ---
     @staticmethod
     def _get_key():
-        # استخدام مفتاح البيئة لضمان الأمان
         key = os.environ.get('ENCRYPTION_KEY')
         return key.encode() if key else b'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq='
 
     @property
     def phone(self):
-        """فك تشفير رقم الهاتف"""
         try:
             return Fernet(self._get_key()).decrypt(self._phone_enc.encode()).decode()
         except: return None
 
     @phone.setter
     def phone(self, value):
-        """تشفير رقم الهاتف وتوليد نسخة للبحث"""
         if value:
             self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
             self.search_phone = str(value)[:20]
@@ -77,20 +74,20 @@ class Supplier(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-        return f'<Supplier {self.username}>'
+        return f'<Supplier {self.username} | Code: {self.supplier_code}>'
 
 # --- نظام المحرك التلقائي (Auto-Discovery) ---
 @event.listens_for(Supplier, 'after_insert')
 def receive_after_insert(mapper, connection, target):
     from apps.models.wallet_db import SupplierWallet
     
-    # 1. تحديث كود المورد الفريد
+    # 1. تحديث كود المورد الفريد (توليد كود تلقائي بعد الإنشاء)
     new_supplier_code = f"MAH-SUP963{target.id}"
     connection.execute(
         update(Supplier).where(Supplier.id == target.id).values(supplier_code=new_supplier_code)
     )
     
-    # 2. إنشاء محفظة مالية مرتبطة تلقائياً
+    # 2. إنشاء محفظة مالية مرتبطة تلقائياً للمورد الجديد
     new_wallet = SupplierWallet(
         wallet_code=f"MAH-WEL963{target.id}",
         supplier_id=target.id,
