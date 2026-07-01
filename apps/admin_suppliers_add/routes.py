@@ -4,9 +4,9 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required
 from apps.extensions import db
-# تم التصحيح: استيراد الموديل بالمفرد ليتطابق مع اسم الملف
 from apps.models.supplier_db import Supplier
 from apps.models.supplier_staff_db import SupplierStaff
+from apps.models.wallet_db import SupplierWallet  # تم الاستيراد
 from sqlalchemy.exc import IntegrityError
 import secrets
 
@@ -19,11 +19,11 @@ admin_suppliers_add_bp = Blueprint(
 @admin_suppliers_add_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_supplier_or_staff():
-    """نقطة دخول موحدة لإضافة مورد (مالك) أو موظف مع أتمتة المحفظة والتعميد."""
+    """نقطة دخول موحدة لإضافة مورد (مالك) أو موظف مع أتمتة المحفظة."""
     
     if request.method == 'POST':
         action_type = request.form.get('action_type') # 'owner' or 'staff'
-        temp_password = secrets.token_hex(4) # كلمة مرور مؤقتة احترافية
+        temp_password = secrets.token_hex(4) 
         
         try:
             if action_type == 'owner':
@@ -34,19 +34,25 @@ def add_supplier_or_staff():
                     rank=request.form.get('rank', 'bronze'),
                     status='active'
                 )
-                new_supplier.phone = request.form.get('phone') # يتم التشفير عبر الـ Setter
+                new_supplier.phone = request.form.get('phone') 
                 new_supplier.set_password(temp_password)
                 
                 db.session.add(new_supplier)
-                db.session.commit()
+                db.session.commit() # حفظ المورد أولاً للحصول على ID
                 
-                db.session.refresh(new_supplier)
-                wallet_code = new_supplier.wallet.wallet_code if new_supplier.wallet else "تم الإنشاء"
+                # 2. أتمتة إنشاء المحفظة فوراً
+                wallet_code = f"MAH-WEL{new_supplier.id}"
+                new_wallet = SupplierWallet(
+                    wallet_code=wallet_code,
+                    supplier_id=new_supplier.id
+                )
+                db.session.add(new_wallet)
+                db.session.commit()
                 
                 flash(f"✅ تم تسجيل المورد: {new_supplier.trade_name} | المحفظة: {wallet_code} | كلمة المرور: {temp_password}", "success")
                 
             elif action_type == 'staff':
-                # 2. إنشاء الموظف
+                # 3. إنشاء الموظف
                 new_staff = SupplierStaff(
                     supplier_id=request.form.get('supplier_id'),
                     username=request.form.get('staff_username'),
