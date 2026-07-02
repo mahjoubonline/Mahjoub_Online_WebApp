@@ -4,84 +4,215 @@
 {% block title %}إضافة شريك جديد | محجوب أونلاين{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<style>
+    /* تخصيص الألوان بناءً على الهوية البصرية في image_89d3fd.png */
+    :root {
+        --mahjoub-primary: #2d144d;    /* البنفسجي الداكن الفاخر */
+        --mahjoub-accent: #dfb743;     /* الذهبي الخاص بمحجوب أونلاين */
+        --mahjoub-hover: #3d1c66;
+        --mahjoub-bg: #f8f9fa;
+    }
+
+    body {
+        background-color: var(--mahjoub-bg);
+    }
+
+    .card-mahjoub {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(45, 20, 77, 0.05);
+        background: #ffffff;
+    }
+
+    .card-header-mahjoub {
+        background-color: var(--mahjoub-primary);
+        color: #ffffff;
+        border-top-left-radius: 16px !important;
+        border-top-right-radius: 16px !important;
+        border-bottom: 3px solid var(--mahjoub-accent);
+        padding: 1.5rem;
+    }
+
+    .btn-mahjoub-primary {
+        background-color: var(--mahjoub-primary);
+        color: #ffffff;
+        border: 1px solid var(--mahjoub-primary);
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-mahjoub-primary:hover {
+        background-color: var(--mahjoub-hover);
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(45, 20, 77, 0.2);
+    }
+
+    .btn-mahjoub-outline {
+        border: 2px solid var(--mahjoub-primary);
+        color: var(--mahjoub-primary);
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-mahjoub-outline:hover {
+        background-color: var(--mahjoub-primary);
+        color: #ffffff;
+    }
+
+    .form-label {
+        color: var(--mahjoub-primary);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control, .form-select {
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.65rem 1rem;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--mahjoub-accent);
+        box-shadow: 0 0 0 3px rgba(223, 183, 67, 0.15);
+        outline: none;
+    }
+
+    /* أنماط التحقق المباشر */
+    .validation-badge {
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-top: 0.35rem;
+        display: block;
+        transition: all 0.3s ease;
+    }
+    
+    .is-valid-input {
+        border-color: #198754 !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: left calc(0.375em + 0.1875rem) center !important;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem) !important;
+    }
+
+    .is-invalid-input {
+        border-color: #dc3545 !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='%23dc3545' d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: left calc(0.375em + 0.1875rem) center !important;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem) !important;
+    }
+</style>
+
+<div class="container-fluid py-5" dir="rtl">
     <div class="row justify-content-center">
         <div class="col-lg-8">
+            
+            <!-- الهيدر العلوي -->
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="text-primary mb-0"><i class="fas fa-user-plus me-2"></i>إضافة شريك جديد</h4>
-                <a href="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-arrow-right me-1"></i> العودة للوحة الإدارة
+                <div class="d-flex align-items-center">
+                    <div class="p-2 bg-white rounded-3 shadow-sm me-3" style="border: 2px solid var(--mahjoub-accent);">
+                        <i class="fas fa-user-plus fa-lg" style="color: var(--mahjoub-primary);"></i>
+                    </div>
+                    <h3 class="fw-bold mb-0" style="color: var(--mahjoub-primary);">إضافة شريك نجاح جديد</h3>
+                </div>
+                <a href="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" class="btn btn-mahjoub-outline d-flex align-items-center gap-2">
+                    <i class="fas fa-arrow-right"></i> لوحة الإدارة
                 </a>
             </div>
 
-            <div class="card shadow-sm border-0 rounded-3">
+            <!-- الكارد الرئيسي -->
+            <div class="card card-mahjoub overflow-hidden">
+                <div class="card-header-mahjoub">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-sliders-h me-2"></i> إعدادات وتخصيص الحساب الصادر</h5>
+                </div>
                 <div class="card-body p-4">
-                    <div class="mb-4">
-                        <label class="form-label fw-bold text-muted">نوع الحساب:</label>
-                        <select id="actionTypeSelector" class="form-select form-select-lg" onchange="toggleForm()">
-                            <option value="owner">مورد جديد (مالك)</option>
-                            <option value="staff">موظف تابع لمورد</option>
+                    
+                    <!-- محدد نوع الحساب -->
+                    <div class="mb-4 p-3 rounded-3" style="background-color: rgba(45, 20, 77, 0.03); border: 1px dashed rgba(45, 20, 77, 0.15);">
+                        <label class="form-label fw-bold"><i class="fas fa-user-shield me-1"></i> نوع الكيان المطلوب تفعيله:</label>
+                        <select id="actionTypeSelector" class="form-select form-select-lg fw-bold" style="color: var(--mahjoub-primary);" onchange="toggleForm()">
+                            <option value="owner">🏬 مورد جديد (مالك كيان تجاري)</option>
+                            <option value="staff">🔑 موظف تشغيلي (تابع لمورد حالي)</option>
                         </select>
                     </div>
 
-                    <form action="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" method="POST">
+                    <!-- استمارة الإدخال -->
+                    <form action="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" method="POST" id="partnerForm">
                         <input type="hidden" name="action_type" id="actionTypeInput" value="owner">
                         
+                        <!-- ================= حقول المورد المالك ================= -->
                         <div id="ownerFields">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">اسم المستخدم:</label>
-                                    <input type="text" name="username" class="form-control">
+                                    <label class="form-label">اسم المستخدم للرابط والتوثيق:</label>
+                                    <input type="text" name="username" id="owner_username" class="form-control" placeholder="مثال: ali_mahjoub" required>
+                                    <div id="owner_username_feedback" class="validation-badge"></div>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">الاسم التجاري:</label>
-                                    <input type="text" name="trade_name" class="form-control">
+                                    <label class="form-label">الاسم التجاري للمتجر/المؤسسة:</label>
+                                    <input type="text" name="trade_name" class="form-control" placeholder="مثال: شركة محجوب للخدمات" required>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">رقم الهاتف:</label>
-                                    <input type="text" name="phone" class="form-control" placeholder="05XXXXXXXX">
+                                    <label class="form-label">رقم الهاتف (9 أرقام بدون مفتاح):</label>
+                                    <input type="text" name="phone" id="owner_phone" class="form-control" placeholder="77XXXXXXX" maxlength="9" required>
+                                    <div id="owner_phone_feedback" class="validation-badge"></div>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">رتبة المورد:</label>
-                                    <select name="rank" class="form-select">
-                                        <option value="bronze">برونزي</option>
-                                        <option value="silver">فضي</option>
-                                        <option value="gold">ذهبي</option>
+                                    <label class="form-label">تصنيف رتبة المورد المعتمدة:</label>
+                                    <select name="rank" class="form-select fw-bold">
+                                        <option value="bronze" style="color: #cd7f32;">🥉 التصنيف البرونزي (الأساسي)</option>
+                                        <option value="silver" style="color: #c0c0c0;">🥈 التصنيف الفضي (المتقدم)</option>
+                                        <option value="gold" style="color: #ffd700;">🥇 التصنيف الذهبي (شريك VIP)</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- ================= حقول الموظف التابع ================= -->
                         <div id="staffFields" style="display: none;">
-                            <div class="mb-3">
-                                <label class="form-label">المورد التابع له:</label>
-                                <select name="supplier_id" class="form-select">
+                            <div class="mb-4">
+                                <label class="form-label">المورد القانوني التابع له الحساب:</label>
+                                <select name="supplier_id" id="supplier_id" class="form-select fw-bold">
                                     {% for s in suppliers %}
-                                    <option value="{{ s.id }}">{{ s.trade_name }}</option>
+                                    <option value="{{ s.id }}">🏢 {{ s.trade_name }} ({{ s.username }})</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">اسم مستخدم الموظف:</label>
-                                    <input type="text" name="staff_username" class="form-control">
+                                    <input type="text" name="staff_username" id="staff_username" class="form-control" placeholder="مثال: staff_ali">
+                                    <div id="staff_username_feedback" class="validation-badge"></div>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">رقم هاتف الموظف:</label>
-                                    <input type="text" name="staff_phone" class="form-control" placeholder="05XXXXXXXX">
+                                    <label class="form-label">رقم هاتف الموظف (9 أرقام):</label>
+                                    <input type="text" name="staff_phone" id="staff_phone" class="form-control" placeholder="77XXXXXXX" maxlength="9">
+                                    <div id="staff_phone_feedback" class="validation-badge"></div>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- حقل كلمة المرور المعطلة المخصصة للأتمتة -->
                         <div class="mb-4">
-                            <label class="form-label">كلمة المرور:</label>
-                            <input type="password" name="password" class="form-control" placeholder="يترك فارغاً للتوليد التلقائي" disabled>
+                            <label class="form-label text-muted">التحقق الأمني وصلاحيات الدخول:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted"><i class="fas fa-magic"></i></span>
+                                <input type="text" class="form-control bg-light text-muted" placeholder="سيقوم النظام بتوليد كلمة مرور مشفرة وآمنة تلقائياً وإرسالها للشريك" disabled>
+                            </div>
                         </div>
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">تثبيت الشريك في النظام</button>
+                        <!-- زر الإرسال والحفظ -->
+                        <div class="d-grid mt-4">
+                            <button type="submit" id="submitBtn" class="btn btn-mahjoub-primary btn-lg fs-5">
+                                <i class="fas fa-check-circle me-2"></i> اعتماد وتثبيت الشريك في النظام
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -91,11 +222,109 @@
 </div>
 
 <script>
+// تبديل النوافذ والكيانات بسلاسة
 function toggleForm() {
     const type = document.getElementById('actionTypeSelector').value;
     document.getElementById('actionTypeInput').value = type;
-    document.getElementById('ownerFields').style.display = (type === 'owner') ? 'block' : 'none';
-    document.getElementById('staffFields').style.display = (type === 'staff') ? 'block' : 'none';
+    
+    const ownerFields = document.getElementById('ownerFields');
+    const staffFields = document.getElementById('staffFields');
+    
+    if (type === 'owner') {
+        ownerFields.style.display = 'block';
+        staffFields.style.display = 'none';
+        // تحديث متطلبات الحقول لمنع أخطاء المتصفح
+        document.getElementById('owner_username').required = true;
+        document.getElementById('owner_phone').required = true;
+        document.getElementById('staff_username').required = false;
+        document.getElementById('staff_phone').required = false;
+    } else {
+        ownerFields.style.display = 'none';
+        staffFields.style.display = 'block';
+        document.getElementById('owner_username').required = false;
+        document.getElementById('owner_phone').required = false;
+        document.getElementById('staff_username').required = true;
+        document.getElementById('staff_phone').required = true;
+    }
+    // مسح الحالات السابقة عند التبديل
+    resetValidationEffects();
 }
+
+function resetValidationEffects() {
+    ['owner_username', 'owner_phone', 'staff_username', 'staff_phone'].forEach(id => {
+        const input = document.getElementById(id);
+        const feedback = document.getElementById(id + '_feedback');
+        if(input) {
+            input.classList.remove('is-valid-input', 'is-invalid-input');
+            feedback.innerHTML = '';
+        }
+    });
+}
+
+// محرك الفحص الفوري Live AJAX Engine
+async function validateField(inputElement, type, feedbackElementId) {
+    const value = inputElement.value.trim();
+    const feedbackEl = document.getElementById(feedbackElementId);
+    
+    if (!value) {
+        inputElement.classList.remove('is-valid-input', 'is-invalid-input');
+        feedbackEl.innerHTML = '';
+        return;
+    }
+
+    // تحقق محلي سريع لأرقام الهواتف لتخفيف الضغط على السيرفر
+    if (type === 'phone') {
+        if (!/^\d+$/.test(value) || value.length !== 9) {
+            inputElement.classList.remove('is-valid-input');
+            inputElement.classList.add('is-invalid-input');
+            feedbackEl.innerHTML = '❌ يجب أن يتكون الرقم من 9 أرقام فقط ويحتوي على أعداد.';
+            feedbackEl.style.color = '#dc3545';
+            return;
+        }
+    }
+
+    // إرسال الطلب للخلفية فورا للفحص المباشر
+    try {
+        const response = await fetch("{{ url_for('admin_suppliers_add_bp.check_availability') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: type, value: value })
+        });
+        const data = await response.json();
+
+        if (data.available) {
+            inputElement.classList.remove('is-invalid-input');
+            inputElement.classList.add('is-valid-input');
+            feedbackEl.innerHTML = `✓ ${data.message}`;
+            feedbackEl.style.color = '#198754';
+        } else {
+            inputElement.classList.remove('is-valid-input');
+            inputElement.classList.add('is-invalid-input');
+            feedbackEl.innerHTML = `${data.message}`;
+            feedbackEl.style.color = '#dc3545';
+        }
+    } catch (error) {
+        console.error("خطأ أثناء الفحص المباشر:", error);
+    }
+}
+
+// ربط المستمعات (Event Listeners) بالحقول المطلوبة للعمل بشكل حيوي وفوري
+document.addEventListener("DOMContentLoaded", () => {
+    // فحص المورد الأساسي
+    document.getElementById('owner_username').addEventListener('input', function() {
+        validateField(this, 'username', 'owner_username_feedback');
+    });
+    document.getElementById('owner_phone').addEventListener('input', function() {
+        validateField(this, 'phone', 'owner_phone_feedback');
+    });
+
+    // فحص الموظف التشغيلي
+    document.getElementById('staff_username').addEventListener('input', function() {
+        validateField(this, 'username', 'staff_username_feedback');
+    });
+    document.getElementById('staff_phone').addEventListener('input', function() {
+        validateField(this, 'phone', 'staff_phone_feedback');
+    });
+});
 </script>
 {% endblock %}
