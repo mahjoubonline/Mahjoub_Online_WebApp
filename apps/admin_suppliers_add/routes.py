@@ -1,4 +1,3 @@
-# coding: utf-8
 # 📂 apps/admin_suppliers_add/routes.py
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, session
@@ -31,7 +30,7 @@ def check_availability():
     if not value:
         return jsonify({'available': False, 'message': '⚠️ الحقل فارغ'})
 
-    # 1. التحقق من توفر اسم المستخدم في جداول الموردين والموظفين معاً لمنع تداخل الجلسات
+    # 1. التحقق من توفر اسم المستخدم في جداول الموردين والموظفين معاً
     if field_type == 'username':
         owner_exists = Supplier.query.filter_by(username=value).first()
         staff_exists = SupplierStaff.query.filter_by(username=value).first()
@@ -40,7 +39,7 @@ def check_availability():
             return jsonify({'available': False, 'message': 'اسم المستخدم مسجل مسبقاً في النظام'})
         return jsonify({'available': True, 'message': 'اسم المستخدم متاح للاستخدام'})
 
-    # 2. التحقق من توفر وصحة رقم الهاتف (9 أرقام محلية بدون مفتاح دولي)
+    # 2. التحقق من توفر وصحة رقم الهاتف (9 أرقام محلية)
     elif field_type == 'phone':
         if not re.match(r'^\d{9}$', value):
             return jsonify({'available': False, 'message': 'يجب أن يتكون رقم الهاتف من 9 أرقام فقط'})
@@ -61,11 +60,11 @@ def check_availability():
 @admin_suppliers_add_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_supplier_or_staff():
-    """نقطة دخول موحدة وآمنة لإضافة مورد (مالك كيان) أو موظف تشغيلي مع أتمتة المحفظة المالية."""
+    """نقطة دخول موحدة وآمنة لإضافة مورد (مالك كيان) أو موظف تشغيلي."""
     
     if request.method == 'POST':
         action_type = request.form.get('action_type')  # 'owner' أو 'staff'
-        temp_password = secrets.token_hex(4)  # توليد كلمة مرور عشوائية آمنة وصارمة
+        temp_password = secrets.token_hex(4)  # توليد كلمة مرور عشوائية آمنة
         
         try:
             # ================= أولاً: معالجة إضافة المورد المالك =================
@@ -75,17 +74,13 @@ def add_supplier_or_staff():
                 trade_name = request.form.get('trade_name', '').strip()
                 rank = request.form.get('rank', 'bronze')
 
-                # جدار حماية خلفي
+                # التحقق من البيانات
                 if not re.match(r'^\d{9}$', phone):
                     flash("❌ خطأ: رقم هاتف المورد يجب أن يتكون من 9 أرقام فقط.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
                 if Supplier.query.filter_by(username=username).first() or SupplierStaff.query.filter_by(username=username).first():
-                    flash("❌ خطأ: اسم المستخدم مسجل مسبقاً لمورد أو موظف آخر.", "danger")
-                    return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
-
-                if Supplier.query.filter_by(phone=phone).first() or SupplierStaff.query.filter_by(phone=phone).first():
-                    flash("❌ خطأ: رقم الهاتف مسجل مسبقاً في النظام.", "danger")
+                    flash("❌ خطأ: اسم المستخدم مسجل مسبقاً.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
                 new_supplier = Supplier(
@@ -116,28 +111,16 @@ def add_supplier_or_staff():
                     'password': temp_password
                 }
                 
-                flash(f"✅ تم تسجيل المورد بنجاح وإنشاء محفظته المالية: {new_supplier.trade_name}", "success")
-                
+                flash(f"✅ تم تسجيل المورد بنجاح: {new_supplier.trade_name}", "success")
+            
             # ================= ثانياً: معالجة إضافة الموظف التشغيلي =================
             elif action_type == 'staff':
                 staff_username = request.form.get('staff_username', '').strip()
                 staff_phone = request.form.get('staff_phone', '').strip()
                 supplier_id = request.form.get('supplier_id')
 
-                if not supplier_id:
-                    flash("❌ خطأ: يجب اختيار المورد القانوني الذي يتبع له الموظف.", "danger")
-                    return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
-
-                if not re.match(r'^\d{9}$', staff_phone):
-                    flash("❌ خطأ: رقم هاتف الموظف يجب أن يتكون من 9 أرقام فقط.", "danger")
-                    return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
-
-                if Supplier.query.filter_by(username=staff_username).first() or SupplierStaff.query.filter_by(username=staff_username).first():
-                    flash("❌ خطأ: اسم مستخدم الموظف مسجل مسبقاً بالحسابات المعتمدة.", "danger")
-                    return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
-
-                if Supplier.query.filter_by(phone=staff_phone).first() or SupplierStaff.query.filter_by(phone=staff_phone).first():
-                    flash("❌ خطأ: رقم هاتف الموظف مسجل مسبقاً في النظام.", "danger")
+                if not supplier_id or not re.match(r'^\d{9}$', staff_phone):
+                    flash("❌ خطأ: بيانات الموظف غير صحيحة.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
                 new_staff = SupplierStaff(
@@ -161,25 +144,23 @@ def add_supplier_or_staff():
                     'password': temp_password
                 }
                 
-                flash(f"✅ تم إضافة الموظف بنجاح وتعيينه للعمل: {new_staff.username}", "success")
+                flash(f"✅ تم إضافة الموظف بنجاح.", "success")
             
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
         except IntegrityError:
             db.session.rollback()
-            flash("❌ خطأ فني: البيانات المدخلة تسببت في تعارض مع قواعد البيانات (مكررة).", "danger")
+            flash("❌ خطأ فني: البيانات مكررة في النظام.", "danger")
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
         except Exception as e:
             db.session.rollback()
-            flash(f"⚠️ حدث خطأ تقني غير متوقع: {str(e)}", "danger")
+            flash(f"⚠️ حدث خطأ تقني: {str(e)}", "danger")
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
     # -----------------------------------------------------------
-    # مرحلة الـ GET (عرض الصفحة وتغذية بيانات البحث)
+    # مرحلة الـ GET (عرض الصفحة)
     # -----------------------------------------------------------
     new_user = session.pop('new_user_data', None)
-    
-    # إصلاح زر البحث: جلب الموردين مع ترتيبهم أبجدياً حسب الاسم التجاري لضمان سهولة البحث في القائمة
     suppliers = Supplier.query.order_by(Supplier.trade_name.asc()).all()
     
     return render_template(
