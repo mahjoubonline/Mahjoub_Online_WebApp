@@ -2,9 +2,9 @@
 # 📂 apps/admin_dashboard/routes.py
 
 from flask import Blueprint, render_template, session, abort
-from flask_login import login_required, current_user
+from flask_login import login_required
 
-# 1. تعريف البلوبرينت (تأكد أن المتغير اسمه 'admin_dashboard' ليتطابق مع registry.py)
+# 1. تعريف البلوبرينت
 admin_dashboard = Blueprint(
     'admin_dashboard', 
     __name__, 
@@ -13,6 +13,7 @@ admin_dashboard = Blueprint(
 
 def admin_required():
     """دالة مساعدة للتحقق من أن المستخدم مدير نظام."""
+    # التحقق من أن الجلسة تحتوي على نوع المستخدم 'admin'
     if session.get('user_type') != 'admin':
         abort(403) # منع الوصول لغير المدراء
 
@@ -21,7 +22,7 @@ def admin_required():
 def dashboard():
     """
     لوحة تحكم المسؤول الرئيسية.
-    المسار النهائي سيكون: /admin/dashboard
+    المسار النهائي: /admin/dashboard
     """
     admin_required()
     
@@ -41,7 +42,7 @@ def dashboard():
 def settings():
     """
     إعدادات النظام العامة.
-    المسار النهائي سيكون: /admin/settings
+    المسار النهائي: /admin/settings
     """
     admin_required()
     return render_template('admin/settings.html')
