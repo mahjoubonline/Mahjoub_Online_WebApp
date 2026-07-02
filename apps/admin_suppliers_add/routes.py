@@ -23,6 +23,7 @@ admin_suppliers_add_bp = Blueprint(
 @admin_suppliers_add_bp.route('/check_availability', methods=['POST'])
 @login_required
 def check_availability():
+    """توفير فحص ديناميكي فوري لمنع تكرار البيانات قبل اعتماد الإرسال."""
     data = request.get_json() or {}
     field_type = data.get('type')  # 'username' أو 'phone'
     value = data.get('value', '').strip()
@@ -30,7 +31,7 @@ def check_availability():
     if not value:
         return jsonify({'available': False, 'message': '⚠️ الحقل فارغ'})
 
-    # 1. التحقق من توفر اسم المستخدم
+    # 1. التحقق من توفر اسم المستخدم في جداول الموردين والموظفين
     if field_type == 'username':
         owner_exists = Supplier.query.filter_by(username=value).first()
         staff_exists = SupplierStaff.query.filter_by(username=value).first()
@@ -39,7 +40,7 @@ def check_availability():
             return jsonify({'available': False, 'message': 'اسم المستخدم مسجل مسبقاً في النظام'})
         return jsonify({'available': True, 'message': 'اسم المستخدم متاح للاستخدام'})
 
-    # 2. التحقق من توفر وصحة رقم الهاتف
+    # 2. التحقق من توفر وصحة رقم الهاتف (9 أرقام محلية يمنية بدون مفتاح دولي)
     elif field_type == 'phone':
         if not re.match(r'^\d{9}$', value):
             return jsonify({'available': False, 'message': 'يجب أن يتكون رقم الهاتف من 9 أرقام فقط'})
@@ -64,7 +65,7 @@ def add_supplier_or_staff():
     
     if request.method == 'POST':
         action_type = request.form.get('action_type')  # 'owner' أو 'staff'
-        temp_password = secrets.token_hex(4)  # توليد كلمة مرور عشوائية آمنة للمسير الجديد
+        temp_password = secrets.token_hex(4)  # توليد كلمة مرور عشوائية آمنة للمسير الجديد (8 خانات)
         
         try:
             # ================= أولاً: معالجة إضافة المورد المالك =================
@@ -74,12 +75,12 @@ def add_supplier_or_staff():
                 trade_name = request.form.get('trade_name', '').strip()
                 rank = request.form.get('rank', 'bronze')
 
-                # جدار حماية خلفي لبيانات الهاتف
+                # جدار حماية خلفي لبيانات الهاتف لضمان سلامة البيانات قبل التخزين
                 if not re.match(r'^\d{9}$', phone):
                     flash("❌ خطأ: رقم هاتف المورد يجب أن يتكون من 9 أرقام فقط.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # التحقق الأمن الخلفي من التكرار
+                # التحقق الأمني الخلفي الصارم من التكرار لحظر التلاعب بـ HTML
                 if Supplier.query.filter_by(username=username).first() or SupplierStaff.query.filter_by(username=username).first():
                     flash("❌ خطأ: اسم المستخدم مسجل مسبقاً لمورد أو موظف آخر.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
@@ -88,7 +89,7 @@ def add_supplier_or_staff():
                     flash("❌ خطأ: رقم الهاتف مسجل مسبقاً في النظام.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # 1. إنشاء كيان المورد
+                # 1. إنشاء كيان المورد الجديد
                 new_supplier = Supplier(
                     username=username,
                     trade_name=trade_name,
@@ -99,9 +100,9 @@ def add_supplier_or_staff():
                 new_supplier.set_password(temp_password)
                 
                 db.session.add(new_supplier)
-                db.session.commit()  # حفظ لتوليد الـ ID
+                db.session.commit()  # حفظ الكيان لتوليد الـ ID الفريد تلقائياً من السيرفر
                 
-                # 2. أتمتة إنشاء المحفظة المالية
+                # 2. أتمتة إنشاء المحفظة المالية المرتبطة بالمورد المحدث
                 wallet_code = f"MAH-WEL{new_supplier.id}"
                 new_wallet = SupplierWallet(
                     wallet_code=wallet_code,
@@ -118,7 +119,7 @@ def add_supplier_or_staff():
                     'password': temp_password
                 }
                 
-                flash(f"✅ تم تسجيل المورد بنجاح: {new_supplier.trade_name}", "success")
+                flash(f"✅ تم تسجيل المورد بنجاح وإنشاء محفظته المالية: {new_supplier.trade_name}", "success")
                 
             # ================= ثانياً: معالجة إضافة الموظف التشغيلي =================
             elif action_type == 'staff':
@@ -131,7 +132,7 @@ def add_supplier_or_staff():
                     flash("❌ خطأ: رقم هاتف الموظف يجب أن يتكون من 9 أرقام فقط.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # فحص منع التكرار
+                # فحص منع التكرار الخلفي للموظف
                 if Supplier.query.filter_by(username=staff_username).first() or SupplierStaff.query.filter_by(username=staff_username).first():
                     flash("❌ خطأ: اسم مستخدم الموظف مسجل مسبقاً بالحسابات المعتمدة.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
@@ -140,7 +141,7 @@ def add_supplier_or_staff():
                     flash("❌ خطأ: رقم هاتف الموظف مسجل مسبقاً في النظام.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # 3. إنشاء كائن الموظف التابع
+                # 3. إنشاء كائن الموظف التابع وتحديد رتبته التشغيلية
                 new_staff = SupplierStaff(
                     supplier_id=supplier_id,
                     username=staff_username,
@@ -152,11 +153,11 @@ def add_supplier_or_staff():
                 db.session.add(new_staff)
                 db.session.commit()
                 
-                # جلب اسم المورد الرئيسي لإظهاره في وثيقة النجاح
+                # جلب اسم المورد الرئيسي التابع له لعرضه بشكل منسق في وثيقة النجاح المنسوخة
                 parent_supplier = Supplier.query.get(supplier_id)
                 parent_name = parent_supplier.trade_name if parent_supplier else "غير محدد"
 
-                # 🌟 تخزين بيانات الموظف الجديد في الجلسة للمودال
+                # 🌟 تخزين بيانات الموظف الجديد في الجلسة لإرسالها فوراً إلى نافذة المودال التفاعلية
                 session['new_user_data'] = {
                     'type': '🔑 موظف تشغيلي (تابع لمورد)',
                     'trade_name': parent_name,
@@ -178,10 +179,10 @@ def add_supplier_or_staff():
     # -----------------------------------------------------------
     # مرحلة الـ GET (عرض الصفحة أو بعد الـ Redirect المباشر)
     # -----------------------------------------------------------
-    # سحب بيانات المستخدم الجديد من الـ session إن وجدت وحذفها فوراً من الجلسة (Flash pop)
+    # سحب بيانات المستخدم الجديد من الـ session إن وجدت وحذفها فوراً من الجلسة (Flash pop) لضمان عدم تكرار ظهور النافذة
     new_user = session.pop('new_user_data', None)
     
-    # جلب كافة الموردين لخيارات القائمة المنسدلة للموظفين
+    # جلب كافة الموردين لتغذية خيارات القائمة المنسدلة في نموذج الموظفين التشغيليين
     suppliers = Supplier.query.all()
     
     return render_template(
