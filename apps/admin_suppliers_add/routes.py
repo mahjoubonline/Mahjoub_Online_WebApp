@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 import secrets
 import re
 
+# تعريف الـ Blueprint
 admin_suppliers_add_bp = Blueprint(
     'admin_suppliers_add_bp', 
     __name__, 
@@ -64,7 +65,7 @@ def add_supplier_or_staff():
     
     if request.method == 'POST':
         action_type = request.form.get('action_type')  # 'owner' أو 'staff'
-        temp_password = secrets.token_hex(4)
+        temp_password = secrets.token_hex(4) # توليد كلمة مرور عشوائية بسيطة
         
         try:
             # ================= معالجة المورد المالك =================
@@ -74,7 +75,7 @@ def add_supplier_or_staff():
                 trade_name = request.form.get('trade_name', '').strip()
                 rank = request.form.get('rank', 'bronze')
 
-                # التحقق من البيانات
+                # التحقق من البيانات الأساسية
                 if not re.match(r'^\d{9}$', phone):
                     flash("❌ خطأ: رقم هاتف المورد يجب أن يتكون من 9 أرقام فقط.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
@@ -104,6 +105,7 @@ def add_supplier_or_staff():
                 db.session.add(new_wallet)
                 db.session.commit()
                 
+                # تخزين البيانات في الجلسة لعرضها في الـ Modal
                 session['new_user_data'] = {
                     'type': '🏬 مورد جديد (مالك كيان تجاري)',
                     'trade_name': new_supplier.trade_name,
