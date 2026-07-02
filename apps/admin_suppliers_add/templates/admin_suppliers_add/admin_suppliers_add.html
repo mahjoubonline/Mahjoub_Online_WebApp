@@ -495,7 +495,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 {% if new_user %}
 function copyCredentials() {
-    const formattedText = `مرحباً بك في منصة محجوب أونلاين\n\nاسم المستخدم: {{ new_user.username }}\nكلمة المرور: {{ new_user.password }}`;
+    const formattedText = `مرحباً بك في منصة محجوب أونلاين\n\nاسم المستخدم: {{ new_user.username }}\nكلمة المرور: {{ new_user.password }}\n\n⚠️ تنبيه هام: يرجى تغيير كلمة المرور من إعدادات لوحة التحكم محجوب أونلاين | سوقك الذكي لضمان أعلى مستويات الأمان والخصوصية لبياناتكم التجارية.`;
     navigator.clipboard.writeText(formattedText).then(() => {
         const copyBtn = document.getElementById('copyBtn');
         copyBtn.innerHTML = `<i class="fas fa-check-circle"></i> تم النسخ!`;
