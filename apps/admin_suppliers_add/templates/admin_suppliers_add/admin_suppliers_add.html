@@ -253,6 +253,8 @@
                                         {% endfor %}
                                     </select>
                                 </div>
+                                <!-- منطقة التحقق الخاصة بالمتجر -->
+                                <div id="supplier_id_feedback" class="validation-badge"></div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -352,8 +354,18 @@ function buildSelect2Engine() {
             language: { noResults: () => "❌ لا توجد نتائج مطابقة لبحثك" }
         });
         
-        // التحسين: تحديث زر الإرسال فور اختيار مورد
+        // تحسين: التحقق من المتجر عند تغييره
         $('#supplier_id').on('change', function() {
+            const container = $(this).next('.select2-container').find('.select2-selection--single');
+            const feedback = $('#supplier_id_feedback');
+            
+            if ($(this).val()) {
+                container.addClass('is-valid-input').removeClass('is-invalid-input');
+                feedback.html('✓ تم اختيار المتجر بنجاح').css('color', '#198754');
+            } else {
+                container.removeClass('is-valid-input').addClass('is-invalid-input');
+                feedback.html('❌ يرجى اختيار متجر صحيح').css('color', '#dc3545');
+            }
             checkFormErrors();
         });
 
@@ -399,6 +411,11 @@ function resetValidationEffects() {
             feedback.innerHTML = '';
         }
     });
+    // إعادة تعيين Select2 إذا كان موجوداً
+    if ($('#supplier_id').hasClass("select2-hidden-accessible")) {
+        $('#supplier_id').next('.select2-container').find('.select2-selection--single').removeClass('is-valid-input is-invalid-input');
+        $('#supplier_id_feedback').html('');
+    }
     checkFormErrors();
 }
 
@@ -444,6 +461,7 @@ async function validateField(inputElement, type, feedbackElementId) {
 function checkFormErrors() {
     const activeType = document.getElementById('actionTypeSelector').value;
     let hasErrors = false;
+    
     if (activeType === 'owner') {
         hasErrors = document.getElementById('owner_username').classList.contains('is-invalid-input') || 
                     document.getElementById('owner_phone').classList.contains('is-invalid-input') ||
@@ -451,11 +469,15 @@ function checkFormErrors() {
                     !document.getElementById('owner_phone').value ||
                     !document.getElementById('trade_name').value;
     } else {
+        // التحقق من Select2
+        const isSelect2Invalid = $('#supplier_id').next('.select2-container').find('.select2-selection--single').hasClass('is-invalid-input');
+        const isSelect2Empty = !$('#supplier_id').val();
+        
         hasErrors = document.getElementById('staff_username').classList.contains('is-invalid-input') || 
                     document.getElementById('staff_phone').classList.contains('is-invalid-input') ||
                     !document.getElementById('staff_username').value ||
                     !document.getElementById('staff_phone').value ||
-                    !document.getElementById('supplier_id').value;
+                    isSelect2Invalid || isSelect2Empty;
     }
     document.getElementById('submitBtn').disabled = hasErrors;
 }
