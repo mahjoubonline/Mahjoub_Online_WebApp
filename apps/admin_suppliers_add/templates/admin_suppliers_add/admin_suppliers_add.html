@@ -112,7 +112,6 @@
     <div class="row justify-content-center">
         <div class="col-lg-8">
             
-            <!-- الهيدر العلوي -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div class="d-flex align-items-center">
                     <div class="p-2 bg-white rounded-3 shadow-sm me-3" style="border: 2px solid var(--mahjoub-accent);">
@@ -125,14 +124,12 @@
                 </a>
             </div>
 
-            <!-- الكارد الرئيسي -->
             <div class="card card-mahjoub overflow-hidden">
                 <div class="card-header-mahjoub">
                     <h5 class="mb-0 fw-bold"><i class="fas fa-sliders-h me-2"></i> إعدادات وتخصيص الحساب الصادر</h5>
                 </div>
                 <div class="card-body p-4">
                     
-                    <!-- محدد نوع الحساب -->
                     <div class="mb-4 p-3 rounded-3" style="background-color: rgba(45, 20, 77, 0.03); border: 1px dashed rgba(45, 20, 77, 0.15);">
                         <label class="form-label fw-bold"><i class="fas fa-user-shield me-1"></i> نوع الكيان المطلوب تفعيله:</label>
                         <select id="actionTypeSelector" class="form-select form-select-lg fw-bold" style="color: var(--mahjoub-primary);" onchange="toggleForm()">
@@ -141,11 +138,9 @@
                         </select>
                     </div>
 
-                    <!-- استمارة الإدخال -->
                     <form action="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" method="POST" id="partnerForm">
                         <input type="hidden" name="action_type" id="actionTypeInput" value="owner">
                         
-                        <!-- ================= حقول المورد المالك ================= -->
                         <div id="ownerFields">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -175,7 +170,6 @@
                             </div>
                         </div>
 
-                        <!-- ================= حقول الموظف التابع ================= -->
                         <div id="staffFields" style="display: none;">
                             <div class="mb-4">
                                 <label class="form-label">المورد القانوني التابع له الحساب:</label>
@@ -199,7 +193,6 @@
                             </div>
                         </div>
 
-                        <!-- حقل كلمة المرور المعطلة المخصصة للأتمتة -->
                         <div class="mb-4">
                             <label class="form-label text-muted">التحقق الأمني وصلاحيات الدخول:</label>
                             <div class="input-group">
@@ -208,7 +201,6 @@
                             </div>
                         </div>
 
-                        <!-- زر الإرسال والحفظ -->
                         <div class="d-grid mt-4">
                             <button type="submit" id="submitBtn" class="btn btn-mahjoub-primary btn-lg fs-5">
                                 <i class="fas fa-check-circle me-2"></i> اعتماد وتثبيت الشريك في النظام
@@ -221,7 +213,6 @@
     </div>
 </div>
 
-<!-- ================= النافذة المنبثقة التفاعلية لبيانات الحساب المنشأ حديثاً ================= -->
 {% if new_user %}
 <div class="modal fade" id="newUserModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="newUserModalLabel" aria-hidden="true" dir="rtl">
     <div class="modal-dialog modal-dialog-centered">
@@ -250,6 +241,11 @@
                         <input type="text" class="form-control bg-light text-center fw-bold text-danger fs-5" value="{{ new_user.password }}" readonly style="letter-spacing: 0.5px;">
                     </div>
                 </div>
+
+                <div class="alert alert-danger py-2 mb-2 border-0 shadow-none text-center small fw-bold shadow-sm animate__animated animate__headShake" style="border-radius: 8px; color: #842029; background-color: #f8d7da;">
+                    <i class="fas fa-exclamation-triangle me-1"></i> يرجى تغيير كلمة المرور من إعدادات لوحة التحكم محجوب أونلاين | سوقك الذكي.
+                </div>
+
                 <div class="alert alert-warning py-2 mb-0 border-0 shadow-none text-center small" style="border-radius: 8px;">
                     <i class="fas fa-info-circle me-1"></i> يرجى نسخ هذه البيانات ومشاركتها مع الشريك فوراً؛ لن تظهر البيانات مجدداً لأسباب أمنية.
                 </div>
@@ -294,147 +290,3 @@ function toggleForm() {
         document.getElementById('owner_username').required = false;
         document.getElementById('trade_name').required = false; 
         document.getElementById('owner_phone').required = false;
-        
-        // تفعيل المتطلبات لحقول الموظف
-        document.getElementById('staff_username').required = true;
-        document.getElementById('staff_phone').required = true;
-    }
-    // مسح الحالات السابقة والـ Feedback عند التبديل
-    resetValidationEffects();
-}
-
-function resetValidationEffects() {
-    ['owner_username', 'owner_phone', 'staff_username', 'staff_phone'].forEach(id => {
-        const input = document.getElementById(id);
-        const feedback = document.getElementById(id + '_feedback');
-        if(input) {
-            input.classList.remove('is-valid-input', 'is-invalid-input');
-            feedback.innerHTML = '';
-        }
-    });
-    checkFormErrors();
-}
-
-// محرك الفحص الفوري الحي عبر الـ AJAX Engine
-async function validateField(inputElement, type, feedbackElementId) {
-    const value = inputElement.value.trim();
-    const feedbackEl = document.getElementById(feedbackElementId);
-    
-    if (!value) {
-        inputElement.classList.remove('is-valid-input', 'is-invalid-input');
-        feedbackEl.innerHTML = '';
-        checkFormErrors();
-        return;
-    }
-
-    // تحقق محلي سريع لأرقام الهواتف لتخفيف الضغط غير المبرر على السيرفر
-    if (type === 'phone') {
-        if (!/^\d+$/.test(value) || value.length !== 9) {
-            inputElement.classList.remove('is-valid-input');
-            inputElement.classList.add('is-invalid-input');
-            feedbackEl.innerHTML = '❌ يجب أن يتكون الرقم من 9 أرقام فقط ويحتوي على أعداد.';
-            feedbackEl.style.color = '#dc3545';
-            checkFormErrors();
-            return;
-        }
-    }
-
-    // إرسال الطلب للخلفية فوراً للفحص المباشر وإرجاع النتيجة
-    try {
-        const response = await fetch("{{ url_for('admin_suppliers_add_bp.check_availability') }}", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type: type, value: value })
-        });
-        const data = await response.json();
-
-        if (data.available) {
-            inputElement.classList.remove('is-invalid-input');
-            inputElement.classList.add('is-valid-input');
-            feedbackEl.innerHTML = `✓ ${data.message}`;
-            feedbackEl.style.color = '#198754';
-        } else {
-            inputElement.classList.remove('is-valid-input');
-            inputElement.classList.add('is-invalid-input');
-            feedbackEl.innerHTML = `${data.message}`;
-            feedbackEl.style.color = '#dc3545';
-        }
-        
-        // فحص الأخطاء لتعطيل أو تمكين زر الإرسال
-        checkFormErrors();
-        
-    } catch (error) {
-        console.error("خطأ أثناء الفحص المباشر:", error);
-    }
-}
-
-// وظيفة مراقبة الأخطاء لمنع الإرسال في حال وجود حقول غير صالحة مكررة
-function checkFormErrors() {
-    const activeType = document.getElementById('actionTypeSelector').value;
-    let hasErrors = false;
-
-    if (activeType === 'owner') {
-        hasErrors = document.getElementById('owner_username').classList.contains('is-invalid-input') || 
-                    document.getElementById('owner_phone').classList.contains('is-invalid-input');
-    } else {
-        hasErrors = document.getElementById('staff_username').classList.contains('is-invalid-input') || 
-                    document.getElementById('staff_phone').classList.contains('is-invalid-input');
-    }
-
-    document.getElementById('submitBtn').disabled = hasErrors;
-}
-
-// ربط المستمعات (Event Listeners) ووظائف التشغيل الآلي للمودال عند التحميل
-document.addEventListener("DOMContentLoaded", () => {
-    // فحص المورد الأساسي (المالك)
-    document.getElementById('owner_username').addEventListener('input', function() {
-        validateField(this, 'username', 'owner_username_feedback');
-    });
-    document.getElementById('owner_phone').addEventListener('input', function() {
-        validateField(this, 'phone', 'owner_phone_feedback');
-    });
-
-    // فحص الموظف التشغيلي (التابع)
-    document.getElementById('staff_username').addEventListener('input', function() {
-        validateField(this, 'username', 'staff_username_feedback');
-    });
-    document.getElementById('staff_phone').addEventListener('input', function() {
-        validateField(this, 'phone', 'staff_phone_feedback');
-    });
-
-    // الاستدعاء التلقائي للمودال في حال توفر بيانات مستخدم من السيرفر
-    {% if new_user %}
-    const userModalEl = document.getElementById('newUserModal');
-    if (userModalEl) {
-        const userModal = new bootstrap.Modal(userModalEl);
-        userModal.show();
-    }
-    {% endif %}
-});
-
-// وظيفة نسخ بيانات الاعتماد بشكل منسق واحترافي
-{% if new_user %}
-function copyCredentials() {
-    const type = "{{ new_user.type }}";
-    const tradeName = "{{ new_user.trade_name }}";
-    const username = "{{ new_user.username }}";
-    const password = "{{ new_user.password }}";
-    
-    const formattedText = `🏬 مرحباً بك شريكنا في منصة محجوب أونلاين\n\nتم إعداد الحساب الخاص بكم بنجاح وصلاحيات الدخول كالتالي:\n\n🔹 نوع الحساب: ${type}\n🏢 الجهة/الشريك: ${tradeName}\n👤 اسم المستخدم: ${username}\n🔑 كلمة المرور المؤقتة: ${password}\n\n🌐 رابط تسجيل دخول الموردين:\n${window.location.origin}/supplier/login\n\n💡 ملاحظة أمنية: يرجى المبادرة بتغيير كلمة المرور فور تسجيل الدخول الأول للحفاظ على خصوصية بياناتكم المالية والتجارية.`;
-    
-    navigator.clipboard.writeText(formattedText).then(() => {
-        const copyBtn = document.getElementById('copyBtn');
-        copyBtn.innerHTML = `<i class="fas fa-check-circle"></i> تم النسخ للحافظة!`;
-        copyBtn.className = "btn btn-success flex-grow-1 d-flex align-items-center justify-content-center gap-2";
-        
-        setTimeout(() => {
-            copyBtn.innerHTML = `<i class="fas fa-copy"></i> نسخ بيانات الدخول`;
-            copyBtn.className = "btn btn-mahjoub-primary flex-grow-1 d-flex align-items-center justify-content-center gap-2";
-        }, 3000);
-    }).catch(err => {
-        console.error('فشلت عملية النسخ التلقائي للبيانات:', err);
-    });
-}
-{% endif %}
-</script>
-{% endblock %}
