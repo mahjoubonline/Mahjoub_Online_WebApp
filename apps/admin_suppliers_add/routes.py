@@ -17,7 +17,7 @@ admin_suppliers_add_bp = Blueprint(
 )
 
 # -----------------------------------------------------------
-# API: للتحقق اللحظي والحي في الخلفية
+# API: للتحقق اللحظي والحي في الخلفية (مدعوم بـ CSRF)
 # -----------------------------------------------------------
 @admin_suppliers_add_bp.route('/check_availability', methods=['POST'])
 @login_required
