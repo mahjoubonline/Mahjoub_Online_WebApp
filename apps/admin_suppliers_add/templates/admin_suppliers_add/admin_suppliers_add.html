@@ -8,17 +8,14 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
 <style>
-    /* تخصيص الألوان بناءً على الهوية البصرية لمحجوب أونلاين */
     :root {
-        --mahjoub-primary: #2d144d;    /* البنفسجي الداكن الفاخر */
-        --mahjoub-accent: #dfb743;     /* الذهبي الخاص بمحجوب أونلاين */
+        --mahjoub-primary: #2d144d;
+        --mahjoub-accent: #dfb743;
         --mahjoub-hover: #3d1c66;
         --mahjoub-bg: #f8f9fa;
     }
 
-    body {
-        background-color: var(--mahjoub-bg);
-    }
+    body { background-color: var(--mahjoub-bg); }
 
     .card-mahjoub {
         border: none;
@@ -67,11 +64,7 @@
         color: #ffffff;
     }
 
-    .form-label {
-        color: var(--mahjoub-primary);
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
+    .form-label { color: var(--mahjoub-primary); font-weight: 600; margin-bottom: 0.5rem; }
 
     .form-control, .form-select {
         border: 1.5px solid #e2e8f0;
@@ -86,7 +79,6 @@
         outline: none;
     }
 
-    /* أنماط التحقق المباشر والحيوي */
     .validation-badge {
         font-size: 0.85rem;
         font-weight: 500;
@@ -210,7 +202,9 @@
                         </select>
                     </div>
 
-                    <form action="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" method="POST" id="partnerForm">
+                    <form action="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" method="POST" id="partnerForm" onsubmit="handleFormSubmit()">
+                        <!-- إضافة رمز الحماية CSRF -->
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="action_type" id="actionTypeInput" value="owner">
                         
                         <div id="ownerFields">
@@ -253,7 +247,6 @@
                                         {% endfor %}
                                     </select>
                                 </div>
-                                <!-- منطقة التحقق الخاصة بالمتجر -->
                                 <div id="supplier_id_feedback" class="validation-badge"></div>
                             </div>
                             <div class="row">
@@ -280,7 +273,8 @@
 
                         <div class="d-grid mt-4">
                             <button type="submit" id="submitBtn" class="btn btn-mahjoub-primary btn-lg fs-5">
-                                <i class="fas fa-check-circle me-2"></i> اعتماد وتثبيت الشريك في النظام
+                                <span id="submitText"><i class="fas fa-check-circle me-2"></i> اعتماد وتثبيت الشريك في النظام</span>
+                                <span id="loadingSpinner" style="display:none;"><i class="fas fa-spinner fa-spin me-2"></i> جاري المعالجة...</span>
                             </button>
                         </div>
                     </form>
@@ -291,7 +285,6 @@
 </div>
 
 {% if new_user %}
-<!-- نافذة المودال الصادرة للنجاح -->
 <div class="modal fade" id="newUserModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="newUserModalLabel" aria-hidden="true" dir="rtl">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 15px 40px rgba(45, 20, 77, 0.25); overflow: hidden;">
@@ -339,6 +332,16 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
+// تفعيل حالة التحميل عند الإرسال
+function handleFormSubmit() {
+    const btn = document.getElementById('submitBtn');
+    const text = document.getElementById('submitText');
+    const spinner = document.getElementById('loadingSpinner');
+    btn.disabled = true;
+    text.style.display = 'none';
+    spinner.style.display = 'inline';
+}
+
 function buildSelect2Engine() {
     if (typeof jQuery !== 'undefined' && $.fn.select2) {
         if ($('#supplier_id').hasClass("select2-hidden-accessible")) {
@@ -354,7 +357,6 @@ function buildSelect2Engine() {
             language: { noResults: () => "❌ لا توجد نتائج مطابقة لبحثك" }
         });
         
-        // تحسين: التحقق من المتجر عند تغييره
         $('#supplier_id').on('change', function() {
             const container = $(this).next('.select2-container').find('.select2-selection--single');
             const feedback = $('#supplier_id_feedback');
@@ -411,7 +413,6 @@ function resetValidationEffects() {
             feedback.innerHTML = '';
         }
     });
-    // إعادة تعيين Select2 إذا كان موجوداً
     if ($('#supplier_id').hasClass("select2-hidden-accessible")) {
         $('#supplier_id').next('.select2-container').find('.select2-selection--single').removeClass('is-valid-input is-invalid-input');
         $('#supplier_id_feedback').html('');
@@ -439,7 +440,7 @@ async function validateField(inputElement, type, feedbackElementId) {
     try {
         const response = await fetch("{{ url_for('admin_suppliers_add_bp.check_availability') }}", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token() }}" },
             body: JSON.stringify({ type: type, value: value })
         });
         const data = await response.json();
@@ -469,7 +470,6 @@ function checkFormErrors() {
                     !document.getElementById('owner_phone').value ||
                     !document.getElementById('trade_name').value;
     } else {
-        // التحقق من Select2
         const isSelect2Invalid = $('#supplier_id').next('.select2-container').find('.select2-selection--single').hasClass('is-invalid-input');
         const isSelect2Empty = !$('#supplier_id').val();
         
