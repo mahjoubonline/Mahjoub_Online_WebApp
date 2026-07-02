@@ -351,6 +351,12 @@ function buildSelect2Engine() {
             dropdownParent: $('#select2Wrapper'),
             language: { noResults: () => "❌ لا توجد نتائج مطابقة لبحثك" }
         });
+        
+        // التحسين: تحديث زر الإرسال فور اختيار مورد
+        $('#supplier_id').on('change', function() {
+            checkFormErrors();
+        });
+
         $(document).on('select2:open',()=>setTimeout(()=>document.querySelector('.select2-search__field')?.focus(),50));
     }
 }
