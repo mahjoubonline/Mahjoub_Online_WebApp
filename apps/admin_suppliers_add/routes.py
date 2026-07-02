@@ -23,7 +23,7 @@ admin_suppliers_add_bp = Blueprint(
 @admin_suppliers_add_bp.route('/check_availability', methods=['POST'])
 @login_required
 def check_availability():
-    """توفير فحص ديناميكي فوري لمنع تكرار البيانات قبل اعتماد الإرسال."""
+    """توفير فحص ديناميكي فوري لمنع تكرار البيانات قبل اعتماد الإرسال من الواجهات."""
     data = request.get_json() or {}
     field_type = data.get('type')  # 'username' أو 'phone'
     value = data.get('value', '').strip()
@@ -31,7 +31,7 @@ def check_availability():
     if not value:
         return jsonify({'available': False, 'message': '⚠️ الحقل فارغ'})
 
-    # 1. التحقق من توفر اسم المستخدم في جداول الموردين والموظفين
+    # 1. التحقق من توفر اسم المستخدم في جداول الموردين والموظفين معاً لمنع تداخل الجلسات
     if field_type == 'username':
         owner_exists = Supplier.query.filter_by(username=value).first()
         staff_exists = SupplierStaff.query.filter_by(username=value).first()
@@ -61,11 +61,11 @@ def check_availability():
 @admin_suppliers_add_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_supplier_or_staff():
-    """نقطة دخول موحدة وآمنة لإضافة مورد (مالك كيان) أو موظف تشغيلي مع أتمتة المحفظة."""
+    """نقطة دخول موحدة وآمنة لإضافة مورد (مالك كيان) أو موظف تشغيلي مع أتمتة المحفظة المالي."""
     
     if request.method == 'POST':
         action_type = request.form.get('action_type')  # 'owner' أو 'staff'
-        temp_password = secrets.token_hex(4)  # توليد كلمة مرور عشوائية آمنة (8 خانات)
+        temp_password = secrets.token_hex(4)  # توليد كلمة مرور عشوائية آمنة وصارمة (8 خانات)
         
         try:
             # ================= أولاً: معالجة إضافة المورد المالك =================
@@ -80,7 +80,7 @@ def add_supplier_or_staff():
                     flash("❌ خطأ: رقم هاتف المورد يجب أن يتكون من 9 أرقام فقط.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # التحقق الأمني الخلفي الصارم من التكرار لحظر التلاعب بـ HTML
+                # التحقق الأمني الخلفي الصارم من التكرار لحظر أي تلاعب في الـ HTML من المتصفح
                 if Supplier.query.filter_by(username=username).first() or SupplierStaff.query.filter_by(username=username).first():
                     flash("❌ خطأ: اسم المستخدم مسجل مسبقاً لمورد أو موظف آخر.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
@@ -89,7 +89,7 @@ def add_supplier_or_staff():
                     flash("❌ خطأ: رقم الهاتف مسجل مسبقاً في النظام.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # 1. إنشاء كيان المورد الجديد
+                # 1. إنشاء كيان المورد الجديد بنجاح
                 new_supplier = Supplier(
                     username=username,
                     trade_name=trade_name,
@@ -102,7 +102,7 @@ def add_supplier_or_staff():
                 db.session.add(new_supplier)
                 db.session.commit()  # حفظ الكيان لتوليد الـ ID الفريد تلقائياً من السيرفر
                 
-                # 2. أتمتة إنشاء المحفظة المالية المرتبطة بالمورد المحدث
+                # 2. أتمتة إنشاء المحفظة المالية المرتبطة بالمورد المحدث مباشرة
                 wallet_code = f"MAH-WEL{new_supplier.id}"
                 new_wallet = SupplierWallet(
                     wallet_code=wallet_code,
@@ -127,7 +127,12 @@ def add_supplier_or_staff():
                 staff_phone = request.form.get('staff_phone', '').strip()
                 supplier_id = request.form.get('supplier_id')
 
-                # جدار حماية خلفي لبيانات الموظف
+                # التحقق من اختيار المورد
+                if not supplier_id:
+                    flash("❌ خطأ: يجب اختيار المورد القانوني الذي يتبع له الموظف.", "danger")
+                    return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
+
+                # جدار حماية خلفي لبيانات هاتف الموظف
                 if not re.match(r'^\d{9}$', staff_phone):
                     flash("❌ خطأ: رقم هاتف الموظف يجب أن يتكون من 9 أرقام فقط.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
@@ -181,10 +186,10 @@ def add_supplier_or_staff():
     # -----------------------------------------------------------
     # مرحلة الـ GET (عرض الصفحة أو بعد الـ Redirect المباشر)
     # -----------------------------------------------------------
-    # سحب بيانات المستخدم الجديد من الـ session إن وجدت وحذفها فوراً من الجلسة لضمان عدم تكرار ظهور النافذة
+    # سحب بيانات المستخدم الجديد من الـ session إن وجدت وحذفها فوراً من الجلسة لضمان عدم تكرار ظهور النافذة عند التحديث
     new_user = session.pop('new_user_data', None)
     
-    # جلب كافة الموردين لتغذية خيارات القائمة المنسدلة في نموذج الموظفين التشغيليين
+    # جلب كافة الموردين لتغذية خيارات القائمة المنسدلة الذكية (Select2) في نموذج الموظفين التشغيليين
     suppliers = Supplier.query.all()
     
     return render_template(
