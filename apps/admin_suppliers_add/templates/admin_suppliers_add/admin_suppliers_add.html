@@ -366,19 +366,20 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-// دالة موحدة لبناء وتهيئة محرك البحث لمنع الـ Layout Break
+// دالة موحدة لبناء وتهيئة محرك البحث وضمان عدم تجميده داخل العناصر المخفية
 function buildSelect2Engine() {
     if (typeof jQuery !== 'undefined' && $.fn.select2) {
         if ($('#supplier_id').hasClass("select2-hidden-accessible")) {
             $('#supplier_id').select2('destroy');
         }
 
-        // تم إلغاء dropdownParent ليعود المحرك لـ Body الأصلي لمنع اختفاء حقل البحث وتبخر المساحات
+        // تم ربط الكيان بـ dropdownParent لحصر مدخل الكتابة ومنع تجمده مع Bootstrap والـ display none
         $('#supplier_id').select2({
             placeholder: "🔍 ابحث باسم المتجر أو المورد القانوني...",
             allowClear: true,
             dir: "rtl",
             width: '100%',
+            dropdownParent: $('#select2Wrapper'),
             language: {
                 noResults: function() {
                     return "❌ لا توجد نتائج مطابقة لبحثك";
@@ -424,8 +425,8 @@ function toggleForm() {
         document.getElementById('staff_phone').required = true;
         document.getElementById('supplier_id').required = true;
 
-        // بناء المحرك فوراً بعد أن أصبح العنصر الأب مرئياً 100%
-        setTimeout(buildSelect2Engine, 80);
+        // بناء محرك البحث فوراً بعد ظهور الأب في الـ DOM لمنع المساحات الصفرية والتجميد
+        setTimeout(buildSelect2Engine, 100);
     }
     resetValidationEffects();
 }
