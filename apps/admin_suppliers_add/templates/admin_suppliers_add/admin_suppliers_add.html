@@ -290,3 +290,147 @@ function toggleForm() {
         document.getElementById('owner_username').required = false;
         document.getElementById('trade_name').required = false; 
         document.getElementById('owner_phone').required = false;
+        
+        // تفعيل المتطلبات لحقول الموظف
+        document.getElementById('staff_username').required = true;
+        document.getElementById('staff_phone').required = true;
+    }
+    // مسح الحالات السابقة والـ Feedback عند التبديل
+    resetValidationEffects();
+}
+
+function resetValidationEffects() {
+    ['owner_username', 'owner_phone', 'staff_username', 'staff_phone'].forEach(id => {
+        const input = document.getElementById(id);
+        const feedback = document.getElementById(id + '_feedback');
+        if(input) {
+            input.classList.remove('is-valid-input', 'is-invalid-input');
+            feedback.innerHTML = '';
+        }
+    });
+    checkFormErrors();
+}
+
+// محرك الفحص الفوري الحي عبر الـ AJAX Engine
+async function validateField(inputElement, type, feedbackElementId) {
+    const value = inputElement.value.trim();
+    const feedbackEl = document.getElementById(feedbackElementId);
+    
+    if (!value) {
+        inputElement.classList.remove('is-valid-input', 'is-invalid-input');
+        feedbackEl.innerHTML = '';
+        checkFormErrors();
+        return;
+    }
+
+    // تحقق محلي سريع لأرقام الهواتف لتخفيف الضغط غير المبرر على السيرفر
+    if (type === 'phone') {
+        if (!/^\d+$/.test(value) || value.length !== 9) {
+            inputElement.classList.remove('is-valid-input');
+            inputElement.classList.add('is-invalid-input');
+            feedbackEl.innerHTML = '❌ يجب أن يتكون الرقم من 9 أرقام فقط ويحتوي على أعداد.';
+            feedbackEl.style.color = '#dc3545';
+            checkFormErrors();
+            return;
+        }
+    }
+
+    // إرسال الطلب للخلفية فوراً للفحص المباشر وإرجاع النتيجة
+    try {
+        const response = await fetch("{{ url_for('admin_suppliers_add_bp.check_availability') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: type, value: value })
+        });
+        const data = await response.json();
+
+        if (data.available) {
+            inputElement.classList.remove('is-invalid-input');
+            inputElement.classList.add('is-valid-input');
+            feedbackEl.innerHTML = `✓ ${data.message}`;
+            feedbackEl.style.color = '#198754';
+        } else {
+            inputElement.classList.remove('is-valid-input');
+            inputElement.classList.add('is-invalid-input');
+            feedbackEl.innerHTML = `${data.message}`;
+            feedbackEl.style.color = '#dc3545';
+        }
+        
+        // فحص الأخطاء لتعطيل أو تمكين زر الإرسال
+        checkFormErrors();
+        
+    } catch (error) {
+        console.error("خطأ أثناء الفحص المباشر:", error);
+    }
+}
+
+// وظيفة مراقبة الأخطاء لمنع الإرسال في حال وجود حقول غير صالحة مكررة
+function checkFormErrors() {
+    const activeType = document.getElementById('actionTypeSelector').value;
+    let hasErrors = false;
+
+    if (activeType === 'owner') {
+        hasErrors = document.getElementById('owner_username').classList.contains('is-invalid-input') || 
+                    document.getElementById('owner_phone').classList.contains('is-invalid-input');
+    } else {
+        hasErrors = document.getElementById('staff_username').classList.contains('is-invalid-input') || 
+                    document.getElementById('staff_phone').classList.contains('is-invalid-input');
+    }
+
+    document.getElementById('submitBtn').disabled = hasErrors;
+}
+
+// ربط المستمعات (Event Listeners) ووظائف التشغيل الآلي للمودال عند التحميل
+document.addEventListener("DOMContentLoaded", () => {
+    // فحص المورد الأساسي (المالك)
+    document.getElementById('owner_username').addEventListener('input', function() {
+        validateField(this, 'username', 'owner_username_feedback');
+    });
+    document.getElementById('owner_phone').addEventListener('input', function() {
+        validateField(this, 'phone', 'owner_phone_feedback');
+    });
+
+    // فحص الموظف التشغيلي (التابع)
+    document.getElementById('staff_username').addEventListener('input', function() {
+        validateField(this, 'username', 'staff_username_feedback');
+    });
+    document.getElementById('staff_phone').addEventListener('input', function() {
+        validateField(this, 'phone', 'staff_phone_feedback');
+    });
+
+    // الاستدعاء التلقائي للمودال في حال توفر بيانات مستخدم من السيرفر
+    {% if new_user %}
+    const userModalEl = document.getElementById('newUserModal');
+    if (userModalEl) {
+        const userModal = new bootstrap.Modal(userModalEl);
+        userModal.show();
+    }
+    {% endif %}
+});
+
+// وظيفة نسخ بيانات الاعتماد بشكل منسق واحترافي مع تضمين التنبيه المطلوبة
+{% if new_user %}
+function copyCredentials() {
+    const type = "{{ new_user.type }}";
+    const tradeName = "{{ new_user.trade_name }}";
+    const username = "{{ new_user.username }}";
+    const password = "{{ new_user.password }}";
+    
+    const formattedText = `🏬 مرحباً بك شريكنا في منصة محجوب أونلاين\n\nتم إعداد الحساب الخاص بكم بنجاح وصلاحيات الدخول كالتالي:\n\n🔹 نوع الحساب: ${type}\n🏢 الجهة/الشريك: ${tradeName}\n👤 اسم المستخدم: ${username}\n🔑 كلمة المرور المؤقتة: ${password}\n\n🌐 رابط تسجيل دخول الموردين:\n${window.location.origin}/supplier/login\n\n⚠️ تنبيه هام: يرجى تغيير كلمة المرور من إعدادات لوحة التحكم محجوب أونلاين | سوقك الذكي لضمان أعلى مستويات الأمان والخصوصية لبياناتكم التجارية.`;
+    
+    navigator.clipboard.writeText(formattedText).then(() => {
+        const copyBtn = document.getElementById('copyBtn');
+        copyBtn.innerHTML = `<i class="fas fa-check-circle"></i> تم النسخ للحافظة!`;
+        copyBtn.className = "btn btn-success flex-grow-1 d-flex align-items-center justify-content-center gap-2";
+        
+        setTimeout(() => {
+            copyBtn.innerHTML = `<i class="fas fa-copy"></i> نسخ بيانات الدخول`;
+            copyBtn.className = "btn btn-mahjoub-primary flex-grow-1 d-flex align-items-center justify-content-center gap-2";
+        }, 3000);
+    }).catch(err => {
+        console.error('فشلت عملية النسخ التلقائي للبيانات:', err);
+    });
+}
+{% endif %}
+</script>
+{% endblock %}
