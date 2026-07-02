@@ -2,7 +2,7 @@
 # 📂 apps/auth_portal/routes.py
 
 import os
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from flask_login import login_user, logout_user, current_user
 from apps.models.admin_db import AdminUser
 
@@ -13,7 +13,7 @@ auth_portal = Blueprint(
     template_folder='templates'
 )
 
-# الرابط السري للإدارة
+# الرابط السري للإدارة من المتغيرات البيئية
 LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x')
 
 @auth_portal.route(LOGIN_PATH, methods=['GET', 'POST'])
@@ -22,13 +22,13 @@ def login():
     
     # 1. التحقق من وجود جلسة فعالة
     if current_user.is_authenticated and session.get('user_type') == 'admin':
-        # تأكد هنا أن اسم الـ Blueprint (admin_dashboard) هو نفسه المعرف في الملف الخاص بالدوشبورد
         return redirect(url_for('admin_dashboard.dashboard'))
 
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         
+        # البحث في قاعدة بيانات المدراء
         admin = AdminUser.query.filter_by(username=username).first()
         
         if admin and admin.check_password(password):
@@ -36,9 +36,14 @@ def login():
             session['user_type'] = 'admin' 
             
             flash('مرحباً بك يا مدير النظام.', 'success')
-            # [نقطة حاسمة]: تأكد أن الملف apps/admin_dashboard/routes.py معرف فيه:
-            # admin_dashboard = Blueprint('admin_dashboard', __name__, ...)
-            return redirect(url_for('admin_dashboard.dashboard'))
+            
+            # محاولة التحويل إلى الدوشبورد مع التقاط الأخطاء
+            try:
+                return redirect(url_for('admin_dashboard.dashboard'))
+            except Exception as e:
+                current_app.logger.error(f"Error redirecting to dashboard: {e}")
+                flash('خطأ في تحديد مسار لوحة التحكم، يرجى التواصل مع الدعم التقني.', 'danger')
+                return redirect(url_for('auth_portal.login'))
         else:
             flash('بيانات دخول غير صحيحة.', 'danger')
             
@@ -46,7 +51,8 @@ def login():
 
 @auth_portal.route('/logout')
 def logout():
-    """تسجيل الخروج مع مسح شامل للجلسة."""
+    """تسجيل الخروج مع مسح شامل للجلسة لمنع تداخل الصلاحيات."""
     logout_user()
     session.clear() 
+    flash('تم تسجيل الخروج بنجاح.', 'info')
     return redirect(url_for('auth_portal.login'))
