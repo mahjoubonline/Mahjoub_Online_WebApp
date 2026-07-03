@@ -6,7 +6,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from sqlalchemy import MetaData
 
-# تعريف الـ Naming Convention
+# تعريف الـ Naming Convention لمنع تعارض الأسماء في الجداول (مهم جداً للمشاريع الكبيرة)
 metadata = MetaData(
     naming_convention={
         "ix": "ix_%(column_0_label)s",
@@ -21,12 +21,12 @@ db = SQLAlchemy(metadata=metadata)
 migrate = Migrate()
 login_manager = LoginManager()
 
-# [صمام الأمان لـ Flask-Login]: تعريف دالة تحميل المستخدم لمنع خطأ 500
+# [صمام الأمان لـ Flask-Login]: تعريف دالة تحميل المستخدم المركزية
 @login_manager.user_loader
 def load_user(user_id):
     """
     دالة موحدة لتحميل المستخدمين من الموديلات المختلفة.
-    تمت إضافة المورد (Supplier) لضمان ربطه بالمحفظة.
+    ملاحظة: الاستيراد داخل الدالة يمنع وقوع Circular Import.
     """
     from apps.models.admin_db import AdminUser
     from apps.models.supplier_db import Supplier
@@ -36,8 +36,7 @@ def load_user(user_id):
     try:
         uid = int(user_id)
         
-        # الترتيب: المورد -> موظف المورد -> المسوق -> الإدارة
-        # يتم البحث بالتسلسل حتى نجد المستخدم المطابق
+        # البحث التسلسلي: الترتيب يحسن الأداء بناءً على كثرة الاستخدام
         user = Supplier.query.get(uid) or \
                SupplierStaff.query.get(uid) or \
                Marketer.query.get(uid) or \
@@ -45,10 +44,11 @@ def load_user(user_id):
                
         return user
         
-    except (ValueError, Exception):
+    except (ValueError, TypeError, Exception):
+        # في حال حدوث أي خطأ في التحويل أو الاستعلام يتم إرجاع None (المستخدم غير مسجل)
         return None
 
-# إعداد مسار تسجيل الدخول الموحد
+# إعداد مسار تسجيل الدخول الموحد (الاسم يجب أن يطابق Blueprint + Route)
 login_manager.login_view = 'auth_portal.login'
 login_manager.login_message = "يرجى تسجيل الدخول للوصول إلى لوحة التحكم."
 login_manager.login_message_category = "info"
