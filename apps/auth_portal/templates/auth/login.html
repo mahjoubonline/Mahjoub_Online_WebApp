@@ -86,6 +86,9 @@
         {% endwith %}
 
         <form method="POST" action="{{ url_for('auth_portal.login') }}" autocomplete="off" spellcheck="false" id="loginForm">
+            <!-- إضافة رمز الحماية المطلوب لتجاوز خطأ 400 -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <div class="input-box">
                 <i class="fas fa-user-shield main-icon"></i>
                 <input type="text" name="username" placeholder="الهوية الرقمية" required>
