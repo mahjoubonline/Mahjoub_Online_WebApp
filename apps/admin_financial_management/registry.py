@@ -1,11 +1,11 @@
 # coding: utf-8
-# 📂 apps/admin_financial_management/registry.py
+# 📂 apps/admin_suppliers_list/registry.py
 
-from apps.admin_financial_management.routes import financial_mgmt_bp
+from apps.admin_suppliers_list.routes import suppliers_bp
 
 def register_module(app):
     """
-    تسجيل موديول الإدارة المالية للطلبات.
+    تسجيل موديول إدارة الموردين.
     """
-    app.register_blueprint(financial_mgmt_bp, url_prefix='/admin/financial-management')
-    print("✅ [Registry]: تم تسجيل موديول 'Admin Financial Management' بنجاح.")
+    app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
+    print("✅ [Registry]: تم تسجيل موديول 'Admin Suppliers List' بنجاح.")
