@@ -56,7 +56,7 @@
             <div class="nav-item">
                 <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-handshake me-3"></i> <span>إدارة الموردين</span> <i class="fas fa-chevron-down ms-auto"></i></div>
                 <ul class="dropdown-content">
-                    <li><a href="{{ url_for('supplier_app.list_suppliers') }}" class="{{ 'active' if request.endpoint == 'supplier_app.list_suppliers' }}"><i class="fas fa-list-ul me-2"></i> قائمة الشركاء</a></li>
+                    <li><a href="{{ url_for('suppliers_list_bp.list_suppliers') }}" class="{{ 'active' if request.endpoint == 'suppliers_list_bp.list_suppliers' }}"><i class="fas fa-list-ul me-2"></i> قائمة الشركاء</a></li>
                     <li><a href="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" class="{{ 'active' if request.endpoint == 'admin_suppliers_add_bp.add_supplier_or_staff' }}"><i class="fas fa-user-plus me-2"></i> إضافة شريك</a></li>
                 </ul>
             </div>
@@ -73,7 +73,6 @@
                 </ul>
             </div>
 
-            {# رابط النافذة الجديدة #}
             <a href="{{ url_for('settings_bp.index') }}" class="nav-link {{ 'active' if request.endpoint == 'settings_bp.index' }}"><i class="fas fa-cog me-3"></i> <span>إعدادات النظام</span></a>
 
             <hr class="text-white my-3">
