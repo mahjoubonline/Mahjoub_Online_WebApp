@@ -7,14 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
-
     <style>
-        :root {
-            --royal-purple: #1a0b2e;
-            --deep-black: #08020d;
-            --mahjoub-gold: #D4AF37;
-            --sidebar-width: 280px;
-        }
+        :root { --royal-purple: #1a0b2e; --deep-black: #08020d; --mahjoub-gold: #D4AF37; --sidebar-width: 280px; }
         body { font-family: 'Cairo', sans-serif; background-color: #f4f7f6; margin: 0; }
         .sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, var(--royal-purple) 0%, var(--deep-black) 100%); height: 100vh; position: fixed; right: 0; top: 0; z-index: 1050; transition: all 0.3s; box-shadow: 2px 0 10px rgba(0,0,0,0.3); overflow-y: auto; }
         .logo-container { padding: 30px 10px; text-align: center; border-bottom: 1px solid rgba(212, 175, 55, 0.3); }
@@ -26,57 +20,36 @@
         .dropdown-content { display: none; list-style: none; padding-right: 35px; border-right: 2px solid var(--mahjoub-gold); margin: 5px 0; }
         .dropdown-content a { color: rgba(255,255,255,0.8); display: block; padding: 8px 10px; font-size: 0.9rem; border-radius: 5px; text-decoration: none; }
         .dropdown-content a:hover { background: rgba(212, 175, 55, 0.1); color: var(--mahjoub-gold); }
-        .dropdown-content a.active { color: var(--mahjoub-gold); font-weight: bold; }
         .main-wrapper { margin-right: var(--sidebar-width); transition: 0.3s; }
         .top-navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .menu-toggle { display: none; background: none; border: none; font-size: 1.5rem; color: var(--royal-purple); }
-        .disabled-link { opacity: 0.5; cursor: not-allowed; }
-        @media (max-width: 992px) {
-            .sidebar { right: -280px; }
-            .sidebar.active { right: 0; }
-            .main-wrapper { margin-right: 0; }
-            .menu-toggle { display: block !important; }
-        }
+        @media (max-width: 992px) { .sidebar { right: -280px; } .sidebar.active { right: 0; } .main-wrapper { margin-right: 0; } .menu-toggle { display: block !important; } }
     </style>
 </head>
 <body>
-
     <aside class="sidebar" id="sidebar">
         <div class="logo-container">
             <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" class="sidebar-logo" alt="MAHJOUB">
             <h6 class="text-white mt-3 fw-bold mb-0">القيادة المركزية</h6>
             <span class="brand-text">محجوب أونلاين | سوقك الذكي</span>
         </div>
-
         <nav class="nav-menu">
-            {# Macro للتحقق من وجود المسار قبل بناء الرابط #}
-            {% macro safe_url(endpoint) %}{{ url_for(endpoint) if endpoint in config.get('ENDPOINT_MAP', {}) else '#' }}{% endmacro %}
-
             <a href="{{ url_for('admin_dashboard.dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_dashboard.dashboard' }}"><i class="fas fa-chart-line me-3"></i> <span>الإحصائيات</span></a>
             
-            <a href="{{ url_for('orders.dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'orders.dashboard' }}"><i class="fas fa-shopping-bag me-3"></i> <span>إدارة الطلبات</span></a>
-
-            {% if registered_modules.get('admin_suppliers_list') %}
-            <div class="nav-item">
-                <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-handshake me-3"></i> <span>إدارة الموردين</span> <i class="fas fa-chevron-down ms-auto"></i></div>
-                <ul class="dropdown-content">
-                    <li><a href="{{ url_for('suppliers_bp.list_suppliers') }}"><i class="fas fa-list-ul me-2"></i> قائمة الشركاء</a></li>
-                    <li><a href="{{ url_for('suppliers_bp.add_supplier') }}"><i class="fas fa-user-plus me-2"></i> إضافة شريك</a></li>
-                </ul>
-            </div>
-            {% endif %}
-
-            {% if registered_modules.get('finance_module') %}
-            <div class="nav-item">
-                <div class="nav-link" onclick="toggleSub(this)"><i class="fas fa-wallet me-3"></i> <span>الرقابة المالية</span> <i class="fas fa-chevron-down ms-auto"></i></div>
-                <ul class="dropdown-content">
-                    <li><a href="{{ url_for('treasury_bp.index') }}"><i class="fas fa-vault me-2"></i> خزينة المنصة</a></li>
-                    <li><a href="{{ url_for('wallet_app.dashboard') }}"><i class="fas fa-money-check-alt me-2"></i> محفظة الموردين</a></li>
-                </ul>
-            </div>
-            {% endif %}
-
-            <a href="#" class="nav-link disabled-link"><i class="fas fa-cog me-3"></i> <span>إعدادات النظام (قريباً)</span></a>
+            {# حلقة ديناميكية لكل الموديولات المسجلة في النظام #}
+            {% for key, module in registered_modules.items() %}
+                <div class="nav-item">
+                    <div class="nav-link" onclick="toggleSub(this)">
+                        <i class="{{ module.icon }} me-3"></i> <span>{{ module.display_name }}</span> 
+                        <i class="fas fa-chevron-down ms-auto"></i>
+                    </div>
+                    <ul class="dropdown-content">
+                        {% for link_text, endpoint in module.links.items() %}
+                        <li><a href="{{ url_for(endpoint) }}"><i class="fas fa-circle me-2" style="font-size: 8px;"></i> {{ link_text }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endfor %}
 
             <hr class="text-white my-3">
             <a href="{{ url_for('auth_portal.logout') }}" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-3"></i> <span>خروج آمن</span></a>
@@ -86,16 +59,12 @@
     <main class="main-wrapper" id="main">
         <header class="top-navbar">
             <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-            <div class="user-identity fw-bold"><i class="fas fa-user-circle me-2"></i> {{ current_user.username if current_user.is_authenticated else 'المسؤول' }}</div>
+            <div class="user-identity fw-bold">{{ current_user.username if current_user.is_authenticated else 'المسؤول' }}</div>
             <div class="badge bg-warning text-dark">بيئة التحكم السيادية</div>
         </header>
-
-        <section class="p-4">
-            {% block content %}{% endblock %}
-        </section>
+        <section class="p-4">{% block content %}{% endblock %}</section>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function toggleSub(el) {
             let drop = el.nextElementSibling;
@@ -104,17 +73,6 @@
             el.querySelector('.fa-chevron-down').style.transform = (drop.style.display === "block") ? "rotate(180deg)" : "rotate(0deg)";
         }
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
-        document.addEventListener("DOMContentLoaded", function() {
-            let activeLinks = document.querySelectorAll('.dropdown-content .active');
-            activeLinks.forEach(link => {
-                let drop = link.closest('.dropdown-content');
-                if(drop) {
-                    drop.style.display = "block";
-                    let icon = drop.previousElementSibling.querySelector('.fa-chevron-down');
-                    if(icon) icon.style.transform = "rotate(180deg)";
-                }
-            });
-        });
     </script>
 </body>
 </html>
