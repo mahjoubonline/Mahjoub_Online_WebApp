@@ -73,6 +73,9 @@
                 </ul>
             </div>
 
+            {# رابط النافذة الجديدة #}
+            <a href="{{ url_for('settings_bp.index') }}" class="nav-link {{ 'active' if request.endpoint == 'settings_bp.index' }}"><i class="fas fa-cog me-3"></i> <span>إعدادات النظام</span></a>
+
             <hr class="text-white my-3">
             <a href="{{ url_for('auth_portal.logout') }}" class="nav-link text-danger"><i class="fas fa-sign-out-alt me-3"></i> <span>خروج آمن</span></a>
         </nav>
@@ -86,18 +89,6 @@
         </header>
 
         <section class="p-4">
-            <!-- معالجة رسائل النظام (Flash Messages) -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            
             {% block content %}{% endblock %}
         </section>
     </main>
@@ -114,8 +105,7 @@
         }
         
         document.addEventListener("DOMContentLoaded", function() {
-            // توسيع قائمة الرقابة المالية تلقائياً إذا كان المسار ضمنها
-            if (window.location.href.includes('treasury') || window.location.href.includes('wallet')) {
+            if (window.location.href.includes('treasury')) {
                 let drop = document.getElementById('finance-dropdown');
                 drop.style.display = "block";
                 let icon = document.getElementById('finance-nav').querySelector('.fa-chevron-down');
