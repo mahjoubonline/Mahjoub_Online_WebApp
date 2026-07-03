@@ -35,13 +35,9 @@
                     </div>
                     <div class="ms-3"><h6 class="text-muted mb-0">الأرصدة المركزية</h6></div>
                 </div>
-                {% if total_balance_sar is defined and total_balance_sar is not none %}
-                    <h5 class="fw-bold mb-1">{{ "%.2f"|format(total_balance_sar) }} <small>ر.س</small></h5>
-                    <h5 class="fw-bold mb-1">{{ "%.2f"|format(total_balance_yer|default(0)) }} <small>ر.ي</small></h5>
-                    <h5 class="fw-bold mb-0 text-dark">{{ "%.2f"|format(total_balance_usd|default(0)) }} <small>د.أ</small></h5>
-                {% else %}
-                    <h6 class="text-muted">جاري تحميل البيانات المالية...</h6>
-                {% endif %}
+                <h5 class="fw-bold mb-1">{{ "%.2f"|format(total_balance_sar | default(0)) }} <small>ر.س</small></h5>
+                <h5 class="fw-bold mb-1">{{ "%.2f"|format(total_balance_yer | default(0)) }} <small>ر.ي</small></h5>
+                <h5 class="fw-bold mb-0 text-dark">{{ "%.2f"|format(total_balance_usd | default(0)) }} <small>د.أ</small></h5>
             </div>
         </div>
     </div>
@@ -63,10 +59,10 @@
                         <tbody>
                             {% for tx in recent_transactions %}
                             <tr>
-                                <td>#{{ tx.id }}</td>
-                                <td class="fw-bold">{{ tx.amount }}</td>
-                                <td>{{ tx.transaction_type }}</td>
-                                <td><span class="badge bg-info">{{ tx.status }}</span></td>
+                                <td>#{{ tx.id | default('N/A') }}</td>
+                                <td class="fw-bold">{{ tx.amount | default(0.00) }}</td>
+                                <td>{{ tx.transaction_type | default('غير محدد') }}</td>
+                                <td><span class="badge bg-info">{{ tx.status | default('قيد المعالجة') }}</span></td>
                             </tr>
                             {% else %}
                             <tr>
