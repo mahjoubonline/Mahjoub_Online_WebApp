@@ -11,6 +11,7 @@ from apps.models.wallet_db import SupplierWallet
 import secrets
 import re
 import logging
+from datetime import datetime  # استيراد المكتبة لتسجيل التوقيت
 
 # إعداد الـ Blueprint
 admin_suppliers_add_bp = Blueprint(
@@ -80,6 +81,7 @@ def add_supplier_or_staff():
 
         action_type = request.form.get('action_type')
         temp_password = secrets.token_hex(4) # توليد كلمة مرور عشوائية
+        registration_time = datetime.utcnow() # التقاط لحظة التسجيل الحالية
         
         try:
             # ================= معالجة المورد المالك =================
@@ -94,7 +96,14 @@ def add_supplier_or_staff():
                     flash("❌ البيانات غير صالحة أو مسجلة مسبقاً في النظام.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                new_supplier = Supplier(username=username, trade_name=trade_name, rank=rank, status='active')
+                # إنشاء المورد مع تسجيل وقت الإنشاء
+                new_supplier = Supplier(
+                    username=username, 
+                    trade_name=trade_name, 
+                    rank=rank, 
+                    status='active',
+                    registration_date=registration_time # تسجيل التاريخ والوقت
+                )
                 new_supplier.phone = phone 
                 new_supplier.set_password(temp_password)
                 
@@ -125,7 +134,14 @@ def add_supplier_or_staff():
                     flash("❌ بيانات الموظف غير صحيحة أو مستخدمة.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                new_staff = SupplierStaff(supplier_id=supplier_id, username=username, phone=phone, role='worker')
+                # إنشاء الموظف مع تسجيل وقت الإنشاء
+                new_staff = SupplierStaff(
+                    supplier_id=supplier_id, 
+                    username=username, 
+                    phone=phone, 
+                    role='worker',
+                    registration_date=registration_time # تسجيل التاريخ والوقت
+                )
                 new_staff.set_password(temp_password)
                 
                 db.session.add(new_staff)
