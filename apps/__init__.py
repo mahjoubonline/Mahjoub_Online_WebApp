@@ -80,10 +80,11 @@ def create_app():
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
                             
-                            # تخزين البيانات ليقرأها نظام القوالب تلقائياً
+                            # تخزين البيانات ليقرأها نظام القوالب تلقائياً (تم التحديث هنا)
                             REGISTERED_MODULES[item] = {
                                 "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
                                 "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
+                                "links": getattr(module, 'LINKS', {}), # تم إضافة روابط الموديول
                                 "active": True
                             }
                             print(f"✅ [Auto-Discovery] تم تسجيل موديول: {item}")
