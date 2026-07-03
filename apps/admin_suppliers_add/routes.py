@@ -1,16 +1,6 @@
 # coding: utf-8
 # 📂 apps/admin_suppliers_add/routes.py
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, session, abort
-from flask_login import login_required
-from apps.extensions import db
-from apps import csrf  # استيراد حماية CSRF
-from apps.models.supplier_db import Supplier
-from apps.models.supplier_staff_db import SupplierStaff
-from apps.models.wallet_db import SupplierWallet
-import secrets# coding: utf-8
-# 📂 apps/admin_suppliers_add/routes.py
-
 import secrets
 import re
 import logging
@@ -31,172 +21,23 @@ admin_suppliers_add_bp = Blueprint(
 )
 
 # -----------------------------------------------------------
-# دالة مساعدة: التحقق من وجود المستخدم (كيان تجاري أو موظف)
-# -----------------------------------------------------------
-def check_user_exists(username=None, phone=None):
-    if username:
-        return Supplier.query.filter_by(username=username).first() or \
-               SupplierStaff.query.filter_by(username=username).first()
-    if phone:
-        # البحث يتم بناءً على آخر 9 أرقام (التوافق مع حقل البحث)
-        search_phone = str(phone)[-9:]
-        return Supplier.query.filter_by(search_phone=search_phone).first() or \
-               SupplierStaff.query.filter_by(phone=phone).first()
-    return None
-
-# -----------------------------------------------------------
-# API: للتحقق اللحظي من توفر البيانات (AJAX)
-# -----------------------------------------------------------
-@admin_suppliers_add_bp.route('/check_availability', methods=['POST'])
-@csrf.exempt
-@login_required
-def check_availability():
-    data = request.get_json() or {}
-    field_type = data.get('type')
-    value = data.get('value', '').strip()
-
-    if not value:
-        return jsonify({'available': False, 'message': '⚠️ الحقل فارغ'})
-
-    if field_type == 'username':
-        if check_user_exists(username=value):
-            return jsonify({'available': False, 'message': 'اسم المستخدم مسجل مسبقاً'})
-        return jsonify({'available': True, 'message': 'متاح'})
-
-    elif field_type == 'phone':
-        if not re.match(r'^\d{9}$', value):
-            return jsonify({'available': False, 'message': 'يجب أن يكون 9 أرقام'})
-        if check_user_exists(phone=value):
-            return jsonify({'available': False, 'message': 'رقم الهاتف مرتبط بحساب آخر'})
-        return jsonify({'available': True, 'message': 'متاح'})
-
-    elif field_type == 'trade_name':
-        if len(value) < 3:
-            return jsonify({'available': False, 'message': 'الاسم قصير جداً'})
-        if Supplier.query.filter_by(trade_name=value).first():
-            return jsonify({'available': False, 'message': 'هذا الاسم التجاري مسجل مسبقاً'})
-        return jsonify({'available': True, 'message': 'اسم المتجر متاح'})
-
-    return jsonify({'available': False, 'message': 'طلب غير صالح'})
-
-# -----------------------------------------------------------
-# المسار الرئيسي: حفظ المورد أو الموظف
-# -----------------------------------------------------------
-@admin_suppliers_add_bp.route('/add', methods=['GET', 'POST'])
-@login_required
-def add_supplier_or_staff():
-    if request.method == 'POST':
-        # 1. حماية ضد البوتات (Honeypot)
-        if request.form.get('hp_field'):
-            abort(403) 
-
-        action_type = request.form.get('action_type')
-        temp_password = secrets.token_hex(4) # كلمة مرور عشوائية قوية
-        reg_time = datetime.utcnow()
-        
-        try:
-            # --- معالجة المورد المالك (Owner) ---
-            if action_type == 'owner':
-                username = request.form.get('username', '').strip()
-                phone = request.form.get('phone', '').strip()
-                trade_name = request.form.get('trade_name', '').strip()
-                rank = request.form.get('rank', 'bronze')
-
-                # التحقق النهائي
-                if check_user_exists(username=username, phone=phone) or Supplier.query.filter_by(trade_name=trade_name).first():
-                    flash("❌ البيانات غير صالحة أو مسجلة مسبقاً.", "danger")
-                    return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
-
-                new_supplier = Supplier(
-                    username=username, 
-                    trade_name=trade_name, 
-                    rank=rank, 
-                    status='active',
-                    registration_date=reg_time
-                )
-                new_supplier.phone = phone 
-                new_supplier.set_password(temp_password)
-                
-                db.session.add(new_supplier)
-                db.session.flush() # الحصول على ID قبل الـ Commit
-                
-                # إنشاء المحفظة تلقائياً (التي استوردناها من wallet_db)
-                new_wallet = SupplierWallet(
-                    wallet_code=f"MAH-WEL963{new_supplier.id}", 
-                    supplier_id=new_supplier.id,
-                    balance_yer=0.00, balance_usd=0.00, balance_sar=0.00, balance_pending=0.00
-                )
-                db.session.add(new_wallet)
-                db.session.commit()
-                
-                # تخزين البيانات في الجلسة لإظهار النافذة المنبثقة
-                session['new_user_data'] = {
-                    'trade_name': trade_name, 'username': username, 'password': temp_password
-                }
-
-            # --- معالجة الموظف التشغيلي (Staff) ---
-            elif action_type == 'staff':
-                username = request.form.get('staff_username', '').strip()
-                phone = request.form.get('staff_phone', '').strip()
-                supplier_id = request.form.get('supplier_id')
-
-                if check_user_exists(username=username, phone=phone):
-                    flash("❌ بيانات الموظف مستخدمة.", "danger")
-                    return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
-
-                new_staff = SupplierStaff(
-                    supplier_id=supplier_id, username=username, phone=phone, 
-                    role='worker', registration_date=reg_time
-                )
-                new_staff.set_password(temp_password)
-                db.session.add(new_staff)
-                db.session.commit()
-                
-                parent = Supplier.query.get(supplier_id)
-                session['new_user_data'] = {
-                    'trade_name': parent.trade_name if parent else "غير محدد", 
-                    'username': username, 'password': temp_password
-                }
-            
-            flash("✅ تمت العملية بنجاح", "success")
-            return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
-
-        except Exception as e:
-            db.session.rollback()
-            logging.error(f"Error in add_supplier_or_staff: {e}")
-            flash(f"⚠️ خطأ تقني: {str(e)}", "danger")
-            return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
-
-    # عرض الصفحة (GET)
-    new_user = session.pop('new_user_data', None)
-    suppliers = Supplier.query.order_by(Supplier.trade_name.asc()).all()
-    return render_template('admin_suppliers_add/admin_suppliers_add.html', suppliers=suppliers, new_user=new_user)
-import re
-import logging
-from datetime import datetime  # استيراد المكتبة لتسجيل التوقيت
-
-# إعداد الـ Blueprint
-admin_suppliers_add_bp = Blueprint(
-    'admin_suppliers_add_bp', 
-    __name__, 
-    template_folder='templates'
-)
-
 # دالة مساعدة للتحقق من وجود المستخدم
+# -----------------------------------------------------------
 def check_user_exists(username=None, phone=None):
     if username:
         return Supplier.query.filter_by(username=username).first() or \
                SupplierStaff.query.filter_by(username=username).first()
     if phone:
+        # البحث يتم بناءً على رقم الهاتف
         return Supplier.query.filter_by(phone=phone).first() or \
                SupplierStaff.query.filter_by(phone=phone).first()
     return None
 
 # -----------------------------------------------------------
-# API: للتحقق اللحظي (تم استثناؤه من حماية CSRF للعمل بسلاسة)
+# API: للتحقق اللحظي من توفر البيانات
 # -----------------------------------------------------------
 @admin_suppliers_add_bp.route('/check_availability', methods=['POST'])
-@csrf.exempt  # استثناء من حماية CSRF لتجنب أخطاء 400 Bad Request
+@csrf.exempt  # استثناء من حماية CSRF لطلبات AJAX
 @login_required
 def check_availability():
     data = request.get_json() or {}
@@ -228,65 +69,67 @@ def check_availability():
             return jsonify({'available': False, 'message': 'هذا الاسم التجاري مسجل مسبقاً'})
         return jsonify({'available': True, 'message': 'اسم المتجر متاح'})
 
-    return jsonify({'available': False, 'message': 'غير مدعوم'})
+    return jsonify({'available': False, 'message': 'طلب غير مدعوم'})
 
 # -----------------------------------------------------------
-# مسار الحفظ والمعالجة
+# المسار الرئيسي: حفظ المورد أو الموظف
 # -----------------------------------------------------------
 @admin_suppliers_add_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_supplier_or_staff():
     if request.method == 'POST':
-        # التحقق من Honeypot (حماية من البوتات)
+        # 1. حماية ضد البوتات (Honeypot)
         if request.form.get('hp_field'):
             abort(403) 
 
         action_type = request.form.get('action_type')
-        temp_password = secrets.token_hex(4) # توليد كلمة مرور عشوائية
-        registration_time = datetime.utcnow() # التقاط لحظة التسجيل الحالية
+        temp_password = secrets.token_hex(4) # كلمة مرور عشوائية قوية
+        registration_time = datetime.utcnow()
         
         try:
-            # ================= معالجة المورد المالك =================
+            # --- معالجة المورد المالك (Owner) ---
             if action_type == 'owner':
                 username = request.form.get('username', '').strip()
                 phone = request.form.get('phone', '').strip()
                 trade_name = request.form.get('trade_name', '').strip()
                 rank = request.form.get('rank', 'bronze')
 
-                # التحقق النهائي من الخادم قبل الحفظ
+                # التحقق النهائي قبل الحفظ
                 if not re.match(r'^\d{9}$', phone) or check_user_exists(username=username, phone=phone) or Supplier.query.filter_by(trade_name=trade_name).first():
                     flash("❌ البيانات غير صالحة أو مسجلة مسبقاً في النظام.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # إنشاء المورد مع تسجيل وقت الإنشاء
                 new_supplier = Supplier(
                     username=username, 
                     trade_name=trade_name, 
                     rank=rank, 
                     status='active',
-                    registration_date=registration_time # تسجيل التاريخ والوقت
+                    registration_date=registration_time
                 )
                 new_supplier.phone = phone 
                 new_supplier.set_password(temp_password)
                 
                 db.session.add(new_supplier)
-                db.session.flush()  # الحصول على ID
+                db.session.flush() # الحصول على ID قبل الـ Commit
                 
-                # إنشاء المحفظة (Wallet)
-                new_wallet = SupplierWallet(wallet_code=f"MAH-WEL{new_supplier.id}", supplier_id=new_supplier.id)
+                # إنشاء المحفظة تلقائياً
+                new_wallet = SupplierWallet(
+                    wallet_code=f"MAH-WEL{new_supplier.id}", 
+                    supplier_id=new_supplier.id
+                )
                 db.session.add(new_wallet)
                 db.session.commit()
                 
                 # تخزين البيانات في الجلسة لإظهار النافذة المنبثقة
                 session['new_user_data'] = {
-                    'type': 'مورد جديد كيان تجاري', 
+                    'type': 'مورد جديد',
                     'trade_name': trade_name, 
                     'username': username, 
                     'password': temp_password
                 }
                 flash(f"✅ تم تسجيل المورد: {trade_name}", "success")
 
-            # ================= معالجة الموظف التشغيلي =================
+            # --- معالجة الموظف التشغيلي (Staff) ---
             elif action_type == 'staff':
                 username = request.form.get('staff_username', '').strip()
                 phone = request.form.get('staff_phone', '').strip()
@@ -296,22 +139,20 @@ def add_supplier_or_staff():
                     flash("❌ بيانات الموظف غير صحيحة أو مستخدمة.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # إنشاء الموظف مع تسجيل وقت الإنشاء
                 new_staff = SupplierStaff(
                     supplier_id=supplier_id, 
                     username=username, 
                     phone=phone, 
-                    role='worker',
-                    registration_date=registration_time # تسجيل التاريخ والوقت
+                    role='worker', 
+                    registration_date=registration_time
                 )
                 new_staff.set_password(temp_password)
-                
                 db.session.add(new_staff)
                 db.session.commit()
                 
                 parent = Supplier.query.get(supplier_id)
                 session['new_user_data'] = {
-                    'type': 'موظف تشغيلي', 
+                    'type': 'موظف تشغيلي',
                     'trade_name': parent.trade_name if parent else "غير محدد", 
                     'username': username, 
                     'password': temp_password
@@ -322,7 +163,7 @@ def add_supplier_or_staff():
 
         except Exception as e:
             db.session.rollback()
-            logging.error(f"Error adding user: {e}")
+            logging.error(f"Error in add_supplier_or_staff: {e}")
             flash(f"⚠️ حدث خطأ تقني غير متوقع.", "danger")
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
