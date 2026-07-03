@@ -13,7 +13,7 @@ from apps.utils.time_utils import format_full_timestamp
 
 csrf = CSRFProtect()
 
-# REGISTERED_MODULES الآن سيحتوي على بيانات الموديول (الاسم، الأيقونة، الرابط)
+# قاموس لتخزين بيانات الموديولات المكتشفة تلقائياً
 REGISTERED_MODULES = {}
 
 @login_manager.user_loader
@@ -31,14 +31,19 @@ def load_user(user_id):
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
+    
+    # إضافة الفلاتر المخصصة
     app.jinja_env.filters['full_time'] = format_full_timestamp
 
+    # إعداد الإضافات
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
+    
     login_manager.login_view = 'suppliers_auth.login'
 
+    # حقن المتغيرات في القوالب تلقائياً
     @app.context_processor
     def inject_vars():
         return dict(
@@ -60,7 +65,7 @@ def create_app():
         except:
             db.session.rollback()
 
-        # [التسجيل التلقائي للموديولات - الفصل التام]
+        # [نظام التسجيل التلقائي للموديولات]
         apps_dir = app.root_path
         ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'suppliers_auth']
         
@@ -70,11 +75,12 @@ def create_app():
                 registry_file = os.path.join(item_path, 'registry.py')
                 if os.path.exists(registry_file):
                     try:
+                        # استيراد الموديول ديناميكياً
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
                             
-                            # التعديل الذكي: تخزين بيانات الموديول ليقرأها الهيكل تلقائياً
+                            # تخزين البيانات ليقرأها نظام القوالب تلقائياً
                             REGISTERED_MODULES[item] = {
                                 "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
                                 "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
@@ -84,5 +90,8 @@ def create_app():
                     except Exception as e:
                         print(f"⚠️ [Auto-Discovery] خطأ في الموديول {item}: {e}")
                         REGISTERED_MODULES[item] = {"active": False}
+
+    # تحديث الـ Config بـ خريطة المسارات لتفادي BuildError في القوالب
+    app.config['ENDPOINT_MAP'] = {rule.endpoint for rule in app.url_map.iter_rules()}
 
     return app
