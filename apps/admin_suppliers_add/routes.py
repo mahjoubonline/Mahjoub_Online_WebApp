@@ -9,7 +9,8 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required
 from apps.extensions import db
 from apps import csrf
-from apps.models.suppliers_db import Supplier
+# تم تعديل السطر التالي ليطابق اسم الملف الصحيح (supplier_db)
+from apps.models.supplier_db import Supplier
 from apps.models.supplier_staff_db import SupplierStaff
 from apps.models.wallet_db import SupplierWallet
 
