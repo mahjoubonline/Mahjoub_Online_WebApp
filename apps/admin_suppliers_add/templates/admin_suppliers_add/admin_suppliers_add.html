@@ -107,7 +107,6 @@
         modal.show();
         {% endif %}
 
-        // 2. تفعيل حالة التحميل عند الإرسال
         document.getElementById('supplierForm').addEventListener('submit', function() {
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
@@ -115,7 +114,6 @@
             document.getElementById('btnText').innerText = 'جاري المعالجة...';
         });
 
-        // 3. التحقق الديناميكي
         async function checkField(type, value) {
             const response = await fetch("{{ url_for('admin_suppliers_add_bp.check_availability') }}", {
                 method: 'POST',
