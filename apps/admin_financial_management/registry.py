@@ -1,11 +1,15 @@
 # coding: utf-8
-# 📂 apps/admin_suppliers_list/registry.py
+# 📂 apps/admin_financial_management/registry.py
 
-from apps.admin_suppliers_list.routes import suppliers_bp
+from apps.admin_financial_management.routes import financial_bp
+
+# تعريف البيانات التعريفية ليقرأها النظام تلقائياً
+MODULE_NAME = "الرقابة المالية"
+MODULE_ICON = "fa-wallet"
 
 def register_module(app):
     """
-    تسجيل موديول إدارة الموردين.
+    تسجيل موديول الإدارة المالية.
     """
-    app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
-    print("✅ [Registry]: تم تسجيل موديول 'Admin Suppliers List' بنجاح.")
+    app.register_blueprint(financial_bp, url_prefix='/admin/financial')
+    print("✅ [Registry]: تم تسجيل موديول 'Admin Financial Management' بنجاح.")
