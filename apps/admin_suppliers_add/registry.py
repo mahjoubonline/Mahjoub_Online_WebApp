@@ -1,22 +1,16 @@
 # coding: utf-8
-# 📂 apps/admin_suppliers_list/registry.py
-
-# احذف السطر التالي من أعلى الملف (السبب الرئيسي للحلقة)
-# from .routes import suppliers_bp 
-
-MODULE_NAME = "إدارة الموردين"
-MODULE_ICON = "fa-users"
-
-LINKS = {
-    "قائمة الشركاء": "suppliers_bp.list_suppliers"
-}
+# 📂 apps/admin_suppliers_add/registry.py
 
 def register_module(app):
-    # قم بعمل الاستيراد هنا داخل الدالة فقط
-    from .routes import suppliers_bp 
-    
+    """
+    تسجيل الـ Blueprint الخاص بالموديول.
+    ملاحظة: تم نقل الاستيراد إلى داخل الدالة (Lazy Import) 
+    لكسر حلقة الاستيراد (Circular Import).
+    """
     try:
-        app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
-        print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_list' بنجاح.")
+        from .routes import admin_suppliers_add_bp
+        
+        app.register_blueprint(admin_suppliers_add_bp, url_prefix='/admin/suppliers_add')
+        print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_add' بنجاح.")
     except Exception as e:
-        print(f"❌ [Registry Error]: فشل تسجيل موديول 'admin_suppliers_list': {e}")
+        print(f"❌ [Registry Error]: فشل تسجيل موديول 'admin_suppliers_add': {e}")
