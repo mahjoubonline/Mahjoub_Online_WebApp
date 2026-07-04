@@ -24,7 +24,7 @@
                     <h5 class="m-0">ملخص الأرصدة</h5>
                     <div class="btn-group">
                         {% for cur in ['SAR', 'YER', 'USD'] %}
-                        <a href="{{ url_for('treasury_bp.index', currency=cur) }}" 
+                        <a href="{{ url_for('treasury_bp.dashboard', currency=cur) }}" 
                            class="btn btn-sm {% if active_currency == cur %}btn-light{% else %}btn-outline-light{% endif %}">
                            {{ cur }}
                         </a>
@@ -81,13 +81,13 @@
             <nav>
                 <ul class="pagination justify-content-center m-0">
                     {% if pagination.has_prev %}
-                    <li class="page-item"><a class="page-link" href="{{ url_for('treasury_bp.index', page=pagination.prev_num, currency=active_currency) }}">السابق</a></li>
+                    <li class="page-item"><a class="page-link" href="{{ url_for('treasury_bp.dashboard', page=pagination.prev_num, currency=active_currency) }}">السابق</a></li>
                     {% endif %}
                     
                     {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1) %}
                         {% if page_num %}
                         <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                            <a class="page-link" href="{{ url_for('treasury_bp.index', page=page_num, currency=active_currency) }}" 
+                            <a class="page-link" href="{{ url_for('treasury_bp.dashboard', page=page_num, currency=active_currency) }}" 
                                {% if page_num == pagination.page %}style="background: #4b0082; border-color: #4b0082; color: white;"{% else %}style="color: #4b0082;"{% endif %}>
                                {{ page_num }}
                             </a>
@@ -96,7 +96,7 @@
                     {% endfor %}
 
                     {% if pagination.has_next %}
-                    <li class="page-item"><a class="page-link" href="{{ url_for('treasury_bp.index', page=pagination.next_num, currency=active_currency) }}">التالي</a></li>
+                    <li class="page-item"><a class="page-link" href="{{ url_for('treasury_bp.dashboard', page=pagination.next_num, currency=active_currency) }}">التالي</a></li>
                     {% endif %}
                 </ul>
             </nav>
