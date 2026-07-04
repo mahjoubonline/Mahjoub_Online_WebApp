@@ -1,5 +1,5 @@
 <style>
-    /* تنسيقات النمط الملكي للجدول */
+    /* تنسيقات النمط الملكي */
     :root {
         --royal-purple: #2e003e;
         --royal-gold: #d4af37;
@@ -60,21 +60,17 @@
         <tbody>
             {% for wallet in wallets %}
             <tr>
-                <td>
-                    <div class="fw-bold text-dark fs-6">{{ wallet.supplier.trade_name }}</div>
-                </td>
-                <td>
-                    <span class="wallet-code-badge">{{ wallet.wallet_code }}</span>
-                </td>
+                <td><div class="fw-bold text-dark fs-6">{{ wallet.supplier.trade_name }}</div></td>
+                <td><span class="wallet-code-badge">{{ wallet.wallet_code }}</span></td>
                 
                 <td class="{{ 'text-danger fw-bold' if wallet.balance_sar < 0 else 'text-dark' }}">
-                    {{ "{:,.2f}".format(wallet.balance_sar) }}
+                    {{ "{:,.2f}".format(wallet.balance_sar|default(0)) }}
                 </td>
                 <td class="{{ 'text-danger fw-bold' if wallet.balance_yer < 0 else 'text-dark' }}">
-                    {{ "{:,.0f}".format(wallet.balance_yer) }}
+                    {{ "{:,.0f}".format(wallet.balance_yer|default(0)) }}
                 </td>
                 <td class="{{ 'text-danger fw-bold' if wallet.balance_usd < 0 else 'text-dark' }}">
-                    {{ "{:,.2f}".format(wallet.balance_usd) }}
+                    {{ "{:,.2f}".format(wallet.balance_usd|default(0)) }}
                 </td>
 
                 <td>
