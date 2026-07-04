@@ -7,11 +7,12 @@ from apps.models import Supplier
 from apps.extensions import db
 
 # تعريف البلوبرنت
+# لاحظ: url_prefix='/admin/suppliers' سيجعل المسارات تبدأ بـ /admin/suppliers تلقائياً
 suppliers_bp = Blueprint(
     'suppliers_bp', 
     __name__, 
     template_folder='templates',
-    url_prefix='/admin/suppliers' # تمت إضافته هنا كحماية إضافية
+    url_prefix='/admin/suppliers' 
 )
 
 @suppliers_bp.route('/list', methods=['GET'])
@@ -25,8 +26,9 @@ def list_suppliers():
         suppliers = []
         print(f"⚠️ خطأ أثناء جلب الموردين: {e}")
     
+    # تأكد من أن هذا المسار يطابق موقع الملف الذي أنشأته
     return render_template(
-        'admin_suppliers_list/list.html', 
+        'admin_suppliers_list/admin_suppliers_list.html', 
         suppliers=suppliers
     )
 
@@ -34,7 +36,7 @@ def list_suppliers():
 @login_required
 def add_supplier():
     """صفحة إضافة مورد جديد."""
-    # يمكنك هنا إضافة منطق المعالجة (POST) إذا لزم الأمر
+    # سيتم ربط هذه الصفحة لاحقاً بـ add.html
     return render_template('admin_suppliers_list/add.html')
 
 @suppliers_bp.route('/<int:supplier_id>/details', methods=['GET'])
