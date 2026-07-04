@@ -1,6 +1,4 @@
 # coding: utf-8
-# 📂 apps/__init__.py
-
 import os
 import importlib
 from flask import Flask, session
@@ -12,21 +10,16 @@ from apps.utils.time_utils import format_full_timestamp
 csrf = CSRFProtect()
 REGISTERED_MODULES = {}
 
-# دالة تحميل المستخدم للـ Login Manager (تعتمد على حزمة الموديلات الموحدة)
+# دالة تحميل المستخدم للـ Login Manager
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        # استيراد من واجهة الموديلات الموحدة بدلاً من الملفات المباشرة
         from apps.models import AdminUser, Supplier, SupplierStaff
-        
         user_type = session.get('user_type')
         uid = int(user_id)
-        
         if user_type == 'admin': return AdminUser.query.get(uid)
         elif user_type == 'supplier': return Supplier.query.get(uid)
         elif user_type == 'staff': return SupplierStaff.query.get(uid)
-        
-        # محاولة أخيرة في حال عدم توفر النوع
         return AdminUser.query.get(uid) or Supplier.query.get(uid) or SupplierStaff.query.get(uid)
     except Exception as e:
         print(f"⚠️ خطأ في تحميل المستخدم: {e}")
@@ -36,16 +29,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     
-    # 1. إعدادات الأساس
-    try:
-        from apps.auth_portal.routes import auth_portal
-        from apps.admin_dashboard.routes import admin_dashboard
-        app.register_blueprint(auth_portal, url_prefix='/auth')
-        app.register_blueprint(admin_dashboard, url_prefix='/admin')
-    except ImportError as e:
-        print(f"⚠️ تحذير: فشل تحميل البلوبرينت الأساسي: {e}")
-    
-    # الفلاتر والإضافات
+    # 1. تهيئة الإضافات الأساسية
     app.jinja_env.filters['full_time'] = format_full_timestamp
     db.init_app(app)
     migrate.init_app(app, db)
@@ -53,9 +37,10 @@ def create_app():
     csrf.init_app(app)
     login_manager.login_view = 'auth_portal.login'
     
-    # 2. اكتشاف الموديولات وتسجيلها (آلية عزل كاملة)
+    # 2. اكتشاف الموديولات وتسجيلها تلقائياً
     apps_dir = app.root_path 
-    ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'auth_portal', 'admin_dashboard']
+    # قمنا بإزالة auth_portal و admin_dashboard من القائمة ليدخلوا في نظام الأتمتة
+    ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils']
     
     print(f"--- بدء اكتشاف الموديولات في: {apps_dir} ---")
     
@@ -66,7 +51,6 @@ def create_app():
                 registry_file = os.path.join(item_path, 'registry.py')
                 if os.path.exists(registry_file):
                     try:
-                        # استيراد ديناميكي مع عزل كامل للأخطاء
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
@@ -76,12 +60,11 @@ def create_app():
                                 "links": getattr(module, 'LINKS', {}),
                                 "active": True
                             }
-                            print(f"✅ تم تسجيل الموديول بنجاح: {item}")
+                            print(f"✅ [Auto-Discovery] تم تسجيل الموديول: {item}")
                     except Exception as e:
-                        # الخطأ هنا لا يوقف تشغيل باقي النظام
-                        print(f"⚠️ [Auto-Discovery] Error in {item}: {e}")
+                        print(f"❌ [Auto-Discovery] فشل تسجيل {item}: {e}")
 
-    # 3. حقن المتغيرات
+    # 3. حقن المتغيرات (Global Context)
     @app.context_processor
     def inject_vars():
         return dict(
@@ -89,7 +72,7 @@ def create_app():
             registered_modules=REGISTERED_MODULES
         )
 
-    # 4. إكمال الإعدادات (Database) - مع عزل الخطأ
+    # 4. تهيئة قاعدة البيانات والمسؤول
     with app.app_context():
         try:
             db.create_all()
@@ -104,5 +87,4 @@ def create_app():
             print(f"⚠️ خطأ أثناء تهيئة قاعدة البيانات: {e}")
             db.session.rollback()
 
-    app.config['ENDPOINT_MAP'] = {rule.endpoint for rule in app.url_map.iter_rules()}
     return app
