@@ -31,7 +31,7 @@
     <div class="row justify-content-center">
         <div class="col-lg-6 col-md-8">
             <div class="mb-4">
-                <a href="{{ url_for('suppliers_bp.list_suppliers') }}" class="back-btn">
+                <a href="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" class="back-btn">
                     <i class="fas fa-arrow-right ms-2"></i> العودة لقائمة الشركاء
                 </a>
             </div>
@@ -92,7 +92,7 @@
                 <div class="credential-box my-3">
                     <strong>الجهة:</strong> {{ new_user.trade_name }}<br>
                     <strong>اسم المالك:</strong> {{ new_user.owner_name }}<br>
-                    <strong>رقم المحفظة:</strong> <code>{{ new_user.wallet.wallet_code if new_user.wallet else 'N/A' }}</code><br>
+                    <strong>رقم المحفظة:</strong> <code>{{ new_user.wallet_code if new_user.wallet_code else 'N/A' }}</code><br>
                     <strong>المستخدم:</strong> {{ new_user.username }}<br>
                     <strong>كلمة المرور:</strong> <code>{{ new_user.password }}</code>
                 </div>
@@ -122,7 +122,6 @@
             document.getElementById('btnText').innerText = 'جاري المعالجة...';
         });
 
-        // ... (باقي منطق التحقق والـ Script الموجود لديك مسبقاً)
         async function checkField(type, value) {
             const response = await fetch("{{ url_for('admin_suppliers_add_bp.check_availability') }}", {
                 method: 'POST',
@@ -166,10 +165,10 @@
 
 تم إعداد الحساب الخاص بكم بنجاح وصلاحيات الدخول كالتالي:
 
-🔹 نوع الحساب: 🔑 موظف تشغيلي (تابع لمورد)
+🔹 نوع الحساب: 🔑 مورد جديد (مستقل)
 🏢 الجهة/الشريك: {{ new_user.trade_name if new_user }}
 👤 اسم المالك: {{ new_user.owner_name if new_user }}
-💳 رقم المحفظة: {{ new_user.wallet.wallet_code if new_user and new_user.wallet else 'غير متاح' }}
+💳 رقم المحفظة: {{ new_user.wallet_code if new_user }}
 👤 اسم المستخدم: {{ new_user.username if new_user }}
 🔑 كلمة المرور المؤقتة: {{ new_user.password if new_user }}
 
