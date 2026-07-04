@@ -1,13 +1,12 @@
-# 📂 apps/admin_suppliers_list/registry.py
+# coding: utf-8
+from .routes import admin_suppliers_add_bp
 
-MODULE_NAME = "إدارة الشركاء"
-MODULE_ICON = "fa-users"
-
-LINKS = {
-    "قائمة الشركاء": "suppliers_bp.list_suppliers",
-    "تعميد شريك": "admin_suppliers_add_bp.add_supplier_or_staff"
-}
+# إزالة MODULE_NAME و LINKS من هنا يمنع ظهور موديول مكرر في الشريط الجانبي
+# النظام سيستخدم اسم المجلد كبديل، ولكن طالما لا توجد روابط، لن تظهر قائمة فارغة.
 
 def register_module(app):
-    # تسجيل الـ Blueprints هنا
-    pass
+    try:
+        app.register_blueprint(admin_suppliers_add_bp, url_prefix='/admin/suppliers_add')
+        print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_add' (بدون قائمة).")
+    except Exception as e:
+        print(f"❌ [Registry Error]: فشل تسجيل الموديول: {e}")
