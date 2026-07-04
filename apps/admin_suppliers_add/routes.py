@@ -12,7 +12,7 @@ from apps.models.wallet_db import SupplierWallet
 # إعداد الـ Blueprint
 admin_suppliers_add_bp = Blueprint('admin_suppliers_add_bp', __name__, template_folder='templates')
 
-@admin_suppliers_add_bp.route('/check-availability', methods=['POST'])
+@admin_suppliers_add_bp.route('/check_availability', methods=['POST'])
 @login_required
 def check_availability():
     """دالة للتحقق اللحظي من توفر البيانات"""
@@ -23,11 +23,10 @@ def check_availability():
     if not value:
         return jsonify({'available': False})
 
-    # التحقق اللحظي لكل الحقول بما فيها اسم المالك
+    # التحقق اللحظي لكل الحقول
     if field == 'username':
         exists = Supplier.query.filter_by(username=value).first()
     elif field == 'phone':
-        # البحث باستخدام آخر 9 أرقام كما هو مخزن في الموديل
         exists = Supplier.query.filter_by(search_phone=str(value)[-9:]).first()
     elif field == 'trade_name':
         exists = Supplier.query.filter_by(trade_name=value).first()
@@ -49,7 +48,7 @@ def add_supplier_or_staff():
             trade_name = request.form.get('trade_name', '').strip()
             phone = request.form.get('phone', '').strip()
             
-            # التحقق النهائي (تجنب التكرار في حال تجاوز المستخدم للتحقق اللحظي)
+            # التحقق النهائي
             if Supplier.query.filter((Supplier.username == username) | (Supplier.search_phone == phone[-9:])).first():
                 flash("اسم المستخدم أو رقم الهاتف مستخدم مسبقاً", "danger")
                 return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
@@ -71,7 +70,7 @@ def add_supplier_or_staff():
             db.session.add(new_supplier)
             db.session.commit()
 
-            # جلب المحفظة التي تم إنشاؤها تلقائياً
+            # جلب المحفظة
             wallet = SupplierWallet.query.filter_by(supplier_id=new_supplier.id).first()
             wallet_code = wallet.wallet_code if wallet else "N/A"
             
