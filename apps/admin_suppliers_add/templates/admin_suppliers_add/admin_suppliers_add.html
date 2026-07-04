@@ -15,38 +15,29 @@
             <div class="card border-0 shadow-sm" style="border-radius: 15px;">
                 <div class="card-body p-4">
                     <h4 class="text-center fw-bold mb-4" style="color: #2d144d;">تعميد مورد جديد</h4>
-                    
                     <form action="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" method="POST" id="supplierForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
-                        <!-- الحقول مع أيقونات التحقق -->
                         <div class="form-floating mb-3 position-relative">
                             <input type="text" class="form-control" name="owner_name" id="owner_name" placeholder="اسم المالك" required>
                             <label>اسم المالك</label>
                             <div id="owner_name_icon" class="validation-icon"></div>
                         </div>
-
                         <div class="form-floating mb-3 position-relative">
                             <input type="text" class="form-control" name="username" id="username" placeholder="اسم المستخدم" required>
                             <label>اسم المستخدم (إنجليزي)</label>
                             <div id="username_icon" class="validation-icon"></div>
                         </div>
-
                         <div class="form-floating mb-3 position-relative">
                             <input type="text" class="form-control" name="trade_name" id="trade_name" placeholder="الاسم التجاري" required>
                             <label>الاسم التجاري</label>
                             <div id="trade_name_icon" class="validation-icon"></div>
                         </div>
-
                         <div class="form-floating mb-4 position-relative">
                             <input type="number" class="form-control" name="phone" id="phone" placeholder="77XXXXXXX" required>
                             <label>رقم الهاتف (9 أرقام)</label>
                             <div id="phone_icon" class="validation-icon"></div>
                         </div>
-
-                        <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-3 fw-bold" style="background: #2d144d; border: none;">
-                            حفظ التعميد
-                        </button>
+                        <button type="submit" id="submitBtn" class="btn btn-primary w-100 py-3 fw-bold" style="background: #2d144d; border: none;">حفظ التعميد</button>
                     </form>
                 </div>
             </div>
@@ -54,70 +45,75 @@
     </div>
 </div>
 
-<!-- النافذة المنبثقة -->
+<!-- النافذة المنبثقة الاحترافية -->
 <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
             <div class="modal-header bg-success text-white border-0">
                 <h5 class="modal-title">تم التعميد بنجاح</h5>
             </div>
-            <div class="modal-body text-center p-4">
+            <div class="modal-body p-4 text-start" dir="rtl">
                 {% if new_user %}
-                <p>تم تعميد المورد: <strong>{{ new_user.trade_name }}</strong></p>
-                <div class="bg-dark text-light p-3 rounded text-start mt-3" style="direction: ltr;">
-                    <div class="mb-2"><strong>User:</strong> {{ new_user.username }}</div>
-                    <div class="mb-2"><strong>Pass:</strong> {{ new_user.password }}</div>
-                    <div><strong>Wallet:</strong> {{ new_user.wallet_code }}</div>
+                <div id="copyContent">
+                    <p>🏬 <strong>مرحباً بك شريكنا في منصة محجوب أونلاين</strong></p>
+                    <p>تم إعداد الحساب الخاص بكم بنجاح وصلاحيات الدخول كالتالي:</p>
+                    <p>🔹 <strong>نوع الحساب:</strong> 🔑 مورد رئيسي<br>
+                    🏢 <strong>الجهة/الشريك:</strong> {{ new_user.trade_name }}<br>
+                    👤 <strong>اسم المستخدم:</strong> {{ new_user.username }}<br>
+                    🔑 <strong>كلمة المرور المؤقتة:</strong> <span class="text-danger fw-bold">{{ new_user.password }}</span></p>
+                    <p>🌐 <strong>رابط تسجيل دخول الموردين:</strong><br>
+                    <small>https://mahjoub-online-webapp-ocnb.onrender.com/supplier/login</small></p>
+                    <p class="text-muted small">⚠️ تنبيه هام: يرجى تغيير كلمة المرور من إعدادات لوحة التحكم لضمان أعلى مستويات الأمان.</p>
                 </div>
                 {% endif %}
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-outline-primary" onclick="copyToClipboard()">نسخ البيانات</button>
+                <button type="button" class="btn btn-secondary" onclick="window.location.reload()">رجوع للبدء</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. منطق التحقق (AJAX)
-    const validateField = async (field, value) => {
-        if (!value) return;
-        const response = await fetch("{{ url_for('admin_suppliers_add_bp.check_availability') }}", {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
-            body: JSON.stringify({ field, value })
+    function copyToClipboard() {
+        const text = document.getElementById('copyContent').innerText;
+        navigator.clipboard.writeText(text).then(() => alert('تم نسخ البيانات!'));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // التحقق اللحظي
+        const validateField = async (field, value) => {
+            if (!value) return;
+            const response = await fetch("{{ url_for('admin_suppliers_add_bp.check_availability') }}", {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+                body: JSON.stringify({ field, value })
+            });
+            const data = await response.json();
+            const iconDiv = document.getElementById(`${field}_icon`);
+            const inputField = document.getElementById(field);
+            if (data.available) {
+                inputField.classList.add('is-valid'); inputField.classList.remove('is-invalid');
+                iconDiv.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+            } else {
+                inputField.classList.add('is-invalid'); inputField.classList.remove('is-valid');
+                iconDiv.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+            }
+        };
+
+        ['username', 'phone', 'trade_name'].forEach(field => {
+            document.getElementById(field).addEventListener('blur', (e) => validateField(field, e.target.value));
         });
-        const data = await response.json();
-        const iconDiv = document.getElementById(`${field}_icon`);
-        const inputField = document.getElementById(field);
-        
-        if (data.available) {
-            inputField.classList.add('is-valid');
-            inputField.classList.remove('is-invalid');
-            iconDiv.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
-        } else {
-            inputField.classList.add('is-invalid');
-            inputField.classList.remove('is-valid');
-            iconDiv.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
-        }
-    };
 
-    // ربط الأحداث
-    ['username', 'phone', 'trade_name'].forEach(field => {
-        document.getElementById(field).addEventListener('blur', (e) => validateField(field, e.target.value));
+        {% if new_user %}
+            new bootstrap.Modal(document.getElementById('successModal')).show();
+        {% endif %}
+
+        document.getElementById('supplierForm').addEventListener('submit', function() {
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').innerHTML = '<span class="spinner-border spinner-border-sm"></span> جاري الحفظ...';
+        });
     });
-
-    // 2. منطق النافذة
-    {% if new_user %}
-        new bootstrap.Modal(document.getElementById('successModal')).show();
-    {% endif %}
-
-    // 3. منع التكرار عند الحفظ
-    document.getElementById('supplierForm').addEventListener('submit', function() {
-        document.getElementById('submitBtn').disabled = true;
-        document.getElementById('submitBtn').innerHTML = '<span class="spinner-border spinner-border-sm"></span> جاري الحفظ...';
-    });
-});
 </script>
 {% endblock %}
