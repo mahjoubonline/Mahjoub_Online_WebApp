@@ -3,13 +3,13 @@
 
 from .routes import suppliers_bp
 
-MODULE_NAME = "إدارة الموردين" # اسم الموديول الموحد
-MODULE_ICON = "fa-users"       # الأيقونة التي ستظهر للقسم
+MODULE_NAME = "إدارة الموردين" 
+MODULE_ICON = "fa-users"       
 
+# [تعديل هام]: قمنا بإزالة التصنيف المتداخل (Nested Dictionary) 
+# ليتمكن القالب من قراءته مباشرة دون خطأ
 LINKS = {
-    "إدارة الموردين": {
-        "قائمة الشركاء": "suppliers_bp.list_suppliers" 
-    }
+    "قائمة الشركاء": "suppliers_bp.list_suppliers" 
 }
 
 def register_module(app):
