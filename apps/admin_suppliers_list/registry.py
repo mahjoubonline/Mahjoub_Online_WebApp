@@ -5,13 +5,16 @@
 from .routes import suppliers_bp
 
 # إعدادات العرض في الشريط الجانبي
-MODULE_NAME = "إدارة الموردين"
+MODULE_NAME = "قائمة الشركاء"
 MODULE_ICON = "fa-users"
 
-# تم حذف "إضافة مورد جديد" من القاموس أدناه
-# الآن سيظهر فقط "قائمة الموردين" في الشريط الجانبي
+# ✅ الربط تحت المظلة الرئيسية "إدارة الموردين"
+# ملاحظة: تأكد أن اسم الـ Blueprint (الاسم داخل Blueprint('اسم_الـ_بلوبرنت', ...))
+# هو المستخدم في الـ url_for أدناه، وليس اسم المتغير suppliers_bp
 LINKS = {
-    "قائمة الموردين": "suppliers_bp.list_suppliers"
+    "إدارة الموردين": {
+        "قائمة الشركاء": "suppliers.list_suppliers"
+    }
 }
 
 def register_module(app):
