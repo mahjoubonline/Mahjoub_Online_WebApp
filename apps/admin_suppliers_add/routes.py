@@ -95,10 +95,11 @@ def add_supplier_or_staff():
                     flash("❌ البيانات غير صالحة أو مسجلة مسبقاً في النظام.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # إنشاء المورد
+                # إنشاء المورد (مع إضافة حقل owner_name الجديد)
                 new_supplier = Supplier(
                     username=username, 
                     trade_name=trade_name, 
+                    owner_name=owner_name, # تم الإضافة هنا
                     rank=rank, 
                     status='active',
                     created_at=registration_time,
@@ -114,7 +115,7 @@ def add_supplier_or_staff():
                 new_wallet = SupplierWallet(supplier_id=new_supplier.id, wallet_code=wallet_code)
                 db.session.add(new_wallet)
                 
-                db.session.commit()
+                db.session.commit() # الحفظ النهائي للعمليتين معاً
                 
                 # تخزين البيانات في الجلسة للعرض
                 session['new_user_data'] = {
