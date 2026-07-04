@@ -1,22 +1,19 @@
 # coding: utf-8
 # 📂 apps/admin_platform_treasury/registry.py
 
-from apps.admin_platform_treasury.routes import platform_treasury_bp # تأكد من اسم الـ Blueprint الصحيح
+from apps.admin_platform_treasury.routes import treasury_bp
 
-# يمكنك إبقاء الاسم كما هو أو تغييره
-MODULE_NAME = "الخزينة" 
-MODULE_ICON = "fa-money-bill"
+MODULE_NAME = "الخزينة"
+MODULE_ICON = "fa-vault"
 
-# ✅ التعديل الجوهري: تفريغ الروابط سيمنع هذا الموديول من الظهور كعنصر مستقل في الشريط الجانبي
-LINKS = {} 
+# تم تعديل الرابط ليتطابق مع اسم الدالة التي سنعدلها (أو يمكنك استخدام treasury_bp.index)
+LINKS = {
+    "خزينة المنصة": "treasury_bp.dashboard" 
+}
 
 def register_module(app):
-    """
-    تسجيل الـ Blueprint لضمان عمل المسارات برمجياً، 
-    دون إظهاره كعنصر مكرر في القائمة الجانبية.
-    """
     try:
-        app.register_blueprint(platform_treasury_bp, url_prefix='/admin/treasury')
-        print("✅ [Registry]: تم تسجيل موديول 'Admin Platform Treasury' بنجاح (مخفي من القائمة).")
+        app.register_blueprint(treasury_bp, url_prefix='/admin/treasury')
+        print("✅ [Registry]: تم تسجيل موديول 'Admin Platform Treasury' بنجاح.")
     except Exception as e:
-        print(f"❌ [Registry Error]: فشل تسجيل موديول 'Admin Platform Treasury': {e}")
+        print(f"❌ [Registry Error]: {e}")
