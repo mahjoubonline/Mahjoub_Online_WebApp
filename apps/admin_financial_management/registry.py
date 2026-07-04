@@ -4,11 +4,11 @@
 from apps.admin_financial_management.routes import financial_bp
 
 # إعدادات الموديول للظهور في القائمة الجانبية
+# إذا كان هذا هو الموديول "القائد" الذي تريده أن يظهر، أبقِ هذه السطور كما هي.
 MODULE_NAME = "الرقابة المالية"
 MODULE_ICON = "fa-wallet"
 
 # تعريف الروابط المتاحة لهذا الموديول
-# تأكد من استبدال 'manage_wallets' باسم الدالة الفعلي في ملف routes.py
 LINKS = {
     "إدارة المحافظ": "financial_bp.manage_wallets"
 }
