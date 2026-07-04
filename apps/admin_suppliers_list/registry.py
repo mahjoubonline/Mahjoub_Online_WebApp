@@ -1,9 +1,6 @@
 # coding: utf-8
 # 📂 apps/admin_suppliers_list/registry.py
 
-# لا تقم بالاستيراد هنا في الأعلى (هذا ما يسبب الحلقة المفرغة)
-# from .routes import suppliers_bp 
-
 MODULE_NAME = "إدارة الموردين"
 MODULE_ICON = "fa-users"
 
@@ -12,7 +9,7 @@ LINKS = {
 }
 
 def register_module(app):
-    # الاستيراد داخل الدالة هو الحل:
+    # الاستيراد يجب أن يكون هنا فقط (داخل الدالة)
     from .routes import suppliers_bp 
     
     try:
