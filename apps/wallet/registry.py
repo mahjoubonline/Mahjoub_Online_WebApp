@@ -3,18 +3,20 @@
 
 from apps.wallet.routes import wallet_bp
 
-# إعدادات الموديول للظهور في لوحة التحكم "القيادة المركزية"
+# إعدادات الموديول
 MODULE_NAME = "الرقابة المالية"
 MODULE_ICON = "fas fa-wallet"
 
-# الروابط التي تربط القائمة الجانبية بـ routes.py
-LINKS = {
-    "إدارة المحافظ": "wallet_app.dashboard"
-}
+# ✅ الحل: تفريغ الروابط هنا سيمنع ظهور هذا الموديول كعنصر مستقل في القائمة الجانبية
+LINKS = {}
 
 def register_module(app):
     """
-    تسجيل الموديول وربط الـ Blueprint الخاص به.
+    تسجيل الموديول برمجياً فقط (لضمان عمل المسارات)
+    دون إظهاره في القائمة الجانبية.
     """
-    app.register_blueprint(wallet_bp, url_prefix='/wallet')
-    print("✅ [Registry]: تم تسجيل موديول 'Wallet' بنجاح.")
+    try:
+        app.register_blueprint(wallet_bp, url_prefix='/wallet')
+        print("✅ [Registry]: تم تسجيل موديول 'Wallet' بنجاح (مخفي من القائمة).")
+    except Exception as e:
+        print(f"❌ [Registry Error]: فشل تسجيل موديول 'Wallet': {e}")
