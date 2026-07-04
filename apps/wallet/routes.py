@@ -34,7 +34,7 @@ def dashboard():
     
     wallets = query.order_by(SupplierWallet.id.desc()).paginate(page=page, per_page=20, error_out=False)
     
-    # 2. حساب الإجماليات المالية للمنصة
+    # 2. حساب الإجماليات المالية للمنصة (تم إضافة or 0 لضمان عدم حدوث خطأ NoneType)
     stats = {
         'total_sar': db.session.query(func.sum(SupplierWallet.balance_sar)).scalar() or 0,
         'total_yer': db.session.query(func.sum(SupplierWallet.balance_yer)).scalar() or 0,
@@ -99,6 +99,10 @@ def add_transaction(supplier_id):
         new_trans.reference_number = order_ref if order_ref else None
         
         db.session.commit()
+        
+        # سجل تدقيق العملية (Audit Log)
+        logger.info(f"Financial Audit: Wallet ID {wallet.id} | Supplier {wallet.supplier_id} | Amount: {amount} {currency} | Type: {trans_type} | Ref: {order_ref}")
+        
         flash(f"تم تسجيل العملية بنجاح للمورد: {wallet.supplier.trade_name}", "success")
         
     except Exception as e:
