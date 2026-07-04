@@ -1,24 +1,20 @@
+# coding: utf-8
 # 📂 apps/admin_suppliers_list/registry.py
 
-from apps.admin_suppliers_list.routes import suppliers_bp
+# استيراد الـ Blueprint من ملف routes الخاص بهذا الموديول
+from .routes import admin_suppliers_list_bp
 
-# إعدادات العرض في الشريط الجانبي الديناميكي
-MODULE_NAME = "الموردون وشركاء النجاح"
-MODULE_ICON = "fas fa-truck"
-
-# الروابط التي ستظهر في القائمة المنسدلة
+# 1. إعدادات ظهور الموديول في الشريط الجانبي
+MODULE_NAME = "إدارة الموردين"  # الاسم الذي سيظهر في القائمة
+MODULE_ICON = "fa-users"        # الأيقونة (من FontAwesome)
 LINKS = {
-    "عرض الكل": "suppliers_bp.list_suppliers",
-    "إضافة مورد جديد": "suppliers_bp.add_supplier"
+    "قائمة الموردين": "admin_suppliers_list_bp.suppliers_list",
+    "سجل الموردين": "admin_suppliers_list_bp.suppliers_logs"
 }
 
+# 2. دالة التسجيل التي يستدعيها الـ Auto-Discovery
 def register_module(app):
     """
-    تسجيل موديول الموردين (admin_suppliers_list).
+    تسجيل الـ Blueprint الخاص بهذا الموديول في تطبيق Flask
     """
-    try:
-        if suppliers_bp:
-            app.register_blueprint(suppliers_bp, url_prefix='/suppliers')
-            print(f"✅ [Registry]: تم تسجيل موديول 'admin_suppliers_list' بنجاح على المسار (/suppliers).")
-    except Exception as e:
-        print(f"❌ [Registry]: فشل تسجيل 'admin_suppliers_list': {e}")
+    app.register_blueprint(admin_suppliers_list_bp, url_prefix='/suppliers')
