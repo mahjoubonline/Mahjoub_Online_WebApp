@@ -88,6 +88,6 @@ def add_supplier_or_staff():
             flash("حدث خطأ تقني، يرجى المحاولة لاحقاً", "danger")
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-    # معالجة عرض الصفحة
+    # معالجة عرض الصفحة: استخدام pop لحذف البيانات من الجلسة بعد العرض مباشرة
     new_user = session.pop('new_user_data', None)
     return render_template('admin_suppliers_add/admin_suppliers_add.html', new_user=new_user)
