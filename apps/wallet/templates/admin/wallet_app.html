@@ -83,8 +83,8 @@
                         <td class="text-primary fw-bold">{{ "{:,.2f}".format(wallet.balance_yer) }}</td>
                         <td class="text-info fw-bold">{{ "{:,.2f}".format(wallet.balance_usd) }}</td>
                         <td>
-                            <!-- تأكد أن اسم الـ route هو 'wallet.view_transactions' -->
-                            <a href="{{ url_for('wallet.view_transactions', wallet_id=wallet.id) }}" class="btn btn-sm" style="background-color: #4b0082; color: white;">
+                            <!-- تم تعديل الرابط ليطابق تعريف الـ Blueprint والـ Route -->
+                            <a href="{{ url_for('wallet_app.manage_wallet', supplier_id=wallet.supplier_id) }}" class="btn btn-sm" style="background-color: #4b0082; color: white;">
                                 <i class="fas fa-history"></i> كشف الحساب
                             </a>
                         </td>
