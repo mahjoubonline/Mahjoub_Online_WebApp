@@ -28,6 +28,7 @@ def check_availability():
     if field == 'username':
         exists = Supplier.query.filter_by(username=value).first()
     elif field == 'phone':
+        # التحقق من آخر 9 أرقام لضمان التطابق
         exists = Supplier.query.filter_by(search_phone=str(value)[-9:]).first()
     elif field == 'trade_name':
         exists = Supplier.query.filter_by(trade_name=value).first()
@@ -47,8 +48,11 @@ def add_supplier_or_staff():
             trade_name = request.form.get('trade_name', '').strip()
             phone = request.form.get('phone', '').strip()
             
+            # استخراج آخر 9 أرقام للهاتف لضمان التناسق مع قاعدة البيانات
+            phone_9 = phone[-9:]
+            
             # التحقق النهائي لمنع أي تكرار ناتج عن طلبات متزامنة
-            existing = Supplier.query.filter((Supplier.username == username) | (Supplier.search_phone == phone[-9:])).first()
+            existing = Supplier.query.filter((Supplier.username == username) | (Supplier.search_phone == phone_9)).first()
             if existing:
                 flash("اسم المستخدم أو رقم الهاتف مستخدم مسبقاً", "danger")
                 return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
@@ -62,6 +66,7 @@ def add_supplier_or_staff():
                 username=username,
                 trade_name=trade_name,
                 phone=phone,
+                search_phone=phone_9, # تخزين الـ 9 أرقام في الحقل المخصص للبحث
                 status='active',
                 created_at=datetime.utcnow()
             )
