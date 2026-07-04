@@ -1,8 +1,7 @@
 # coding: utf-8
 # 📂 apps/admin_suppliers_list/registry.py
 
-# قم بحذف "from .routes import suppliers_bp" من هنا (أعلى الملف)
-
+# هذه المتغيرات يقرأها النظام تلقائياً لإظهار القائمة
 MODULE_NAME = "إدارة الموردين"
 MODULE_ICON = "fa-users"
 
@@ -11,8 +10,8 @@ LINKS = {
 }
 
 def register_module(app):
-    # قم بعمل الاستيراد هنا داخل الدالة فقط
-    from .routes import suppliers_bp 
+    # نضع الاستيراد هنا فقط (Lazy Import) لحل مشكلة الـ Circular Import
+    from .routes import suppliers_bp
     
     try:
         app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
