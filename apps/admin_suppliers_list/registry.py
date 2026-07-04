@@ -3,13 +3,14 @@
 
 from apps.admin_suppliers_list.routes import suppliers_bp
 
+# هذه المتغيرات العامة هي ما يبحث عنه النظام لرسم القائمة الجانبية
+MODULE_NAME = "سجل الشركاء"
+MODULE_ICON = "fas fa-handshake"
+LINKS = {
+    "قائمة الشركاء": "suppliers_bp.list_suppliers"
+}
+
 def register_module(app):
     # تسجيل مسارات الموردين/الشركاء في النظام
     app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
-    
-    # هذه البيانات هي التي ستجعل الموديول يظهر في القائمة الجانبية (Sidebar)
-    return {
-        "name": "سجل الشركاء",                  # الاسم الذي سيظهر في لوحة التحكم
-        "icon": "fas fa-handshake",              # أيقونة معبرة عن الشركاء/الموردين
-        "endpoint": "suppliers_bp.list_suppliers" # الدالة التي ستعمل عند النقر على الرابط
-    }
+    print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_list' بنجاح.")
