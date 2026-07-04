@@ -1,14 +1,15 @@
+# coding: utf-8
 # 📂 apps/admin_suppliers_list/registry.py
+
 from apps.admin_suppliers_list.routes import suppliers_bp
 
-# أضف هذه المتغيرات لكي يراها نظام التسجيل التلقائي
-MODULE_NAME = "سجل الشركاء"
-MODULE_ICON = "fa-users"
-LINKS = {
-    "قائمة الشركاء": "suppliers_bp.list_suppliers" # تأكد من مطابقة اسم الـ endpoint في routes.py
-}
-
 def register_module(app):
-    """تسجيل موديول 'سجل الشركاء'."""
+    # تسجيل مسارات الموردين/الشركاء في النظام
     app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
-    print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_list' بنجاح.")
+    
+    # هذه البيانات هي التي ستجعل الموديول يظهر في القائمة الجانبية (Sidebar)
+    return {
+        "name": "سجل الشركاء",                  # الاسم الذي سيظهر في لوحة التحكم
+        "icon": "fas fa-handshake",              # أيقونة معبرة عن الشركاء/الموردين
+        "endpoint": "suppliers_bp.list_suppliers" # الدالة التي ستعمل عند النقر على الرابط
+    }
