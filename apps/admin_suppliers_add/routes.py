@@ -21,7 +21,7 @@ admin_suppliers_add_bp = Blueprint(
 )
 
 # -----------------------------------------------------------
-# دالة مساعدة للتحقق من وجود المستخدم
+# دالة مساعدة للتحقق من وجود المستخدم (اسم مستخدم أو هاتف)
 # -----------------------------------------------------------
 def check_user_exists(username=None, phone=None):
     if username:
@@ -33,7 +33,7 @@ def check_user_exists(username=None, phone=None):
     return None
 
 # -----------------------------------------------------------
-# API: للتحقق اللحظي من توفر البيانات
+# API: للتحقق اللحظي من توفر البيانات (AJAX)
 # -----------------------------------------------------------
 @admin_suppliers_add_bp.route('/check_availability', methods=['POST'])
 @csrf.exempt 
@@ -74,6 +74,7 @@ def check_availability():
 @login_required
 def add_supplier_or_staff():
     if request.method == 'POST':
+        # التحقق من حقل وهمي لمنع البوتات (Honeypot)
         if request.form.get('hp_field'):
             abort(403) 
 
@@ -87,7 +88,6 @@ def add_supplier_or_staff():
                 username = request.form.get('username', '').strip()
                 phone = request.form.get('phone', '').strip()
                 trade_name = request.form.get('trade_name', '').strip()
-                # استقبال الاسم للعرض في النافذة المنبثقة
                 owner_name = request.form.get('owner_name', '').strip() 
                 rank = request.form.get('rank', 'bronze')
 
@@ -101,20 +101,22 @@ def add_supplier_or_staff():
                     trade_name=trade_name, 
                     rank=rank, 
                     status='active',
-                    created_at=registration_time
+                    created_at=registration_time,
+                    phone=phone
                 )
-                new_supplier.phone = phone 
                 new_supplier.set_password(temp_password)
                 
                 db.session.add(new_supplier)
-                db.session.flush() # الحصول على ID بعد الإنشاء لإنشاء المحفظة
+                db.session.flush() # الحصول على ID لإنشاء المحفظة
                 
-                # إنشاء كود المحفظة (يتم تخزينه مؤقتاً للعرض)
+                # إنشاء المحفظة وحفظها
                 wallet_code = f"MAH-WEL963{new_supplier.id}"
+                new_wallet = SupplierWallet(supplier_id=new_supplier.id, wallet_code=wallet_code)
+                db.session.add(new_wallet)
                 
                 db.session.commit()
                 
-                # تخزين البيانات في الجلسة لإظهار النافذة المنبثقة
+                # تخزين البيانات في الجلسة للعرض
                 session['new_user_data'] = {
                     'type': 'مورد جديد',
                     'trade_name': trade_name, 
