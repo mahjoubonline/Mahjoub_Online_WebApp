@@ -6,7 +6,8 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session, jsonify
 from flask_login import login_required
 from apps.extensions import db
-from apps.models.suppliers_db import Supplier
+# تم تصحيح اسم الملف هنا من suppliers_db إلى supplier_db
+from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet
 
 # إعداد الـ Blueprint
