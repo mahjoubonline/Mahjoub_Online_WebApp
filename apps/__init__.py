@@ -40,9 +40,31 @@ def create_app():
             registered_modules=REGISTERED_MODULES
         )
 
+    # 2. نظام التسجيل التلقائي الذكي (خارج app_context لضمان توفره عند بدء التشغيل)
+    apps_dir = app.root_path
+    ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'suppliers_auth', 'auth_portal', 'admin_dashboard']
+    
+    for item in os.listdir(apps_dir):
+        item_path = os.path.join(apps_dir, item)
+        if os.path.isdir(item_path) and item not in ignored_dirs:
+            registry_file = os.path.join(item_path, 'registry.py')
+            if os.path.exists(registry_file):
+                try:
+                    module = importlib.import_module(f"apps.{item}.registry")
+                    if hasattr(module, 'register_module'):
+                        module.register_module(app)
+                        REGISTERED_MODULES[item] = {
+                            "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
+                            "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
+                            "links": getattr(module, 'LINKS', {}),
+                            "active": True
+                        }
+                except Exception as e:
+                    print(f"⚠️ [Auto-Discovery] Error in {item}: {e}")
+
+    # 3. تحديث خريطة المسارات بعد تسجيل كل شيء
     with app.app_context():
         db.create_all()
-
         # زرع المستخدم الافتراضي
         try:
             from apps.models.admin_db import AdminUser
@@ -55,30 +77,6 @@ def create_app():
         except Exception:
             db.session.rollback()
 
-        # نظام التسجيل التلقائي الذكي
-        apps_dir = app.root_path
-        # قائمة ثابتة للمجلدات التي لا تعتبر موديولات قابلة للتسجيل
-        ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'suppliers_auth', 'auth_portal', 'admin_dashboard']
-        
-        for item in os.listdir(apps_dir):
-            item_path = os.path.join(apps_dir, item)
-            # الشرط: يجب أن يكون مجلداً، ليس في قائمة التجاهل، ويحتوي على registry.py
-            if os.path.isdir(item_path) and item not in ignored_dirs:
-                registry_file = os.path.join(item_path, 'registry.py')
-                if os.path.exists(registry_file):
-                    try:
-                        module = importlib.import_module(f"apps.{item}.registry")
-                        if hasattr(module, 'register_module'):
-                            module.register_module(app)
-                            # هنا يتم حقن الموديول في الذاكرة ليظهر في الشريط الجانبي
-                            REGISTERED_MODULES[item] = {
-                                "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
-                                "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
-                                "links": getattr(module, 'LINKS', {}),
-                                "active": True
-                            }
-                    except Exception as e:
-                        print(f"⚠️ [Auto-Discovery] Error in {item}: {e}")
-
     app.config['ENDPOINT_MAP'] = {rule.endpoint for rule in app.url_map.iter_rules()}
+    
     return app
