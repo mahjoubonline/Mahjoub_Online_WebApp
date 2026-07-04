@@ -1,15 +1,39 @@
 # 📂 apps/admin_suppliers_add/routes.py
+
 import secrets
 import logging
 from datetime import datetime
-from flask import Blueprint, render_template, request, flash, redirect, url_for, session
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session, jsonify
 from flask_login import login_required
 from apps.extensions import db
-from apps.models.supplier_db import Supplier
+from apps.models.suppliers_db import Supplier
 from apps.models.wallet_db import SupplierWallet
 
 # إعداد الـ Blueprint
 admin_suppliers_add_bp = Blueprint('admin_suppliers_add_bp', __name__, template_folder='templates')
+
+@admin_suppliers_add_bp.route('/check-availability', methods=['POST'])
+@login_required
+def check_availability():
+    """دالة للتحقق اللحظي من توفر البيانات"""
+    data = request.get_json()
+    field = data.get('field')
+    value = data.get('value')
+    
+    if not value:
+        return jsonify({'available': False})
+
+    if field == 'username':
+        exists = Supplier.query.filter_by(username=value).first()
+    elif field == 'phone':
+        # البحث باستخدام آخر 9 أرقام كما هو مخزن في الموديل
+        exists = Supplier.query.filter_by(search_phone=str(value)[-9:]).first()
+    elif field == 'trade_name':
+        exists = Supplier.query.filter_by(trade_name=value).first()
+    else:
+        return jsonify({'available': False})
+        
+    return jsonify({'available': not exists})
 
 @admin_suppliers_add_bp.route('/add', methods=['GET', 'POST'])
 @login_required
@@ -22,15 +46,15 @@ def add_supplier_or_staff():
             trade_name = request.form.get('trade_name', '').strip()
             phone = request.form.get('phone', '').strip()
             
-            # توليد كلمة مرور عشوائية قوية
-            temp_password = secrets.token_hex(4)
-
-            # التحقق من وجود المستخدم مسبقاً
-            if Supplier.query.filter((Supplier.username == username) | (Supplier.phone == phone)).first():
+            # التحقق النهائي (تجنب التكرار في حال تجاوز المستخدم للتحقق اللحظي)
+            if Supplier.query.filter((Supplier.username == username) | (Supplier.search_phone == phone[-9:])).first():
                 flash("اسم المستخدم أو رقم الهاتف مستخدم مسبقاً", "danger")
                 return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-            # إنشاء المورد
+            # توليد كلمة مرور عشوائية قوية
+            temp_password = secrets.token_hex(4)
+
+            # إنشاء المورد (الموديل سيتولى إنشاء المحفظة والموظف تلقائياً بفضل after_insert)
             new_supplier = Supplier(
                 owner_name=owner_name,
                 username=username,
@@ -42,14 +66,11 @@ def add_supplier_or_staff():
             new_supplier.set_password(temp_password)
             
             db.session.add(new_supplier)
-            db.session.flush() # هام: للحصول على الـ ID قبل الـ Commit
+            db.session.commit() # هنا يتم تفعيل الـ Event Listeners (إنشاء المحفظة والموظف)
 
-            # إنشاء المحفظة
-            wallet_code = f"MAH-{new_supplier.id}-WEL"
-            new_wallet = SupplierWallet(supplier_id=new_supplier.id, wallet_code=wallet_code)
-            db.session.add(new_wallet)
-            
-            db.session.commit()
+            # جلب المحفظة التي تم إنشاؤها تلقائياً لعرض كودها في النافذة
+            wallet = SupplierWallet.query.filter_by(supplier_id=new_supplier.id).first()
+            wallet_code = wallet.wallet_code if wallet else "N/A"
             
             # تخزين البيانات في الجلسة لعرضها في النافذة المنبثقة
             session['new_user_data'] = {
