@@ -1,12 +1,9 @@
 # coding: utf-8
-# 📂 apps/admin_suppliers_list/registry.py
-
 from .routes import suppliers_bp
 
 MODULE_NAME = "إدارة الموردين"
 MODULE_ICON = "fa-users"
 
-# تم تسطيح الروابط هنا لتتوافق مع القالب دون تغيير القالب
 LINKS = {
     "قائمة الشركاء": "suppliers_bp.list_suppliers"
 }
