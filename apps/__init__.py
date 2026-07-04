@@ -46,8 +46,11 @@ def create_app():
     if os.path.exists(apps_dir):
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
+            
+            # مجس تشخيصي: للتحقق من المجلدات التي يتم فحصها
             if os.path.isdir(item_path) and item not in ignored_dirs:
                 registry_file = os.path.join(item_path, 'registry.py')
+                
                 if os.path.exists(registry_file):
                     try:
                         module = importlib.import_module(f"apps.{item}.registry")
@@ -60,13 +63,18 @@ def create_app():
                                 "active": True
                             }
                             print(f"✅ [Auto-Discovery] تم تسجيل الموديول: {item}")
+                        else:
+                            print(f"⚠️ [Auto-Discovery] ملف registry.py موجود في {item} ولكن مفقود register_module")
                     except Exception as e:
-                        print(f"❌ [Auto-Discovery] فشل تسجيل {item}: {e}")
+                        print(f"❌ [Auto-Discovery] فشل استيراد {item}: {e}")
+                else:
+                    # هذا السطر سيخبرنا إذا كان النظام يتجاهل المجلد لأنه لا يجد ملف registry.py
+                    print(f"DEBUG: No registry.py found in {item}")
 
     # 3. حقن المتغيرات (Global Context)
     @app.context_processor
     def inject_vars():
-        # [تعديل للتشخيص]: هذا السطر سيطبع محتوى الموديولات في سجلات Render كلما فتحت صفحة
+        # مجس تشخيصي: طباعة عدد الموديولات عند فتح أي صفحة
         print(f"DEBUG: Injecting {len(REGISTERED_MODULES)} modules to template: {list(REGISTERED_MODULES.keys())}")
         
         return dict(
