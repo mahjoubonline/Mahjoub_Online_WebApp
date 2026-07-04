@@ -35,9 +35,9 @@ def create_app():
             registered_modules=REGISTERED_MODULES
         )
 
-    # نظام التسجيل التلقائي الذكي
-    # تأكد أن apps_dir يشير إلى المجلد الذي يحتوي على موديولاتك
-    apps_dir = os.path.join(app.root_path, 'apps') 
+    # نظام التسجيل التلقائي الذكي - التعديل هنا:
+    # استخدام app.root_path مباشرة هو المسار الصحيح للمجلد الذي يحتوي على الموديولات
+    apps_dir = app.root_path 
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'auth_portal', 'admin_dashboard']
     
     print(f"--- بدء اكتشاف الموديولات في: {apps_dir} ---")
