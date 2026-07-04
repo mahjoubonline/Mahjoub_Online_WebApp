@@ -23,7 +23,7 @@ def check_availability():
     if not value:
         return jsonify({'available': False})
 
-    # التحقق اللحظي لقاعدة البيانات
+    # التحقق من وجود البيانات في قاعدة البيانات
     exists = False
     if field == 'username':
         exists = Supplier.query.filter_by(username=value).first()
@@ -47,15 +47,16 @@ def add_supplier_or_staff():
             trade_name = request.form.get('trade_name', '').strip()
             phone = request.form.get('phone', '').strip()
             
-            # التحقق النهائي
-            if Supplier.query.filter((Supplier.username == username) | (Supplier.search_phone == phone[-9:])).first():
+            # التحقق النهائي لمنع أي تكرار ناتج عن طلبات متزامنة
+            existing = Supplier.query.filter((Supplier.username == username) | (Supplier.search_phone == phone[-9:])).first()
+            if existing:
                 flash("اسم المستخدم أو رقم الهاتف مستخدم مسبقاً", "danger")
                 return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-            # توليد كلمة مرور عشوائية
+            # توليد كلمة مرور عشوائية (8 أحرف)
             temp_password = secrets.token_hex(4)
 
-            # إنشاء المورد
+            # إنشاء المورد الجديد
             new_supplier = Supplier(
                 owner_name=owner_name,
                 username=username,
@@ -69,11 +70,11 @@ def add_supplier_or_staff():
             db.session.add(new_supplier)
             db.session.commit()
 
-            # جلب المحفظة
+            # جلب كود المحفظة بعد الحفظ
             wallet = SupplierWallet.query.filter_by(supplier_id=new_supplier.id).first()
             wallet_code = wallet.wallet_code if wallet else "N/A"
             
-            # تخزين البيانات في الجلسة لمرة واحدة فقط
+            # تخزين البيانات في الجلسة لعرض النافذة
             session['new_user_data'] = {
                 'trade_name': trade_name,
                 'username': username,
@@ -81,7 +82,6 @@ def add_supplier_or_staff():
                 'wallet_code': wallet_code
             }
             
-            # استخدام redirect لضمان تحديث الصفحة وتفعيل النافذة
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
         except Exception as e:
@@ -90,7 +90,7 @@ def add_supplier_or_staff():
             flash("حدث خطأ تقني، يرجى المحاولة لاحقاً", "danger")
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-    # معالجة عرض الصفحة: استخدام pop لضمان مسح البيانات بعد ظهور النافذة
+    # معالجة الـ GET: سحب البيانات وعرضها مرة واحدة فقط
     new_user = session.pop('new_user_data', None)
     
     return render_template('admin_suppliers_add/admin_suppliers_add.html', new_user=new_user)
