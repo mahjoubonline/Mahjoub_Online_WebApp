@@ -87,7 +87,7 @@ def add_supplier_or_staff():
                 username = request.form.get('username', '').strip()
                 phone = request.form.get('phone', '').strip()
                 trade_name = request.form.get('trade_name', '').strip()
-                # نستقبل الاسم للعرض فقط في الجلسة (Session)
+                # استقبال الاسم للعرض في النافذة المنبثقة
                 owner_name = request.form.get('owner_name', '').strip() 
                 rank = request.form.get('rank', 'bronze')
 
@@ -95,7 +95,7 @@ def add_supplier_or_staff():
                     flash("❌ البيانات غير صالحة أو مسجلة مسبقاً في النظام.", "danger")
                     return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
-                # إنشاء المورد (بدون حقل owner_name لأنه غير موجود في الموديل)
+                # إنشاء المورد
                 new_supplier = Supplier(
                     username=username, 
                     trade_name=trade_name, 
@@ -109,20 +109,17 @@ def add_supplier_or_staff():
                 db.session.add(new_supplier)
                 db.session.flush() # الحصول على ID بعد الإنشاء لإنشاء المحفظة
                 
-                # إنشاء المحفظة تلقائياً (الـ ID متاح هنا)
+                # إنشاء كود المحفظة (يتم تخزينه مؤقتاً للعرض)
                 wallet_code = f"MAH-WEL963{new_supplier.id}"
-                
-                # ملاحظة: الموديل الخاص بك يقوم بإنشاء المحفظة تلقائياً عبر Event
-                # لذا سنقوم فقط بتجهيز البيانات للنافذة المنبثقة
                 
                 db.session.commit()
                 
-                # تخزين البيانات في الجلسة لإظهار النافذة المنبثقة (بما في ذلك اسم المالك والكود)
+                # تخزين البيانات في الجلسة لإظهار النافذة المنبثقة
                 session['new_user_data'] = {
                     'type': 'مورد جديد',
                     'trade_name': trade_name, 
-                    'owner_name': owner_name, # للعرض فقط
-                    'wallet_code': wallet_code, # للعرض فقط
+                    'owner_name': owner_name, 
+                    'wallet_code': wallet_code, 
                     'username': username, 
                     'password': temp_password
                 }
