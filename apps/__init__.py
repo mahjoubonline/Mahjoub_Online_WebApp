@@ -3,30 +3,15 @@
 
 import os
 import importlib
-from flask import Flask, session
+from flask import Flask
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from apps.extensions import db, login_manager, migrate
-from apps.models import AdminUser, Supplier, SupplierProfile
-from apps.models.supplier_staff_db import SupplierStaff
-from apps.models.wallet_db import SupplierWallet
 from apps.utils.time_utils import format_full_timestamp
 
 csrf = CSRFProtect()
 
 # قاموس لتخزين بيانات الموديولات المكتشفة تلقائياً
 REGISTERED_MODULES = {}
-
-@login_manager.user_loader
-def load_user(user_id):
-    user_type = session.get('user_type')
-    try:
-        uid = int(user_id)
-        if user_type == 'admin': return AdminUser.query.get(uid)
-        elif user_type == 'supplier': return Supplier.query.get(uid)
-        elif user_type == 'staff': return SupplierStaff.query.get(uid)
-        return AdminUser.query.get(uid) or Supplier.query.get(uid) or SupplierStaff.query.get(uid)
-    except:
-        return None
 
 def create_app():
     app = Flask(__name__)
@@ -35,15 +20,13 @@ def create_app():
     # إضافة الفلاتر المخصصة
     app.jinja_env.filters['full_time'] = format_full_timestamp
 
-    # إعداد الإضافات
+    # إعداد الإضافات (لاحظ أننا لا نعيد كتابة إعدادات login_manager هنا لأنها تمت في extensions.py)
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     
-    login_manager.login_view = 'suppliers_auth.login'
-
-    # [تحسين الحقن التلقائي]: الحقن المباشر للمتغير العالمي لضمان التحديث اللحظي
+    # [تحديث مهم]: الحقن المباشر للمتغير لضمان وصول الموديولات للشريط الجانبي
     @app.context_processor
     def inject_vars():
         return dict(
@@ -54,20 +37,22 @@ def create_app():
     with app.app_context():
         db.create_all()
 
-        # زرع المستخدم الافتراضي
+        # زرع المستخدم الافتراضي (المدير)
         try:
+            from apps.models.admin_db import AdminUser
             admin = AdminUser.query.filter_by(username='علي محجوب').first()
             if not admin:
                 admin = AdminUser(username='علي محجوب')
                 admin.set_password('123')
                 db.session.add(admin)
                 db.session.commit()
-        except:
+        except Exception as e:
             db.session.rollback()
+            print(f"⚠️ خطأ أثناء إنشاء المستخدم الافتراضي: {e}")
 
         # [نظام التسجيل التلقائي للموديولات]
         apps_dir = app.root_path
-        ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'suppliers_auth']
+        ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'suppliers_auth', 'auth_portal']
         
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
