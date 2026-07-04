@@ -1,18 +1,15 @@
 # coding: utf-8
-from .routes import suppliers_bp
+# 📂 apps/admin_suppliers_add/registry.py
 
-MODULE_NAME = "إدارة الشركاء"
-MODULE_ICON = "fa-users"
+from .routes import admin_suppliers_add_bp 
 
-# هنا نجمع كل الروابط الخاصة بالموردين
-LINKS = {
-    "قائمة الشركاء": "suppliers_bp.list_suppliers",
-    "تعميد شريك": "admin_suppliers_add_bp.add_supplier_or_staff"
-}
+# ملاحظة: تم حذف MODULE_NAME و LINKS من هنا متعمداً.
+# لأننا قمنا بنقل تعريفات الروابط والاسم إلى ملف الموديول الرئيسي (admin_suppliers_list/registry.py).
+# بهذا الشكل، سيعمل الموديول في الخلفية ولن يظهر كقائمة مكررة في الشريط الجانبي.
 
 def register_module(app):
     try:
-        app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
-        print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_list' بنجاح.")
+        app.register_blueprint(admin_suppliers_add_bp, url_prefix='/admin/suppliers_add')
+        print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_add' بنجاح (بدون تكرار في القائمة).")
     except Exception as e:
-        print(f"❌ [Registry Error]: فشل تسجيل موديول 'admin_suppliers_list': {e}")
+        print(f"❌ [Registry Error]: فشل تسجيل موديول 'admin_suppliers_add': {e}")
