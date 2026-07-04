@@ -37,7 +37,7 @@ def create_app():
     csrf.init_app(app)
     login_manager.login_view = 'auth_portal.login'
     
-    # 2. اكتشاف الموديولات وتسجيلها تلقائياً
+    # 2. اكتشاف الموديولات وتسجيلها بأمان (عزل الأعطال)
     apps_dir = app.root_path 
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils']
     
@@ -47,15 +47,20 @@ def create_app():
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
             
-            # مجس تشخيصي: للتحقق من المجلدات التي يتم فحصها
             if os.path.isdir(item_path) and item not in ignored_dirs:
                 registry_file = os.path.join(item_path, 'registry.py')
                 
                 if os.path.exists(registry_file):
                     try:
+                        # استيراد الموديول ديناميكياً
                         module = importlib.import_module(f"apps.{item}.registry")
+                        
+                        # التأكد من وجود الدالة قبل التنفيذ
                         if hasattr(module, 'register_module'):
+                            # تنفيذ التسجيل
                             module.register_module(app)
+                            
+                            # إضافة الموديول للقاموس فقط بعد النجاح التام (العزل)
                             REGISTERED_MODULES[item] = {
                                 "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
                                 "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
@@ -64,19 +69,18 @@ def create_app():
                             }
                             print(f"✅ [Auto-Discovery] تم تسجيل الموديول: {item}")
                         else:
-                            print(f"⚠️ [Auto-Discovery] ملف registry.py موجود في {item} ولكن مفقود register_module")
+                            print(f"⚠️ [Auto-Discovery] ملف registry.py في {item} مفقود الدالة register_module")
+                            
                     except Exception as e:
-                        print(f"❌ [Auto-Discovery] فشل استيراد {item}: {e}")
+                        # العزل: إذا فشل هذا الموديول، لن يتأثر التطبيق ولن يضاف للقائمة
+                        print(f"❌ [Auto-Discovery] فشل تسجيل الموديول {item}، سيتم تجاهله: {e}")
                 else:
-                    # هذا السطر سيخبرنا إذا كان النظام يتجاهل المجلد لأنه لا يجد ملف registry.py
-                    print(f"DEBUG: No registry.py found in {item}")
+                    # مجلد لا يحتوي registry.py (يتم تجاهله)
+                    pass
 
     # 3. حقن المتغيرات (Global Context)
     @app.context_processor
     def inject_vars():
-        # مجس تشخيصي: طباعة عدد الموديولات عند فتح أي صفحة
-        print(f"DEBUG: Injecting {len(REGISTERED_MODULES)} modules to template: {list(REGISTERED_MODULES.keys())}")
-        
         return dict(
             csrf_token=generate_csrf,
             registered_modules=REGISTERED_MODULES
