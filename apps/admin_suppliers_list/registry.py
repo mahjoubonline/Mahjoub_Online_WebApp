@@ -1,16 +1,14 @@
-# coding: utf-8
 # 📂 apps/admin_suppliers_list/registry.py
 
-from apps.admin_suppliers_list.routes import suppliers_bp
+MODULE_NAME = "الموردون وشركاء النجاح"
+MODULE_ICON = "fas fa-truck"  # أيقونة FontAwesome
 
-# هذه المتغيرات العامة هي ما يبحث عنه النظام لرسم القائمة الجانبية
-MODULE_NAME = "سجل الشركاء"
-MODULE_ICON = "fas fa-handshake"
+# هنا نضع الروابط التي ستظهر في القائمة
 LINKS = {
-    "قائمة الشركاء": "suppliers_bp.list_suppliers"
+    "عرض الكل": "suppliers_bp.list_suppliers",
+    "إضافة مورد جديد": "suppliers_bp.add_supplier"
 }
 
 def register_module(app):
-    # تسجيل مسارات الموردين/الشركاء في النظام
-    app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
-    print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_list' بنجاح.")
+    from apps.admin_suppliers_list.routes import suppliers_bp
+    app.register_blueprint(suppliers_bp, url_prefix='/suppliers')
