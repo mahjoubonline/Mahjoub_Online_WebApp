@@ -3,6 +3,13 @@
 # نستخدم الاستيراد النسبي للوصول إلى البلوبرينت المعرف في routes.py
 from .routes import admin_dashboard
 
+# إعدادات العرض في النظام الديناميكي
+MODULE_NAME = "لوحة التحكم"
+MODULE_ICON = "fas fa-tachometer-alt"
+LINKS = {
+    "الإحصائيات": "admin_dashboard.dashboard"
+}
+
 def register_module(app):
     """
     تسجيل موديول لوحة تحكم المسؤول (admin_dashboard).
