@@ -9,7 +9,6 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required
 from apps.extensions import db
 from apps import csrf
-# تم تعديل السطر التالي ليطابق اسم الملف الصحيح (supplier_db)
 from apps.models.supplier_db import Supplier
 from apps.models.supplier_staff_db import SupplierStaff
 from apps.models.wallet_db import SupplierWallet
@@ -29,7 +28,6 @@ def check_user_exists(username=None, phone=None):
         return Supplier.query.filter_by(username=username).first() or \
                SupplierStaff.query.filter_by(username=username).first()
     if phone:
-        # البحث يتم بناءً على رقم الهاتف
         return Supplier.query.filter_by(phone=phone).first() or \
                SupplierStaff.query.filter_by(phone=phone).first()
     return None
