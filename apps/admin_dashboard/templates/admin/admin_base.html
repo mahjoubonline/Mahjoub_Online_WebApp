@@ -56,22 +56,21 @@
             <!-- الموديولات المكتشفة -->
             {% if registered_modules %}
                 {% for key, module in registered_modules.items() %}
-                <div class="nav-item">
-                    <div class="nav-link" onclick="toggleSub(this)">
-                        <i class="{{ module.icon|default('fas fa-folder') }} me-3"></i> 
-                        <span>{{ module.display_name }}</span> 
-                        <i class="fas fa-chevron-down ms-auto"></i>
-                    </div>
-                    <ul class="dropdown-content">
-                        {% if module.links %}
+                    {# ### تم إضافة الشرط هنا لمنع عرض الموديولات الفارغة ### #}
+                    {% if module.links and module.links|length > 0 %}
+                    <div class="nav-item">
+                        <div class="nav-link" onclick="toggleSub(this)">
+                            <i class="{{ module.icon|default('fas fa-folder') }} me-3"></i> 
+                            <span>{{ module.display_name }}</span> 
+                            <i class="fas fa-chevron-down ms-auto"></i>
+                        </div>
+                        <ul class="dropdown-content">
                             {% for label, endpoint in module.links.items() %}
                                 <li><a href="{{ url_for(endpoint) }}"><i class="fas fa-circle me-2" style="font-size: 8px;"></i> {{ label }}</a></li>
                             {% endfor %}
-                        {% else %}
-                            <li><a href="#"><small class="text-muted">لا توجد روابط</small></a></li>
-                        {% endif %}
-                    </ul>
-                </div>
+                        </ul>
+                    </div>
+                    {% endif %}
                 {% endfor %}
             {% else %}
                 <div class="px-3 py-2 text-white-50 small"><i class="fas fa-info-circle me-2"></i> لا توجد موديولات نشطة</div>
