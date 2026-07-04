@@ -16,8 +16,9 @@ treasury_bp = Blueprint(
 
 @treasury_bp.route('/dashboard', methods=['GET'])
 @login_required
-def index():
+def dashboard():
     """عرض الأستاذ العام (كشف حساب المنصة)."""
+    # تم تغيير اسم الدالة من index إلى dashboard لتتوافق مع الروابط في registry.py
     currency = request.args.get('currency', 'SAR')
     page = request.args.get('page', 1, type=int)
     per_page = 20
@@ -81,4 +82,4 @@ def filter_treasury():
                 'balance_after': t.balance_after
             })
         return render_template('admin_platform_treasury.html', transactions=processed, active_currency='SAR')
-    return index()
+    return dashboard()
