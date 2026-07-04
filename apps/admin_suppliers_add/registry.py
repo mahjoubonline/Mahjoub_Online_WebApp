@@ -1,15 +1,14 @@
 # coding: utf-8
 # 📂 apps/admin_suppliers_add/registry.py
 
-from .routes import admin_suppliers_add_bp
+from .routes import admin_suppliers_add_bp # تأكد من اسم الـ Blueprint لديك
 
-# لاحظ: لا نحتاج لتغيير MODULE_NAME هنا، النظام سيجمعهم تحت "إدارة الموردين"
-MODULE_ICON = "fa-user-plus" 
+MODULE_NAME = "إدارة الموردين"
+MODULE_ICON = "fa-user-plus"
 
+# تم تسطيح الروابط هنا أيضاً
 LINKS = {
-    "إدارة الموردين": {
-        "تعميد شريك": "admin_suppliers_add_bp.add_supplier_or_staff"
-    }
+    "تعميد شريك": "admin_suppliers_add_bp.add_supplier_or_staff"
 }
 
 def register_module(app):
