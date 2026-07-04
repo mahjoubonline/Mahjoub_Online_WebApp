@@ -1,26 +1,21 @@
 # coding: utf-8
-# 📂 apps/admin_suppliers_list/registry.py
+# 📂 apps/admin_suppliers_add/registry.py
 
-# استيراد الـ Blueprint الصحيح من ملف routes
-from .routes import suppliers_bp
+from apps.admin_suppliers_add.routes import admin_suppliers_add_bp
 
-# إعدادات العرض في الشريط الجانبي
-MODULE_NAME = "إدارة الموردين"
-MODULE_ICON = "fa-users"
+# تم إبقاء الاسم هنا، ولكن بما أن LINKS فارغ، لن يظهر هذا كقائمة جانبية منفصلة
+MODULE_NAME = "إضافة مورد" 
+MODULE_ICON = "fa-user-plus"
 
-# دمج جميع روابط الموردين هنا ليكون هذا الموديول هو المرجع الرئيسي
-LINKS = {
-    "قائمة الموردين": "suppliers_bp.list_suppliers",
-    "إضافة مورد جديد": "suppliers_bp.add_supplier"
-}
+# ✅ الحل: تفريغ القائمة ليتم تجاهل هذا الموديول في القائمة الجانبية
+LINKS = {} 
 
 def register_module(app):
     """
-    تسجيل الـ Blueprint في التطبيق مع معالجة الأخطاء
+    تسجيل موديول الإضافة برمجياً فقط
     """
     try:
-        # تم ضبط المسار على /admin/suppliers ليتوافق مع هيكلية لوحة التحكم
-        app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
-        print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_list' بنجاح.")
+        app.register_blueprint(admin_suppliers_add_bp, url_prefix='/admin/suppliers')
+        print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_add' بنجاح (مخفي من القائمة).")
     except Exception as e:
-        print(f"❌ [Registry Error]: فشل تسجيل موديول 'admin_suppliers_list': {e}")
+        print(f"❌ [Registry Error]: فشل تسجيل موديول 'admin_suppliers_add': {e}")
