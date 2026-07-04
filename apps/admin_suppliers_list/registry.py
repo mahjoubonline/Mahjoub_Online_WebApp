@@ -8,12 +8,19 @@ from .routes import suppliers_bp
 MODULE_NAME = "إدارة الموردين"
 MODULE_ICON = "fa-users"
 
-# الربط الصحيح باستخدام اسم الـ Blueprint (suppliers_bp)
+# دمج جميع روابط الموردين هنا ليكون هذا الموديول هو المرجع الرئيسي
 LINKS = {
     "قائمة الموردين": "suppliers_bp.list_suppliers",
-    "إضافة مورد": "suppliers_bp.add_supplier"
+    "إضافة مورد جديد": "suppliers_bp.add_supplier"
 }
 
 def register_module(app):
-    """تسجيل الـ Blueprint في التطبيق"""
-    app.register_blueprint(suppliers_bp, url_prefix='/suppliers')
+    """
+    تسجيل الـ Blueprint في التطبيق مع معالجة الأخطاء
+    """
+    try:
+        # تم ضبط المسار على /admin/suppliers ليتوافق مع هيكلية لوحة التحكم
+        app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
+        print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_list' بنجاح.")
+    except Exception as e:
+        print(f"❌ [Registry Error]: فشل تسجيل موديول 'admin_suppliers_list': {e}")
