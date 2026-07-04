@@ -10,20 +10,21 @@ from apps.utils.time_utils import format_full_timestamp
 
 csrf = CSRFProtect()
 
+# هذا القاموس هو المحرك الذي يغذي الشريط الجانبي
 REGISTERED_MODULES = {}
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     
-    # 1. تسجيل Blueprints الإدارة يدوياً لضمان توفرها في خريطة المسارات
+    # 1. تسجيل الموديولات الأساسية
     from apps.auth_portal.routes import auth_portal
     from apps.admin_dashboard.routes import admin_dashboard
     
     app.register_blueprint(auth_portal, url_prefix='/auth')
     app.register_blueprint(admin_dashboard, url_prefix='/admin')
     
-    # إضافة الفلاتر المخصصة
+    # إضافة الفلاتر
     app.jinja_env.filters['full_time'] = format_full_timestamp
 
     # إعداد الإضافات
@@ -54,12 +55,14 @@ def create_app():
         except Exception:
             db.session.rollback()
 
-        # نظام التسجيل التلقائي للموديولات الأخرى
+        # نظام التسجيل التلقائي الذكي
         apps_dir = app.root_path
+        # قائمة ثابتة للمجلدات التي لا تعتبر موديولات قابلة للتسجيل
         ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'suppliers_auth', 'auth_portal', 'admin_dashboard']
         
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
+            # الشرط: يجب أن يكون مجلداً، ليس في قائمة التجاهل، ويحتوي على registry.py
             if os.path.isdir(item_path) and item not in ignored_dirs:
                 registry_file = os.path.join(item_path, 'registry.py')
                 if os.path.exists(registry_file):
@@ -67,6 +70,7 @@ def create_app():
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
+                            # هنا يتم حقن الموديول في الذاكرة ليظهر في الشريط الجانبي
                             REGISTERED_MODULES[item] = {
                                 "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
                                 "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
@@ -76,7 +80,5 @@ def create_app():
                     except Exception as e:
                         print(f"⚠️ [Auto-Discovery] Error in {item}: {e}")
 
-    # تحديث خريطة المسارات لتفادي BuildError
     app.config['ENDPOINT_MAP'] = {rule.endpoint for rule in app.url_map.iter_rules()}
-
     return app
