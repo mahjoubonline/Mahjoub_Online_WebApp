@@ -38,8 +38,8 @@
             <h3 class="fw-bold text-royal-purple"><i class="fas fa-shopping-bag me-2"></i>طلبات المتجر</h3>
             <p class="text-muted small mb-0">مراقبة حركة الطلبات وتوزيعها بين المتاجر والموردين</p>
         </div>
-        <!-- تم تصحيح المسار هنا إلى orders.sync_all مع حماية من الانهيار -->
-        <form action="{{ url_for('orders.sync_all') if 'orders.sync_all' in app.view_functions else '#' }}" method="POST">
+        <!-- المسار المباشر والمصحح -->
+        <form action="{{ url_for('orders.sync_all') }}" method="POST">
             <button type="submit" class="btn btn-royal-back shadow-sm">
                 <i class="fas fa-sync-alt me-2"></i>مزامنة الطلبات
             </button>
