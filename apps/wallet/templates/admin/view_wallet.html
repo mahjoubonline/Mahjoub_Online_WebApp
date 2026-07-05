@@ -1,8 +1,4 @@
-{% extends "admin/admin_base.html" %}
-
-{% block title %}تفاصيل محفظة {{ wallet.supplier.trade_name }}{% endblock %}
-
-{% block content %}
+<!-- 📂 view_wallet.html -->
 <style>
     :root { 
         --royal-purple: #2e003e; 
@@ -110,6 +106,6 @@ function filterTable(currency) {
     document.getElementById('totalDebit').innerText = d.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('totalCredit').innerText = c.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
+// تشغيل الفلترة عند تحميل الصفحة لعرض الإجمالي العام
 filterTable('ALL');
 </script>
-{% endblock %}
