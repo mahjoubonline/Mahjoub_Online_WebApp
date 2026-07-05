@@ -6,11 +6,10 @@ from flask_login import login_required
 from apps.extensions import db
 from apps.models.orders_db import Order
 from apps.models.financials_db import OrderFinancial
+from apps.orders.services import OrderService  # الخدمة التي تحتوي منطق التسوية
 from apps.api.sync_engine import SyncEngine
 from sqlalchemy import func
 
-# تعريف الـ Blueprint باسم 'orders'
-# يجب أن تكون جميع الروابط في القوالب تستخدم 'orders.اسم_الدالة'
 orders_bp = Blueprint('orders', __name__, template_folder='templates')
 
 @orders_bp.route('/dashboard')
@@ -49,11 +48,20 @@ def dashboard():
         'total_sales': float(total_sales) 
     }
     
-    # دعم طلبات الـ AJAX (يتم استدعاؤه من الـ Templates)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('admin/partials/_table.html', pagination=pagination)
     
     return render_template('admin/orders_dashboard.html', pagination=pagination, stats=stats)
+
+@orders_bp.route('/complete-order/<int:order_id>', methods=['POST'])
+@login_required
+def complete_order(order_id):
+    """تسوية الطلب مالياً وتحديث المحفظة تلقائياً."""
+    if OrderService.complete_order_and_settle(order_id):
+        flash("تمت تسوية الطلب بنجاح وإضافة الرصيد للمحفظة.", "success")
+    else:
+        flash("فشل في تسوية الطلب أو أن الطلب مسوى مسبقاً.", "danger")
+    return redirect(url_for('orders.view_order', order_id=order_id))
 
 @orders_bp.route('/sync-all', methods=['POST'])
 @login_required
@@ -70,8 +78,8 @@ def sync_all():
 @orders_bp.route('/view-order/<int:order_id>') 
 @login_required
 def view_order(order_id):
-    result = db.session.query(Order, OrderFinancial)\
-        .outerjoin(OrderFinancial, Order.id == OrderFinancial.order_id)\
-        .filter(Order.id == order_id).first_or_404()
+    order, financial = OrderService.get_order_details(order_id)
+    if not order:
+        return "الطلب غير موجود", 404
         
-    return render_template('admin/order_details.html', order=result[0], financial=result[1])
+    return render_template('admin/order_details.html', order=order, financial=financial)
