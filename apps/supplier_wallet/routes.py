@@ -14,13 +14,22 @@ supplier_wallet_bp = Blueprint('supplier_wallet', __name__, template_folder='tem
 @supplier_wallet_bp.route('/my-wallet', methods=['GET'])
 @login_required
 def view_my_wallet():
-    # 1. تحديد الـ s_id الموحد (للمورد أو المالك)
-    s_id = current_user.id if session.get('user_type') == 'supplier' else current_user.supplier_id
+    # 1. تحديد الـ s_id بمرونة لتجنب خطأ المدير
+    user_type = session.get('user_type')
+    
+    if user_type == 'supplier':
+        # إذا كان مورداً، نستخدم معرفه الخاص
+        s_id = current_user.id
+    else:
+        # إذا كان مديراً، يجب أن يأتي المعرف من الرابط (مثال: ?supplier_id=5)
+        s_id = request.args.get('supplier_id')
+        if not s_id:
+            abort(400, description="يجب تحديد معرف المورد (supplier_id) لعرض المحفظة.")
     
     # 2. جلب محفظة المتجر
     wallet = SupplierWallet.query.filter_by(supplier_id=s_id).first()
     if not wallet:
-        abort(404, description="لم يتم العثور على محفظة مرتبطة بحسابك.")
+        abort(404, description="لم يتم العثور على محفظة مرتبطة بهذا المورد.")
 
     # 3. الفلاتر الأساسية
     currency = request.args.get('currency', 'SAR')
@@ -37,7 +46,6 @@ def view_my_wallet():
     elif filter_type == 'month':
         query = query.filter(WalletTransaction.created_at >= (datetime.utcnow() - timedelta(days=30)))
     
-    # فلترة بالتاريخ المخصص
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     if start_date: query = query.filter(WalletTransaction.created_at >= start_date)
@@ -90,8 +98,8 @@ def view_my_wallet():
 @supplier_wallet_bp.route('/test-sync', methods=['GET'])
 @login_required
 def test_sync():
-    # التحقق من صلاحيات المدير العام للنظام
-    if not hasattr(current_user, 'is_admin') or not current_user.is_admin: 
+    # التحقق من صلاحيات المدير
+    if not getattr(current_user, 'is_admin', False): 
         abort(403)
     
     if SyncEngine.fetch_and_sync_order():
