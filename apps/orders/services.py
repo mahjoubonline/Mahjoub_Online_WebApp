@@ -1,41 +1,47 @@
-# 📂 apps/orders/routes.py
+from apps.models.orders_db import Order
+from apps.models.financials_db import OrderFinancial
+from apps.models.wallet_db import SupplierWallet, WalletTransaction
+from apps.extensions import db
+from decimal import Decimal
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for
-from flask_login import login_required
-from apps.orders.services import OrderService # استيراد الخدمة الجديدة
-from apps.api.sync_engine import SyncEngine
+class OrderService:
+    @staticmethod
+    def get_order_details(order_id):
+        # جلب الطلب مع بياناته المالية
+        result = db.session.query(Order, OrderFinancial)\
+            .outerjoin(OrderFinancial, Order.id == OrderFinancial.order_id)\
+            .filter(Order.id == str(order_id)).first()
+        return result if result else (None, None)
 
-orders_bp = Blueprint('orders', __name__, template_folder='templates')
-
-@orders_bp.route('/dashboard')
-@login_required
-def dashboard():
-    # استخدام الخدمة لجلب البيانات
-    page = request.args.get('page', 1, type=int)
-    search_query = request.args.get('q', '').strip()
-    status = request.args.get('status', '').strip()
-    
-    pagination = OrderService.get_paginated_orders(page, 20, search_query, status)
-    stats = OrderService.get_dashboard_stats()
-    
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render_template('admin/partials/_table.html', pagination=pagination)
-    
-    return render_template('admin/orders_dashboard.html', pagination=pagination, stats=stats)
-
-@orders_bp.route('/sync-all', methods=['POST'])
-@login_required
-def sync_all():
-    # منطق المزامنة يبقى هنا أو يمكن نقله لـ Service لاحقاً
-    if SyncEngine.fetch_and_sync_order():
-        flash("تم تحديث الطلبات بنجاح.", "success")
-    else:
-        flash("حدث خطأ أثناء المزامنة.", "danger")
-    return redirect(url_for('orders.dashboard'))
-
-@orders_bp.route('/view-order/<int:order_id>') 
-@login_required
-def view_order(order_id):
-    # استخدام الخدمة لجلب التفاصيل
-    order_data = OrderService.get_order_details(order_id)
-    return render_template('admin/order_details.html', order=order_data[0], financial=order_data[1])
+    @staticmethod
+    def complete_order_and_settle(order_id):
+        """
+        محرك التسوية: يحول الطلب لمكتمل ويوزع الأرباح للمورد في محفظته
+        """
+        order = Order.query.get(str(order_id))
+        financial = OrderFinancial.query.filter_by(order_id=str(order_id)).first()
+        
+        if order and financial and order.status != 'completed':
+            # 1. تحديث حالة الطلب والمالية
+            order.status = 'completed'
+            financial.settlement_status = 'settled'
+            
+            # 2. إيداع المبلغ في محفظة المورد
+            wallet = SupplierWallet.query.filter_by(supplier_id=financial.supplier_id).first()
+            if wallet:
+                # إنشاء سجل حركة مالية
+                transaction = WalletTransaction(
+                    wallet_id=wallet.id,
+                    owner_type='supplier',
+                    owner_id=financial.supplier_id,
+                    trans_type='sale_revenue',
+                    amount=Decimal(str(financial.total_paid_raw)),
+                    currency=financial.currency,
+                    description=f"تسوية الطلب رقم {order.order_id_display}",
+                    related_order_id=str(order.id)
+                )
+                db.session.add(transaction)
+            
+            db.session.commit()
+            return True
+        return False
