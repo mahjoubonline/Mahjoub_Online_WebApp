@@ -5,17 +5,22 @@ from flask_login import login_required, current_user
 from apps.extensions import db
 from apps.models.exchange_db import ExchangeRate
 
-# تحديد المسار للقوالب (Flask سيبحث داخل مجلد templates الملحق بالموديول)
-template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
-admin_exchange_bp = Blueprint('admin_exchange', __name__, template_folder='templates')
+# نضبط الـ template_folder ليشير إلى المجلد الأب (templates) مباشرة
+# Flask سيبحث تلقائياً عن المسارات الفرعية من هناك
+admin_exchange_bp = Blueprint(
+    'admin_exchange', 
+    __name__, 
+    template_folder='templates'
+)
 
 @admin_exchange_bp.route('/exchange-rates', methods=['GET', 'POST'])
 @login_required
 def manage_rates():
     # التحقق من الصلاحيات
     user_role = getattr(current_user, 'role', None)
+    
     if user_role not in ['admin', 'Owner']:
-        flash("غير مصرح لك بالوصول", "danger")
+        flash(f"غير مصرح لك بالوصول (رتبتك الحالية: {user_role})", "danger")
         return redirect(url_for('admin_dashboard.dashboard'))
 
     if request.method == 'POST':
@@ -35,12 +40,11 @@ def manage_rates():
             db.session.add(new_entry)
         
         db.session.commit()
-        flash(f"تم التحديث لعملة {code}", "success")
+        flash(f"تم تحديث سعر الصرف لعملة {code} بنجاح", "success")
         return redirect(url_for('admin_exchange.manage_rates'))
 
     rates = ExchangeRate.query.all()
     
-    # التغيير الجوهري هنا: بما أننا داخل Blueprint، 
-    # وبما أن مسار الملف هو admin/exchange_rates.html داخل templates
-    # يفضل أن يكون استدعاء الملف مطابقاً تماماً للهيكل الموجود في المجلد
+    # بما أن الـ template_folder هو 'templates'، فإن 'admin/exchange_rates.html'
+    # سيبحث عنه Flask في: templates/admin/exchange_rates.html
     return render_template('admin/exchange_rates.html', rates=rates)
