@@ -5,12 +5,14 @@ from flask_login import login_required, current_user
 from apps.extensions import db
 from apps.models.exchange_db import ExchangeRate
 
-# نضبط الـ template_folder ليشير إلى المجلد الأب (templates) مباشرة
-# Flask سيبحث تلقائياً عن المسارات الفرعية من هناك
+# نحدد المسار الديناميكي للقوالب لضمان العثور عليها مهما كان مسار التشغيل
+template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
+
+# التعديل هنا: ننشئ البلوبرينت مع تحديد المسار المباشر للقوالب
 admin_exchange_bp = Blueprint(
     'admin_exchange', 
     __name__, 
-    template_folder='templates'
+    template_folder='templates' 
 )
 
 @admin_exchange_bp.route('/exchange-rates', methods=['GET', 'POST'])
@@ -18,9 +20,8 @@ admin_exchange_bp = Blueprint(
 def manage_rates():
     # التحقق من الصلاحيات
     user_role = getattr(current_user, 'role', None)
-    
     if user_role not in ['admin', 'Owner']:
-        flash(f"غير مصرح لك بالوصول (رتبتك الحالية: {user_role})", "danger")
+        flash("غير مصرح لك بالوصول", "danger")
         return redirect(url_for('admin_dashboard.dashboard'))
 
     if request.method == 'POST':
@@ -45,6 +46,6 @@ def manage_rates():
 
     rates = ExchangeRate.query.all()
     
-    # بما أن الـ template_folder هو 'templates'، فإن 'admin/exchange_rates.html'
-    # سيبحث عنه Flask في: templates/admin/exchange_rates.html
+    # الحل: المسار هنا يجب أن يكون دقيقاً بالنسبة لـ template_folder
+    # بما أن template_folder هو 'templates'، فإن المسار النسبي هو 'admin/exchange_rates.html'
     return render_template('admin/exchange_rates.html', rates=rates)
