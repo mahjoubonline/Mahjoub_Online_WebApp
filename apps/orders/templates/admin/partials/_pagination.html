@@ -4,8 +4,8 @@
         {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
             {% if page_num %}
                 <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
-                    <!-- تم تعديل الـ url_for هنا ليتوافق مع المسمى الصحيح للـ Blueprint -->
-                    <a class="page-link" href="#" onclick="updateTable('{{ url_for('suppliers_orders.dashboard', page=page_num, q=request.args.get('q', ''), status=request.args.get('status', '')) }}'); return false;">
+                    <!-- تم التصحيح هنا إلى orders.dashboard -->
+                    <a class="page-link" href="#" onclick="updateTable('{{ url_for('orders.dashboard', page=page_num, q=request.args.get('q', ''), status=request.args.get('status', '')) }}'); return false;">
                         {{ page_num }}
                     </a>
                 </li>
