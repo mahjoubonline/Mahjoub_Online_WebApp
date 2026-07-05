@@ -25,7 +25,8 @@
             </td>
             <td>{{ "{:,.2f}".format(financial.total_paid if financial else 0) }}</td>
             <td>
-                <a href="{{ url_for('orders.view_order', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                <!-- تم تعديل الرابط هنا ليتطابق مع اسم الـ Blueprint الجديد -->
+                <a href="{{ url_for('suppliers_orders.view_order', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
                     <i class="fas fa-eye"></i>
                 </a>
             </td>
