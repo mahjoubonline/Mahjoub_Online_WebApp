@@ -15,7 +15,8 @@ def manage_rates():
     # التحقق من صلاحيات المدير
     if not hasattr(current_user, 'rank') or current_user.rank != 'admin': 
         flash("غير مصرح لك بالوصول إلى هذه الصفحة", "danger")
-        return redirect(url_for('admin.dashboard'))
+        # تم التعديل هنا ليتوافق مع اسم الـ endpoint المكتشف في النظام
+        return redirect(url_for('admin_dashboard.dashboard'))
 
     if request.method == 'POST':
         code = request.form.get('currency_code')
