@@ -12,35 +12,32 @@ suppliers_bp = Blueprint('suppliers_auth', __name__, template_folder='templates'
 @suppliers_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """
-    بوابة تسجيل دخول الموردين والمسوقين.
+    بوابة تسجيل دخول الموردين والمسوقين المحسنة.
     """
     if request.method == 'GET':
-        # التحقق من أن المستخدم غير مسجل دخول بالفعل
         if current_user.is_authenticated and session.get('user_type') == 'supplier':
             return redirect(url_for('suppliers_dashboard.dashboard'))
         return render_template('suppliers_auth_portal/login.html')
 
     try:
-        # دعم الطلبات بصيغة JSON أو Form Data
-        if request.is_json:
-            data = request.get_json()
-        else:
-            data = request.form
-
+        # التعديل: قبول JSON أو Form Data لضمان عدم توقف الطلبات
+        data = request.get_json(silent=True) or request.form.to_dict()
+        
         if not data:
             return jsonify({"status": "error", "message": "بيانات غير صالحة"}), 400
 
-        login_type = data.get('type', 'supplier')
+        login_type = data.get('type')
         username = data.get('username', '').strip()
         password = data.get('password', '')
 
-        if not username or not password:
-            return jsonify({"status": "error", "message": "يرجى إدخال البيانات كاملة"}), 400
+        if not login_type or not username or not password:
+            return jsonify({"status": "error", "message": "يجب إدخال اسم المستخدم وكلمة المرور"}), 400
 
         # --- منطق دخول المسوقين ---
         if login_type == 'marketer':
             user = Marketer.query.filter_by(marketing_code=username).first()
-            if user and user.check_password(password):
+            # استخدام hasattr للتأكد من وجود دالة التحقق قبل استدعائها
+            if user and hasattr(user, 'check_password') and user.check_password(password):
                 login_user(user, remember=True)
                 session['user_type'] = 'supplier' 
                 session.modified = True
@@ -53,7 +50,8 @@ def login():
                 (Supplier.search_phone == username) | (Supplier.username == username)
             ).first()
             
-            if supplier and supplier.check_password(password):
+            # استخدام hasattr للتأكد من وجود دالة التحقق قبل استدعائها
+            if supplier and hasattr(supplier, 'check_password') and supplier.check_password(password):
                 login_user(supplier, remember=True)
                 session['user_type'] = 'supplier'
                 session.modified = True
@@ -63,18 +61,17 @@ def login():
         return jsonify({"status": "error", "message": "نوع دخول غير معروف"}), 400
 
     except Exception as e:
-        return jsonify({"status": "error", "message": f"خطأ فني: {str(e)}"}), 500
+        # إظهار تفاصيل الخطأ في السجلات لمساعدتك في التصحيح
+        return jsonify({"status": "error", "message": f"خطأ في السيرفر: {str(e)}"}), 500
 
 @suppliers_bp.route('/logout')
 def logout():
     """
-    تسجيل خروج آمن مع مسح الجلسة.
+    تسجيل خروج آمن مع مسح كامل للجلسة.
     """
     logout_user()
     session.clear() 
     response = make_response(redirect(url_for('suppliers_auth.login')))
     response.set_cookie('session', '', expires=0, path='/')
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
     return response
