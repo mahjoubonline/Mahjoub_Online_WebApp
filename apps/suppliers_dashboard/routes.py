@@ -14,16 +14,21 @@ def full_access_required():
     """
     دالة تحقق مطورة: تسمح للمورد الرئيسي والمالك (Owner) فقط بالوصول الكامل.
     """
-    is_supplier = session.get('user_type') == 'supplier'
-    is_owner = (session.get('user_type') == 'staff' and getattr(current_user, 'role', '') == 'owner')
+    # 1. المورد الرئيسي دائماً لديه وصول كامل
+    if session.get('user_type') == 'supplier':
+        return
     
-    if not (is_supplier or is_owner):
-        abort(403) # منع أي شخص آخر (مثل الموظفين العاديين)
+    # 2. الموظف: يجب التحقق من دوره (Owner)
+    # ملاحظة: تأكد أن نموذج الموظف يحتوي على حقل role
+    if session.get('user_type') == 'staff' and getattr(current_user, 'role', None) == 'owner':
+        return
+        
+    abort(403) # منع أي موظف غير المالك
 
 @dashboard_bp.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
-    # تحديد المعرف الصحيح للمتجر (سواء كان المورد أو الموظف/المالك)
+    # جلب المعرف الصحيح
     s_id = current_user.id if session.get('user_type') == 'supplier' else current_user.supplier_id
     
     pending_orders_count = Order.query.filter_by(
@@ -36,16 +41,15 @@ def dashboard():
 @dashboard_bp.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
-    full_access_required() # المالك والمورد فقط لديهم حق السحب
+    full_access_required() 
     flash("سيتم تفعيل خدمة السحب قريباً، يرجى التواصل مع الإدارة.", "info")
     return redirect(url_for('suppliers_dashboard.dashboard'))
 
 @dashboard_bp.route('/settings', methods=['GET'])
 @login_required
 def settings():
-    full_access_required() # المالك والمورد فقط لديهم حق الإعدادات
+    full_access_required() 
     
-    # تحديد المعرف للبحث
     s_id = current_user.id if session.get('user_type') == 'supplier' else current_user.supplier_id
     
     supplier_data = Supplier.query.options(
@@ -63,7 +67,7 @@ def settings():
 def update_settings():
     full_access_required()
     
-    # التعامل مع البيانات عبر current_user.supplier إذا كان موظفاً
+    # تحديد المورد المستهدف للتحديث
     target = current_user if session.get('user_type') == 'supplier' else current_user.supplier
     profile = target.supplier_profile
     
@@ -82,7 +86,9 @@ def update_settings():
 @login_required
 def update_password():
     full_access_required()
-    # يتم التحقق عبر الدالة الموجودة في نموذج المستخدم الحالي
+    
+    # التأكد من استخدام المودل الصحيح لتغيير كلمة المرور
+    # (إذا كان الموظف يغير كلمة مروره الخاصة، نستخدم current_user مباشرة)
     if current_user.check_password(request.form.get('old_password')):
         current_user.set_password(request.form.get('new_password'))
         db.session.commit()
