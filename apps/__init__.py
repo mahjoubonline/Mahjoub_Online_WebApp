@@ -1,4 +1,6 @@
 # coding: utf-8
+# 📂 apps/__init__.py
+
 import os
 import importlib
 from flask import Flask, session
@@ -35,17 +37,16 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     
-    # --- التعديل: تسجيل موديول الموردين لضمان عمل الرابط /supplier/login ---
+    # --- تسجيل موديول الموردين (بوابة الدخول) ---
     from apps.suppliers_auth_portal.routes import suppliers_bp
     csrf.exempt(suppliers_bp) 
     app.register_blueprint(suppliers_bp, url_prefix='/supplier')
-    # ----------------------------------------------------
 
     login_manager.login_view = 'auth_portal.login'
     
-    # 2. اكتشاف الموديولات وتسجيلها
+    # 2. اكتشاف الموديولات وتسجيلها تلقائياً
     apps_dir = app.root_path 
-    ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils']
+    ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api', 'suppliers_auth_portal']
     
     print(f"--- بدء اكتشاف الموديولات في: {apps_dir} ---")
     
