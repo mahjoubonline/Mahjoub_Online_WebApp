@@ -10,7 +10,7 @@ from apps.utils.time_utils import format_full_timestamp
 csrf = CSRFProtect()
 REGISTERED_MODULES = {}
 
-# دالة تحميل المستخدم للـ Login Manager
+# ... (دالة load_user تظل كما هي) ...
 @login_manager.user_loader
 def load_user(user_id):
     try:
@@ -35,9 +35,15 @@ def create_app():
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
+    
+    # --- التعديل هنا: استثناء مسار الموردين من حماية CSRF ---
+    from apps.suppliers_auth_portal.routes import suppliers_bp
+    csrf.exempt(suppliers_bp) 
+    # ----------------------------------------------------
+
     login_manager.login_view = 'auth_portal.login'
     
-    # 2. اكتشاف الموديولات وتسجيلها بأمان (عزل الأعطال)
+    # 2. اكتشاف الموديولات وتسجيلها
     apps_dir = app.root_path 
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils']
     
@@ -52,15 +58,9 @@ def create_app():
                 
                 if os.path.exists(registry_file):
                     try:
-                        # استيراد الموديول ديناميكياً
                         module = importlib.import_module(f"apps.{item}.registry")
-                        
-                        # التأكد من وجود الدالة قبل التنفيذ
                         if hasattr(module, 'register_module'):
-                            # تنفيذ التسجيل
                             module.register_module(app)
-                            
-                            # إضافة الموديول للقاموس فقط بعد النجاح التام (العزل)
                             REGISTERED_MODULES[item] = {
                                 "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
                                 "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
@@ -68,15 +68,8 @@ def create_app():
                                 "active": True
                             }
                             print(f"✅ [Auto-Discovery] تم تسجيل الموديول: {item}")
-                        else:
-                            print(f"⚠️ [Auto-Discovery] ملف registry.py في {item} مفقود الدالة register_module")
-                            
                     except Exception as e:
-                        # العزل: إذا فشل هذا الموديول، لن يتأثر التطبيق ولن يضاف للقائمة
-                        print(f"❌ [Auto-Discovery] فشل تسجيل الموديول {item}، سيتم تجاهله: {e}")
-                else:
-                    # مجلد لا يحتوي registry.py (يتم تجاهله)
-                    pass
+                        print(f"❌ [Auto-Discovery] فشل تسجيل الموديول {item}: {e}")
 
     # 3. حقن المتغيرات (Global Context)
     @app.context_processor
