@@ -4,37 +4,30 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, session, abort, request
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
-
-# استيراد قاعدة البيانات والنماذج
 from apps import db 
 from apps.models.orders_db import Order 
 from apps.models.supplier_db import Supplier
 
-# تعريف البلوبرينت
-dashboard_bp = Blueprint(
-    'suppliers_dashboard', 
-    __name__, 
-    template_folder='templates'
-)
+dashboard_bp = Blueprint('suppliers_dashboard', __name__, template_folder='templates')
 
-def supplier_required():
+def full_access_required():
     """
-    دالة تحقق أمني: تضمن أن المستخدم الحالي مورد.
+    دالة تحقق مطورة: تسمح للمورد الرئيسي والمالك (Owner) فقط بالوصول الكامل.
     """
-    if session.get('user_type') != 'supplier':
-        abort(403)
+    is_supplier = session.get('user_type') == 'supplier'
+    is_owner = (session.get('user_type') == 'staff' and getattr(current_user, 'role', '') == 'owner')
+    
+    if not (is_supplier or is_owner):
+        abort(403) # منع أي شخص آخر (مثل الموظفين العاديين)
 
 @dashboard_bp.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
-    """
-    لوحة التحكم الرئيسية للمورد.
-    """
-    supplier_required() 
+    # تحديد المعرف الصحيح للمتجر (سواء كان المورد أو الموظف/المالك)
+    s_id = current_user.id if session.get('user_type') == 'supplier' else current_user.supplier_id
     
-    # جلب عدد الطلبات المعلقة فعلياً
     pending_orders_count = Order.query.filter_by(
-        supplier_id=current_user.id, 
+        supplier_id=s_id, 
         status='pending'
     ).count()
 
@@ -43,23 +36,22 @@ def dashboard():
 @dashboard_bp.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
-    supplier_required() 
+    full_access_required() # المالك والمورد فقط لديهم حق السحب
     flash("سيتم تفعيل خدمة السحب قريباً، يرجى التواصل مع الإدارة.", "info")
     return redirect(url_for('suppliers_dashboard.dashboard'))
 
 @dashboard_bp.route('/settings', methods=['GET'])
 @login_required
 def settings():
-    """
-    صفحة إعدادات المتجر مع جلب بيانات الملف الشخصي والمحفظة.
-    """
-    supplier_required() 
+    full_access_required() # المالك والمورد فقط لديهم حق الإعدادات
     
-    # جلب المورد مع بيانات الملف الشخصي والمحفظة المرتبطة به
+    # تحديد المعرف للبحث
+    s_id = current_user.id if session.get('user_type') == 'supplier' else current_user.supplier_id
+    
     supplier_data = Supplier.query.options(
         joinedload(Supplier.supplier_profile),
         joinedload(Supplier.wallet)
-    ).get(current_user.id)
+    ).get(s_id)
     
     if not supplier_data:
         abort(404)
@@ -69,12 +61,11 @@ def settings():
 @dashboard_bp.route('/settings/update', methods=['POST'])
 @login_required
 def update_settings():
-    """
-    تحديث بيانات الملف الشخصي للمورد.
-    """
-    supplier_required()
+    full_access_required()
     
-    profile = current_user.supplier_profile
+    # التعامل مع البيانات عبر current_user.supplier إذا كان موظفاً
+    target = current_user if session.get('user_type') == 'supplier' else current_user.supplier
+    profile = target.supplier_profile
     
     if profile:
         profile.owner_name = request.form.get('owner_name')
@@ -83,30 +74,19 @@ def update_settings():
         profile.governorate = request.form.get('governorate')
         profile.city = request.form.get('city')
         profile.address = request.form.get('address')
-        
         db.session.commit()
-        flash("تم تحديث بيانات ملفك الشخصي بنجاح!", "success")
-    else:
-        flash("خطأ: تعذر الوصول إلى بيانات الملف الشخصي.", "danger")
-    
+        flash("تم تحديث البيانات بنجاح!", "success")
     return redirect(url_for('suppliers_dashboard.settings'))
 
 @dashboard_bp.route('/settings/update-password', methods=['POST'])
 @login_required
 def update_password():
-    """
-    تغيير كلمة المرور الخاصة بالمورد.
-    """
-    supplier_required()
-    old_password = request.form.get('old_password')
-    new_password = request.form.get('new_password')
-    
-    # التحقق من كلمة المرور القديمة باستخدام دالة النموذج
-    if current_user.check_password(old_password):
-        current_user.set_password(new_password)
+    full_access_required()
+    # يتم التحقق عبر الدالة الموجودة في نموذج المستخدم الحالي
+    if current_user.check_password(request.form.get('old_password')):
+        current_user.set_password(request.form.get('new_password'))
         db.session.commit()
         flash("تم تغيير كلمة المرور بنجاح!", "success")
     else:
-        flash("كلمة المرور الحالية غير صحيحة، يرجى المحاولة مرة أخرى.", "danger")
-        
+        flash("كلمة المرور الحالية غير صحيحة.", "danger")
     return redirect(url_for('suppliers_dashboard.settings'))
