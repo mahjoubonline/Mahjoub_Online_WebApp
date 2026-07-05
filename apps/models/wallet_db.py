@@ -21,7 +21,9 @@ class SupplierWallet(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     wallet_code = db.Column(db.String(50), unique=True, nullable=False)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, unique=True)
+    
+    # تم تعديل supplier_id إلى String لقبول المعرفات النصية
+    supplier_id = db.Column(db.String(50), db.ForeignKey('suppliers.id'), nullable=False, unique=True)
     
     # أرصدة العملات
     balance_yer = db.Column(db.Numeric(18, 2), default=0.00) 
@@ -71,7 +73,10 @@ class WalletTransaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     wallet_id = db.Column(db.Integer, db.ForeignKey('supplier_wallets.id'), nullable=False)
     owner_type = db.Column(db.String(20), default='supplier') 
-    owner_id = db.Column(db.Integer, nullable=False)
+    
+    # تم تعديل owner_id إلى String لقبول المعرفات النصية للمالك
+    owner_id = db.Column(db.String(50), nullable=False)
+    
     trans_type = db.Column(db.String(20), nullable=False) 
     source_type = db.Column(db.String(20), default='manual')
     amount = db.Column(db.Numeric(18, 2), nullable=False)
@@ -89,7 +94,7 @@ class WalletTransaction(db.Model):
 
 @event.listens_for(WalletTransaction, 'before_insert')
 def set_voucher_number(mapper, connection, target):
-    # 1. توليد رقم القسيمة باستخدام الاتصال المباشر (أكثر أماناً في Events)
+    # 1. توليد رقم القسيمة
     if not target.voucher_number:
         last_trans = connection.execute(
             select(func.max(WalletTransaction.voucher_number))
@@ -109,17 +114,14 @@ def set_voucher_number(mapper, connection, target):
         
         if wallet:
             amount_dec = Decimal(str(target.amount or 0))
-            # اختيار العملة
             attr = f'balance_{target.currency.lower()}'
             current = Decimal(str(getattr(wallet, attr, 0) or 0))
             
             target.balance_before = current
             
-            # حساب الرصيد
             if target.trans_type in ['credit', 'adjustment_credit', 'sale_revenue']:
                 target.balance_after = current + amount_dec
             else:
                 target.balance_after = current - amount_dec
             
-            # تحديث المحفظة
             setattr(wallet, attr, target.balance_after)
