@@ -23,7 +23,10 @@ class OrderFinancial(db.Model):
     # 1. المعرفات والربط
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.String(100), db.ForeignKey('orders.id'), nullable=False, unique=True)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
+    
+    # تم تعديل supplier_id إلى String لقبول المعرفات النصية
+    supplier_id = db.Column(db.String(50), db.ForeignKey('suppliers.id'), nullable=False)
+    
     transaction_id = db.Column(db.Integer, db.ForeignKey('wallet_transactions.id'), nullable=True)
     
     # 2. حقل العملة
