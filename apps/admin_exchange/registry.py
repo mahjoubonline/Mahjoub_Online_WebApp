@@ -1,6 +1,7 @@
 # 📂 apps/admin_exchange/registry.py
 
-from apps.exchange.exchange_routes import admin_exchange_bp
+# تم تعديل مسار الاستيراد ليطابق اسم المجلد الفعلي admin_exchange
+from apps.admin_exchange.exchange_routes import admin_exchange_bp
 
 # تعريف بيانات الموديول ليتم التعرف عليه في لوحة التحكم المركزية
 MODULE_NAME = "أسعار الصرف"
@@ -12,7 +13,7 @@ def register_module(app):
     """
     app.register_blueprint(admin_exchange_bp, url_prefix='/admin/exchange')
     
-    print("✅ [Registry]: تم تسجيل موديول 'Exchange' بنجاح.")
+    print("✅ [Registry]: تم تسجيل موديول 'admin_exchange' بنجاح.")
 
 # إضافة إعدادات الروابط لتظهر في القائمة الجانبية (Sidebar) في لوحة الإدارة
 LINKS = {
