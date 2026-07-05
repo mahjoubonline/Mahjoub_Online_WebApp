@@ -38,7 +38,15 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light text-primary">
-                    <tr><th>كود المحفظة</th><th>المتجر</th><th>SAR</th><th>YER</th><th>USD</th><th>الإجراءات</th></tr>
+                    <tr>
+                        <th>كود المحفظة</th>
+                        <th>المتجر</th>
+                        <th>SAR</th>
+                        <th>YER</th>
+                        <th>USD</th>
+                        <th>آخر تحديث</th>
+                        <th>الإجراءات</th>
+                    </tr>
                 </thead>
                 <tbody id="walletTableBody">
                     {% include 'admin/partials/wallet_table_body.html' %}
@@ -68,7 +76,7 @@
 <script>
     let currentSearch = '';
 
-    // دالة تحميل الصفحة عبر AJAX
+    // دالة تحميل البيانات عبر AJAX
     function loadWalletPage(page) {
         fetch(`{{ url_for('wallet_app.dashboard') }}?page=${page}&search=${currentSearch}`, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
@@ -76,14 +84,17 @@
         .then(response => response.text())
         .then(html => {
             document.getElementById('walletTableBody').innerHTML = html;
-            // تحديث الترقيم (في تطبيق متقدم يمكن تحديث الـ paginationControls أيضاً)
         });
     }
 
-    // دالة البحث الشامل
+    // دالة البحث مع تأخير بسيط (Debounce) لتقليل الضغط على الخادم
+    let timeout = null;
     document.getElementById('walletSearch').addEventListener('input', function() {
+        clearTimeout(timeout);
         currentSearch = this.value;
-        loadWalletPage(1);
+        timeout = setTimeout(() => {
+            loadWalletPage(1);
+        }, 300);
     });
 </script>
 {% endblock %}
