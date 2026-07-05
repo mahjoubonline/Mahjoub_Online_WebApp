@@ -6,7 +6,7 @@ from datetime import datetime
 from cryptography.fernet import Fernet
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import event, update, Table, MetaData, Column, Integer, String, Float
+from sqlalchemy import event, update, Table, MetaData, Column, Integer, String
 from apps.extensions import db
 
 class Supplier(db.Model, UserMixin):
@@ -83,36 +83,35 @@ def receive_after_insert(mapper, connection, target):
     
     metadata = MetaData()
     
-    # 2. إنشاء المحفظة تلقائياً
+    # 2. إنشاء المحفظة تلقائياً (تعديل ليتناسب مع supplier_id النصي في الجداول الأخرى)
     wallets_table = Table('supplier_wallets', metadata, 
                           Column('id', Integer, primary_key=True),
                           Column('wallet_code', String(50)),
-                          Column('supplier_id', Integer),
+                          Column('supplier_id', String(50)), # تغيير لـ String
                           autoload_with=connection)
     
     connection.execute(
         wallets_table.insert().values(
             wallet_code=f"MAH-WEL963{target.id}",
-            supplier_id=target.id
+            supplier_id=str(target.id) # تمرير كـ نص
         )
     )
 
-    # 3. إنشاء المالك (Owner) تلقائياً في جدول الموظفين
+    # 3. إنشاء المالك تلقائياً (تعديل ليتناسب مع supplier_id النصي)
     staff_table = Table('supplier_staff', metadata,
                         Column('id', Integer, primary_key=True),
-                        Column('supplier_id', Integer),
+                        Column('supplier_id', String(50)), # تغيير لـ String
                         Column('username', String(100)),
                         Column('phone', String(20)),
                         Column('password_hash', String(255)),
                         Column('role', String(50)),
                         autoload_with=connection)
     
-    # كلمة مرور افتراضية للمالك (يمكن للمورد تغييرها لاحقاً)
     default_pw = generate_password_hash("Admin123!", method='pbkdf2:sha256')
     
     connection.execute(
         staff_table.insert().values(
-            supplier_id=target.id,
+            supplier_id=str(target.id), # تمرير كـ نص
             username=target.username,
             phone=target.phone, 
             password_hash=default_pw,
