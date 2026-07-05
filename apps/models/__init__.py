@@ -11,6 +11,7 @@
 from .supplier_db import Supplier
 from .admin_db import AdminUser
 from .marketer_db import Marketer
+from .exchange_db import ExchangeRate  # إضافة موديل أسعار الصرف
 
 # 2. الموديلات التابعة (المرتبطة بـ Foreign Keys للموديلات أعلاه)
 from .admin_staff_db import AdminStaff
@@ -22,10 +23,10 @@ from .orders_db import Order
 from .sync_log import SyncLog
 
 # 3. القائمة المصدرة (Export Registry)
-# تسمح هذه القائمة باستيراد أي موديل مباشرة من حزمة apps.models
 __all__ = [
     'AdminStaff',
     'AdminUser',
+    'ExchangeRate',  # إضافة إلى قائمة التصدير
     'Marketer',
     'Order',
     'OrderFinancial',
