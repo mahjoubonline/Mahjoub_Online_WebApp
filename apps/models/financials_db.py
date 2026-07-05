@@ -10,6 +10,7 @@ class OrderFinancial(db.Model):
     """المركز المالي للطلبات: المحرك المحاسبي للمنصة والموردين."""
     __tablename__ = 'order_financials'
 
+    # الفهارس لضمان سرعة الاستعلام
     __table_args__ = (
         db.Index('idx_fin_order_id', 'order_id'),
         db.Index('idx_fin_supplier_id', 'supplier_id'),
@@ -20,19 +21,16 @@ class OrderFinancial(db.Model):
         {'extend_existing': True}
     )
 
-    # 1. المعرفات والربط
+    # 1. المعرفات والربط (تم توحيد supplier_id ليكون Integer)
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.String(100), db.ForeignKey('orders.id'), nullable=False, unique=True)
-    
-    # تم تعديل supplier_id إلى String لقبول المعرفات النصية
-    supplier_id = db.Column(db.String(50), db.ForeignKey('suppliers.id'), nullable=False)
-    
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
     transaction_id = db.Column(db.Integer, db.ForeignKey('wallet_transactions.id'), nullable=True)
     
     # 2. حقل العملة
     currency = db.Column(db.String(5), default='SAR', nullable=False)
     
-    # 3. المبالغ المالية (مشفرة للخصوصية + خام للعمليات الحسابية)
+    # 3. المبالغ المالية (تشفير + قيمة خام للعمليات الحسابية)
     _supplier_cost_enc = db.Column(db.String(255), nullable=False)
     supplier_cost_raw = db.Column(db.Numeric(18, 2), default=0.00)
     
@@ -54,7 +52,7 @@ class OrderFinancial(db.Model):
     supplier = db.relationship('Supplier', back_populates='financials')
     transaction = db.relationship('WalletTransaction', backref='order_financials')
 
-    # --- منطق التشفير ---
+    # --- منطق التشفير السيادي ---
     @staticmethod
     def _get_key():
         key = os.environ.get('ENCRYPTION_KEY')
@@ -70,7 +68,7 @@ class OrderFinancial(db.Model):
             return float(f.decrypt(value.encode()).decode())
         except Exception: return 0.0
 
-    # --- Properties الذكية ---
+    # --- Properties الذكية (تعمل كواجهة بين التشفير والقيم الخام) ---
     @property
     def supplier_cost(self): return self._decrypt(self._supplier_cost_enc)
     @supplier_cost.setter
