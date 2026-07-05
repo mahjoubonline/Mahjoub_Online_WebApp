@@ -7,6 +7,7 @@ from datetime import datetime
 from apps.extensions import db
 from apps.models.orders_db import Order
 from apps.models.financials_db import OrderFinancial
+from apps.models.suppliers_db import Supplier
 from apps.orders.services import OrderService
 from apps.api.sync_engine import SyncEngine
 from sqlalchemy import func
@@ -26,7 +27,12 @@ def add_new_order():
         try:
             supplier_id_input = int(request.form.get('supplier_id'))
         except (ValueError, TypeError):
-            flash("خطأ في بيانات المورد.", "danger")
+            flash("خطأ في بيانات المورد: يجب إدخال معرف رقمي صحيح.", "danger")
+            return redirect(url_for('orders.add_new_order'))
+        
+        # التحقق من وجود المورد في قاعدة البيانات
+        if not Supplier.query.get(supplier_id_input):
+            flash("خطأ: المتجر غير موجود في النظام.", "danger")
             return redirect(url_for('orders.add_new_order'))
         
         new_order = Order(
