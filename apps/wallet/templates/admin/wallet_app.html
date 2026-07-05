@@ -6,9 +6,11 @@
 <style>
     .card-royal { border: 1px solid #d4af37; box-shadow: 0 4px 15px rgba(75, 0, 130, 0.3); }
     .stat-card { background: #2d144d; color: white; border-radius: 15px; padding: 20px; border-bottom: 4px solid #d4af37; }
+    .page-link { color: #2d144d; cursor: pointer; }
+    .page-item.active .page-link { background-color: #2d144d; border-color: #2d144d; color: white; }
 </style>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4" dir="rtl">
     <!-- زر العودة -->
     <div class="mb-4">
         <a href="{{ url_for('admin_dashboard.dashboard') }}" class="text-decoration-none" style="color: #2d144d; font-weight: 500;">
@@ -18,7 +20,7 @@
 
     <!-- البطاقات الأربع للملخص -->
     <div class="row mb-4">
-        <div class="col-md-3"><div class="stat-card text-center"><p>عدد المحافظ</p><h3>{{ wallets|length }}</h3></div></div>
+        <div class="col-md-3"><div class="stat-card text-center"><p>عدد المحافظ</p><h3>{{ pagination.total }}</h3></div></div>
         <div class="col-md-3"><div class="stat-card text-center"><p>إجمالي رصيد SAR</p><h3>{{ "{:,.2f}".format(stats.total_sar or 0) }}</h3></div></div>
         <div class="col-md-3"><div class="stat-card text-center"><p>إجمالي رصيد YER</p><h3>{{ "{:,.2f}".format(stats.total_yer or 0) }}</h3></div></div>
         <div class="col-md-3"><div class="stat-card text-center"><p>إجمالي رصيد USD</p><h3>{{ "{:,.2f}".format(stats.total_usd or 0) }}</h3></div></div>
@@ -33,10 +35,8 @@
 
     <!-- جدول المحافظ -->
     <div class="card border-0 shadow-sm">
-        <div class="table-responsive" id="tableContainer">
-            <!-- هنا سيتم تحميل wallet_table_body.html لاحقاً -->
+        <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <!-- الرؤوس -->
                 <thead class="table-light text-primary">
                     <tr><th>كود المحفظة</th><th>المتجر</th><th>SAR</th><th>YER</th><th>USD</th><th>الإجراءات</th></tr>
                 </thead>
@@ -45,21 +45,45 @@
                 </tbody>
             </table>
         </div>
-        <!-- منطقة الترقيم (Pagination) -->
+        
+        <!-- منطقة الترقيم الديناميكي -->
         <div class="card-footer d-flex justify-content-center" id="paginationControls">
-            <button class="btn btn-outline-primary mx-1">السابق</button>
-            <button class="btn btn-primary mx-1">1</button>
-            <button class="btn btn-outline-primary mx-1">2</button>
-            <button class="btn btn-outline-primary mx-1">التالي</button>
+            <nav>
+                <ul class="pagination" id="paginationList">
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                                <a class="page-link" onclick="loadWalletPage({{ page_num }})">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </nav>
         </div>
     </div>
 </div>
 
 <script>
-    // التنبيه: البحث هنا يجب أن يتم عبر طلب AJAX للـ Backend لدعم البحث الشامل
+    let currentSearch = '';
+
+    // دالة تحميل الصفحة عبر AJAX
+    function loadWalletPage(page) {
+        fetch(`{{ url_for('wallet_app.dashboard') }}?page=${page}&search=${currentSearch}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('walletTableBody').innerHTML = html;
+            // تحديث الترقيم (في تطبيق متقدم يمكن تحديث الـ paginationControls أيضاً)
+        });
+    }
+
+    // دالة البحث الشامل
     document.getElementById('walletSearch').addEventListener('input', function() {
-        let query = this.value;
-        // منطق جلب البيانات المفلترة من السيرفر
+        currentSearch = this.value;
+        loadWalletPage(1);
     });
 </script>
 {% endblock %}
