@@ -1,3 +1,4 @@
+# coding: utf-8
 # 📂 apps/suppliers_orders/routes.py
 
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
@@ -7,7 +8,7 @@ from apps.models.financials_db import OrderFinancial
 from apps.models.wallet_db import WalletTransaction
 from sqlalchemy.orm import joinedload
 
-# تعريف البلوبرينت
+# تعريف البلوبرينت باسم 'suppliers_orders' ليتطابق مع التسجيل التلقائي
 suppliers_orders_bp = Blueprint('suppliers_orders', __name__, template_folder='templates')
 
 @suppliers_orders_bp.route('/dashboard')
@@ -19,11 +20,11 @@ def dashboard():
     # استعلام ذكي لجلب البيانات المالية مع الطلبات المرتبطة بها
     # نستخدم joinedload لتسريع الأداء ومنع استعلامات N+1
     pagination = OrderFinancial.query.filter_by(supplier_id=current_user.id)\
-                          .options(joinedload(OrderFinancial.order))\
-                          .order_by(OrderFinancial.created_at.desc())\
-                          .paginate(page=page, per_page=20)
+                        .options(joinedload(OrderFinancial.order))\
+                        .order_by(OrderFinancial.created_at.desc())\
+                        .paginate(page=page, per_page=20)
     
-    # التحقق من طلب AJAX لتحديث الجدول فقط (تستخدمه دالة JavaScript في القالب)
+    # التحقق من طلب AJAX لتحديث الجدول فقط
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('admin/partials/_supplier_table.html', pagination=pagination)
         
@@ -34,6 +35,7 @@ def dashboard():
 @login_required
 def complete_order(order_id):
     """عملية أتمتة إكمال الطلب وتحويل المستحقات للمحفظة"""
+    # البحث عن السجل المالي الخاص بالطلب والمورد الحالي فقط
     fin = OrderFinancial.query.filter_by(order_id=order_id, supplier_id=current_user.id).first_or_404()
     
     if fin.order.status == 'completed':
@@ -48,6 +50,7 @@ def complete_order(order_id):
         fin.settled_at = db.func.now()
         
         # 3. تسجيل حركة مالية (إضافة مستحقات المورد للمحفظة)
+        # ملاحظة: التأكد من أن current_user.wallet موجود ومُهيأ مسبقاً
         new_transaction = WalletTransaction(
             wallet_id=current_user.wallet.id,
             owner_type='supplier',
