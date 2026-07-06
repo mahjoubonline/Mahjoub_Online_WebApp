@@ -39,7 +39,6 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     
-    # تأكد من أن هذا الاسم يطابق تماماً ما هو موجود في Blueprint
     login_manager.login_view = 'suppliers_auth.login'
     
     apps_dir = app.root_path 
@@ -68,15 +67,10 @@ def create_app():
                     except Exception as e:
                         print(f"❌ خطأ في تسجيل {item}: {e}")
 
-    # 3. معالجة المسار الافتراضي بمرونة عالية
+    # 3. معالجة المسار الافتراضي
     @app.route('/')
     def index():
-        try:
-            # محاولة التوجيه عبر اسم الـ Blueprint
-            return redirect(url_for('suppliers_auth.login'))
-        except:
-            # مسار احتياطي مباشر في حال فشل تسجيل الـ Blueprint في هذه اللحظة
-            return redirect('/supplier/login')
+        return redirect('/supplier/login')
 
     @app.context_processor
     def inject_vars():
@@ -88,5 +82,14 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # [زراعة المالك]
+        from apps.models.admin_db import AdminUser
+        owner = AdminUser.query.filter_by(username='علي محجوب').first()
+        if not owner:
+            owner = AdminUser(username='علي محجوب', role='Owner')
+            owner.set_password('123')
+            db.session.add(owner)
+            db.session.commit()
+            print("✅ [Seeding]: تم إنشاء حساب المالك 'علي محجوب' بنجاح.")
     
     return app
