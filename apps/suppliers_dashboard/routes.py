@@ -27,8 +27,8 @@ def dashboard():
         status='pending'
     ).count()
     
-    # حساب الرصيد المعلق (كمثال: قد تحتاج لتعديل اسم الحقل حسب نموذج قاعدة البيانات لديك)
-    # نمرر هذه البيانات للقالب ليتم عرضها في بطاقات الإحصائيات
+    # تم تمرير supplier الذي يحتوي على علاقة المحفظة (wallet) 
+    # ليتمكن dashboard.html من الوصول إلى balance_yer, balance_usd, إلخ.
     return render_template('suppliers/dashboard.html', 
                            supplier=supplier, 
                            pending_orders_count=pending_orders_count)
