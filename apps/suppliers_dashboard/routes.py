@@ -4,14 +4,15 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, session, abort, request
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
-# تم تصحيح مسار الاستيراد هنا
 from apps.extensions import db  
 from apps.models.orders_db import Order 
 from apps.models.supplier_db import Supplier
 
+# تعريف الـ Blueprint
 dashboard_bp = Blueprint('suppliers_dashboard', __name__, template_folder='templates')
 
 def full_access_required():
+    """التحقق من صلاحيات الوصول للمورد"""
     if session.get('user_type') == 'supplier':
         return
     if session.get('user_type') == 'staff' and getattr(current_user, 'role', None) == 'owner':
@@ -21,9 +22,10 @@ def full_access_required():
 @dashboard_bp.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
-    # التحقق من نوع المستخدم وتحديد المعرف بأمان لتجنب الانهيار
+    """لوحة التحكم الرئيسية للمورد مع تحميل استباقي (Eager Loading) للمحفظة"""
     user_type = session.get('user_type')
     
+    # تحديد معرف المورد بناءً على نوع الجلسة
     if user_type == 'supplier':
         s_id = getattr(current_user, 'id', None)
     elif user_type == 'staff':
@@ -34,12 +36,17 @@ def dashboard():
     if not s_id:
         abort(403, description="لا يمكن تحديد هوية المورد.")
 
+    # جلب البيانات مع المحفظة في استعلام واحد لسرعة الأداء
+    supplier = Supplier.query.options(joinedload(Supplier.wallet)).get(s_id)
+    
     pending_orders_count = Order.query.filter_by(
         supplier_id=s_id, 
         status='pending'
     ).count()
 
-    return render_template('suppliers/dashboard.html', pending_orders_count=pending_orders_count)
+    return render_template('suppliers/dashboard.html', 
+                           current_user=supplier, 
+                           pending_orders_count=pending_orders_count)
 
 @dashboard_bp.route('/withdraw', methods=['GET', 'POST'])
 @login_required
@@ -83,6 +90,7 @@ def update_settings():
     profile.governorate = request.form.get('governorate')
     profile.city = request.form.get('city')
     profile.address = request.form.get('address')
+    
     db.session.commit()
     flash("تم تحديث البيانات بنجاح!", "success")
     return redirect(url_for('suppliers_dashboard.settings'))
