@@ -63,10 +63,12 @@ def create_app():
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
+                            # تسجيل الموديول مع سمة show_in_supplier ليعتمد عليها القالب
                             REGISTERED_MODULES[item] = {
                                 "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
                                 "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
                                 "links": getattr(module, 'LINKS', {}),
+                                "show_in_supplier": getattr(module, 'SHOW_IN_SUPPLIER', True),
                                 "active": True
                             }
                             print(f"✅ [Auto-Discovery] تم تسجيل الموديول: {item}")
