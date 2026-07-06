@@ -14,15 +14,28 @@ SUPPLIER_MODULES = {}
 
 @login_manager.user_loader
 def load_user(user_id):
+    """
+    تحميل المستخدم مع معالجة آمنة للأنواع لضمان عدم انهيار النظام
+    """
     try:
-        from apps.models import AdminUser, Supplier, SupplierStaff
+        from apps.models.admin_db import AdminUser
+        from apps.models.supplier_db import Supplier
+        from apps.models.supplier_staff_db import SupplierStaff
+        
         user_type = session.get('user_type')
         uid = int(user_id)
-        if user_type == 'admin': return AdminUser.query.get(uid)
-        elif user_type == 'supplier': return Supplier.query.get(uid)
-        elif user_type == 'staff': return SupplierStaff.query.get(uid)
+        
+        if user_type == 'admin':
+            return AdminUser.query.get(uid)
+        elif user_type == 'supplier':
+            return Supplier.query.get(uid)
+        elif user_type == 'staff':
+            return SupplierStaff.query.get(uid)
+            
+        # في حال لم تكن الـ session واضحة، نحاول البحث في الجداول الثلاثة
         return AdminUser.query.get(uid) or Supplier.query.get(uid) or SupplierStaff.query.get(uid)
-    except Exception as e:
+    except Exception:
+        # إذا حدث أي خطأ في قاعدة البيانات أو التحويل، نرجع None لمنع انهيار الطلب
         return None
 
 def create_app():
