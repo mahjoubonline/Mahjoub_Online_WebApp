@@ -33,14 +33,13 @@
         </div>
         
         <div class="d-flex gap-2">
-            <!-- تم تحديث الرابط هنا ليتجاوز خطأ BuildError -->
-            <a href="{{ url_for('suppliers_orders.add_new_order') if 'suppliers_orders.add_new_order' in get_flashed_messages.__self__.app.view_functions else '#' }}" 
+            <!-- استخدام المتغيرات الممررة من الـ route لضمان عدم وجود أخطاء -->
+            <a href="{{ url_for('orders.add_new_order') if can_add_order else '#' }}" 
                class="btn btn-primary shadow-sm" style="background-color: var(--royal-purple); border-color: var(--royal-purple);">
                 <i class="fas fa-plus me-2"></i>طلب جديد
             </a>
             
-            <!-- زر المزامنة -->
-            <form action="{{ url_for('orders.sync_all') if 'orders.sync_all' in get_flashed_messages.__self__.app.view_functions else '#' }}" method="POST" class="m-0">
+            <form action="{{ url_for('orders.sync_all') if can_sync else '#' }}" method="POST" class="m-0">
                 <button type="submit" class="btn btn-royal-back shadow-sm">
                     <i class="fas fa-sync-alt me-2"></i>مزامنة يدوي
                 </button>
