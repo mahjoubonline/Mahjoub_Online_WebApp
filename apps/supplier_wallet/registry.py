@@ -1,6 +1,11 @@
 # coding: utf-8
-from apps.supplier_wallet.routes import supplier_wallet_bp
+# 📂 apps/suppliers_orders/registry.py
+
+from apps.suppliers_orders.routes import suppliers_orders_bp
 
 def register_module(app):
-    app.register_blueprint(supplier_wallet_bp, url_prefix='/supplier/wallet')
-    print("✅ [Registry] تم تسجيل موديول 'محفظة المورد' بنجاح.")
+    """
+    تسجيل موديول الطلبات للموردين فقط دون إضافته للهيكل الديناميكي للإدارة.
+    """
+    app.register_blueprint(suppliers_orders_bp, url_prefix='/suppliers_orders')
+    print("✅ [Registry] تم تسجيل موديول 'طلبات المورد' بنجاح.")
