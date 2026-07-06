@@ -44,7 +44,7 @@
         <div class="logo-container">
             <img src="https://cdn.qumra.cloud/media/67f7f6d5f0b82f44a47bf845/1770229315912-117966978.webp" class="sidebar-logo" alt="MAHJOUB">
             <h6 class="text-white mt-3 fw-bold">
-                {{ current_user.trade_name if session.get('user_type') == 'supplier' else current_user.supplier.trade_name }}
+                {{ current_user.trade_name if session.get('user_type') == 'supplier' else 'المورد' }}
             </h6>
         </div>
 
@@ -58,11 +58,12 @@
                 <i class="fas fa-shopping-cart me-3"></i> <span>طلبات الزبائن</span>
             </a>
             
-            <a href="{{ url_for('supplier_wallet.view_my_wallet') }}" class="nav-link {% if request.endpoint == 'supplier_wallet.view_my_wallet' %}active{% endif %}">
+            <!-- رابط آمن للمحفظة -->
+            <a href="#" class="nav-link" title="قريباً">
                 <i class="fas fa-vault me-3"></i> <span>خزانة المورد</span>
             </a>
 
-            <a href="{{ url_for('suppliers_dashboard.settings') }}" class="nav-link {% if request.endpoint == 'suppliers_dashboard.settings' %}active{% endif %}">
+            <a href="#" class="nav-link">
                 <i class="fas fa-cog me-3"></i> <span>إعدادات المتجر</span>
             </a>
             <hr class="text-white my-3">
@@ -77,23 +78,17 @@
             <button class="btn d-lg-none" onclick="document.getElementById('sidebar').classList.toggle('active')">
                 <i class="fas fa-bars"></i>
             </button>
-            
             <div class="user-identity d-flex align-items-center">
                 <div class="text-end me-3 d-none d-md-block">
                     <div class="fw-bold text-dark" style="font-size: 0.9rem;">
-                        {% if session.get('user_type') == 'supplier' %}
-                            {{ current_user.trade_name }}
-                        {% else %}
-                            {{ current_user.full_name }} ({{ current_user.role }})
-                        {% endif %}
+                        {{ current_user.trade_name }}
                     </div>
                 </div>
                 <div class="avatar-circle bg-light d-flex align-items-center justify-content-center" 
                         style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--mahjoub-gold);">
                     <i class="fas fa-user text-dark"></i>
                 </div>
-                
-                <a href="#" class="btn btn-link notification-btn ms-3" title="الإشعارات">
+                <a href="#" class="btn btn-link notification-btn ms-3">
                     <i class="fas fa-bell fa-lg"></i>
                     <span class="notification-badge">0</span>
                 </a>
@@ -115,7 +110,6 @@
                 sidebar.classList.remove('active');
             }
         });
-
         document.getElementById('logout-btn').addEventListener('click', function(e) {
             e.preventDefault(); 
             sessionStorage.clear();
