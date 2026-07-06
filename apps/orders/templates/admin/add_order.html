@@ -1,10 +1,11 @@
-<!-- 📂 apps/orders/templates/admin/add_order.html -->
-
 {% extends 'admin/admin_base.html' %}
 
 {% block title %}إضافة طلب جديد{% endblock %}
 
 {% block content %}
+<!-- تضمين ملفات CSS الخاصة بـ Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
 <div class="container py-4">
     <h3 class="fw-bold text-royal-purple mb-4">إضافة طلب سيادي جديد</h3>
     <div class="card shadow-sm border-royal p-4">
@@ -18,10 +19,15 @@
                     <label class="form-label">رقم الهاتف</label>
                     <input type="text" name="customer_phone" class="form-control" required>
                 </div>
+                <!-- حقل المورد كقائمة منسدلة -->
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">رقم المورد (Store ID)</label>
-                    <!-- تم تغيير type إلى number لضمان إدخال أرقام فقط وتوافقها مع الـ Integer في الباك إند -->
-                    <input type="number" name="supplier_id" class="form-control" placeholder="أدخل الرقم التعريفي للمتجر" required>
+                    <label class="form-label">المتجر (المورد)</label>
+                    <select name="supplier_id" class="form-select select2" required>
+                        <option value="" disabled selected>اختر المتجر...</option>
+                        {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}">{{ supplier.name }} (ID: {{ supplier.id }})</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">المبلغ الإجمالي (SAR)</label>
@@ -32,4 +38,13 @@
         </form>
     </div>
 </div>
+
+<!-- تضمين مكتبات الجافا سكريبت -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({ placeholder: "ابحث عن المتجر...", width: '100%' });
+    });
+</script>
 {% endblock %}
