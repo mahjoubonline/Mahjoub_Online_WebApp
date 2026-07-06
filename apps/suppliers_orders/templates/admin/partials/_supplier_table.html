@@ -9,18 +9,20 @@
         </tr>
     </thead>
     <tbody>
-        {% for fin in pagination.items %}
+        {# قمنا بتغيير pagination.items إلى orders #}
+        {% for order in orders %}
         <tr>
-            <td><span class="badge bg-dark">#{{ fin.order.order_id_display }}</span></td>
-            <td>{{ fin.order.customer_name }}</td>
+            <td><span class="badge bg-dark">#{{ order.id }}</span></td>
+            <td>{{ order.customer_name }}</td>
             <td>
-                <span class="badge {{ 'bg-success' if fin.order.status == 'completed' else 'bg-warning text-dark' }}">
-                    {{ fin.order.status }}
+                <span class="badge {{ 'bg-success' if order.status == 'completed' else 'bg-warning text-dark' }}">
+                    {{ order.status }}
                 </span>
             </td>
-            <td class="fw-bold text-success">{{ "{:,.2f}".format(fin.supplier_cost) }} YER</td>
+            <td class="fw-bold text-success">{{ "{:,.2f}".format(order.amount or 0) }} YER</td>
             <td>
-                <button class="btn btn-sm btn-outline-primary">عرض</button>
+                {# تأكد من ربط زر العرض بالمسار الصحيح #}
+                <a href="{{ url_for('suppliers_orders.order_details', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">عرض</a>
             </td>
         </tr>
         {% else %}
@@ -29,4 +31,5 @@
     </tbody>
 </table>
 
-{% include 'admin/partials/_pagination.html' %}
+{# يمكنك حذف هذا السطر إذا كنت لا تستخدم الصفحات حالياً لتجنب خطأ #}
+{# {% include 'admin/partials/_pagination.html' %} #}
