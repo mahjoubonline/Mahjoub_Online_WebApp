@@ -46,7 +46,7 @@ def dashboard():
         .order_by(Order.id.desc())\
         .paginate(page=page, per_page=20)
     
-    # 3. تمرير المتغيرات للقالب[cite: 5]
+    # 3. تمرير المتغيرات للقالب
     return render_template('admin/orders_dashboard.html', 
                            pagination=pagination, 
                            stats=stats,
@@ -90,7 +90,9 @@ def add_new_order():
         flash("تم إضافة الطلب بنجاح.", "success")
         return redirect(url_for('orders.dashboard'))
     
-    return render_template('admin/add_order.html')
+    # جلب قائمة الموردين لعرضها في القائمة المنسدلة[cite: 5]
+    suppliers = Supplier.query.all()
+    return render_template('admin/add_order.html', suppliers=suppliers)
 
 @orders_bp.route('/complete-order/<string:order_id>', methods=['POST'])
 @login_required
