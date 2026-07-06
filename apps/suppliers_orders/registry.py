@@ -9,7 +9,25 @@ MODULE_ICON = "fas fa-shopping-cart"
 LINKS = {
     "إدارة الطلبات": "suppliers_orders_portal.dashboard"
 }
+# coding: utf-8
+# 📂 apps/suppliers_orders/registry.py
 
+# الاستيراد الوحيد المسموح به هنا هو من الـ routes
+from .routes import suppliers_orders_bp 
+
+MODULE_NAME = "طلبات الزبائن"
+MODULE_ICON = "fas fa-shopping-cart"
+LINKS = {
+    "إدارة الطلبات": "suppliers_orders_portal.dashboard"
+}
+SHOW_IN_SUPPLIER = True
+
+def register_module(app):
+    try:
+        app.register_blueprint(suppliers_orders_bp, url_prefix='/suppliers/orders')
+        print("✅ [Registry]: تم تسجيل موديول 'suppliers_orders' بنجاح.")
+    except Exception as e:
+        print(f"🚨 [Registry Error]: {e}")
 def register_module(app):
     try:
         app.register_blueprint(suppliers_orders_bp, url_prefix='/suppliers/orders')
