@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, jsonify, abort, session
 from flask_login import login_required, current_user
 from apps.extensions import db
 from apps.models.financials_db import OrderFinancial
-from apps.models.wallet_db import WalletTransaction
+from apps.api.sync_engine import SyncEngine  # استيراد محرك المزامنة المحاسبي
 from sqlalchemy.orm import joinedload
 
 # تعريف البلوبرينت باسم 'suppliers_orders' ليتطابق مع التسجيل التلقائي
@@ -29,7 +29,6 @@ def dashboard():
                         .paginate(page=page, per_page=20)
     
     # التحقق من طلب AJAX لتحديث الجدول فقط
-    # تأكد من أن مسار البارتشل هنا يشير لمجلد الموردين الجديد
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('admin/partials/_supplier_table.html', pagination=pagination)
         
@@ -39,39 +38,35 @@ def dashboard():
 @suppliers_orders_bp.route('/order/complete/<order_id>', methods=['POST'])
 @login_required
 def complete_order(order_id):
-    """عملية أتمتة إكمال الطلب وتحويل المستحقات للمحفظة"""
-    # البحث عن السجل المالي الخاص بالطلب والمورد الحالي فقط
+    """عملية أتمتة إكمال الطلب وتحويل المستحقات للمحفظة عبر المحرك المالي"""
+    # 1. البحث عن السجل المالي الخاص بالطلب والمورد الحالي فقط
     fin = OrderFinancial.query.filter_by(order_id=order_id, supplier_id=current_user.id).first_or_404()
     
+    # 2. التحقق من حالة الطلب
     if fin.order.status == 'completed':
         return jsonify({'status': 'error', 'message': 'الطلب مكتمل مسبقاً'}), 400
 
     try:
-        # 1. تحديث حالة الطلب
-        fin.order.status = 'completed'
-        
-        # 2. تحديث الحالة المالية
-        fin.settlement_status = 'settled'
-        fin.settled_at = db.func.now()
-        
-        # 3. تسجيل حركة مالية (إضافة مستحقات المورد للمحفظة)
-        # ملاحظة: التأكد من أن current_user.wallet موجود ومُهيأ مسبقاً
-        new_transaction = WalletTransaction(
-            wallet_id=current_user.wallet.id,
-            owner_type='supplier',
-            owner_id=current_user.id,
-            trans_type='sale_revenue',
-            amount=fin.supplier_cost, # القيمة المشفرة تُفك تلقائياً عبر الموديل
-            currency=fin.currency,
-            description=f"إيراد بيع للطلب رقم {fin.order.order_id_display}",
-            related_order_id=order_id
+        # 3. استخدام محرك المزامنة (SyncEngine) لضمان اتساق العمليات المالية
+        # نمرر إجمالي القيمة ليقوم المحرك بتوزيع حصة المورد والمنصة
+        success = SyncEngine.process_financials(
+            order_id=fin.order_id,
+            supplier_id=current_user.id,
+            total_price=fin.total_paid, # القيمة الكلية للطلب
+            product_currency=fin.currency
         )
         
-        db.session.add(new_transaction)
-        db.session.commit()
-        
-        return jsonify({'status': 'success', 'message': 'تم إكمال الطلب بنجاح'})
+        if success:
+            # تحديث حالة الطلب ليكون مكتمل
+            fin.order.status = 'completed'
+            fin.settlement_status = 'settled'
+            fin.settled_at = db.func.now()
+            db.session.commit()
+            
+            return jsonify({'status': 'success', 'message': 'تم إكمال الطلب بنجاح'})
+        else:
+            return jsonify({'status': 'error', 'message': 'فشلت عملية التسوية المالية عبر المحرك'}), 500
     
     except Exception as e:
         db.session.rollback()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': f"خطأ غير متوقع: {str(e)}"}), 500
