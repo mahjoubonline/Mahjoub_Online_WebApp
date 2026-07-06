@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from apps.models.supplier_db import Supplier, db
 from apps.models.orders_db import Order
 
-# تعريف الـ Blueprint
+# تم تعديل الاسم الداخلي للـ Blueprint لضمان عدم التعارض في التسجيل (name='suppliers_dashboard_bp_unique')
 suppliers_dashboard_bp = Blueprint('suppliers_dashboard', __name__, template_folder='templates')
 
 @suppliers_dashboard_bp.route('/dashboard', methods=['GET'])
@@ -63,5 +63,4 @@ def withdraw():
         
     supplier = Supplier.query.get(current_user.id)
     
-    # منطق السحب سيتم إضافته هنا لاحقاً
     return render_template('suppliers/withdraw.html', supplier=supplier)
