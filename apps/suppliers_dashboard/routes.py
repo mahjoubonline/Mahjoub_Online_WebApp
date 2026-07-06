@@ -1,25 +1,20 @@
 # coding: utf-8
-# 📂 apps/suppliers_auth/routes.py
+from flask import Blueprint, render_template, abort, session
+from flask_login import login_required, current_user
+from apps.models.supplier_db import Supplier
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_user, logout_user, login_required
-# تأكد من استيراد نموذج المورد الخاص بك هنا
-from apps.models.supplier_db import Supplier 
+# 1. هذا الـ Blueprint مخصص للداشبورد فقط
+suppliers_dashboard_bp = Blueprint('suppliers_dashboard', __name__, template_folder='templates')
 
-suppliers_auth_bp = Blueprint('suppliers_auth', __name__, template_folder='templates')
-
-@suppliers_auth_bp.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        # ... كود التحقق من البيانات هنا ...
-        # عند نجاح الدخول:
-        login_user(user)
-        # هذا هو السطر الأهم:
-        return redirect(url_for('suppliers_dashboard.dashboard'))
-    return render_template('suppliers/login.html')
-
-@suppliers_auth_bp.route('/logout')
+@suppliers_dashboard_bp.route('/dashboard', methods=['GET'])
 @login_required
-def logout():
-    logout_user()
-    return redirect(url_for('suppliers_auth.login'))
+def dashboard():
+    # التحقق من أن المستخدم مورد (أو موظف)
+    if 'user_type' not in session:
+        abort(403)
+        
+    # جلب بيانات المورد بناءً على ID المستخدم الحالي
+    supplier = Supplier.query.get(current_user.id)
+    
+    # عرض صفحة الداشبورد
+    return render_template('suppliers/dashboard.html', supplier=supplier)
