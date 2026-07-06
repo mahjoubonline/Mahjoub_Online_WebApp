@@ -1,7 +1,7 @@
 # coding: utf-8
 # 📂 apps/orders/routes.py
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session, abort
 from flask_login import login_required
 from datetime import datetime
 from apps.extensions import db
@@ -15,14 +15,21 @@ from sqlalchemy import func
 # تم توحيد اسم البلوبرينت إلى 'orders' ليطابق هيكل المجلد ويمنع تضارب التسجيل
 orders_bp = Blueprint('orders', __name__, template_folder='templates')
 
+# دالة مساعدة للتحقق من صلاحية الإدارة
+def admin_required():
+    if session.get('user_type') != 'admin':
+        abort(403)
+
 @orders_bp.route('/dashboard')
 @login_required
 def dashboard():
+    admin_required()
     return render_template('admin/orders_dashboard.html')
 
 @orders_bp.route('/add-order', methods=['GET', 'POST'])
 @login_required
 def add_new_order():
+    admin_required()
     if request.method == 'POST':
         order_id = str(int(datetime.utcnow().timestamp()))
         
@@ -64,16 +71,17 @@ def add_new_order():
 @orders_bp.route('/complete-order/<string:order_id>', methods=['POST'])
 @login_required
 def complete_order(order_id):
+    admin_required()
     if OrderService.complete_order_and_settle(order_id):
         flash("تمت تسوية الطلب بنجاح.", "success")
     else:
         flash("فشل في تسوية الطلب.", "danger")
-    # استخدام الاسم الموحد 'orders.view_order'
     return redirect(url_for('orders.view_order', order_id=order_id))
 
 @orders_bp.route('/view-order/<string:order_id>') 
 @login_required
 def view_order(order_id):
+    admin_required()
     order, financial = OrderService.get_order_details(order_id)
     if not order:
         return "الطلب غير موجود", 404
@@ -83,7 +91,7 @@ def view_order(order_id):
 @orders_bp.route('/sync-all', methods=['POST'])
 @login_required
 def sync_all():
-    # إضافة مسار المزامنة ليتوافق مع القالب
+    admin_required()
     SyncEngine.run_sync()
     flash("تمت عملية المزامنة بنجاح.", "success")
     return redirect(url_for('orders.dashboard'))
