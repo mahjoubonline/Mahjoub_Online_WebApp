@@ -29,20 +29,20 @@ class Order(db.Model):
     )
 
     # المعرفات الأساسية
-    id = db.Column(db.String(100), primary_key=True) 
+    id = db.Column(db.String(100), primary_key=True)
     order_id_display = db.Column(db.String(50), nullable=True)
     
-    # الربط السيادي: تم تعديل supplier_id إلى Integer ليتطابق مع ID المورد في جدول suppliers
+    # الربط السيادي
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
     marketer_id = db.Column(db.Integer, db.ForeignKey('marketers.id'), nullable=True)
     
     tracking_tag = db.Column(db.String(100), nullable=True)
-    order_reference = db.Column(db.String(100), unique=True, nullable=True) 
+    order_reference = db.Column(db.String(100), unique=True, nullable=True)
     
     # بيانات ظاهرة
     total_price = db.Column(db.Numeric(18, 2), default=0.00)
     items_count = db.Column(db.Integer, default=0)
-    status = db.Column(db.String(30), default='pending') 
+    status = db.Column(db.String(30), default='pending')
     
     # [تشفير حساس]
     _customer_name = db.Column(db.Text)
