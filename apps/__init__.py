@@ -14,9 +14,6 @@ SUPPLIER_MODULES = {}
 
 @login_manager.user_loader
 def load_user(user_id):
-    """
-    تحميل المستخدم مع معالجة آمنة للأنواع لضمان عدم انهيار النظام
-    """
     try:
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
@@ -25,43 +22,34 @@ def load_user(user_id):
         user_type = session.get('user_type')
         uid = int(user_id)
         
-        if user_type == 'admin':
-            return AdminUser.query.get(uid)
-        elif user_type == 'supplier':
-            return Supplier.query.get(uid)
-        elif user_type == 'staff':
-            return SupplierStaff.query.get(uid)
-            
-        # في حال لم تكن الـ session واضحة، نحاول البحث في الجداول الثلاثة
+        if user_type == 'admin': return AdminUser.query.get(uid)
+        elif user_type == 'supplier': return Supplier.query.get(uid)
+        elif user_type == 'staff': return SupplierStaff.query.get(uid)
         return AdminUser.query.get(uid) or Supplier.query.get(uid) or SupplierStaff.query.get(uid)
     except Exception:
-        # إذا حدث أي خطأ في قاعدة البيانات أو التحويل، نرجع None لمنع انهيار الطلب
         return None
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     
-    # 1. تهيئة الإضافات
     app.jinja_env.filters['full_time'] = format_full_timestamp
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     
+    # تصحيح الـ login_view بناءً على الـ Blueprint المسجل فعلياً (suppliers_auth)
     login_manager.login_view = 'suppliers_auth.login'
     
-    # 2. اكتشاف الموديولات
     apps_dir = app.root_path 
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api']
     
     if os.path.exists(apps_dir):
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
-            
             if os.path.isdir(item_path) and item not in ignored_dirs:
                 registry_file = os.path.join(item_path, 'registry.py')
-                
                 if os.path.exists(registry_file):
                     try:
                         module = importlib.import_module(f"apps.{item}.registry")
@@ -73,22 +61,19 @@ def create_app():
                                 "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
                                 "links": getattr(module, 'LINKS', {}),
                             }
-                            
                             if getattr(module, 'SHOW_IN_SUPPLIER', False):
                                 SUPPLIER_MODULES[item] = mod_data
                             else:
                                 ADMIN_MODULES[item] = mod_data
-                                
-                            print(f"✅ تم تسجيل الموديول: {item}")
                     except Exception as e:
                         print(f"❌ خطأ في تسجيل {item}: {e}")
 
-    # 3. معالجة المسار الافتراضي
+    # 3. معالجة المسار الافتراضي (استخدام .login مباشرة)
     @app.route('/')
     def index():
+        # إذا استمر الخطأ، جرب تغيير 'suppliers_auth.login' إلى 'suppliers_bp.login'
         return redirect(url_for('suppliers_auth.login'))
 
-    # 4. حقن المتغيرات
     @app.context_processor
     def inject_vars():
         return dict(
@@ -97,7 +82,6 @@ def create_app():
             supplier_modules=SUPPLIER_MODULES
         )
 
-    # 5. تهيئة قاعدة البيانات
     with app.app_context():
         db.create_all()
     
