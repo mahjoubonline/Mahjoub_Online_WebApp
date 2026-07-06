@@ -17,7 +17,6 @@
         border-color: var(--mahjoub-gold);
     }
     
-    /* تدرج المحفظة الملكي */
     .gradient-wallet { 
         background: linear-gradient(135deg, var(--royal-purple) 0%, #36175e 100%); 
         color: white; 
@@ -27,11 +26,8 @@
     .balance-label { font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 5px; }
     
     .stat-card-icon { color: var(--mahjoub-gold); }
-    
-    /* تصميم البطاقات البيضاء */
     .white-glass-card { background: #fff; }
     
-    /* زر السحب */
     .btn-withdraw {
         background-color: var(--mahjoub-gold);
         color: var(--royal-purple);
@@ -49,7 +45,6 @@
 </style>
 
 <div class="container-fluid py-4">
-    <!-- الترحيب مع اسم المتجر -->
     <div class="mb-5 d-flex align-items-center">
         <div class="bg-white p-3 rounded-circle shadow-sm me-3" style="border: 2px solid var(--mahjoub-gold);">
             <i class="fas fa-store fa-2x" style="color: var(--royal-purple);"></i>
@@ -103,7 +98,7 @@
                 <div class="stat-card-icon mb-3 text-warning"><i class="fas fa-clock fa-2x"></i></div>
                 <h6 class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">رصيد معلق</h6>
                 <h2 class="fw-bold mt-2 mb-0">
-                    {{ "{:,.2f}".format(current_user.wallet.balance_pending|float) if current_user.wallet else '0.00' }} 
+                    {{ "{:,.2f}".format(current_user.wallet.balance_pending|float) if (current_user.wallet and current_user.wallet.balance_pending) else '0.00' }} 
                     <span class="fs-6 text-muted fw-normal">ر.س</span>
                 </h2>
             </div>
