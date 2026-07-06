@@ -39,7 +39,7 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     
-    # تصحيح الـ login_view بناءً على الـ Blueprint المسجل فعلياً (suppliers_auth)
+    # تأكد من أن هذا الاسم يطابق تماماً ما هو موجود في Blueprint
     login_manager.login_view = 'suppliers_auth.login'
     
     apps_dir = app.root_path 
@@ -68,11 +68,15 @@ def create_app():
                     except Exception as e:
                         print(f"❌ خطأ في تسجيل {item}: {e}")
 
-    # 3. معالجة المسار الافتراضي (استخدام .login مباشرة)
+    # 3. معالجة المسار الافتراضي بمرونة عالية
     @app.route('/')
     def index():
-        # إذا استمر الخطأ، جرب تغيير 'suppliers_auth.login' إلى 'suppliers_bp.login'
-        return redirect(url_for('suppliers_auth.login'))
+        try:
+            # محاولة التوجيه عبر اسم الـ Blueprint
+            return redirect(url_for('suppliers_auth.login'))
+        except:
+            # مسار احتياطي مباشر في حال فشل تسجيل الـ Blueprint في هذه اللحظة
+            return redirect('/supplier/login')
 
     @app.context_processor
     def inject_vars():
