@@ -7,12 +7,13 @@ from apps.suppliers_dashboard.routes import suppliers_dashboard_bp
 MODULE_NAME = "لوحة التحكم"
 MODULE_ICON = "fas fa-tachometer-alt"
 
-# 2. هذا المتغير هو الذي يجعله يظهر في قائمة المورد الجانبية (نظام العزل)
+# 2. تفعيل الظهور في القائمة الجانبية للمورد
 SHOW_IN_SUPPLIER = True
 
-# 3. الروابط (تأكد أن الـ endpoint يطابق الاسم المعرف في Blueprint)
+# 3. الروابط (تم توحيدها لتطابق الـ Blueprint والـ View في routes.py)
 LINKS = {
-    "الرئيسية": "suppliers_dashboard.dashboard"
+    "الرئيسية": "suppliers_dashboard.dashboard",
+    "الإعدادات": "suppliers_dashboard.settings"
 }
 
 def register_module(app):
@@ -20,8 +21,8 @@ def register_module(app):
     تسجيل موديول لوحة تحكم المورد في النظام
     """
     try:
-        # تسجيل الـ Blueprint الخاص بلوحة التحكم
-        app.register_blueprint(suppliers_dashboard_bp, url_prefix='/supplier/dashboard')
-        print("✅ [Registry]: تم تسجيل موديول 'لوحة التحكم' بنجاح.")
+        # تسجيل الـ Blueprint باستخدام الاسم الموحد
+        app.register_blueprint(suppliers_dashboard_bp, url_prefix='/supplier')
+        print("✅ [Registry]: تم تسجيل موديول 'suppliers_dashboard' بنجاح.")
     except Exception as e:
         print(f"❌ [Registry Error]: فشل تسجيل موديول 'suppliers_dashboard': {e}")
