@@ -7,7 +7,8 @@ from datetime import datetime
 from apps.extensions import db
 from apps.models.orders_db import Order
 from apps.models.financials_db import OrderFinancial
-from apps.models.suppliers_db import Supplier
+# تم تصحيح اسم الملف هنا من suppliers_db إلى supplier_db
+from apps.models.supplier_db import Supplier
 from apps.orders.services import OrderService
 from apps.api.sync_engine import SyncEngine
 from sqlalchemy import func
