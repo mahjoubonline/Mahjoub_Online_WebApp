@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - النسخة النهائية
+# 📂 apps/orders/routes.py - النسخة النهائية المصححة
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session, abort, current_app
 from flask_login import login_required
@@ -29,8 +29,8 @@ def dashboard():
     can_add_order = 'orders.add_new_order' in current_app.view_functions
     can_sync = 'orders.sync_all' in current_app.view_functions
     
-    # استخدام total_paid وهو الحقل المعتمد في الموديلات لجمع المبيعات
-    total_sales = db.session.query(func.sum(OrderFinancial.total_paid)).scalar() or 0
+    # تصحيح: استخدام total_paid_raw (العمود الفعلي) بدلاً من total_paid (الخاصية) لتجنب خطأ البرمجة
+    total_sales = db.session.query(func.sum(OrderFinancial.total_paid_raw)).scalar() or 0
     completed_count = Order.query.filter_by(status='completed').count()
     cancelled_count = Order.query.filter_by(status='cancelled').count()
     
@@ -89,7 +89,7 @@ def add_new_order():
             new_financial = OrderFinancial(
                 order_id=order_id,
                 supplier_id=supplier_id,
-                total_paid=total_price,
+                total_paid=total_price, # هذا سيقوم بتعبئة total_paid_raw تلقائياً عبر setter
                 settlement_status='pending'
             )
             db.session.add(new_financial)
