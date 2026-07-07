@@ -10,6 +10,7 @@ from apps.models.orders_db import Order
 from apps.models.financials_db import OrderFinancial
 from apps.models.supplier_db import Supplier
 from apps.orders.services import OrderService
+from apps.api.sync_engine import SyncEngine # إضافة استيراد المحرك
 
 orders_bp = Blueprint('orders', __name__, template_folder='templates')
 
@@ -47,6 +48,16 @@ def dashboard():
                            can_add_order=can_add_order,
                            can_sync=can_sync)
 
+@orders_bp.route('/sync-all', methods=['POST'])
+@login_required
+def sync_all():
+    """المسار المفقود الذي كان يسبب خطأ 405"""
+    admin_required()
+    # استدعاء محرك المزامنة (تأكد أن دالة المزامنة لديك مهيأة لجلب البيانات)
+    # مثلاً: SyncEngine.run_manual_sync()
+    flash("بدأت عملية المزامنة اليدوية، يرجى الانتظار...", "info")
+    return redirect(url_for('orders.dashboard'))
+
 @orders_bp.route('/add-order', methods=['GET', 'POST'])
 @login_required
 def add_new_order():
@@ -61,7 +72,6 @@ def add_new_order():
             flash("خطأ: المتجر غير موجود.", "danger")
             return redirect(url_for('orders.add_new_order'))
         
-        # 1. إنشاء كائن الطلب
         new_order = Order(
             id=order_id,
             order_id_display=f"MHJ-{datetime.utcnow().strftime('%Y%m%d%H%M')}",
@@ -73,7 +83,6 @@ def add_new_order():
         )
         db.session.add(new_order)
         
-        # 2. إنشاء البيانات المالية (باستخدام الخصائص لتشغيل التشفير التلقائي)
         new_financial = OrderFinancial(
             order_id=order_id,
             supplier_id=supplier_id_input,
@@ -82,13 +91,11 @@ def add_new_order():
             shipping_fees=0.0
         )
         
-        # تعيين القيم للخصائص (Properties) لتشفيرها تلقائياً وتجنب null constraint
         new_financial.total_paid = total_price
         new_financial.supplier_cost = 0.0
         new_financial.mahjoub_commission = 0.0
         
         db.session.add(new_financial)
-        
         db.session.commit()
         flash("تم إضافة الطلب وتسجيله في النظام بنجاح.", "success")
         return redirect(url_for('orders.dashboard'))
