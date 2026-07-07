@@ -1,67 +1,95 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - النسخة النهائية المحدثة
+# 📂 apps/models/financials_db.py
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, session, abort, current_app
-from flask_login import login_required
+import os
 from datetime import datetime
-from sqlalchemy import func
+from cryptography.fernet import Fernet
 from apps.extensions import db
-from apps.models.orders_db import Order
-from apps.models.financials_db import OrderFinancial
-from apps.models.supplier_db import Supplier
-from apps.orders.services import OrderService
-from apps.api.sync_engine import SyncEngine 
-import logging
 
-logger = logging.getLogger(__name__)
+class OrderFinancial(db.Model):
+    """المركز المالي للطلبات: المحرك المحاسبي للمنصة والموردين."""
+    __tablename__ = 'order_financials'
 
-orders_bp = Blueprint('orders', __name__, template_folder='templates')
+    # [فهرسة الأداء]: تحسين سرعة الاستعلامات والربط المالي
+    __table_args__ = (
+        db.Index('idx_fin_order_id', 'order_id'),
+        db.Index('idx_fin_supplier_id', 'supplier_id'),
+        db.Index('idx_fin_settlement', 'settlement_status'),
+        db.Index('idx_fin_created', 'created_at'),
+        db.Index('idx_fin_transaction', 'transaction_id'),
+        db.Index('idx_fin_currency', 'currency'),
+        {'extend_existing': True}
+    )
 
-def admin_required():
-    """التحقق من صلاحية المسؤول"""
-    if session.get('user_type') != 'admin':
-        abort(403)
+    # 1. المعرفات والربط
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.String(100), db.ForeignKey('orders.id'), nullable=False, unique=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
+    transaction_id = db.Column(db.Integer, db.ForeignKey('wallet_transactions.id'), nullable=True)
+    
+    # 2. حقل العملة
+    currency = db.Column(db.String(5), default='SAR', nullable=False)
+    
+    # 3. المبالغ المالية (تشفير محكم + قيمة خام للعمليات الحسابية السريعة)
+    _supplier_cost_enc = db.Column(db.String(255), nullable=False)
+    supplier_cost_raw = db.Column(db.Numeric(18, 2), default=0.00)
+    
+    _mahjoub_commission_enc = db.Column(db.String(255), nullable=False)
+    mahjoub_commission_raw = db.Column(db.Numeric(18, 2), default=0.00)
+    
+    _total_paid_enc = db.Column(db.String(255), nullable=False)
+    total_paid_raw = db.Column(db.Numeric(18, 2), default=0.00)
+    
+    shipping_fees = db.Column(db.Numeric(18, 2), default=0.00)
+    
+    # 4. حالة التسوية
+    settlement_status = db.Column(db.String(20), default='pending') 
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    settled_at = db.Column(db.DateTime, nullable=True)
 
-@orders_bp.route('/dashboard')
-@login_required
-def dashboard():
-    admin_required()
-    
-    # التحقق من توفر المسارات
-    can_add_order = 'orders.add_new_order' in current_app.view_functions
-    can_sync = 'orders.sync_all' in current_app.view_functions
-    
-    # إحصائيات اللوحة - استخدام total_paid_raw للعمليات الحسابية الآمنة والسريعة
-    total_sales = db.session.query(func.sum(OrderFinancial.total_paid_raw)).scalar() or 0
-    completed_count = Order.query.filter_by(status='completed').count()
-    cancelled_count = Order.query.filter_by(status='cancelled').count()
-    
-    stats = {
-        'total_sales': float(total_sales),
-        'completed': completed_count,
-        'cancelled': cancelled_count
-    }
-    
-    # الترقيم (Pagination)
-    page = request.args.get('page', 1, type=int)
-    pagination = db.session.query(Order, OrderFinancial)\
-        .outerjoin(OrderFinancial, Order.id == OrderFinancial.order_id)\
-        .order_by(Order.id.desc())\
-        .paginate(page=page, per_page=20)
-    
-    return render_template('admin/orders_dashboard.html', 
-                           pagination=pagination, 
-                           stats=stats,
-                           can_add_order=can_add_order,
-                           can_sync=can_sync)
+    # العلاقات
+    order = db.relationship('Order', back_populates='financials')
+    supplier = db.relationship('Supplier', back_populates='financials')
+    transaction = db.relationship('WalletTransaction', backref='order_financials')
 
-@orders_bp.route('/sync-all', methods=['POST'])
-@login_required
-def sync_all():
-    """تشغيل المزامنة اليدوية مع منصة قمرة"""
-    admin_required()
-    try:
-        if SyncEngine.run_manual_sync():
-            flash("تمت عملية المزامنة بنجاح وجلب الطلبات الجديدة.", "success")
-        else:
-            flash("لم يتم جلب بيانات جديدة أو حدث خطأ أثناء المزامنة.", "warning")
+    # --- منطق التشفير السيادي ---
+    @staticmethod
+    def _get_key():
+        key = os.environ.get('ENCRYPTION_KEY')
+        return key.encode() if key else b'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq='
+
+    def _encrypt(self, value):
+        f = Fernet(self._get_key())
+        return f.encrypt(str(value).encode()).decode()
+
+    def _decrypt(self, value):
+        if not value: return 0.0
+        try:
+            f = Fernet(self._get_key())
+            return float(f.decrypt(value.encode()).decode())
+        except Exception: return 0.0
+
+    # --- Properties الذكية للتعامل مع البيانات ---
+    @property
+    def supplier_cost(self): return self._decrypt(self._supplier_cost_enc)
+    @supplier_cost.setter
+    def supplier_cost(self, value): 
+        self._supplier_cost_enc = self._encrypt(value)
+        self.supplier_cost_raw = float(value)
+
+    @property
+    def mahjoub_commission(self): return self._decrypt(self._mahjoub_commission_enc)
+    @mahjoub_commission.setter
+    def mahjoub_commission(self, value): 
+        self._mahjoub_commission_enc = self._encrypt(value)
+        self.mahjoub_commission_raw = float(value)
+
+    @property
+    def total_paid(self): return self._decrypt(self._total_paid_enc)
+    @total_paid.setter
+    def total_paid(self, value): 
+        self._total_paid_enc = self._encrypt(value)
+        self.total_paid_raw = float(value)
+
+    def __repr__(self):
+        return f'<OrderFinancial OrderID: {self.order_id} | Status: {self.settlement_status}>'
