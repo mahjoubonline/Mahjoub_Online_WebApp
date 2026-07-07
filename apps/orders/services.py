@@ -14,7 +14,6 @@ class OrderService:
     @staticmethod
     def get_order_details(order_id):
         """جلب تفاصيل الطلب والبيانات المالية المرتبطة به."""
-        # استخدام STR لضمان التوافق مع المعرف النصي (String ID)
         result = db.session.query(Order, OrderFinancial)\
             .outerjoin(OrderFinancial, Order.id == OrderFinancial.order_id)\
             .filter(Order.id == str(order_id)).first()
@@ -24,28 +23,25 @@ class OrderService:
     def complete_order_and_settle(order_id):
         """
         محرك التسوية: يحول الطلب لمكتمل ويوزع الأرباح للمورد في محفظته.
-        يعتمد على أحداث (Events) في WalletTransaction لتحديث الرصيد تلقائياً.
         """
         order_id_str = str(order_id)
         order = Order.query.get(order_id_str)
         financial = OrderFinancial.query.filter_by(order_id=order_id_str).first()
         
-        # التأكد من وجود الطلب والبيانات المالية وأنه لم يسبق تسويته
         if order and financial and order.status != 'completed':
             try:
                 # 1. تحديث حالة الطلب والمالية
                 order.status = 'completed'
                 financial.settlement_status = 'settled'
                 
-                # 2. إيداع المبلغ في محفظة المورد
+                # 2. تحديد مبلغ التسوية (الصافي للمورد)
+                # نستخدم supplier_cost لضمان عدم إيداع عمولة المنصة للمورد
+                amount_val = Decimal(str(financial.supplier_cost or 0))
+                
                 s_id = int(financial.supplier_id)
                 wallet = SupplierWallet.query.filter_by(supplier_id=s_id).first()
                 
                 if wallet:
-                    # استخدام الخاصية المشفّرة .total_paid لضمان دقة القيمة
-                    # (تجنب استخدام total_paid_raw لضمان فك التشفير الصحيح)
-                    amount_val = Decimal(str(financial.total_paid or 0))
-                    
                     # إنشاء سجل حركة مالية
                     transaction = WalletTransaction(
                         wallet_id=wallet.id,
@@ -58,12 +54,15 @@ class OrderService:
                         related_order_id=order_id_str
                     )
                     db.session.add(transaction)
+                    
+                    # ملاحظة: إذا كان موديل المحفظة يقوم بتحديث الرصيد تلقائياً (عبر signals/events)، 
+                    # فلا حاجة لتحديث حقل balance هنا.
                 
                 db.session.commit()
-                logger.info(f"تمت تسوية الطلب {order_id} بنجاح.")
+                logger.info(f"✅ تمت تسوية الطلب {order_id} وتحويل المبلغ للمورد بنجاح.")
                 return True
                 
-            except (ValueError, InvalidOperation, Exception) as e:
+            except Exception as e:
                 db.session.rollback()
                 logger.error(f"❌ خطأ أثناء تسوية الطلب {order_id}: {e}")
                 return False
