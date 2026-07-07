@@ -10,7 +10,7 @@ class OrderFinancial(db.Model):
     """المركز المالي للطلبات: المحرك المحاسبي للمنصة والموردين."""
     __tablename__ = 'order_financials'
 
-    # الفهارس لضمان سرعة الاستعلام
+    # [فهرسة الأداء]: تحسين سرعة الاستعلامات والربط المالي
     __table_args__ = (
         db.Index('idx_fin_order_id', 'order_id'),
         db.Index('idx_fin_supplier_id', 'supplier_id'),
@@ -21,7 +21,7 @@ class OrderFinancial(db.Model):
         {'extend_existing': True}
     )
 
-    # 1. المعرفات والربط (تم توحيد supplier_id ليكون Integer)
+    # 1. المعرفات والربط
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.String(100), db.ForeignKey('orders.id'), nullable=False, unique=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
@@ -30,7 +30,7 @@ class OrderFinancial(db.Model):
     # 2. حقل العملة
     currency = db.Column(db.String(5), default='SAR', nullable=False)
     
-    # 3. المبالغ المالية (تشفير + قيمة خام للعمليات الحسابية)
+    # 3. المبالغ المالية (تشفير محكم + قيمة خام للعمليات الحسابية السريعة)
     _supplier_cost_enc = db.Column(db.String(255), nullable=False)
     supplier_cost_raw = db.Column(db.Numeric(18, 2), default=0.00)
     
@@ -63,12 +63,13 @@ class OrderFinancial(db.Model):
         return f.encrypt(str(value).encode()).decode()
 
     def _decrypt(self, value):
+        if not value: return 0.0
         try:
             f = Fernet(self._get_key())
             return float(f.decrypt(value.encode()).decode())
         except Exception: return 0.0
 
-    # --- Properties الذكية (تعمل كواجهة بين التشفير والقيم الخام) ---
+    # --- Properties الذكية للتعامل مع البيانات ---
     @property
     def supplier_cost(self): return self._decrypt(self._supplier_cost_enc)
     @supplier_cost.setter
