@@ -5,56 +5,48 @@ import os
 import importlib
 from flask import Flask, session, redirect, url_for
 from flask_wtf.csrf import CSRFProtect, generate_csrf
-from flask_talisman import Talisman  # للحماية من XSS و Clickjacking
+from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from apps.extensions import db, login_manager, migrate
 from apps.utils.time_utils import format_full_timestamp
 
+# تهيئة الأدوات
 csrf = CSRFProtect()
-talisman = Talisman() # الحماية الأمنية
-limiter = Limiter(key_func=get_remote_address) # الحماية من الريبوتات والزحف العنيف
+talisman = Talisman()
+# Limiter مضبوط ليعمل بمرونة دون التأثير على تجربة المستخدم
+limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
 
 ADMIN_MODULES = {}
 SUPPLIER_MODULES = {}
-
-@login_manager.user_loader
-def load_user(user_id):
-    try:
-        from apps.models.admin_db import AdminUser
-        from apps.models.supplier_db import Supplier
-        from apps.models.supplier_staff_db import SupplierStaff
-        user_type = session.get('user_type')
-        uid = int(user_id)
-        if user_type == 'admin': return AdminUser.query.get(uid)
-        elif user_type == 'supplier': return Supplier.query.get(uid)
-        elif user_type == 'staff': return SupplierStaff.query.get(uid)
-        return None
-    except Exception:
-        return None
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     
-    # 1. تهيئة أدوات الحماية
+    # تهيئة الإضافات
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
     
-    # Talisman يضيف Headers أمنية قوية تلقائياً
-    talisman.init_app(app, content_security_policy={
-        'default-src': ["'self'"],
-        'script-src': ["'self'", "https://code.jquery.com", "https://cdn.jsdelivr.net"],
-        'style-src': ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
-    })
+    # Talisman بتعديلات تضمن عدم كسر التصميم (CSS/Fonts)
+    talisman.init_app(app, 
+        content_security_policy={
+            'default-src': ["'self'"],
+            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+            'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
+            'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://code.jquery.com", "https://cdn.jsdelivr.net"],
+            'img-src': ["'self'", "data:", "*"]
+        },
+        force_https=False # اجعلها True فقط إذا كان موقعك يدعم HTTPS رسمياً
+    )
 
     app.jinja_env.filters['full_time'] = format_full_timestamp
     login_manager.login_view = 'suppliers_auth.login'
     
-    # تسجيل الموديولات (كما في كودك الأصلي)
+    # تسجيل الموديولات
     apps_dir = app.root_path 
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api']
     
@@ -94,7 +86,6 @@ def create_app():
 
     with app.app_context():
         db.create_all()
-        # [زراعة المالك]
         from apps.models.admin_db import AdminUser
         if not AdminUser.query.filter_by(username='علي محجوب').first():
             owner = AdminUser(username='علي محجوب', role='Owner')
