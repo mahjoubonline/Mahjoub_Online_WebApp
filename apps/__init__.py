@@ -8,6 +8,7 @@ from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_cors import CORS  # إضافة استيراد CORS
 
 from apps.extensions import db, login_manager, migrate
 from apps.utils.time_utils import format_full_timestamp
@@ -24,6 +25,9 @@ SUPPLIER_MODULES = {}
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
+
+    # تفعيل CORS للسماح بالاتصال الخارجي (Apollo/GraphQL)
+    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
     # 1. تهيئة الإضافات الأساسية
     db.init_app(app)
@@ -47,9 +51,12 @@ def create_app():
     app.jinja_env.filters['full_time'] = format_full_timestamp
     login_manager.login_view = 'suppliers_auth.login'
 
-    # 3. تسجيل الـ Webhook (يُستثنى من CSRF لأنه قادم من طرف خارجي)
+    # 3. تسجيل الـ Webhook والـ GraphQL (استثناء من CSRF)
     app.register_blueprint(qomrah_bp)
     csrf.exempt(qomrah_bp)
+    
+    # [تعديل] استثناء مسار GraphQL من CSRF - تأكد من إضافة مسار الـ Blueprint الخاص بك هنا
+    # csrf.exempt('admin.graphql_bp') 
 
     # 4. تسجيل الموديولات الديناميكي (Registry)
     apps_dir = app.root_path
