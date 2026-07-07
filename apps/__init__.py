@@ -17,7 +17,7 @@ from apps.api.qomrah_webhook import qomrah_bp
 # تهيئة الأدوات
 csrf = CSRFProtect()
 talisman = Talisman()
-# إضافة storage_uri لتجنب تحذير الذاكرة في الإنتاج
+# إعداد Limiter مع تحديد التخزين في الذاكرة لتجنب التحذيرات
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"], storage_uri="memory://")
 
 ADMIN_MODULES = {}
@@ -27,7 +27,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
 
-    # تفعيل CORS
+    # تفعيل CORS للسماح بالاتصال الخارجي (Apollo/GraphQL)
     CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
     # 1. تهيئة الإضافات الأساسية
@@ -56,14 +56,14 @@ def create_app():
     app.register_blueprint(qomrah_bp)
     csrf.exempt(qomrah_bp)
     
-    # استثناء الـ GraphQL من حماية CSRF لحل مشكلة Apollo Sandbox
-    # تأكد من استيراد البلوبرينت الخاص بك هنا، استبدل 'admin.graphql_bp' بمسار الاستيراد الفعلي إذا لزم الأمر
+    # استثناء مسار GraphQL من CSRF
     try:
         from apps.admin.graphql_routes import graphql_bp 
         app.register_blueprint(graphql_bp)
         csrf.exempt(graphql_bp)
     except ImportError:
-        pass # تجاهل إذا لم يتم تسجيل الموديول بعد
+        # في حال لم يتم تسجيل الموديول بعد أو لم يوجد، لا نقوم بإيقاف التطبيق
+        pass
 
     # 4. تسجيل الموديولات الديناميكي (Registry)
     apps_dir = app.root_path
