@@ -6,6 +6,9 @@ from apps.models.financials_db import OrderFinancial
 from apps.models.wallet_db import SupplierWallet, WalletTransaction
 from apps.extensions import db
 from decimal import Decimal, InvalidOperation
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OrderService:
     @staticmethod
@@ -35,16 +38,15 @@ class OrderService:
                 financial.settlement_status = 'settled'
                 
                 # 2. إيداع المبلغ في محفظة المورد
-                # نستخدم supplier_id من البيانات المالية (Integer)
                 s_id = int(financial.supplier_id)
                 wallet = SupplierWallet.query.filter_by(supplier_id=s_id).first()
                 
                 if wallet:
-                    # تحويل المبلغ لـ Decimal بأمان لتجنب أخطاء العمليات الحسابية
-                    amount_val = Decimal(str(financial.total_paid_raw or 0))
+                    # استخدام الخاصية المشفّرة .total_paid لضمان دقة القيمة
+                    # (تجنب استخدام total_paid_raw لضمان فك التشفير الصحيح)
+                    amount_val = Decimal(str(financial.total_paid or 0))
                     
                     # إنشاء سجل حركة مالية
-                    # الـ Event في WalletTransaction سيقوم بتحديث balance_after في المحفظة
                     transaction = WalletTransaction(
                         wallet_id=wallet.id,
                         owner_type='supplier',
@@ -58,11 +60,12 @@ class OrderService:
                     db.session.add(transaction)
                 
                 db.session.commit()
+                logger.info(f"تمت تسوية الطلب {order_id} بنجاح.")
                 return True
                 
             except (ValueError, InvalidOperation, Exception) as e:
                 db.session.rollback()
-                print(f"❌ خطأ أثناء تسوية الطلب {order_id}: {e}")
+                logger.error(f"❌ خطأ أثناء تسوية الطلب {order_id}: {e}")
                 return False
                 
         return False
