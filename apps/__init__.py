@@ -5,10 +5,16 @@ import os
 import importlib
 from flask import Flask, session, redirect, url_for
 from flask_wtf.csrf import CSRFProtect, generate_csrf
+from flask_talisman import Talisman  # للحماية من XSS و Clickjacking
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from apps.extensions import db, login_manager, migrate
 from apps.utils.time_utils import format_full_timestamp
 
 csrf = CSRFProtect()
+talisman = Talisman() # الحماية الأمنية
+limiter = Limiter(key_func=get_remote_address) # الحماية من الريبوتات والزحف العنيف
+
 ADMIN_MODULES = {}
 SUPPLIER_MODULES = {}
 
@@ -18,14 +24,12 @@ def load_user(user_id):
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.supplier_staff_db import SupplierStaff
-        
         user_type = session.get('user_type')
         uid = int(user_id)
-        
         if user_type == 'admin': return AdminUser.query.get(uid)
         elif user_type == 'supplier': return Supplier.query.get(uid)
         elif user_type == 'staff': return SupplierStaff.query.get(uid)
-        return AdminUser.query.get(uid) or Supplier.query.get(uid) or SupplierStaff.query.get(uid)
+        return None
     except Exception:
         return None
 
@@ -33,14 +37,24 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     
-    app.jinja_env.filters['full_time'] = format_full_timestamp
+    # 1. تهيئة أدوات الحماية
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
     
+    # Talisman يضيف Headers أمنية قوية تلقائياً
+    talisman.init_app(app, content_security_policy={
+        'default-src': ["'self'"],
+        'script-src': ["'self'", "https://code.jquery.com", "https://cdn.jsdelivr.net"],
+        'style-src': ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+    })
+
+    app.jinja_env.filters['full_time'] = format_full_timestamp
     login_manager.login_view = 'suppliers_auth.login'
     
+    # تسجيل الموديولات (كما في كودك الأصلي)
     apps_dir = app.root_path 
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api']
     
@@ -54,7 +68,6 @@ def create_app():
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
-                            
                             mod_data = {
                                 "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
                                 "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
@@ -67,7 +80,6 @@ def create_app():
                     except Exception as e:
                         print(f"❌ خطأ في تسجيل {item}: {e}")
 
-    # 3. معالجة المسار الافتراضي
     @app.route('/')
     def index():
         return redirect('/supplier/login')
@@ -84,12 +96,10 @@ def create_app():
         db.create_all()
         # [زراعة المالك]
         from apps.models.admin_db import AdminUser
-        owner = AdminUser.query.filter_by(username='علي محجوب').first()
-        if not owner:
+        if not AdminUser.query.filter_by(username='علي محجوب').first():
             owner = AdminUser(username='علي محجوب', role='Owner')
             owner.set_password('123')
             db.session.add(owner)
             db.session.commit()
-            print("✅ [Seeding]: تم إنشاء حساب المالك 'علي محجوب' بنجاح.")
     
     return app
