@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/services/graphql_client.py - النسخة النهائية المتوافقة مع Qomrah Schema
+# 📂 apps/services/graphql_client.py - النسخة المصححة بناءً على رسائل خطأ السيرفر
 
 import requests
 import logging
@@ -19,69 +19,44 @@ class QomrahGraphQLClient:
 
     @staticmethod
     def fetch_orders(limit=20, offset=0):
-        """جلب قائمة الطلبات باستخدام الدالة الصحيحة findAllOrders."""
+        """جلب قائمة الطلبات باستخدام الحقول المكتشفة من السيرفر."""
         
+        # تصحيح الاستعلام بناءً على رسائل الخطأ التي أرسلتها
         query = """
-        query GetOrders($limit: Int, $offset: Int) {
-          findAllOrders(limit: $limit, offset: $offset) {
+        query GetOrders {
+          findAllOrders { 
             data {
-              id
-              customer_name
-              total_price
-              status
-              created_at
+              _id
+              totalPrice
+              status {
+                name
+              }
+              createdAt
+              items {
+                productName
+                quantity
+                price
+                sku
+              }
             }
           }
         }
         """
-        variables = {"limit": limit, "offset": offset}
+        # ملاحظة: السيرفر اشتكى من limit/offset، لذا قد تكون هذه الدالة 
+        # تعيد كل شيء أو تحتاج لطريقة ترقيم أخرى. سنبدأ بدونها.
         
         try:
             response = requests.post(
                 Config.QUMRA_API_URL, 
-                json={'query': query, 'variables': variables},
+                json={'query': query},
                 headers=QomrahGraphQLClient._get_headers(),
                 timeout=15
             )
             response.raise_for_status()
             result = response.json()
             
-            # استخراج البيانات من المسار الصحيح: data -> findAllOrders -> data
             return result.get('data', {}).get('findAllOrders', {}).get('data', [])
             
         except Exception as e:
-            logger.error(f"❌ خطأ أثناء جلب الطلبات: {e}")
+            logger.error(f"❌ خطأ في الاتصال بـ GraphQL: {e}")
             return []
-
-    @staticmethod
-    def get_order_details(order_id):
-        """جلب تفاصيل طلب محدد باستخدام الدالة الصحيحة findOrderById."""
-        
-        query = """
-        query GetOrder($id: ID!) {
-          findOrderById(id: $id) {
-            id
-            customer_name
-            total_price
-            status
-          }
-        }
-        """
-        variables = {"id": order_id}
-        
-        try:
-            response = requests.post(
-                Config.QUMRA_API_URL, 
-                json={'query': query, 'variables': variables},
-                headers=QomrahGraphQLClient._get_headers(),
-                timeout=10
-            )
-            response.raise_for_status()
-            result = response.json()
-            
-            # استخراج البيانات من المسار: data -> findOrderById
-            return result.get('data', {}).get('findOrderById')
-
-        except Exception as e:
-            logger.error(f"❌ خطأ في جلب تفاصيل الطلب {order_id}: {e}")
-            return None
