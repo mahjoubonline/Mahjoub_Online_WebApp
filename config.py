@@ -4,38 +4,36 @@
 import os
 
 class Config:
-    # 🛡️ مفتاح الأمان السيادي للمنصة (يُفضل تعريفه كمتغير بيئة في Render)
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'SOVEREIGN_KEY_2026')
+    """إعدادات النظام المركزية مع حماية للبيانات الحساسة."""
     
-    # 🔐 مفتاح التشفير المركزي (لـ AES-256) 
-    ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
+    # 🛡️ مفتاح الأمان السيادي للمنصة
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     
-    # 🕵️‍♂️ مفتاح توقيع الويب هوك الجديد
-    WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET', 'cdde0d415221df2c074cc80d226b6ef1ab9b5ef1f24f9c1a37aec40f2d9df2a7')
+    # 🔐 مفتاح التشفير المركزي (لـ AES-256)
+    ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
+    
+    # 🕵️‍♂️ مفتاح توقيع الويب هوك (للتحقق من مصدر الطلبات)
+    WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET')
     
     # 🌐 رابط المتجر الأساسي
     STORE_BASE_URL = os.environ.get('STORE_BASE_URL', 'https://mahjoub.online')
     
-    # 🔒 إعدادات الحماية الأمنية للـ Cookies (تعديل ديناميكي للإنتاج)
-    # ملاحظة: إذا كان التطبيق يعمل على Render، يفضل ضبط ENV=production في المتغيرات
+    # 🔒 إعدادات الحماية الأمنية للـ Cookies
     IS_PRODUCTION = os.environ.get('ENV') == 'production'
     SESSION_COOKIE_SECURE = IS_PRODUCTION 
     REMEMBER_COOKIE_SECURE = IS_PRODUCTION
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     
-    # 1. إعدادات قاعدة البيانات
+    # 1. إعدادات قاعدة البيانات (مع التحقق من التوافق)
     _db_url = os.environ.get('DATABASE_URL')
-    if _db_url:
-        if _db_url.startswith("postgres://"):
-            _db_url = _db_url.replace("postgres://", "postgresql+psycopg2://", 1)
-        elif _db_url.startswith("postgresql://"):
-            _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
-    
+    if _db_url and _db_url.startswith("postgres://"):
+        _db_url = _db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+        
     SQLALCHEMY_DATABASE_URI = _db_url or 'sqlite:///mahjoub_online.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # 2. إعدادات Pool الاتصالات
+    # 2. إعدادات Pool الاتصالات (لأداء سحابي مستقر)
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": 15,
         "max_overflow": 10,
@@ -49,13 +47,25 @@ class Config:
     QUMRA_API_URL = os.environ.get('QUMRA_API_URL', 'https://mahjoub.online/admin/graphql')
 
     # 4. إعدادات WhatsApp Cloud API
-    WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '1190456080809834')
-    WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN', 'rb3tZFnHRcsN')
-    WHATSAPP_VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'Mahjoub_WhatsApp_Secure_2026')
+    WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID')
+    WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN')
+    WHATSAPP_VERIFY_TOKEN = os.environ.get('WHATSAPP_VERIFY_TOKEN')
 
-    # 5. إعدادات HyperSender (للتحقق السيادي عبر OTP)
+    # 5. إعدادات HyperSender
     HYPERSEND_API_KEY = os.environ.get('HYPERSEND_API_KEY')
     HYPERSEND_INSTANCE_ID = os.environ.get('HYPERSEND_INSTANCE_ID')
 
-    # 6. ترميز النصوص
+    # 6. إعدادات المزامنة
+    SYNC_MODE = os.environ.get('SYNC_MODE', 'live')
+
+    # 7. ترميز النصوص
     JSON_AS_ASCII = False
+
+    @classmethod
+    def validate_config(cls):
+        """التحقق من وجود المفاتيح الحساسة في بيئة الإنتاج."""
+        if cls.IS_PRODUCTION:
+            required = ['SECRET_KEY', 'ENCRYPTION_KEY', 'WEBHOOK_SECRET', 'QUMRA_API_KEY']
+            for var in required:
+                if not getattr(cls, var):
+                    raise EnvironmentError(f"المتغير الحساس {var} مفقود في بيئة الإنتاج!")
