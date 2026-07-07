@@ -29,8 +29,9 @@ def create_app():
     # التحقق من الإعدادات الحساسة عند التشغيل
     config.Config.validate_config()
 
-    # تفعيل CORS
-    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    # تفعيل CORS لدعم التواصل مع Apollo Sandbox وواجهات النظام
+    # قمت بتوسيع النطاقات المسموح بها لتشمل studio.apollographql.com لتجاوز خطأ CORS
+    CORS(app, resources={r"/admin/*": {"origins": ["https://studio.apollographql.com", "http://localhost:5000"]}}, supports_credentials=True)
 
     # 1. تهيئة الإضافات
     db.init_app(app)
@@ -60,7 +61,7 @@ def create_app():
     try:
         from apps.admin.graphql_routes import graphql_bp 
         app.register_blueprint(graphql_bp)
-        csrf.exempt(graphql_bp)
+        csrf.exempt(graphql_bp) # ضروري جداً لعمل طلبات GraphQL من المزامنة و Apollo
     except ImportError:
         pass
 
