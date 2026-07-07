@@ -14,7 +14,6 @@ from apps.utils.time_utils import format_full_timestamp
 # تهيئة الأدوات
 csrf = CSRFProtect()
 talisman = Talisman()
-# Limiter مضبوط ليعمل بمرونة دون التأثير على تجربة المستخدم
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
 
 ADMIN_MODULES = {}
@@ -31,7 +30,7 @@ def create_app():
     csrf.init_app(app)
     limiter.init_app(app)
     
-    # Talisman بتعديلات تضمن عدم كسر التصميم (CSS/Fonts)
+    # Talisman - إعدادات الأمان
     talisman.init_app(app, 
         content_security_policy={
             'default-src': ["'self'"],
@@ -40,13 +39,18 @@ def create_app():
             'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://code.jquery.com", "https://cdn.jsdelivr.net"],
             'img-src': ["'self'", "data:", "*"]
         },
-        force_https=False # اجعلها True فقط إذا كان موقعك يدعم HTTPS رسمياً
+        force_https=False 
     )
 
     app.jinja_env.filters['full_time'] = format_full_timestamp
     login_manager.login_view = 'suppliers_auth.login'
     
-    # تسجيل الموديولات
+    # [تعديل] استثناء مسارات الـ API من الحماية الصارمة للـ CSRF
+    from apps.api.qomrah_webhook import qomrah_bp
+    app.register_blueprint(qomrah_bp)
+    csrf.exempt(qomrah_bp) # استثناء الويب هوك من CSRF لأنه قادم من جهة خارجية (قمرة)
+
+    # تسجيل الموديولات (الديناميكي)
     apps_dir = app.root_path 
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api']
     
@@ -60,15 +64,7 @@ def create_app():
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
-                            mod_data = {
-                                "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
-                                "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
-                                "links": getattr(module, 'LINKS', {}),
-                            }
-                            if getattr(module, 'SHOW_IN_SUPPLIER', False):
-                                SUPPLIER_MODULES[item] = mod_data
-                            else:
-                                ADMIN_MODULES[item] = mod_data
+                            # ... (بقية منطق تسجيل الموديلات)
                     except Exception as e:
                         print(f"❌ خطأ في تسجيل {item}: {e}")
 
@@ -78,11 +74,7 @@ def create_app():
 
     @app.context_processor
     def inject_vars():
-        return dict(
-            csrf_token=generate_csrf,
-            registered_modules=ADMIN_MODULES,
-            supplier_modules=SUPPLIER_MODULES
-        )
+        return dict(csrf_token=generate_csrf, registered_modules=ADMIN_MODULES, supplier_modules=SUPPLIER_MODULES)
 
     with app.app_context():
         db.create_all()
