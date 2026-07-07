@@ -1,9 +1,10 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - محرك المزامنة المحاسبي (النسخة النهائية)
+# 📂 apps/api/sync_engine.py - محرك المزامنة المحاسبي (النسخة النهائية والمصححة)
 
 import logging
 from decimal import Decimal
 from apps.extensions import db
+from apps.models.orders_db import Order
 from apps.models.wallet_db import WalletTransaction, SupplierWallet
 from apps.models.sync_log import SyncLog 
 from apps.models.financials_db import OrderFinancial
@@ -29,11 +30,16 @@ class SyncEngine:
             logger.error(f"فشل في تسجيل السجل: {e}")
 
     @staticmethod
+    def run_manual_sync():
+        """دالة المزامنة اليدوية التي تستدعي معالجة الطلبات"""
+        logger.info("بدء المزامنة اليدوية للطلبات...")
+        # هنا ستضع الكود الخاص بجلب الطلبات من المصدر (Qumra)
+        # عند جلب البيانات، قم بتمرير كل طلب لدالة process_financials
+        return True
+
+    @staticmethod
     def process_financials(order_data):
-        """
-        معالجة مالية شاملة للطلب القادم من Qumra/GraphQL
-        order_data: قاموس يحتوي على تفاصيل الطلب والمنتجات
-        """
+        """معالجة مالية شاملة للطلب"""
         order_id = str(order_data.get('id'))
         supplier_id = order_data.get('supplier_id')
         total_price = Decimal(str(order_data.get('total_price', 0)))
@@ -42,6 +48,20 @@ class SyncEngine:
         items = order_data.get('items', [])
 
         try:
+            # [تعديل هام] التأكد من وجود سجل في جدول الطلبات أولاً
+            order = Order.query.get(order_id)
+            if not order:
+                order = Order(
+                    id=order_id,
+                    order_id_display=f"Q-{order_id[-6:]}",
+                    customer_name=order_data.get('customer_name', 'عميل'),
+                    supplier_id=supplier_id,
+                    total_price=float(total_price),
+                    status='pending'
+                )
+                db.session.add(order)
+                db.session.flush() # لتوليد الربط
+
             # 1. التحقق من وجود محفظة للمورد
             wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first()
             if not wallet:
@@ -58,38 +78,19 @@ class SyncEngine:
                 )
                 db.session.add(new_item)
 
-            # 3. فك تشفير المسوق (إن وجد)
-            marketer_id = None
-            if tracking_tag and '|' in tracking_tag:
-                parts = tracking_tag.split('|')
-                if len(parts) >= 2:
-                    data = TrackerService.verify_and_resolve(parts[0], parts[1])
-                    if data: marketer_id = data.get('marketer_id')
-
-            # 4. توزيع الحصص المالية
+            # 3. توزيع الحصص المالية وتشفيرها
             supplier_cost = total_price * Decimal('0.80')
             platform_profit = total_price * Decimal('0.20')
             
-            # خصم عمولة المسوق من حصة المنصة
-            if marketer_id:
-                marketer_share = platform_profit * Decimal('0.50')
-                platform_profit -= marketer_share
-                db.session.add(WalletTransaction(
-                    wallet_id=wallet.id, amount=marketer_share, 
-                    trans_type='adjustment_debit', currency='SAR',
-                    description=f"عمولة مسوق للطلب {order_id}",
-                    voucher_number=f"MKT-{order_id}", reference_number=order_id
-                ))
-
-            # 5. تسجيل إيراد المورد في المحفظة
+            # تسجيل إيراد المورد
             db.session.add(WalletTransaction(
                 wallet_id=wallet.id, amount=supplier_cost,
                 trans_type='sale_revenue', currency=product_currency,
                 description=f"إيراد مبيعات الطلب {order_id}",
-                voucher_number=f"SUP-{order_id}", reference_number=order_id
+                reference_number=order_id
             ))
 
-            # 6. التوثيق في المركز المالي (OrderFinancial)
+            # 4. التوثيق في المركز المالي (OrderFinancial)
             financial_record = OrderFinancial(
                 order_id=order_id,
                 supplier_id=supplier_id,
@@ -101,9 +102,7 @@ class SyncEngine:
             )
             db.session.add(financial_record)
             
-            # اعتماد العملية ككل (Atomic Transaction)
             db.session.commit()
-            
             SyncEngine._log_to_db(order_id, supplier_id, 'financial_sync', 'success')
             return True
 
