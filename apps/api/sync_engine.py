@@ -10,6 +10,7 @@ from apps.models.sync_log import SyncLog
 from apps.models.financials_db import OrderFinancial
 from apps.models.order_items_db import OrderItem
 from apps.models.supplier_db import Supplier
+from apps.services.graphql_client import QomrahGraphQLClient
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,33 @@ class SyncEngine:
 
     @staticmethod
     def run_manual_sync():
-        """الدالة التي يستدعيها النظام للبدء بالمزامنة"""
+        """الدالة التي تجلب الطلبات من قمرة (مع الترقيم) وتمررها للمعالجة"""
         logger.info("بدء المزامنة اليدوية للطلبات...")
-        # كود الاتصال بـ API قمرة يوضع هنا
+        
+        page = 1
+        limit = 20
+        total_synced = 0
+        has_more = True
+
+        while has_more:
+            logger.info(f"جاري جلب الصفحة رقم {page}...")
+            # استخدام العميل المحدث لجلب البيانات
+            orders = QomrahGraphQLClient.fetch_orders(limit=limit, offset=(page-1)*limit)
+            
+            if not orders:
+                break
+                
+            for order_data in orders:
+                if SyncEngine.process_financials(order_data):
+                    total_synced += 1
+            
+            # إذا كان عدد الطلبات المجلوبة أقل من الـ limit، فقد وصلنا لآخر صفحة
+            if len(orders) < limit:
+                has_more = False
+            else:
+                page += 1
+                
+        logger.info(f"انتهت المزامنة بنجاح. إجمالي الطلبات المحدثة: {total_synced}")
         return True
 
     @staticmethod
@@ -45,7 +70,7 @@ class SyncEngine:
         supplier_id = order_data.get('supplier_id')
         if not supplier_id:
             tracking_tag = order_data.get('tracking_tag')
-            supplier = Supplier.query.filter_by(store_tag=tracking_tag).first() # تأكد أن الحقل في موديل Supplier هو store_tag
+            supplier = Supplier.query.filter_by(store_tag=tracking_tag).first()
             if supplier:
                 supplier_id = supplier.id
             else:
