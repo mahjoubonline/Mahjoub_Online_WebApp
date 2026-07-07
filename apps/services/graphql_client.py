@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/services/graphql_client.py - النسخة المصححة بناءً على رسائل خطأ السيرفر
+# 📂 apps/services/graphql_client.py - النسخة النهائية المصححة
 
 import requests
 import logging
@@ -12,16 +12,19 @@ class QomrahGraphQLClient:
 
     @staticmethod
     def _get_headers():
+        """تحضير الترويسات مع إضافة الترويسات الأمنية لتجاوز CSRF"""
         return {
             "Authorization": f"Bearer {Config.QUMRA_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "x-apollo-operation-name": "GetOrders",
+            "apollo-require-preflight": "true"
         }
 
     @staticmethod
-    def fetch_orders(limit=20, offset=0):
-        """جلب قائمة الطلبات باستخدام الحقول المكتشفة من السيرفر."""
+    def fetch_orders():
+        """جلب قائمة الطلبات باستخدام الهيكلية المكتشفة من السيرفر."""
         
-        # تصحيح الاستعلام بناءً على رسائل الخطأ التي أرسلتها
+        # الاستعلام مصحح ليتناسب مع Schema السيرفر (findAllOrders)
         query = """
         query GetOrders {
           findAllOrders { 
@@ -42,8 +45,6 @@ class QomrahGraphQLClient:
           }
         }
         """
-        # ملاحظة: السيرفر اشتكى من limit/offset، لذا قد تكون هذه الدالة 
-        # تعيد كل شيء أو تحتاج لطريقة ترقيم أخرى. سنبدأ بدونها.
         
         try:
             response = requests.post(
@@ -55,8 +56,12 @@ class QomrahGraphQLClient:
             response.raise_for_status()
             result = response.json()
             
+            # استخراج البيانات بناءً على هيكلية الـ JSON المكتشفة
             return result.get('data', {}).get('findAllOrders', {}).get('data', [])
             
+        except requests.exceptions.HTTPError as http_err:
+            logger.error(f"❌ خطأ HTTP أثناء الاتصال بـ GraphQL: {http_err}")
+            return []
         except Exception as e:
-            logger.error(f"❌ خطأ في الاتصال بـ GraphQL: {e}")
+            logger.error(f"❌ خطأ غير متوقع أثناء الاتصال بـ GraphQL: {e}")
             return []
