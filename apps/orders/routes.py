@@ -10,7 +10,6 @@ from apps.models.orders_db import Order
 from apps.models.financials_db import OrderFinancial
 from apps.models.supplier_db import Supplier
 from apps.orders.services import OrderService
-from apps.api.sync_engine import SyncEngine
 
 orders_bp = Blueprint('orders', __name__, template_folder='templates')
 
@@ -23,11 +22,9 @@ def admin_required():
 def dashboard():
     admin_required()
     
-    # التحقق من وجود الروابط لتجنب أخطاء Jinja2
     can_add_order = 'orders.add_new_order' in current_app.view_functions
     can_sync = 'orders.sync_all' in current_app.view_functions
     
-    # 1. حساب الإحصائيات (استخدام العمود الخام لتجنب خطأ التشفير)
     total_sales = db.session.query(func.sum(OrderFinancial.total_paid_raw)).scalar() or 0
     completed_count = Order.query.filter_by(status='completed').count()
     cancelled_count = Order.query.filter_by(status='cancelled').count()
@@ -38,9 +35,7 @@ def dashboard():
         'cancelled': cancelled_count
     }
     
-    # 2. إعداد الترقيم وجلب البيانات المترابطة
     page = request.args.get('page', 1, type=int)
-    
     pagination = db.session.query(Order, OrderFinancial)\
         .outerjoin(OrderFinancial, Order.id == OrderFinancial.order_id)\
         .order_by(Order.id.desc())\
@@ -57,43 +52,47 @@ def dashboard():
 def add_new_order():
     admin_required()
     if request.method == 'POST':
-        # استخدام معرف فريد للطلب يعتمد على التوقيت الحالي
         order_id = str(int(datetime.utcnow().timestamp()))
         supplier_id_input = request.form.get('supplier_id', type=int)
+        total_price = float(request.form.get('total_price', 0))
         
-        # التأكد من صحة المورد
         supplier = Supplier.query.get(supplier_id_input)
         if not supplier:
             flash("خطأ: المتجر غير موجود.", "danger")
             return redirect(url_for('orders.add_new_order'))
         
-        # حفظ الطلب في النظام
+        # 1. إنشاء كائن الطلب
         new_order = Order(
             id=order_id,
             order_id_display=f"MHJ-{datetime.utcnow().strftime('%Y%m%d%H%M')}",
             customer_name=request.form.get('customer_name'),
             customer_phone=request.form.get('customer_phone'),
             supplier_id=supplier_id_input, 
-            total_price=float(request.form.get('total_price', 0)),
+            total_price=total_price,
             status='pending'
         )
         db.session.add(new_order)
         
-        # حفظ البيانات المالية المرتبطة
+        # 2. إنشاء البيانات المالية (باستخدام الخصائص لتشغيل التشفير التلقائي)
         new_financial = OrderFinancial(
             order_id=order_id,
             supplier_id=supplier_id_input,
-            total_paid=float(request.form.get('total_price', 0)),
-            total_paid_raw=float(request.form.get('total_price', 0)),
-            currency='SAR'
+            currency='SAR',
+            settlement_status='pending',
+            shipping_fees=0.0
         )
+        
+        # تعيين القيم للخصائص (Properties) لتشفيرها تلقائياً وتجنب null constraint
+        new_financial.total_paid = total_price
+        new_financial.supplier_cost = 0.0
+        new_financial.mahjoub_commission = 0.0
+        
         db.session.add(new_financial)
         
         db.session.commit()
         flash("تم إضافة الطلب وتسجيله في النظام بنجاح.", "success")
         return redirect(url_for('orders.dashboard'))
     
-    # جلب قائمة الموردين لتظهر في القائمة المنسدلة في القالب
     suppliers = Supplier.query.all()
     return render_template('admin/add_order.html', suppliers=suppliers)
 
@@ -101,7 +100,6 @@ def add_new_order():
 @login_required
 def complete_order(order_id):
     admin_required()
-    # استخدام خدمة التسوية لضمان تحديث الأرصدة تلقائياً في المحفظة
     if OrderService.complete_order_and_settle(order_id):
         flash("تمت تسوية الطلب وتحويل الأرباح بنجاح.", "success")
     else:
