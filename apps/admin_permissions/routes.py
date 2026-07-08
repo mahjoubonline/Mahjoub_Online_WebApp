@@ -29,6 +29,7 @@ def roles_list():
         return redirect(url_for('admin_dashboard.dashboard'))
     
     # جلب جميع الموظفين الإداريين لعرض أدوارهم من جدول AdminStaff
+    # نستخدم AdminStaff بدلاً من Role لحل مشكلة الاستيراد وتوافق النظام
     staff_members = AdminStaff.query.all()
     
     return render_template(
