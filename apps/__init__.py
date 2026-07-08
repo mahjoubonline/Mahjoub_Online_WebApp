@@ -103,18 +103,19 @@ def create_app():
             supplier_modules=SUPPLIER_MODULES
         )
 
-    # 6. إعداد البيئة الأولية (آمنة وبدون تعارض)
+    # 6. إعداد البيئة الأولية (إنشاء المستخدم المالك)
     with app.app_context():
-        # تم حذف db.create_all() هنا لمنع تعارض المايجريشن
         try:
             from apps.models.admin_db import AdminUser
+            # التحقق من وجود المستخدم قبل الإضافة
             if not AdminUser.query.filter_by(username='علي محجوب').first():
                 owner = AdminUser(username='علي محجوب', role='Owner')
                 owner.set_password('123')
                 db.session.add(owner)
                 db.session.commit()
+                print("✅ [Setup]: تم إنشاء المستخدم المالك بنجاح.")
         except Exception as e:
-            # نتجاهل الخطأ إذا لم تكن الجداول موجودة بعد
-            print(f"ℹ️ [Setup]: تخطي إنشاء المستخدم الافتراضي (قد يكون النظام في مرحلة التهيئة): {e}")
+            # هذا الجزء يُنفذ إذا لم تكن الجداول موجودة بعد، لذا لا نوقف السيرفر
+            print(f"ℹ️ [Setup]: تخطي إضافة المستخدم المالك (الجداول قد لا تكون جاهزة بعد): {e}")
 
     return app
