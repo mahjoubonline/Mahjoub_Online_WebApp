@@ -7,17 +7,20 @@ import secrets
 import string
 
 from apps.extensions import db
-from apps.models.admin_db import AdminStaff # تأكد من المسار الصحيح لموديل الموظفين
+from apps.models.admin_db import AdminStaff  # تأكد من المسار الصحيح للموديل
 
+# تعريف الـ Blueprint
 admin_permissions_bp = Blueprint(
     'admin_permissions', 
     __name__, 
     template_folder='templates'
 )
 
+# دالة التحقق من الصلاحيات السيادية
 def is_admin():
     return current_user.is_authenticated and (getattr(current_user, 'role', '') in ['admin', 'Owner'])
 
+# دالة توليد كلمة مرور عشوائية قوية
 def generate_random_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return ''.join(secrets.choice(chars) for _ in range(length))
@@ -25,6 +28,7 @@ def generate_random_password(length=12):
 @admin_permissions_bp.route('/admin/permissions/roles', methods=['GET'])
 @login_required
 def roles_list():
+    """عرض قائمة الموظفين مع خاصية البحث والترقيم الصفحي."""
     if not is_admin():
         flash("غير مصرح لك.", "danger")
         return redirect(url_for('admin_dashboard.dashboard'))
@@ -45,34 +49,41 @@ def roles_list():
 @admin_permissions_bp.route('/admin/permissions/assign', methods=['POST'])
 @login_required
 def assign_permissions():
+    """إضافة موظف جديد عبر النافذة المنبثقة."""
     if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
     
     username = request.form.get('username')
     email = request.form.get('email')
     
-    new_staff = AdminStaff(username=username, email=email, role='worker', is_active=True)
-    new_staff.set_password('123456') # كلمة مرور افتراضية
-    db.session.add(new_staff)
-    db.session.commit()
-    
-    flash(f"تمت إضافة الموظف {username} بنجاح", "success")
+    if username and email:
+        new_staff = AdminStaff(username=username, email=email, role='worker', is_active=True)
+        new_staff.set_password('123456') # كلمة مرور افتراضية أولية
+        db.session.add(new_staff)
+        db.session.commit()
+        flash(f"تمت إضافة الموظف {username} بنجاح", "success")
+    else:
+        flash("بيانات غير مكتملة", "danger")
+        
     return redirect(url_for('admin_permissions.roles_list'))
 
 @admin_permissions_bp.route('/admin/permissions/reset-password/<int:id>', methods=['GET'])
 @login_required
 def reset_password(id):
+    """إعادة تعيين كلمة المرور وتوليدها عشوائياً."""
     staff = AdminStaff.query.get_or_404(id)
     new_pass = generate_random_password()
     staff.set_password(new_pass)
     db.session.commit()
-    flash(f"كلمة المرور الجديدة لـ {staff.username} هي: {new_pass}", "success")
+    flash(f"تمت إعادة تعيين كلمة المرور لـ {staff.username}. الجديدة هي: {new_pass}", "success")
     return redirect(url_for('admin_permissions.roles_list'))
 
 @admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>', methods=['GET'])
 @login_required
 def toggle_status(id):
+    """تفعيل أو إيقاف حساب الموظف."""
     staff = AdminStaff.query.get_or_404(id)
     staff.is_active = not staff.is_active
     db.session.commit()
-    flash(f"تم تحديث حالة {staff.username}", "info")
+    status = "نشط" if staff.is_active else "موقوف"
+    flash(f"تم تحديث حالة {staff.username} إلى {status}", "info")
     return redirect(url_for('admin_permissions.roles_list'))
