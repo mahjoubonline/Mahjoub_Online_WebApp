@@ -11,7 +11,7 @@
 from apps.extensions import db
 
 # 1. الموديلات الأساسية
-from .supplier_db import Supplier
+from .suppliers_db import Supplier        # تم تصحيح الاسم ليكون مطابقاً لـ suppliers_db.py
 from .admin_db import AdminUser
 from .marketer_db import Marketer
 from .exchange_db import ExchangeRate
@@ -25,10 +25,8 @@ from .financials_db import OrderFinancial
 from .orders_db import Order
 from .order_items_db import OrderItem
 from .sync_log import SyncLog
-# في حال أضفت أي موديل جديد مستقبلاً، أضفه هنا
 
 # 3. القائمة المصدرة (Export Registry)
-# تأكد أن أي موديل تضيفه أعلاه موجود أيضاً في هذه القائمة
 __all__ = [
     'db',
     'AdminStaff',
