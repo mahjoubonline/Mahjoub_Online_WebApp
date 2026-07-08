@@ -38,7 +38,6 @@ def check_phone():
     if len(phone) < 9: return jsonify({'available': False})
     
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
-    # نفترض أن الحقل المخزن هو search_phone
     exists = model.query.filter_by(search_phone=phone[-9:]).first()
     return jsonify({'available': exists is None})
 
@@ -75,17 +74,26 @@ def assign_permissions():
     
     if staff_type == 'admin':
         new_staff = AdminStaff(username=username, role='worker')
+        supplier_info = {'trade_name': 'إدارة مركزية', 'supplier_code': 'ADMIN-SYS'}
     else:
-        new_staff = SupplierStaff(username=username, role='worker', supplier_id=int(supplier_id))
+        supplier = Supplier.query.get_or_404(int(supplier_id))
+        new_staff = SupplierStaff(username=username, role='worker', supplier_id=supplier.id)
+        supplier_info = {'trade_name': supplier.trade_name, 'supplier_code': supplier.supplier_code}
     
     new_staff.phone = phone
-    new_staff.search_phone = phone[-9:] # التأكد من حفظ الرقم المختصر للبحث
+    new_staff.search_phone = phone[-9:]
     new_staff.set_password(password)
     
     db.session.add(new_staff)
     try:
         db.session.commit()
-        return jsonify({'success': True, 'username': username, 'password': password})
+        return jsonify({
+            'success': True, 
+            'username': username, 
+            'password': password,
+            'trade_name': supplier_info['trade_name'],
+            'supplier_code': supplier_info['supplier_code']
+        })
     except Exception:
         db.session.rollback()
         return jsonify({'success': False, 'message': 'خطأ في قاعدة البيانات'})
@@ -100,7 +108,6 @@ def reset_password(id, type):
     new_pass = generate_random_password()
     user.set_password(new_pass)
     db.session.commit()
-    # هنا يمكنك استخدام فلاش لإظهار كلمة المرور الجديدة
     return redirect(url_for('admin_permissions.roles_list', type=type))
 
 @admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<type>')
