@@ -1,5 +1,7 @@
 # coding: utf-8
-from flask import Blueprint, render_template, flash, redirect, url_for, request, jsonify
+# 📂 apps/admin_permissions/routes.py
+
+from flask import Blueprint, render_template, redirect, url_for, request, jsonify
 from flask_login import login_required, current_user
 import secrets
 import string
@@ -18,19 +20,16 @@ def generate_random_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return ''.join(secrets.choice(chars) for _ in range(length))
 
-# --- التحقق اللحظي من اسم المستخدم ---
+# --- التحقق اللحظي ---
 @admin_permissions_bp.route('/admin/permissions/check-user', methods=['GET'])
 @login_required
 def check_user():
     username = request.args.get('username', '')
     if len(username) < 3: return jsonify({'available': False})
-    
-    # التحقق في كلا الجدولين
     exists = AdminStaff.query.filter_by(username=username).first() or \
              SupplierStaff.query.filter_by(username=username).first()
     return jsonify({'available': exists is None})
 
-# --- التحقق اللحظي من رقم الهاتف ---
 @admin_permissions_bp.route('/admin/permissions/check-phone', methods=['GET'])
 @login_required
 def check_phone():
@@ -39,27 +38,29 @@ def check_phone():
     if len(phone) < 9: return jsonify({'available': False})
     
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
+    # نفترض أن الحقل المخزن هو search_phone
     exists = model.query.filter_by(search_phone=phone[-9:]).first()
     return jsonify({'available': exists is None})
 
+# --- عرض القائمة ---
 @admin_permissions_bp.route('/admin/permissions/roles', methods=['GET'])
 @login_required
 def roles_list():
     if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
     
     page = request.args.get('page', 1, type=int)
-    search = request.args.get('q', '')
     staff_type = request.args.get('type', 'admin')
     
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
-    query = model.query
-    if search:
-        query = query.filter((model.username.contains(search)) | (model.search_phone.contains(search[-9:])))
-        
-    pagination = query.order_by(model.created_at.desc()).paginate(page=page, per_page=10, error_out=False)
-    return render_template('admin/permissions.html', staff=pagination.items, pagination=pagination, 
-                           type_filter=staff_type, suppliers=Supplier.query.all())
+    pagination = model.query.order_by(model.created_at.desc()).paginate(page=page, per_page=10, error_out=False)
+    
+    return render_template('admin/permissions.html', 
+                           staff=pagination.items, 
+                           pagination=pagination, 
+                           type_filter=staff_type, 
+                           suppliers=Supplier.query.all())
 
+# --- إضافة موظف جديد ---
 @admin_permissions_bp.route('/admin/permissions/assign', methods=['POST'])
 @login_required
 def assign_permissions():
@@ -70,27 +71,44 @@ def assign_permissions():
     staff_type = request.form.get('type')
     supplier_id = request.form.get('supplier_id')
     
-    password = generate_random_password() # كلمة مرور عشوائية للتعميد
+    password = generate_random_password()
     
     if staff_type == 'admin':
         new_staff = AdminStaff(username=username, role='worker')
     else:
         new_staff = SupplierStaff(username=username, role='worker', supplier_id=int(supplier_id))
     
-    new_staff.phone = phone 
+    new_staff.phone = phone
+    new_staff.search_phone = phone[-9:] # التأكد من حفظ الرقم المختصر للبحث
     new_staff.set_password(password)
     
     db.session.add(new_staff)
     try:
         db.session.commit()
-        # إرجاع البيانات للـ AJAX لإظهار نافذة التعميد
-        return jsonify({
-            'success': True, 
-            'username': username, 
-            'password': password
-        })
-    except Exception as e:
+        return jsonify({'success': True, 'username': username, 'password': password})
+    except Exception:
         db.session.rollback()
-        return jsonify({'success': False, 'message': 'خطأ في الحفظ'})
+        return jsonify({'success': False, 'message': 'خطأ في قاعدة البيانات'})
 
-# --- المسارات الأخرى (reset_password و toggle_status) تبقى كما هي ---
+# --- إدارة الحسابات ---
+@admin_permissions_bp.route('/admin/permissions/reset-password/<int:id>/<type>')
+@login_required
+def reset_password(id, type):
+    if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
+    model = AdminStaff if type == 'admin' else SupplierStaff
+    user = model.query.get_or_404(id)
+    new_pass = generate_random_password()
+    user.set_password(new_pass)
+    db.session.commit()
+    # هنا يمكنك استخدام فلاش لإظهار كلمة المرور الجديدة
+    return redirect(url_for('admin_permissions.roles_list', type=type))
+
+@admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<type>')
+@login_required
+def toggle_status(id, type):
+    if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
+    model = AdminStaff if type == 'admin' else SupplierStaff
+    user = model.query.get_or_404(id)
+    user.is_active = not user.is_active
+    db.session.commit()
+    return redirect(url_for('admin_permissions.roles_list', type=type))
