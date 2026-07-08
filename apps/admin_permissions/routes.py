@@ -54,10 +54,6 @@ def roles_list():
 @admin_permissions_bp.route('/admin/permissions/assign', methods=['POST'])
 @login_required
 def assign_permissions():
-    """
-    ملاحظة: هذا المسار يتطلب وجود CSRF Token في الفورم (HTML)
-    بسبب استخدام Flask-WTF أو CSRFProtect في إعدادات التطبيق.
-    """
     if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
     
     username = request.form.get('username')
@@ -67,18 +63,24 @@ def assign_permissions():
     
     if username and phone:
         if staff_type == 'admin':
-            new_staff = AdminStaff(username=username, phone=phone, role='worker')
+            new_staff = AdminStaff(username=username, role='worker')
+            new_staff.phone = phone # التعيين هنا يضمن تفعيل الـ setter والتشفير
         else:
             if not supplier_id:
                 flash("يجب اختيار مورد تابع له الموظف", "danger")
                 return redirect(url_for('admin_permissions.roles_list', type='supplier'))
             
-            new_staff = SupplierStaff(username=username, phone=phone, role='worker', supplier_id=int(supplier_id))
+            new_staff = SupplierStaff(username=username, role='worker', supplier_id=int(supplier_id))
+            new_staff.phone = phone # التعيين هنا يضمن تفعيل الـ setter والتشفير
         
         new_staff.set_password('123456')
         db.session.add(new_staff)
-        db.session.commit()
-        flash(f"تمت إضافة {username} بنجاح", "success")
+        try:
+            db.session.commit()
+            flash(f"تمت إضافة {username} بنجاح", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash("حدث خطأ أثناء حفظ البيانات. تأكد من صحة رقم الهاتف.", "danger")
     
     return redirect(url_for('admin_permissions.roles_list', type=staff_type))
 
