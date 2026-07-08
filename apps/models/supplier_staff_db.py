@@ -24,20 +24,15 @@ class SupplierStaff(db.Model, UserMixin):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # 2. الفهارس للسرعة العالية
-    __table_args__ = (
-        db.Index('idx_staff_supplier_id', 'supplier_id'),
-        db.Index('idx_staff_username', 'username'),
-        db.Index('idx_staff_phone', 'phone'),
-        db.Index('idx_staff_role', 'role'),
-        db.Index('idx_staff_active', 'is_active'),
-        {'extend_existing': True}
-    )
+    # 2. إعدادات الجدول
+    # قمنا بإزالة الفهارس من هنا لأنها موجودة فعلياً في قاعدة البيانات وتسبب خطأ DuplicateTable
+    # استخدمنا 'extend_existing': True للسماح بإعادة تعريف الموديل أثناء التطوير
+    __table_args__ = {'extend_existing': True}
 
     # 3. العلاقات
     supplier = db.relationship('Supplier', back_populates='staff_members')
 
-    # 4. التشفير (Fernet للهاتف + PBKDF2 لكلمة المرور)
+    # 4. التشفير
     @staticmethod
     def _get_key():
         key = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
@@ -53,7 +48,7 @@ class SupplierStaff(db.Model, UserMixin):
     def phone_number(self, value):
         if value:
             self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
-            self.phone = str(value)[-9:] # لتسهيل البحث
+            self.phone = str(value)[-9:] 
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
