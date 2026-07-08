@@ -7,7 +7,7 @@
     .btn-royal:hover { background-color: #2e004d; color: #d4af37; }
     .card { border: 1px solid #d4af37; background-color: #fcfcfc; }
     .table thead { background-color: #4b0082 !important; color: #fff; }
-    .pagination .page-item.active .page-link { background-color: #4b0082; border-color: #4b0082; }
+    .pagination .page-item.active .page-link { background-color: #4b0082; border-color: #4b0082; color: #fff; }
     .text-royal { color: #4b0082; }
     .gold-border { border-color: #d4af37; }
 </style>
@@ -29,7 +29,7 @@
         <div class="card-body">
             <form method="GET" class="row g-3">
                 <div class="col-md-5">
-                    <input type="text" name="q" class="form-control" placeholder="بحث بالاسم أو الهاتف...">
+                    <input type="text" name="q" class="form-control" placeholder="بحث بالاسم أو الهاتف..." value="{{ request.args.get('q', '') }}">
                 </div>
                 <div class="col-md-4">
                     <select name="type" class="form-select">
@@ -77,8 +77,8 @@
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown">خيارات</button>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="{{ url_for('admin_permissions.reset_password', id=member.id) }}"><i class="fas fa-key text-warning me-2"></i> كلمة مرور جديدة</a></li>
-                                        <li><a class="dropdown-item" href="{{ url_for('admin_permissions.toggle_status', id=member.id) }}">
+                                        <li><a class="dropdown-item" href="{{ url_for('admin_permissions.reset_password', id=member.id, type=type_filter) }}"><i class="fas fa-key text-warning me-2"></i> كلمة مرور جديدة</a></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('admin_permissions.toggle_status', id=member.id, type=type_filter) }}">
                                             <i class="fas fa-power-off text-danger me-2"></i> {{ 'إيقاف الحساب' if member.is_active else 'تفعيل الحساب' }}
                                         </a></li>
                                     </ul>
@@ -89,6 +89,18 @@
                     </tbody>
                 </table>
             </div>
+
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% for page_num in pagination.iter_pages(left_edge=2, right_edge=2) %}
+                        {% if page_num %}
+                            <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                <a class="page-link" href="{{ url_for('admin_permissions.roles_list', page=page_num, type=type_filter, q=request.args.get('q', '')) }}">{{ page_num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -100,9 +112,15 @@
             <div class="modal-body">
                 <input type="text" name="username" class="form-control mb-3" placeholder="اسم المستخدم" required>
                 <input type="tel" name="phone" class="form-control mb-3" placeholder="رقم الهاتف (00967...)" required>
-                <select name="type" class="form-select mb-3">
+                <select name="type" id="staffTypeSelect" class="form-select mb-3" onchange="toggleSupplierField(this.value)">
                     <option value="admin">إدارة مركزية</option>
                     <option value="supplier">موظف شريك</option>
+                </select>
+                <select name="supplier_id" id="supplierField" class="form-select mb-3" style="display:none;">
+                    <option value="">-- اختر المورد المرتبط --</option>
+                    {% for sup in suppliers %}
+                        <option value="{{ sup.id }}">{{ sup.trade_name }} - ({{ sup.supplier_code }})</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="modal-footer">
@@ -112,4 +130,11 @@
         </form>
     </div>
 </div>
+
+<script>
+    function toggleSupplierField(val) {
+        document.getElementById('supplierField').style.display = (val === 'supplier') ? 'block' : 'none';
+        document.getElementById('supplierField').required = (val === 'supplier');
+    }
+</script>
 {% endblock %}
