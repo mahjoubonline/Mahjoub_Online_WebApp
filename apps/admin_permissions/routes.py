@@ -9,7 +9,8 @@ import string
 from apps.extensions import db
 from apps.models.admin_staff_db import AdminStaff
 from apps.models.supplier_staff_db import SupplierStaff
-from apps.models.suppliers_db import Supplier
+# تم التصحيح هنا: استخدام اسم الملف الفعلي supplier_db
+from apps.models.supplier_db import Supplier 
 
 admin_permissions_bp = Blueprint('admin_permissions', __name__, template_folder='templates')
 
@@ -68,6 +69,7 @@ def assign_permissions():
             if not supplier_id:
                 flash("يجب اختيار مورد تابع له الموظف", "danger")
                 return redirect(url_for('admin_permissions.roles_list', type='supplier'))
+            
             new_staff = SupplierStaff(username=username, phone=phone, role='worker', supplier_id=int(supplier_id))
         
         new_staff.set_password('123456')
