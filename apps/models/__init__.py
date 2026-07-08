@@ -7,7 +7,7 @@
 لتجنب أخطاء الاعتمادات الدائرية (Circular Imports).
 """
 
-# استيراد قاعدة البيانات لتكون متاحة عبر apps.models
+# استيراد قاعدة البيانات لتكون متاحة عبر apps.models لأي موديول
 from apps.extensions import db
 
 # 1. الموديلات الأساسية
@@ -25,10 +25,12 @@ from .financials_db import OrderFinancial
 from .orders_db import Order
 from .order_items_db import OrderItem
 from .sync_log import SyncLog
+# في حال أضفت أي موديل جديد مستقبلاً، أضفه هنا
 
 # 3. القائمة المصدرة (Export Registry)
+# تأكد أن أي موديل تضيفه أعلاه موجود أيضاً في هذه القائمة
 __all__ = [
-    'db',              # تمت إضافة قاعدة البيانات هنا
+    'db',
     'AdminStaff',
     'AdminUser',
     'ExchangeRate',
