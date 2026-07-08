@@ -28,75 +28,28 @@
         </button>
     </div>
 
-    <div class="card shadow-sm mb-4 gold-border">
-        <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-5">
-                    <input type="text" name="q" class="form-control" placeholder="بحث بالاسم أو الهاتف..." value="{{ request.args.get('q', '') }}">
-                </div>
-                <div class="col-md-4">
-                    <select name="type" class="form-select">
-                        <option value="admin" {% if type_filter == 'admin' %}selected{% endif %}>إدارة مركزية</option>
-                        <option value="supplier" {% if type_filter == 'supplier' %}selected{% endif %}>موظفي الشركاء</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-royal w-100">تطبيق الفلتر</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <div class="card shadow-sm gold-border">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-royal">
-                        <tr>
-                            <th>#</th>
-                            <th>الموظف</th>
-                            <th>الدور</th>
-                            {% if type_filter == 'supplier' %}<th>المورد (الاسم - الكود)</th>{% endif %}
-                            <th>تاريخ الانضمام</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
+                        <tr><th>#</th><th>الموظف</th><th>الدور</th>{% if type_filter == 'supplier' %}<th>المورد</th>{% endif %}<th>تاريخ الانضمام</th><th>الحالة</th><th>الإجراءات</th></tr>
                     </thead>
                     <tbody>
                         {% for member in staff %}
                         <tr>
                             <td>{{ loop.index + (pagination.page - 1) * 10 }}</td>
-                            <td>
-                                <div class="fw-bold">{{ member.username }}</div>
-                                <small class="text-muted">{{ member.phone }}</small>
-                            </td>
+                            <td><div class="fw-bold">{{ member.username }}</div><small class="text-muted">{{ member.phone }}</small></td>
                             <td><span class="badge" style="background-color: #d4af37; color: #000;">{{ member.role }}</span></td>
-                            {% if type_filter == 'supplier' %}
-                            <td>
-                                {% if member.supplier %}
-                                    <div class="fw-bold text-royal">{{ member.supplier.trade_name }}</div>
-                                    <small class="text-secondary fw-bold">كود: {{ member.supplier.supplier_code }}</small>
-                                {% else %}
-                                    <span class="text-muted">غير مرتبط</span>
-                                {% endif %}
-                            </td>
-                            {% endif %}
+                            {% if type_filter == 'supplier' %}<td>{% if member.supplier %}<div class="fw-bold text-royal">{{ member.supplier.trade_name }}</div><small class="text-secondary fw-bold">كود: {{ member.supplier.supplier_code }}</small>{% else %}<span class="text-muted">غير مرتبط</span>{% endif %}</td>{% endif %}
                             <td class="text-secondary">{{ member.created_at.strftime('%Y-%m-%d') }}</td>
-                            <td>
-                                {% if member.is_active %}
-                                    <span class="text-success"><i class="fas fa-check-circle"></i> نشط</span>
-                                {% else %}
-                                    <span class="text-danger"><i class="fas fa-times-circle"></i> موقوف</span>
-                                {% endif %}
-                            </td>
+                            <td>{% if member.is_active %}<span class="text-success"><i class="fas fa-check-circle"></i> نشط</span>{% else %}<span class="text-danger"><i class="fas fa-times-circle"></i> موقوف</span>{% endif %}</td>
                             <td>
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown">خيارات</button>
                                     <ul class="dropdown-menu">
                                         <li><a class="dropdown-item" href="{{ url_for('admin_permissions.reset_password', id=member.id, type=type_filter) }}"><i class="fas fa-key text-warning me-2"></i> كلمة مرور جديدة</a></li>
-                                        <li><a class="dropdown-item" href="{{ url_for('admin_permissions.toggle_status', id=member.id, type=type_filter) }}">
-                                            <i class="fas fa-power-off text-danger me-2"></i> {{ 'إيقاف الحساب' if member.is_active else 'تفعيل الحساب' }}
-                                        </a></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('admin_permissions.toggle_status', id=member.id, type=type_filter) }}"><i class="fas fa-power-off text-danger me-2"></i> {{ 'إيقاف الحساب' if member.is_active else 'تفعيل الحساب' }}</a></li>
                                     </ul>
                                 </div>
                             </td>
@@ -105,81 +58,88 @@
                     </tbody>
                 </table>
             </div>
-            <nav class="mt-4"><ul class="pagination justify-content-center">{% for page_num in pagination.iter_pages(left_edge=2, right_edge=2) %}{% if page_num %}<li class="page-item {{ 'active' if page_num == pagination.page }}"><a class="page-link" href="{{ url_for('admin_permissions.roles_list', page=page_num, type=type_filter, q=request.args.get('q', '')) }}">{{ page_num }}</a></li>{% endif %}{% endfor %}</ul></nav>
         </div>
     </div>
 </div>
 
 <div class="modal fade" id="addStaffModal" tabindex="-1">
     <div class="modal-dialog">
-        <form id="addStaffForm" class="modal-content gold-border" method="POST" action="{{ url_for('admin_permissions.assign_permissions') }}">
+        <form id="addStaffForm" class="modal-content gold-border">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="modal-header bg-light text-royal"><h5>إضافة موظف جديد</h5></div>
             <div class="modal-body">
-                <input type="text" name="username" class="form-control mb-3" placeholder="اسم المستخدم" required>
-                
                 <div class="position-relative mb-3">
-                    <input type="tel" name="phone" id="phoneInput" class="form-control" placeholder="رقم الهاتف (00967...)" required oninput="validatePhone()">
+                    <input type="text" name="username" id="usernameInput" class="form-control" placeholder="اسم المستخدم" required oninput="checkAll()">
+                    <span id="userStatus" class="phone-status"></span>
+                </div>
+                <div class="position-relative mb-3">
+                    <input type="tel" name="phone" id="phoneInput" class="form-control" placeholder="رقم الهاتف (00967...)" required oninput="checkAll()">
                     <span id="phoneStatus" class="phone-status"></span>
                 </div>
-
-                <select name="type" id="staffTypeSelect" class="form-select mb-3" onchange="toggleSupplierField(this.value); validatePhone()">
+                <select name="type" id="staffTypeSelect" class="form-select mb-3" onchange="toggleSupplierField(this.value); checkAll()">
                     <option value="admin">إدارة مركزية</option>
                     <option value="supplier">موظف شريك</option>
                 </select>
-                
                 <select name="supplier_id" id="supplierField" class="form-control mb-3" style="display:none;">
-                    <option value="">-- ابحث عن المورد (الاسم أو الكود) --</option>
-                    {% for sup in suppliers %}
-                        <option value="{{ sup.id }}">{{ sup.trade_name }} - ({{ sup.supplier_code }})</option>
-                    {% endfor %}
+                    {% for sup in suppliers %}<option value="{{ sup.id }}">{{ sup.trade_name }} - ({{ sup.supplier_code }})</option>{% endfor %}
                 </select>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="submit" id="submitBtn" class="btn btn-royal">حفظ البيانات</button>
-            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button><button type="submit" id="submitBtn" class="btn btn-royal" disabled>حفظ البيانات</button></div>
         </form>
+    </div>
+</div>
+
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white"><h5>تم التعميد بنجاح</h5></div>
+            <div class="modal-body text-center">
+                <p>مرحباً ياشريكنا تم اعتماد موظف لديكم بنجاح في منصة محجوب أونلاين | سوقك الذكي</p>
+                <div class="bg-light p-3 border rounded text-start" id="credentialBox">
+                    <p>اسم المستخدم: <strong id="resUser"></strong></p>
+                    <p>كلمة المرور: <strong id="resPass" class="text-royal"></strong></p>
+                </div>
+                <p class="text-danger mt-3">تنبيه: يرجى تغيير كلمة المرور من لوحة الإعدادات.</p>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-royal" onclick="window.location.reload()">إغلاق وتحديث</button></div>
+        </div>
     </div>
 </div>
 
 <script>
     const element = document.getElementById('supplierField');
-    const choices = new Choices(element, { searchEnabled: true, itemSelectText: 'اضغط للاختيار' });
+    const choices = new Choices(element, { searchEnabled: true });
     const submitBtn = document.getElementById('submitBtn');
 
     function toggleSupplierField(val) {
-        const fieldContainer = document.querySelector('.choices');
-        if (val === 'supplier') {
-            fieldContainer.style.display = 'block';
-            element.required = true;
-        } else {
-            fieldContainer.style.display = 'none';
-            element.required = false;
-        }
+        document.querySelector('.choices').style.display = (val === 'supplier') ? 'block' : 'none';
     }
 
-    async function validatePhone() {
+    async function checkAll() {
+        const user = document.getElementById('usernameInput').value;
         const phone = document.getElementById('phoneInput').value;
         const type = document.getElementById('staffTypeSelect').value;
-        const statusSpan = document.getElementById('phoneStatus');
         
-        if(phone.length < 9) {
-            statusSpan.innerHTML = '';
-            submitBtn.disabled = false;
-            return;
-        }
-
-        const response = await fetch(`/admin/permissions/check-phone?phone=${phone}&type=${type}`);
-        const data = await response.json();
-
-        if(data.available) {
-            statusSpan.innerHTML = '✅';
-            submitBtn.disabled = false;
-        } else {
-            statusSpan.innerHTML = '❌';
-            submitBtn.disabled = true;
-        }
+        const [uRes, pRes] = await Promise.all([
+            fetch(`/admin/permissions/check-user?username=${user}`).then(r=>r.json()),
+            fetch(`/admin/permissions/check-phone?phone=${phone}&type=${type}`).then(r=>r.json())
+        ]);
+        
+        document.getElementById('userStatus').innerHTML = (user.length > 3 && uRes.available) ? '✅' : (user.length > 3 ? '❌' : '');
+        document.getElementById('phoneStatus').innerHTML = (phone.length >= 9 && pRes.available) ? '✅' : (phone.length >= 9 ? '❌' : '');
+        submitBtn.disabled = !(uRes.available && pRes.available && user.length > 3 && phone.length >= 9);
     }
+
+    document.getElementById('addStaffForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const res = await fetch(e.target.action, { method: 'POST', body: new FormData(e.target) });
+        const data = await res.json();
+        if(data.success) {
+            document.getElementById('resUser').innerText = data.username;
+            document.getElementById('resPass').innerText = data.password;
+            $('#addStaffModal').modal('hide');
+            new bootstrap.Modal(document.getElementById('successModal')).show();
+        }
+    };
 </script>
 {% endblock %}
