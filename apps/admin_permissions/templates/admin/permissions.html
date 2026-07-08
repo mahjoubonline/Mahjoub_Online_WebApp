@@ -9,7 +9,6 @@
     .btn-royal:hover { background-color: #2e004d; color: #d4af37; }
     .card { border: 1px solid #d4af37; background-color: #fcfcfc; }
     .table thead { background-color: #4b0082 !important; color: #fff; }
-    .pagination .page-item.active .page-link { background-color: #4b0082; border-color: #4b0082; color: #fff; }
     .text-royal { color: #4b0082; }
     .gold-border { border-color: #d4af37; }
     .phone-status { position: absolute; left: 15px; top: 10px; font-size: 1.2rem; }
@@ -64,7 +63,7 @@
 
 <div class="modal fade" id="addStaffModal" tabindex="-1">
     <div class="modal-dialog">
-        <form id="addStaffForm" class="modal-content gold-border">
+        <form id="addStaffForm" action="{{ url_for('admin_permissions.assign_permissions') }}" class="modal-content gold-border">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="modal-header bg-light text-royal"><h5>إضافة موظف جديد</h5></div>
             <div class="modal-body">
@@ -112,7 +111,8 @@
     const submitBtn = document.getElementById('submitBtn');
 
     function toggleSupplierField(val) {
-        document.querySelector('.choices').style.display = (val === 'supplier') ? 'block' : 'none';
+        const container = document.querySelector('.choices');
+        if(container) container.style.display = (val === 'supplier') ? 'block' : 'none';
     }
 
     async function checkAll() {
@@ -120,25 +120,41 @@
         const phone = document.getElementById('phoneInput').value;
         const type = document.getElementById('staffTypeSelect').value;
         
+        if (user.length < 3 || phone.length < 9) {
+            submitBtn.disabled = true;
+            return;
+        }
+
         const [uRes, pRes] = await Promise.all([
             fetch(`/admin/permissions/check-user?username=${user}`).then(r=>r.json()),
             fetch(`/admin/permissions/check-phone?phone=${phone}&type=${type}`).then(r=>r.json())
         ]);
         
-        document.getElementById('userStatus').innerHTML = (user.length > 3 && uRes.available) ? '✅' : (user.length > 3 ? '❌' : '');
-        document.getElementById('phoneStatus').innerHTML = (phone.length >= 9 && pRes.available) ? '✅' : (phone.length >= 9 ? '❌' : '');
-        submitBtn.disabled = !(uRes.available && pRes.available && user.length > 3 && phone.length >= 9);
+        document.getElementById('userStatus').innerHTML = (uRes.available) ? '✅' : '❌';
+        document.getElementById('phoneStatus').innerHTML = (pRes.available) ? '✅' : '❌';
+        submitBtn.disabled = !(uRes.available && pRes.available);
     }
 
     document.getElementById('addStaffForm').onsubmit = async (e) => {
         e.preventDefault();
-        const res = await fetch(e.target.action, { method: 'POST', body: new FormData(e.target) });
+        const res = await fetch(e.target.action, { 
+            method: 'POST', 
+            body: new FormData(e.target) 
+        });
         const data = await res.json();
+        
         if(data.success) {
             document.getElementById('resUser').innerText = data.username;
             document.getElementById('resPass').innerText = data.password;
-            $('#addStaffModal').modal('hide');
+            
+            // إغلاق المودال الحالي وإظهار مودال النجاح
+            const modalEl = document.getElementById('addStaffModal');
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.hide();
+            
             new bootstrap.Modal(document.getElementById('successModal')).show();
+        } else {
+            alert(data.message || "حدث خطأ أثناء المعالجة");
         }
     };
 </script>
