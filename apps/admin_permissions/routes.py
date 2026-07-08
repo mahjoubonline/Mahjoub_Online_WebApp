@@ -1,7 +1,7 @@
 # coding: utf-8
 # 📂 apps/admin_permissions/routes.py
 
-from flask import Blueprint, render_template, flash, redirect, url_for, request
+from flask import Blueprint, render_template, flash, redirect, url_for, request, jsonify
 from flask_login import login_required, current_user
 import secrets
 import string
@@ -20,6 +20,22 @@ def generate_random_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return ''.join(secrets.choice(chars) for _ in range(length))
 
+# --- مسار التحقق اللحظي من رقم الهاتف ---
+@admin_permissions_bp.route('/admin/permissions/check-phone', methods=['GET'])
+@login_required
+def check_phone():
+    phone = request.args.get('phone', '')
+    staff_type = request.args.get('type', 'admin')
+    
+    if len(phone) < 9:
+        return jsonify({'available': False})
+    
+    # البحث باستخدام آخر 9 أرقام (الموجودة في search_phone)
+    model = AdminStaff if staff_type == 'admin' else SupplierStaff
+    exists = model.query.filter_by(search_phone=phone[-9:]).first()
+    
+    return jsonify({'available': exists is None})
+
 @admin_permissions_bp.route('/admin/permissions/roles', methods=['GET'])
 @login_required
 def roles_list():
@@ -31,18 +47,17 @@ def roles_list():
     search = request.args.get('q', '')
     staff_type = request.args.get('type', 'admin')
     
-    # تحديد الموديل بناءً على نوع الموظف
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
     query = model.query
     
-    # فلترة البحث
+    # فلترة البحث باستخدام search_phone للبحث في البيانات المشفرة
     if search:
-        query = query.filter(model.username.contains(search) | model.phone.contains(search))
+        query = query.filter(
+            (model.username.contains(search)) | 
+            (model.search_phone.contains(search[-9:]))
+        )
         
-    # الترقيم الصفحي
     pagination = query.order_by(model.created_at.desc()).paginate(page=page, per_page=10, error_out=False)
-    
-    # جلب الموردين للقائمة المنسدلة
     all_suppliers = Supplier.query.all()
     
     return render_template('admin/permissions.html', 
@@ -64,23 +79,23 @@ def assign_permissions():
     if username and phone:
         if staff_type == 'admin':
             new_staff = AdminStaff(username=username, role='worker')
-            new_staff.phone = phone # التعيين هنا يضمن تفعيل الـ setter والتشفير
         else:
             if not supplier_id:
                 flash("يجب اختيار مورد تابع له الموظف", "danger")
                 return redirect(url_for('admin_permissions.roles_list', type='supplier'))
-            
             new_staff = SupplierStaff(username=username, role='worker', supplier_id=int(supplier_id))
-            new_staff.phone = phone # التعيين هنا يضمن تفعيل الـ setter والتشفير
         
+        # التعيين هنا يضمن تفعيل الـ setter (تشفير AES-256 + تحديث search_phone)
+        new_staff.phone = phone 
         new_staff.set_password('123456')
+        
         db.session.add(new_staff)
         try:
             db.session.commit()
             flash(f"تمت إضافة {username} بنجاح", "success")
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            flash("حدث خطأ أثناء حفظ البيانات. تأكد من صحة رقم الهاتف.", "danger")
+            flash("خطأ: الرقم قد يكون مستخدماً مسبقاً في النظام.", "danger")
     
     return redirect(url_for('admin_permissions.roles_list', type=staff_type))
 
@@ -92,7 +107,7 @@ def reset_password(id, type):
     new_pass = generate_random_password()
     staff.set_password(new_pass)
     db.session.commit()
-    flash(f"تمت إعادة تعيين كلمة المرور لـ {staff.username}. الجديدة هي: {new_pass}", "success")
+    flash(f"تمت إعادة تعيين كلمة المرور. الجديدة هي: {new_pass}", "success")
     return redirect(url_for('admin_permissions.roles_list', type=type))
 
 @admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<string:type>', methods=['GET'])
