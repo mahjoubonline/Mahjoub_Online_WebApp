@@ -11,7 +11,8 @@
 from apps.extensions import db
 
 # 1. الموديلات الأساسية
-from .suppliers_db import Supplier        # تم تصحيح الاسم ليكون مطابقاً لـ suppliers_db.py
+# تم تعديل الاسم إلى supplier_db ليتوافق مع هيكلية المجلد الحالية
+from .supplier_db import Supplier        
 from .admin_db import AdminUser
 from .marketer_db import Marketer
 from .exchange_db import ExchangeRate
