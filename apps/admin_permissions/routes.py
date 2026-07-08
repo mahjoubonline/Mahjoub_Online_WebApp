@@ -7,21 +7,14 @@ import secrets
 import string
 
 from apps.extensions import db
-# تم تعديل المسار هنا ليطابق اسم الملف الفعلي لديك
-from apps.models.admin_staff_db import AdminStaff 
+from apps.models.admin_staff_db import AdminStaff
+from apps.models.supplier_staff_db import SupplierStaff
 
-# تعريف الـ Blueprint
-admin_permissions_bp = Blueprint(
-    'admin_permissions', 
-    __name__, 
-    template_folder='templates'
-)
+admin_permissions_bp = Blueprint('admin_permissions', __name__, template_folder='templates')
 
-# دالة التحقق من الصلاحيات السيادية
 def is_admin():
     return current_user.is_authenticated and (getattr(current_user, 'role', '') in ['admin', 'Owner'])
 
-# دالة توليد كلمة مرور عشوائية قوية
 def generate_random_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return ''.join(secrets.choice(chars) for _ in range(length))
@@ -29,62 +22,69 @@ def generate_random_password(length=12):
 @admin_permissions_bp.route('/admin/permissions/roles', methods=['GET'])
 @login_required
 def roles_list():
-    """عرض قائمة الموظفين مع خاصية البحث والترقيم الصفحي."""
     if not is_admin():
         flash("غير مصرح لك.", "danger")
         return redirect(url_for('admin_dashboard.dashboard'))
     
     page = request.args.get('page', 1, type=int)
     search = request.args.get('q', '')
+    staff_type = request.args.get('type', 'admin')
     
-    query = AdminStaff.query
+    # اختيار الموديل بناءً على الفلتر
+    model = AdminStaff if staff_type == 'admin' else SupplierStaff
+    query = model.query
+    
+    # البحث الموحد (بالاسم أو الهاتف)
     if search:
-        query = query.filter(AdminStaff.username.contains(search) | AdminStaff.email.contains(search))
+        query = query.filter(model.username.contains(search) | model.phone.contains(search))
         
-    pagination = query.paginate(page=page, per_page=10)
+    # ترقيم صفحي احترافي (10 عناصر في الصفحة)
+    pagination = query.order_by(model.created_at.desc()).paginate(page=page, per_page=10, error_out=False)
+    
     return render_template('admin/permissions.html', 
                            staff=pagination.items, 
                            pagination=pagination, 
-                           active_tab='roles')
+                           type_filter=staff_type)
 
 @admin_permissions_bp.route('/admin/permissions/assign', methods=['POST'])
 @login_required
 def assign_permissions():
-    """إضافة موظف جديد عبر النافذة المنبثقة."""
     if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
     
     username = request.form.get('username')
-    email = request.form.get('email')
+    phone = request.form.get('phone')
+    staff_type = request.form.get('type')
     
-    if username and email:
-        new_staff = AdminStaff(username=username, email=email, role='worker', is_active=True)
-        new_staff.set_password('123456') # كلمة مرور افتراضية أولية
+    if username and phone:
+        if staff_type == 'admin':
+            new_staff = AdminStaff(username=username, phone=phone, role='worker')
+        else:
+            new_staff = SupplierStaff(username=username, phone=phone, role='worker', supplier_id=1) # يمكن تعديل supplier_id
+        
+        new_staff.set_password('123456')
         db.session.add(new_staff)
         db.session.commit()
-        flash(f"تمت إضافة الموظف {username} بنجاح", "success")
-    else:
-        flash("بيانات غير مكتملة", "danger")
-        
-    return redirect(url_for('admin_permissions.roles_list'))
+        flash(f"تمت إضافة {username} بنجاح", "success")
+    
+    return redirect(url_for('admin_permissions.roles_list', type=staff_type))
 
-@admin_permissions_bp.route('/admin/permissions/reset-password/<int:id>', methods=['GET'])
+@admin_permissions_bp.route('/admin/permissions/reset-password/<int:id>/<string:type>', methods=['GET'])
 @login_required
-def reset_password(id):
-    """إعادة تعيين كلمة المرور وتوليدها عشوائياً."""
-    staff = AdminStaff.query.get_or_404(id)
+def reset_password(id, type):
+    model = AdminStaff if type == 'admin' else SupplierStaff
+    staff = model.query.get_or_404(id)
     new_pass = generate_random_password()
     staff.set_password(new_pass)
     db.session.commit()
-    flash(f"تمت إعادة تعيين كلمة المرور لـ {staff.username}. الجديدة هي: {new_pass}", "success")
-    return redirect(url_for('admin_permissions.roles_list'))
+    flash(f"كلمة المرور الجديدة لـ {staff.username}: {new_pass}", "success")
+    return redirect(url_for('admin_permissions.roles_list', type=type))
 
-@admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>', methods=['GET'])
+@admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<string:type>', methods=['GET'])
 @login_required
-def toggle_status(id):
-    """تفعيل أو إيقاف حساب الموظف."""
-    staff = AdminStaff.query.get_or_404(id)
+def toggle_status(id, type):
+    model = AdminStaff if type == 'admin' else SupplierStaff
+    staff = model.query.get_or_404(id)
     staff.is_active = not staff.is_active
     db.session.commit()
-    status = "نشط" if staff.is_active else "موقوف"
-    flash(f"تم تحديث حالة {staff.username} إلى {status}", "info")
-    return redirect(url_for('admin_permissions.roles_list'))
+    flash(f"تم تحديث حالة {staff.username}", "info")
+    return redirect(url_for('admin_permissions.roles_list', type=type))
