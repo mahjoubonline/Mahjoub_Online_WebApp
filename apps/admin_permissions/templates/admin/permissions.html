@@ -1,6 +1,7 @@
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
+<!-- استدعاء ملفات التنسيق للـ DataTables للتحكم الاحترافي بالجداول -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 
 <style>
@@ -26,29 +27,39 @@
     .text-royal {
         color: #210433 !important;
     }
+
+    /* تنسيق خاص وراقٍ لنافذة تأكيد إعادة التعيين */
+    .modal-confirm-header {
+        background-color: #fcf8e3 !important;
+        border-bottom: 2px solid #f0ad4e !important;
+        color: #8a6d3b !important;
+    }
 </style>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4" style="direction: rtl;">
+    <!-- ترويسة الصفحة العلوية -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="btn btn-outline-secondary btn-sm mb-2">
-                <i class="fas fa-arrow-right me-1"></i> رجوع
+            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="btn btn-outline-secondary btn-sm mb-2 rounded-2 px-3">
+                <i class="fas fa-arrow-right me-1"></i> رجوع للرئيسية
             </a>
-            <h4 class="text-royal fw-bold">
-                <i class="fas fa-user-shield me-2"></i> إدارة صلاحيات النظام
+            <h4 class="text-royal fw-bold m-0">
+                <i class="fas fa-user-shield me-2 text-royal"></i> إدارة صلاحيات النظام وحوكمة الحسابات
             </h4>
         </div>
-        <button class="btn btn-royal" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+        <button class="btn btn-royal px-4 py-2" data-bs-toggle="modal" data-bs-target="#addStaffModal">
             <i class="fas fa-plus-circle me-1"></i> إضافة موظف جديد
         </button>
     </div>
 
+    <!-- تضمين ملف بطاقات الإحصائيات وفلاتر التبديل -->
     {% include 'admin/includes/filters_and_cards.html' %}
     
+    <!-- جدول عرض البيانات الرئيسي -->
     <div class="row">
         <div class="col-12">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-0">
                     {% include 'admin/includes/table_data.html' %}
                 </div>
             </div>
@@ -56,27 +67,40 @@
     </div>
 </div>
 
+<!-- تضمين نيازك الحوار المنبثقة (Modals) المجهزة مسبقاً -->
 {% include 'admin/includes/modal_add_staff.html' %}
 {% include 'admin/includes/modal_success.html' %}
 
-<div class="modal fade" id="confirmResetModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">تأكيد إعادة التعيين</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- نافذة تأكيد إعادة تعيين كلمة المرور الفاخرة -->
+<div class="modal fade" id="confirmResetModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header modal-confirm-header py-3">
+                <h5 class="modal-title fw-bold m-0 fs-6">
+                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i> تأكيد إعادة تعيين كلمة المرور
+                </h5>
+                <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                تنبيه: سيتم تغيير كلمة المرور للموظف: <span id="confirmUsername" class="fw-bold"></span>. هل أنت متأكد؟
+            <div class="modal-body p-4 text-start">
+                <p class="mb-0 text-dark fs-6">
+                    تنبيه أمني: أنت على وشك تصفير وتغيير كلمة المرور الخاصة بالموظف: 
+                    <span id="confirmUsername" class="badge bg-dark px-2 py-1.5 fs-6 mx-1 fw-bold"></span>.
+                </p>
+                <small class="text-muted d-block mt-2">
+                    <i class="fas fa-info-circle me-1"></i> سيتم توليد كلمة مرور عشوائية جديدة فوراً وتثبيتها بالحساب. هل تريد الاستمرار؟
+                </small>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-warning" id="btnConfirmReset">تأكيد التغيير</button>
+            <div class="modal-footer justify-content-end bg-light border-0 py-3">
+                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء الأمر</button>
+                <button type="button" class="btn btn-warning px-4 fw-bold text-dark" id="btnConfirmReset">
+                    <i class="fas fa-key me-1"></i> تأكيد التغيير الآن
+                </button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- استدعاء المكتبات البرمجية بالترتيب الصحيح لضمان ثبات النظام -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
@@ -84,22 +108,20 @@
 <script>
     let currentStaff = {};
 
-    // دالة النسخ للحافظة 
-    function copyToClipboard(elementId) {
-        const text = document.getElementById(elementId).innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            alert('تم النسخ إلى الحافظة!');
-        });
-    }
-
+    // استدعاء نافذة التأكيد قبل طلب تعديل كلمة المرور من السيرفر
     function resetPassword(staffId, staffType, username) {
         currentStaff = {staffId, staffType, username};
         $('#confirmUsername').text(username);
         $('#confirmResetModal').modal('show');
     }
 
+    // إرسال طلب التغيير عبر الأياكس وتحديث واجهة النجاح الملوكية
     $('#btnConfirmReset').click(function() {
+        const confirmBtn = $(this);
+        confirmBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري المعالجة...');
+
         $('#confirmResetModal').modal('hide');
+        
         $.ajax({
             url: `/admin/permissions/reset-password/${currentStaff.staffId}/${currentStaff.staffType}`,
             type: 'GET',
@@ -107,27 +129,39 @@
                 if (response.success) {
                     showSuccessModal(response.username, response.new_password);
                 } else {
-                    alert('خطأ: ' + (response.message || 'فشل التحديث'));
+                    alert('خطأ في العملية: ' + (response.message || 'فشل التحديث من الخادم'));
                 }
             },
             error: function() {
-                alert('حدث خطأ في الاتصال بالخادم');
+                alert('حدث خطأ غير متوقع أثناء الاتصال بالخادم، يرجى التحقق من الشبكة.');
+            },
+            complete: function() {
+                // إعادة الزر لوضعه الطبيعي بعد اكتمال الطلب
+                confirmBtn.prop('disabled', false).html('<i class="fas fa-key me-1"></i> تأكيد التغيير الآن');
             }
         });
     });
 
+    // دالة عرض بيانات الاعتماد الجديدة داخل الـ Modal الملكي المخصص للنجاح
     function showSuccessModal(username, password) {
+        // تفريغ أو إخفاء حقول المورد الإضافية إن وجدت منعاً للتشويش
+        $('#resStore').text('إدارة مركزية / عام');
+        $('#resCode').text('---');
+        
         $('#resUser').text(username);
         $('#resPass').text(password);
         $('#successModal').modal('show');
     }
 
+    // تهيئة الجدول وإيقاف التكرار لضمان أداء مثالي
     $(document).ready(function() {
-        if ($('#staffTable').length) {
+        // نترك لـ table_data.html إدارة تهيئة الـ DataTable لعدم حدوث تعارض برمي مزدوج
+        if ($('#staffTable').length && !$.fn.DataTable.isDataTable('#staffTable')) {
             $('#staffTable').DataTable({
                 "pageLength": 10,
                 "responsive": true,
                 "searching": true,
+                "ordering": true,
                 "language": { 
                     "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json" 
                 }
