@@ -12,11 +12,11 @@ class AdminStaff(db.Model, UserMixin):
     """موديل موظفي الإدارة: مع تشفير سيادي وفهرسة أداء متقدمة."""
     __tablename__ = 'admin_staff'
     
-    # [فهرسة الأداء]: لضمان سرعة الاستعلامات والبحث
+    # [فهرسة الأداء]: تم تعديل الأسماء لتكون فريدة (idx_admin_staff) لضمان عدم التعارض
     __table_args__ = (
-        db.Index('idx_staff_username', 'username'),
-        db.Index('idx_staff_phone', 'search_phone'),
-        db.Index('idx_staff_created', 'created_at'),
+        db.Index('idx_admin_staff_username', 'username'),
+        db.Index('idx_admin_staff_phone', 'search_phone'),
+        db.Index('idx_admin_staff_created', 'created_at'),
         {'extend_existing': True}
     )
     
