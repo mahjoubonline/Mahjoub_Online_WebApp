@@ -87,7 +87,7 @@ def assign_permissions():
             supplier_info = {'trade_name': supplier.trade_name, 'supplier_code': supplier.supplier_code}
         
         # الاعتماد الكلي على Setter الموديل للقيام بالتشفير وتعبئة الحقول
-        # هذا السطر سيقوم بتحديث _phone_enc و phone (للبحث) تلقائياً
+        # هذا السطر سيقوم بتحديث _phone_enc و search_phone تلقائياً
         new_staff.phone = phone
         
         new_staff.set_password(password)
