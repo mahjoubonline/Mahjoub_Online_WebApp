@@ -122,9 +122,15 @@
     });
 
     $(document).ready(function() {
-        // تأخير بسيط لضمان تحميل الجدول قبل تهيئته
-        setTimeout(function() {
-            if ($('#staffTable').length && !$.fn.DataTable.isDataTable('#staffTable')) {
+        // استخدام setInterval لضمان تهيئة الجدول فور تحميله في الدوم
+        var checkTable = setInterval(function() {
+            if ($('#staffTable').length > 0) {
+                clearInterval(checkTable);
+                
+                if ($.fn.DataTable.isDataTable('#staffTable')) {
+                    $('#staffTable').DataTable().destroy();
+                }
+
                 $('#staffTable').DataTable({
                     "pageLength": 10,
                     "responsive": true,
@@ -136,7 +142,7 @@
                     }
                 });
             }
-        }, 300);
+        }, 100);
     });
 </script>
 {% endblock %}
