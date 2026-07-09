@@ -55,14 +55,12 @@
 <script>
     let currentStaff = {};
 
-    // دالة فتح مودال التأكيد
     function resetPassword(staffId, staffType, username) {
         currentStaff = {staffId, staffType, username};
         $('#confirmUsername').text(username);
         $('#confirmResetModal').modal('show');
     }
 
-    // تنفيذ إعادة التعيين عبر AJAX
     $('#btnConfirmReset').click(function() {
         $('#confirmResetModal').modal('hide');
         $.ajax({
@@ -70,6 +68,7 @@
             type: 'GET',
             success: function(response) {
                 if (response.success) {
+                    // تم تحديث هذه الدالة لتطابق المعرفات في modal_success.html
                     showSuccessModal(response.username, response.new_password);
                 } else {
                     alert('خطأ: ' + (response.message || 'فشل التحديث'));
@@ -81,15 +80,17 @@
         });
     });
 
-    // دالة إظهار مودال النجاح
     function showSuccessModal(username, password) {
-        // تأكد من أن المعرفات في modal_success.html هي successUsername و successPassword
-        $('#successUsername').text(username);
-        $('#successPassword').text(password);
-        $('#modalSuccess').modal('show');
+        // تحديث المعرفات لتطابق الموجود في modal_success.html
+        $('#resUser').text(username);
+        $('#resPass').text(password);
+        $('#resStore').text('إدارة النظام'); // اختياري
+        $('#resCode').text('---');          // اختياري
+        
+        // إظهار المودال الصحيح
+        $('#successModal').modal('show');
     }
 
-    // تفعيل الجدول عند جاهزية الصفحة
     $(document).ready(function() {
         if ($('#staffTable').length) {
             $('#staffTable').DataTable({
