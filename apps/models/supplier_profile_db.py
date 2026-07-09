@@ -8,7 +8,7 @@ from apps.extensions import db
 class SupplierProfile(db.Model):
     __tablename__ = 'supplier_profiles'
     
-    # [صمام الأمان]: فهرسة مسمّاة ومنع تكرار التعريف
+    # [صمام الأمان]: فهرسة مسمّاة لضمان سرعة الاستعلامات
     __table_args__ = (
         db.Index('idx_prof_supplier_id', 'supplier_id'),
         db.Index('idx_prof_trade_name', 'trade_name'),
@@ -31,19 +31,21 @@ class SupplierProfile(db.Model):
     governorate = db.Column(db.String(100))
     city = db.Column(db.String(100))
     
-    # [المسار الكامل]: الربط السيادي لمنع خطأ Multiple classes found
+    # [التحميل الكسول]: استخدام 'select' يضمن عدم جلب المورد إلا عند استدعائه
     supplier = db.relationship(
-        'apps.models.supplier_db.Supplier', 
-        back_populates='supplier_profile'
+        'Supplier', 
+        back_populates='supplier_profile',
+        lazy='select' 
     )
 
-    # --- نظام التشفير (AES) ---
+    # --- نظام التشفير (AES-256) ---
     @staticmethod
     def _get_key():
         return os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=').encode()
 
     @property
     def bank_account(self):
+        """فك التشفير عند الاستدعاء"""
         if not self._bank_account_enc: return None
         try:
             return Fernet(self._get_key()).decrypt(self._bank_account_enc.encode()).decode()
@@ -51,11 +53,13 @@ class SupplierProfile(db.Model):
 
     @bank_account.setter
     def bank_account(self, value):
+        """تشفير الحساب البنكي قبل التخزين"""
         if value:
             self._bank_account_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
 
     @property
     def id_number(self):
+        """فك التشفير عند الاستدعاء"""
         if not self._id_number_enc: return None
         try:
             return Fernet(self._get_key()).decrypt(self._id_number_enc.encode()).decode()
@@ -63,6 +67,7 @@ class SupplierProfile(db.Model):
 
     @id_number.setter
     def id_number(self, value):
+        """تشفير رقم الهوية قبل التخزين"""
         if value:
             self._id_number_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
 
