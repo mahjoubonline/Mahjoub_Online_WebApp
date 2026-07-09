@@ -104,7 +104,7 @@
                                     </li>
                                     <li><hr class="dropdown-divider my-1"></li>
                                     <li>
-                                        <a class="dropdown-item py-2" href="{{ url_for('admin_permissions.toggle_status', id=member.id, type=type_filter) }}">
+                                        <a class="dropdown-item py-2" href="{{ url_for('admin_permissions.toggle_status', id=member.id, staff_type=type_filter) }}">
                                             {% if member.is_active %}
                                             <i class="fas fa-user-slash text-danger me-2"></i> إيقاف الحساب
                                             {% else %}
@@ -125,7 +125,6 @@
 
 <script>
 $(document).ready(function() {
-    // تدمير الجدول القديم إذا وجد قبل إعادة تهيئته (لتجنب التعارض)
     if ($.fn.DataTable.isDataTable('#staffTable')) {
         $('#staffTable').DataTable().destroy();
     }
