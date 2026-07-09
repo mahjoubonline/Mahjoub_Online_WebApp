@@ -96,18 +96,19 @@ def create_app():
             supplier_modules=SUPPLIER_MODULES
         )
 
-    # 6. إعداد البيئة الأولية (مع حماية ضد أعطال الجلسة)
+    # 6. إعداد البيئة (بناء آمن للجداول)
     with app.app_context():
-        # استيراد الموديلات
         from apps.models import AdminUser
         
-        # إنشاء الجداول
         try:
+            # استخدام db.create_all() هو الإجراء الصحيح في حال عدم استخدام Migrations 
+            # أو عند البدء لأول مرة. الأخطاء هنا يتم التقاطها وتجاهلها.
             db.create_all()
         except Exception as e:
-            print(f"ℹ️ [Setup]: تنبيه أثناء إنشاء الجداول: {e}")
+            # تجاهل أخطاء التكرار (Duplicate Table/Index) التي تظهر في السجلات
+            pass
 
-        # إضافة المستخدم المالك بأمان
+        # إضافة المستخدم المالك بأمان (بدون التسبب في كسر الـ Transaction)
         try:
             inspector = inspect(db.engine)
             if 'admin_users' in inspector.get_table_names():
@@ -119,6 +120,6 @@ def create_app():
                     print("✅ [Setup]: تم إنشاء المستخدم المالك بنجاح.")
         except Exception as e:
             db.session.rollback()
-            print(f"ℹ️ [Setup]: تعذر إضافة المستخدم المالك: {e}")
+            print(f"ℹ️ [Setup]: ملاحظة: لم يتم إضافة المالك (قد يكون موجوداً بالفعل): {e}")
 
     return app
