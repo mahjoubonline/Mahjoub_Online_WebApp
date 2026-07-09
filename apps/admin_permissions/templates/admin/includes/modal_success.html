@@ -1,12 +1,42 @@
-<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static">
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white"><h5>تم التعميد</h5></div>
-            <div class="modal-body text-center" id="credBox">
-                <p>اسم المستخدم: <strong id="resUser"></strong></p>
-                <p>كلمة المرور: <strong id="resPass"></strong></p>
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i> تم الاعتماد بنجاح</h5>
             </div>
-            <div class="modal-footer"><button class="btn btn-primary" onclick="copyText()">نسخ</button></div>
+            <div class="modal-body text-center">
+                <p class="mb-3">تم إنشاء حساب الموظف بنجاح في منصة محجوب أونلاين.</p>
+                
+                <div class="bg-light p-3 border rounded text-start mx-auto" id="credBox" style="max-width: 350px;">
+                    <p class="mb-1">المتجر: <strong id="resStore" class="text-royal"></strong></p>
+                    <p class="mb-1">كود المتجر: <strong id="resCode" class="text-secondary"></strong></p>
+                    <hr class="my-2">
+                    <p class="mb-1">اسم المستخدم: <strong id="resUser"></strong></p>
+                    <p class="mb-0">كلمة المرور: <strong id="resPass" class="text-danger"></strong></p>
+                </div>
+                
+                <p class="text-muted mt-3 small"><i class="fas fa-info-circle me-1"></i> يرجى نسخ البيانات وتزويد الموظف بها.</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-outline-dark" onclick="copyCredentials()">
+                    <i class="fas fa-copy me-1"></i> نسخ البيانات
+                </button>
+                <button type="button" class="btn btn-royal" onclick="window.location.reload()">
+                    <i class="fas fa-sync-alt me-1"></i> إغلاق وتحديث
+                </button>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+    // وظيفة نسخ محتوى الصندوق إلى الحافظة
+    function copyCredentials() {
+        const textToCopy = document.getElementById('credBox').innerText;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            alert("تم نسخ البيانات بنجاح!");
+        }).catch(err => {
+            console.error('فشل النسخ: ', err);
+        });
+    }
+</script>
