@@ -26,34 +26,27 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     
-    # التحقق من الإعدادات الحساسة
     config.Config.validate_config()
-
-    # تفعيل CORS
     CORS(app, resources={r"/admin/*": {"origins": ["https://studio.apollographql.com", "http://localhost:5000"]}}, supports_credentials=True)
 
-    # 1. تهيئة الإضافات
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
 
-    # 2. إعدادات الأمان
     talisman.init_app(app, 
         content_security_policy={
             'default-src': ["'self'"],
             'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://cdn.datatables.net"],
             'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
-            'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://code.jquery.com", "https://cdn.jsdelivr.net", "https://cdn.datatables.net"],
+            'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://code.jquery.com", "https://cdn.jquery.com", "https://cdn.jsdelivr.net", "https://cdn.datatables.net"],
             'img-src': ["'self'", "data:", "*"]
         },
         force_https=False
     )
 
     login_manager.login_view = 'suppliers_auth.login'
-
-    # 3. تسجيل الـ Blueprints
     app.register_blueprint(qomrah_bp)
     csrf.exempt(qomrah_bp)
     
@@ -64,10 +57,9 @@ def create_app():
     except ImportError:
         pass
 
-    # 4. تسجيل الموديولات الديناميكي
+    # تسجيل الموديولات
     apps_dir = app.root_path
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api']
-
     if os.path.exists(apps_dir):
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
@@ -78,57 +70,43 @@ def create_app():
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
-                            mod_data = {
-                                "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
-                                "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
-                                "links": getattr(module, 'LINKS', {}),
-                            }
-                            if getattr(module, 'SHOW_IN_SUPPLIER', False):
-                                SUPPLIER_MODULES[item] = mod_data
-                            else:
-                                ADMIN_MODULES[item] = mod_data
                     except Exception as e:
                         print(f"❌ [Registry]: خطأ في تسجيل موديول {item}: {e}")
 
-    # 5. المسارات الأساسية
     @app.route('/')
     def index():
         return redirect('/supplier/login')
 
     @app.context_processor
     def inject_vars():
-        return dict(
-            csrf_token=generate_csrf,
-            registered_modules=ADMIN_MODULES,
-            supplier_modules=SUPPLIER_MODULES
-        )
+        return dict(csrf_token=generate_csrf)
 
-    # 6. إعداد البيئة الأولية وزرع المالك (علي محجوب)
+    # 6. إعداد البيئة الأولية
     with app.app_context():
-        # إنشاء الجداول أولاً
+        # هام: تأكد من استيراد كل الموديلات ليتعرف عليها SQLAlchemy قبل create_all
         try:
-            db.create_all()
-        except Exception as e:
-            print(f"⚠️ [Setup]: تنبيه أثناء إنشاء الجداول: {e}")
-
-        # زرع المالك في جدول الإدارة حصراً
-        try:
-            from apps.models.admin_db import AdminUser
+            from apps.models import (
+                Supplier, AdminUser, Marketer, ExchangeRate, AdminStaff, 
+                SupplierProfile, SupplierStaff, SupplierWallet, WalletTransaction,
+                OrderFinancial, Order, OrderItem, SyncLog
+            )
+            print("✅ [Setup]: تم تحميل الموديلات بنجاح.")
             
+            db.create_all()
+            print("✅ [Setup]: تم إنشاء الجداول بنجاح.")
+            
+            # زرع المالك
             owner = AdminUser.query.filter_by(username='علي محجوب').first()
             if not owner:
                 owner = AdminUser(username='علي محجوب', role='Owner')
                 db.session.add(owner)
-                db.session.flush() # لإعطاء ID قبل تعيين كلمة المرور إن لزم الأمر
-                print("✅ [Setup]: تم إنشاء المستخدم المالك 'علي محجوب'.")
-            
-            # تحديث كلمة المرور لضمان القدرة على الدخول
-            owner.set_password('123')
-            db.session.commit()
-            print("🔐 [Setup]: تم تأمين حساب المالك (علي محجوب) بكلمة المرور: 123.")
+                db.session.flush()
+                owner.set_password('123')
+                db.session.commit()
+                print("✅ [Setup]: تم إنشاء المستخدم المالك.")
             
         except Exception as e:
             db.session.rollback()
-            print(f"❌ [Setup]: فشل زرع المستخدم المالك في جدول الإدارة: {e}")
+            print(f"❌ [Setup]: خطأ أثناء التهيئة: {e}")
 
     return app
