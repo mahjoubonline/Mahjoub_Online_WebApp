@@ -1,11 +1,10 @@
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
-<!-- استدعاء ملفات التنسيق للـ DataTables للتحكم الاحترافي بالجداول -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 
 <style>
-    /* التنسيق الملكي الفاخر للأزرار (بنفسجي ملكي داكن مميل للأسود في الأطراف) */
+    /* التنسيق الملكي الفاخر للأزرار */
     .btn-royal {
         background: linear-gradient(135deg, #491269 0%, #210433 70%, #09010e 100%) !important;
         border: 1px solid #05000a !important;
@@ -15,18 +14,12 @@
         transition: all 0.3s ease !important;
     }
 
-    .btn-royal:hover, .btn-royal:focus {
+    .btn-royal:hover {
         background: linear-gradient(135deg, #320b49 0%, #12011d 70%, #000000 100%) !important;
-        border-color: #000000 !important;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55) !important;
-        color: #ffffff !important;
         transform: translateY(-1px);
     }
     
-    /* لمسة جمالية لنصوص العناوين الملكية */
-    .text-royal {
-        color: #210433 !important;
-    }
+    .text-royal { color: #210433 !important; }
 
     /* تنسيق خاص وراقٍ لنافذة تأكيد إعادة التعيين */
     .modal-confirm-header {
@@ -34,10 +27,15 @@
         border-bottom: 2px solid #f0ad4e !important;
         color: #8a6d3b !important;
     }
+
+    /* تنسيق رأس الجدول الملكي */
+    .table-royal-header {
+        background: linear-gradient(135deg, #491269 0%, #210433 100%) !important;
+        color: #ffffff !important;
+    }
 </style>
 
 <div class="container-fluid py-4" style="direction: rtl;">
-    <!-- ترويسة الصفحة العلوية -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <a href="{{ url_for('admin_dashboard.dashboard') }}" class="btn btn-outline-secondary btn-sm mb-2 rounded-2 px-3">
@@ -52,10 +50,8 @@
         </button>
     </div>
 
-    <!-- تضمين ملف بطاقات الإحصائيات وفلاتر التبديل -->
     {% include 'admin/includes/filters_and_cards.html' %}
     
-    <!-- جدول عرض البيانات الرئيسي -->
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm border-0 rounded-3">
@@ -67,11 +63,9 @@
     </div>
 </div>
 
-<!-- تضمين نيازك الحوار المنبثقة (Modals) المجهزة مسبقاً -->
 {% include 'admin/includes/modal_add_staff.html' %}
 {% include 'admin/includes/modal_success.html' %}
 
-<!-- نافذة تأكيد إعادة تعيين كلمة المرور الفاخرة -->
 <div class="modal fade" id="confirmResetModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
@@ -79,19 +73,12 @@
                 <h5 class="modal-title fw-bold m-0 fs-6">
                     <i class="fas fa-exclamation-triangle me-2 text-warning"></i> تأكيد إعادة تعيين كلمة المرور
                 </h5>
-                <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4 text-start">
-                <p class="mb-0 text-dark fs-6">
-                    تنبيه أمني: أنت على وشك تصفير وتغيير كلمة المرور الخاصة بالموظف: 
-                    <span id="confirmUsername" class="badge bg-dark px-2 py-1.5 fs-6 mx-1 fw-bold"></span>.
-                </p>
-                <small class="text-muted d-block mt-2">
-                    <i class="fas fa-info-circle me-1"></i> سيتم توليد كلمة مرور عشوائية جديدة فوراً وتثبيتها بالحساب. هل تريد الاستمرار؟
-                </small>
+                <p class="mb-0 text-dark fs-6">تنبيه أمني: أنت على وشك تصفير وتغيير كلمة المرور الخاصة بالموظف: <span id="confirmUsername" class="badge bg-dark px-2 py-1.5 fs-6 mx-1 fw-bold"></span>.</p>
             </div>
             <div class="modal-footer justify-content-end bg-light border-0 py-3">
-                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء الأمر</button>
+                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
                 <button type="button" class="btn btn-warning px-4 fw-bold text-dark" id="btnConfirmReset">
                     <i class="fas fa-key me-1"></i> تأكيد التغيير الآن
                 </button>
@@ -100,7 +87,6 @@
     </div>
 </div>
 
-<!-- استدعاء المكتبات البرمجية بالترتيب الصحيح لضمان ثبات النظام -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
@@ -108,18 +94,15 @@
 <script>
     let currentStaff = {};
 
-    // استدعاء نافذة التأكيد قبل طلب تعديل كلمة المرور من السيرفر
     function resetPassword(staffId, staffType, username) {
         currentStaff = {staffId, staffType, username};
         $('#confirmUsername').text(username);
         $('#confirmResetModal').modal('show');
     }
 
-    // إرسال طلب التغيير عبر الأياكس وتحديث واجهة النجاح الملوكية
     $('#btnConfirmReset').click(function() {
         const confirmBtn = $(this);
         confirmBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري المعالجة...');
-
         $('#confirmResetModal').modal('hide');
         
         $.ajax({
@@ -127,44 +110,33 @@
             type: 'GET',
             success: function(response) {
                 if (response.success) {
-                    showSuccessModal(response.username, response.new_password);
+                    // تمرير بيانات المتجر المستلمة من السيرفر
+                    showSuccessModal(response.username, response.new_password, response.store_name, response.store_code);
                 } else {
-                    alert('خطأ في العملية: ' + (response.message || 'فشل التحديث من الخادم'));
+                    alert('خطأ: ' + (response.message || 'فشل التحديث'));
                 }
             },
-            error: function() {
-                alert('حدث خطأ غير متوقع أثناء الاتصال بالخادم، يرجى التحقق من الشبكة.');
-            },
             complete: function() {
-                // إعادة الزر لوضعه الطبيعي بعد اكتمال الطلب
                 confirmBtn.prop('disabled', false).html('<i class="fas fa-key me-1"></i> تأكيد التغيير الآن');
             }
         });
     });
 
-    // دالة عرض بيانات الاعتماد الجديدة داخل الـ Modal الملكي المخصص للنجاح
-    function showSuccessModal(username, password) {
-        // تفريغ أو إخفاء حقول المورد الإضافية إن وجدت منعاً للتشويش
-        $('#resStore').text('إدارة مركزية / عام');
-        $('#resCode').text('---');
-        
+    // دالة عرض بيانات النجاح مع دعم المتجر
+    function showSuccessModal(username, password, storeName = 'إدارة مركزية', storeCode = 'SYSTEM') {
+        $('#resStore').text(storeName);
+        $('#resCode').text(storeCode);
         $('#resUser').text(username);
         $('#resPass').text(password);
         $('#successModal').modal('show');
     }
 
-    // تهيئة الجدول وإيقاف التكرار لضمان أداء مثالي
     $(document).ready(function() {
-        // نترك لـ table_data.html إدارة تهيئة الـ DataTable لعدم حدوث تعارض برمي مزدوج
         if ($('#staffTable').length && !$.fn.DataTable.isDataTable('#staffTable')) {
             $('#staffTable').DataTable({
                 "pageLength": 10,
                 "responsive": true,
-                "searching": true,
-                "ordering": true,
-                "language": { 
-                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json" 
-                }
+                "language": { "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json" }
             });
         }
     });
