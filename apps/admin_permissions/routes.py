@@ -40,7 +40,6 @@ def check_phone():
     if len(phone) < 9: return jsonify({'available': False})
     
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
-    # تم التصحيح: البحث باستخدام العمود 'phone' الموجود في الموديل
     exists = model.query.filter_by(phone=phone[-9:]).first()
     return jsonify({'available': exists is None})
 
@@ -82,7 +81,6 @@ def assign_permissions():
             new_staff = SupplierStaff(username=username, role='worker', supplier_id=supplier.id)
             supplier_info = {'trade_name': supplier.trade_name, 'supplier_code': supplier.supplier_code}
         
-        # التعديل هنا: استخدام الخاصية phone_number للـ setter التي برمجتها في الموديل
         new_staff.phone_number = phone 
         new_staff.set_password(password)
         
@@ -100,19 +98,20 @@ def assign_permissions():
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
 
-# --- إدارة الحسابات ---
-@admin_permissions_bp.route('/admin/permissions/reset-password/<int:id>/<type>')
+# --- إدارة الحسابات (محدثة لتعمل مع AJAX) ---
+@admin_permissions_bp.route('/admin/permissions/reset-password/<int:id>/<type>', methods=['GET'])
 @login_required
 def reset_password(id, type):
-    if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
+    if not is_admin(): return jsonify({'success': False, 'message': 'غير مصرح'})
     model = AdminStaff if type == 'admin' else SupplierStaff
     user = model.query.get_or_404(id)
     new_pass = generate_random_password()
     user.set_password(new_pass)
     db.session.commit()
-    return redirect(url_for('admin_permissions.roles_list', type=type))
+    # إرجاع كلمة المرور للـ JS ليتم عرضها في المودال
+    return jsonify({'success': True, 'username': user.username, 'new_password': new_pass})
 
-@admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<type>')
+@admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<type>', methods=['GET'])
 @login_required
 def toggle_status(id, type):
     if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
