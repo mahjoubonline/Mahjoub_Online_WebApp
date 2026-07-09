@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/models/admin_db.py
+# 📂 apps/models/admin_staff_db.py
 
 import os
 from datetime import datetime
@@ -8,16 +8,15 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from apps.extensions import db
 
-class AdminUser(db.Model, UserMixin):
-    """موديل إدارة النظام: مع تشفير سيادي وفهرسة أداء متقدمة."""
-    __tablename__ = 'admin_users'
+class AdminStaff(db.Model, UserMixin):
+    """موديل موظفي الإدارة: مع تشفير سيادي وفهرسة أداء متقدمة."""
+    __tablename__ = 'admin_staff'
     
-    # [فهرسة الأداء]: تحسين سرعة الاستعلامات والبحث
+    # [فهرسة الأداء]: لضمان سرعة الاستعلامات والبحث
     __table_args__ = (
-        db.Index('idx_adm_username', 'username'),
-        db.Index('idx_adm_role', 'role'),
-        db.Index('idx_adm_phone', 'search_phone'), 
-        db.Index('idx_adm_created', 'created_at'),
+        db.Index('idx_staff_username', 'username'),
+        db.Index('idx_staff_phone', 'search_phone'),
+        db.Index('idx_staff_created', 'created_at'),
         {'extend_existing': True}
     )
     
@@ -25,16 +24,16 @@ class AdminUser(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), default='worker')
+    is_active = db.Column(db.Boolean, default=True)
     
-    # 2. معلومات الحساب - [نظام تشفير AES-256 السيادي]
-    role = db.Column(db.String(20), default='Owner')
-    is_active = db.Column(db.Boolean, default=True) # مضافة لتتوافق مع دوال التفعيل والتعطيل
-    _phone_enc = db.Column(db.String(255), nullable=True) 
-    search_phone = db.Column(db.String(20)) 
+    # 2. التشفير السيادي للهاتف
+    # _phone_enc يخزن البيانات المشفرة، بينما search_phone مخصص للبحث السريع (نص عادي)
+    _phone_enc = db.Column(db.String(255), nullable=True)
+    search_phone = db.Column(db.String(20))
     
     # 3. التدقيق الزمني
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_login = db.Column(db.DateTime, nullable=True)
 
     # --- نظام التشفير الاحترافي (Fernet / AES-256) ---
     @staticmethod
@@ -45,7 +44,8 @@ class AdminUser(db.Model, UserMixin):
     @property
     def phone(self):
         """فك التشفير عند العرض."""
-        if not self._phone_enc: return None
+        if not self._phone_enc: 
+            return None
         try:
             return Fernet(self._get_key()).decrypt(self._phone_enc.encode()).decode()
         except Exception: 
@@ -55,10 +55,12 @@ class AdminUser(db.Model, UserMixin):
     def phone(self, value):
         """تشفير الهاتف قبل التخزين مع الاحتفاظ بـ search_phone للبحث."""
         if value:
+            # تشفير القيمة كاملة للحماية
             self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
-            self.search_phone = str(value)[-9:] # الاحتفاظ بآخر 9 أرقام للبحث السريع
+            # تخزين آخر 9 أرقام فقط في حقل الفهرسة لتسريع عمليات الاستعلام (Index)
+            self.search_phone = str(value)[-9:] 
 
-    # --- نظام تأمين كلمة المرور (PBKDF2) ---
+    # --- إدارة كلمة المرور (PBKDF2) ---
     def set_password(self, password):
         """توليد Hash مشفر بـ SHA256 للكلمة المرور."""
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
@@ -68,4 +70,4 @@ class AdminUser(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-        return f'<AdminUser {self.username}>'
+        return f'<AdminStaff {self.username}>'
