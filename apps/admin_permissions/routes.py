@@ -5,9 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, jsonif
 from flask_login import login_required, current_user
 import secrets
 import string
-import os
 from datetime import datetime
-from cryptography.fernet import Fernet
 from sqlalchemy.exc import IntegrityError
 
 from apps.extensions import db
@@ -28,7 +26,7 @@ def generate_random_password(length=12):
 @admin_permissions_bp.route('/admin/permissions/check-user', methods=['GET'])
 @login_required
 def check_user():
-    username = request.args.get('username', '')
+    username = request.args.get('username', '').strip()
     if len(username) < 3: return jsonify({'available': False})
     exists = AdminStaff.query.filter_by(username=username).first() or \
              SupplierStaff.query.filter_by(username=username).first()
@@ -37,12 +35,13 @@ def check_user():
 @admin_permissions_bp.route('/admin/permissions/check-phone', methods=['GET'])
 @login_required
 def check_phone():
-    phone = request.args.get('phone', '')
+    phone = request.args.get('phone', '').strip()
     staff_type = request.args.get('type', 'admin')
     if len(phone) != 9 or not phone.startswith('7'):
         return jsonify({'available': False})
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
-    exists = model.query.filter_by(phone=phone).first()
+    # البحث يتم عبر حقل الفهرسة search_phone
+    exists = model.query.filter_by(search_phone=phone[-9:]).first()
     return jsonify({'available': exists is None})
 
 # --- عرض القائمة ---
@@ -54,11 +53,7 @@ def roles_list():
     staff_type = request.args.get('type', 'admin')
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
     
-    # جلب البيانات مرتبة حسب التاريخ الأحدث
-    if staff_type == 'supplier':
-        staff_list = model.query.options(db.joinedload(SupplierStaff.supplier)).order_by(model.created_at.desc()).all()
-    else:
-        staff_list = model.query.order_by(model.created_at.desc()).all()
+    staff_list = model.query.order_by(model.created_at.desc()).all()
         
     return render_template('admin/permissions.html', 
                            staff=staff_list, 
@@ -71,8 +66,8 @@ def roles_list():
 def assign_permissions():
     if not is_admin(): return jsonify({'success': False, 'message': 'غير مصرح'})
     
-    username = request.form.get('username')
-    phone = request.form.get('phone')
+    username = request.form.get('username', '').strip()
+    phone = request.form.get('phone', '').strip()
     staff_type = request.form.get('type')
     supplier_id = request.form.get('supplier_id')
     
@@ -80,29 +75,24 @@ def assign_permissions():
         return jsonify({'success': False, 'message': 'بيانات الهاتف غير صالحة'})
     
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
-    if model.query.filter_by(username=username).first() or model.query.filter_by(phone=phone).first():
+    if model.query.filter_by(username=username).first() or model.query.filter_by(search_phone=phone[-9:]).first():
         return jsonify({'success': False, 'message': 'الموظف موجود مسبقاً'})
 
     try:
         password = generate_random_password()
-        enc_key = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
-        fernet = Fernet(enc_key.encode())
-
+        
         if staff_type == 'admin':
-            new_staff = AdminStaff(username=username, role='worker', created_at=datetime.utcnow())
+            new_staff = AdminStaff(username=username, role='worker')
             supplier_info = {'trade_name': 'إدارة مركزية', 'supplier_code': 'SYSTEM'}
         else:
             supplier = Supplier.query.get_or_404(int(supplier_id))
-            new_staff = SupplierStaff(username=username, role='worker', supplier_id=supplier.id, created_at=datetime.utcnow())
+            new_staff = SupplierStaff(username=username, role='worker', supplier_id=supplier.id)
             supplier_info = {'trade_name': supplier.trade_name, 'supplier_code': supplier.supplier_code}
 
+        # استخدام الـ setter في الموديل للتعامل مع التشفير والفهرسة
         new_staff.phone = phone
-        new_staff._phone_enc = fernet.encrypt(str(phone).encode()).decode()
-        
-        if hasattr(new_staff, 'search_phone'):
-            new_staff.search_phone = str(phone)[-9:]
-            
         new_staff.set_password(password)
+        
         db.session.add(new_staff)
         db.session.commit()
         
@@ -116,12 +106,12 @@ def assign_permissions():
         
     except IntegrityError:
         db.session.rollback()
-        return jsonify({'success': False, 'message': 'خطأ: اسم المستخدم أو الهاتف مستخدم من قبل'})
+        return jsonify({'success': False, 'message': 'خطأ في حفظ البيانات (مكرر)'})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': f"خطأ غير متوقع: {str(e)}"})
+        return jsonify({'success': False, 'message': f"خطأ: {str(e)}"})
 
-# --- إدارة الحسابات (إعادة تعيين كلمة المرور) ---
+# --- إعادة تعيين كلمة المرور ---
 @admin_permissions_bp.route('/admin/permissions/reset-password/<int:id>/<staff_type>', methods=['GET'])
 @login_required
 def reset_password(id, staff_type):
@@ -130,16 +120,13 @@ def reset_password(id, staff_type):
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
     user = model.query.get_or_404(id)
     
-    if staff_type == 'admin':
-        store_name = 'إدارة مركزية'
-        store_code = 'SYSTEM'
-    else:
-        store_name = user.supplier.trade_name if hasattr(user, 'supplier') and user.supplier else 'غير محدد'
-        store_code = user.supplier.supplier_code if hasattr(user, 'supplier') and user.supplier else '---'
-    
     new_pass = generate_random_password()
     user.set_password(new_pass)
     db.session.commit()
+    
+    # تحديد بيانات المورد للإرجاع
+    store_name = user.supplier.trade_name if hasattr(user, 'supplier') and user.supplier else 'إدارة مركزية'
+    store_code = user.supplier.supplier_code if hasattr(user, 'supplier') and user.supplier else 'SYSTEM'
     
     return jsonify({
         'success': True, 
@@ -153,7 +140,7 @@ def reset_password(id, staff_type):
 @admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<staff_type>', methods=['GET'])
 @login_required
 def toggle_status(id, staff_type):
-    if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
+    if not is_admin(): return redirect(url_for('admin_permissions.roles_list', type=staff_type))
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
     user = model.query.get_or_404(id)
     user.is_active = not user.is_active
