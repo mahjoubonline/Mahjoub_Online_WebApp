@@ -9,6 +9,7 @@ from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS 
+from sqlalchemy import inspect
 import config
 
 from apps.extensions import db, login_manager, migrate
@@ -95,27 +96,27 @@ def create_app():
             supplier_modules=SUPPLIER_MODULES
         )
 
-    # 6. إعداد البيئة الأولية
+    # 6. إعداد البيئة الأولية (مع حماية ضد أعطال الجلسة)
     with app.app_context():
-        # استيراد كافة الموديلات لضمان تسجيلها قبل الإنشاء
-        from apps.models import (
-            Supplier, AdminUser, Marketer, ExchangeRate, AdminStaff, 
-            SupplierProfile, SupplierStaff, SupplierWallet, WalletTransaction,
-            OrderFinancial, Order, OrderItem, SyncLog
-        )
+        # استيراد الموديلات
+        from apps.models import AdminUser
         
+        # إنشاء الجداول
         try:
             db.create_all()
         except Exception as e:
             print(f"ℹ️ [Setup]: تنبيه أثناء إنشاء الجداول: {e}")
 
+        # إضافة المستخدم المالك بأمان
         try:
-            if not AdminUser.query.filter_by(username='علي محجوب').first():
-                owner = AdminUser(username='علي محجوب', role='Owner')
-                owner.set_password('123')
-                db.session.add(owner)
-                db.session.commit()
-                print("✅ [Setup]: تم إنشاء المستخدم المالك بنجاح.")
+            inspector = inspect(db.engine)
+            if 'admin_users' in inspector.get_table_names():
+                if not AdminUser.query.filter_by(username='علي محجوب').first():
+                    owner = AdminUser(username='علي محجوب', role='Owner')
+                    owner.set_password('123')
+                    db.session.add(owner)
+                    db.session.commit()
+                    print("✅ [Setup]: تم إنشاء المستخدم المالك بنجاح.")
         except Exception as e:
             db.session.rollback()
             print(f"ℹ️ [Setup]: تعذر إضافة المستخدم المالك: {e}")
