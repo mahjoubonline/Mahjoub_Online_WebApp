@@ -49,10 +49,20 @@ def check_phone():
 @login_required
 def roles_list():
     if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
+    
     staff_type = request.args.get('type', 'admin')
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
-    staff_list = model.query.order_by(model.created_at.desc()).all()
-    return render_template('admin/permissions.html', staff=staff_list, type_filter=staff_type, suppliers=Supplier.query.all())
+    
+    # تحسين الاستعلام لجلب البيانات المرتبطة وتجنب N+1 query issue
+    if staff_type == 'supplier':
+        staff_list = model.query.options(db.joinedload(SupplierStaff.supplier)).order_by(model.created_at.desc()).all()
+    else:
+        staff_list = model.query.order_by(model.created_at.desc()).all()
+        
+    return render_template('admin/permissions.html', 
+                           staff=staff_list, 
+                           type_filter=staff_type, 
+                           suppliers=Supplier.query.all())
 
 # --- إضافة موظف جديد ---
 @admin_permissions_bp.route('/admin/permissions/assign', methods=['POST'])
@@ -74,6 +84,7 @@ def assign_permissions():
 
     try:
         password = generate_random_password()
+        # تأكد أن المفتاح موجود في البيئة، وإلا استخدم القيمة الافتراضية بأمان
         enc_key = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
         fernet = Fernet(enc_key.encode())
 
@@ -88,6 +99,7 @@ def assign_permissions():
         new_staff.phone = phone
         new_staff._phone_enc = fernet.encrypt(str(phone).encode()).decode()
         
+        # التأكد من وجود الخصائص قبل تعيينها لتجنب الأخطاء
         if hasattr(new_staff, 'search_phone'):
             new_staff.search_phone = str(phone)[-9:]
             
@@ -111,21 +123,21 @@ def assign_permissions():
         return jsonify({'success': False, 'message': f"خطأ غير متوقع: {str(e)}"})
 
 # --- إدارة الحسابات (إعادة تعيين كلمة المرور) ---
-@admin_permissions_bp.route('/admin/permissions/reset-password/<int:id>/<type>', methods=['GET'])
+@admin_permissions_bp.route('/admin/permissions/reset-password/<int:id>/<staff_type>', methods=['GET'])
 @login_required
-def reset_password(id, type):
+def reset_password(id, staff_type):
     if not is_admin(): return jsonify({'success': False, 'message': 'غير مصرح'})
     
-    model = AdminStaff if type == 'admin' else SupplierStaff
+    model = AdminStaff if staff_type == 'admin' else SupplierStaff
     user = model.query.get_or_404(id)
     
-    # جلب بيانات المتجر لإرسالها للواجهة
-    if type == 'admin':
+    if staff_type == 'admin':
         store_name = 'إدارة مركزية'
         store_code = 'SYSTEM'
     else:
-        store_name = user.supplier.trade_name if user.supplier else 'غير محدد'
-        store_code = user.supplier.supplier_code if user.supplier else '---'
+        # تأكد من استخدام اسم العلاقة الصحيح هنا (supplier)
+        store_name = user.supplier.trade_name if hasattr(user, 'supplier') and user.supplier else 'غير محدد'
+        store_code = user.supplier.supplier_code if hasattr(user, 'supplier') and user.supplier else '---'
     
     new_pass = generate_random_password()
     user.set_password(new_pass)
@@ -140,12 +152,12 @@ def reset_password(id, type):
     })
 
 # --- تغيير حالة الحساب ---
-@admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<type>', methods=['GET'])
+@admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<staff_type>', methods=['GET'])
 @login_required
-def toggle_status(id, type):
+def toggle_status(id, staff_type):
     if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
-    model = AdminStaff if type == 'admin' else SupplierStaff
+    model = AdminStaff if staff_type == 'admin' else SupplierStaff
     user = model.query.get_or_404(id)
     user.is_active = not user.is_active
     db.session.commit()
-    return redirect(url_for('admin_permissions.roles_list', type=type))
+    return redirect(url_for('admin_permissions.roles_list', type=staff_type))
