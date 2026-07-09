@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 import secrets
 import string
 import os
+from datetime import datetime
 from cryptography.fernet import Fernet
 from sqlalchemy.exc import IntegrityError
 
@@ -53,7 +54,7 @@ def roles_list():
     staff_type = request.args.get('type', 'admin')
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
     
-    # تحسين الاستعلام لجلب البيانات المرتبطة وتجنب N+1 query issue
+    # جلب البيانات مرتبة حسب التاريخ الأحدث
     if staff_type == 'supplier':
         staff_list = model.query.options(db.joinedload(SupplierStaff.supplier)).order_by(model.created_at.desc()).all()
     else:
@@ -84,22 +85,20 @@ def assign_permissions():
 
     try:
         password = generate_random_password()
-        # تأكد أن المفتاح موجود في البيئة، وإلا استخدم القيمة الافتراضية بأمان
         enc_key = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
         fernet = Fernet(enc_key.encode())
 
         if staff_type == 'admin':
-            new_staff = AdminStaff(username=username, role='worker')
+            new_staff = AdminStaff(username=username, role='worker', created_at=datetime.utcnow())
             supplier_info = {'trade_name': 'إدارة مركزية', 'supplier_code': 'SYSTEM'}
         else:
             supplier = Supplier.query.get_or_404(int(supplier_id))
-            new_staff = SupplierStaff(username=username, role='worker', supplier_id=supplier.id)
+            new_staff = SupplierStaff(username=username, role='worker', supplier_id=supplier.id, created_at=datetime.utcnow())
             supplier_info = {'trade_name': supplier.trade_name, 'supplier_code': supplier.supplier_code}
 
         new_staff.phone = phone
         new_staff._phone_enc = fernet.encrypt(str(phone).encode()).decode()
         
-        # التأكد من وجود الخصائص قبل تعيينها لتجنب الأخطاء
         if hasattr(new_staff, 'search_phone'):
             new_staff.search_phone = str(phone)[-9:]
             
@@ -135,7 +134,6 @@ def reset_password(id, staff_type):
         store_name = 'إدارة مركزية'
         store_code = 'SYSTEM'
     else:
-        # تأكد من استخدام اسم العلاقة الصحيح هنا (supplier)
         store_name = user.supplier.trade_name if hasattr(user, 'supplier') and user.supplier else 'غير محدد'
         store_code = user.supplier.supplier_code if hasattr(user, 'supplier') and user.supplier else '---'
     
