@@ -37,10 +37,13 @@ def check_user():
 def check_phone():
     phone = request.args.get('phone', '')
     staff_type = request.args.get('type', 'admin')
-    if len(phone) < 9: return jsonify({'available': False})
+    
+    # منطق التحقق: 9 أرقام تبدأ بـ 7
+    if len(phone) != 9 or not phone.startswith('7'):
+        return jsonify({'available': False, 'message': 'يجب أن يبدأ الرقم بـ 7 وأن يتكون من 9 أرقام'})
     
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
-    exists = model.query.filter_by(phone=phone[-9:]).first()
+    exists = model.query.filter_by(phone=phone).first()
     return jsonify({'available': exists is None})
 
 # --- عرض القائمة ---
@@ -70,6 +73,10 @@ def assign_permissions():
     staff_type = request.form.get('type')
     supplier_id = request.form.get('supplier_id')
     
+    # التحقق النهائي من الرقم في السيرفر
+    if len(phone) != 9 or not phone.startswith('7'):
+        return jsonify({'success': False, 'message': 'رقم الهاتف غير صالح، يجب أن يبدأ بـ 7 ويتكون من 9 أرقام'})
+    
     password = generate_random_password()
     
     try:
@@ -81,7 +88,7 @@ def assign_permissions():
             new_staff = SupplierStaff(username=username, role='worker', supplier_id=supplier.id)
             supplier_info = {'trade_name': supplier.trade_name, 'supplier_code': supplier.supplier_code}
         
-        new_staff.phone_number = phone 
+        new_staff.phone = phone 
         new_staff.set_password(password)
         
         db.session.add(new_staff)
@@ -110,7 +117,6 @@ def reset_password(id, type):
     user.set_password(new_pass)
     db.session.commit()
     
-    # إرجاع استجابة JSON للتعامل معها في المودال دون تحديث الصفحة
     return jsonify({'success': True, 'username': user.username, 'new_password': new_pass})
 
 @admin_permissions_bp.route('/admin/permissions/toggle-status/<int:id>/<type>', methods=['GET'])
