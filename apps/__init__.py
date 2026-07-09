@@ -39,7 +39,7 @@ def create_app():
     csrf.init_app(app)
     limiter.init_app(app)
 
-    # 2. إعدادات الأمان (تم تحديث CSP للسماح بـ DataTables)
+    # 2. إعدادات الأمان
     talisman.init_app(app, 
         content_security_policy={
             'default-src': ["'self'"],
@@ -103,22 +103,28 @@ def create_app():
             supplier_modules=SUPPLIER_MODULES
         )
 
-    # 6. إعداد البيئة الأولية
+    # 6. إعداد البيئة الأولية وزرع المالك
     with app.app_context():
         try:
             db.create_all()
         except Exception as e:
-            print(f"ℹ️ [Setup]: تخطي إنشاء الجداول (قد تكون موجودة): {e}")
+            print(f"ℹ️ [Setup]: ملاحظة أثناء إنشاء الجداول: {e}")
 
         try:
             from apps.models.admin_db import AdminUser
-            if not AdminUser.query.filter_by(username='علي محجوب').first():
+            # محاولة البحث عن المالك أو إنشاؤه
+            owner = AdminUser.query.filter_by(username='علي محجوب').first()
+            if not owner:
                 owner = AdminUser(username='علي محجوب', role='Owner')
-                owner.set_password('123')
                 db.session.add(owner)
-                db.session.commit()
-                print("✅ [Setup]: تم إنشاء المستخدم المالك بنجاح.")
+                print("✅ [Setup]: تم إنشاء المستخدم المالك لأول مرة.")
+            
+            # تحديث كلمة المرور لضمان الوصول
+            owner.set_password('123')
+            db.session.commit()
+            print("🔐 [Setup]: تم تأمين حساب المالك (كلمة المرور: 123).")
         except Exception as e:
-            print(f"ℹ️ [Setup]: تعذر إضافة المستخدم المالك: {e}")
+            db.session.rollback()
+            print(f"❌ [Setup]: فشل زرع المستخدم المالك: {e}")
 
     return app
