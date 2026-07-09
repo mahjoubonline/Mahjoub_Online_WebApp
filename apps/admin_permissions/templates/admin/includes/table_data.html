@@ -78,13 +78,16 @@ $(document).ready(function() {
             "language": {
                 "search": "بحث:",
                 "paginate": { "next": "التالي", "previous": "السابق" },
-                "info": "عرض _START_ إلى _END_ من أصل _TOTAL_ مدخل"
+                "info": "عرض _START_ إلى _END_ من أصل _TOTAL_ مدخل",
+                "emptyTable": "لا توجد بيانات متاحة في الجدول",
+                "infoEmpty": "يعرض 0 إلى 0 من أصل 0 مُدخل",
+                "lengthMenu": "عرض _MENU_ مُدخل"
             }
         });
     }
 });
 
-// دالة إعادة التعيين مع نافذة منبثقة للنتيجة
+// دالة إعادة التعيين مع النسخ التلقائي للحافظة
 async function handleResetPassword(id, type, username) {
     if (!confirm(`تنبيه: سيتم تغيير كلمة المرور للموظف: ${username}. هل أنت متأكد؟`)) return;
 
@@ -93,12 +96,21 @@ async function handleResetPassword(id, type, username) {
         const data = await response.json();
         
         if (data.success) {
-            alert(`تم تغيير كلمة المرور بنجاح!\nالموظف: ${data.username}\nكلمة المرور الجديدة: ${data.new_password}`);
+            const credentials = `المستخدم: ${data.username}\nكلمة المرور: ${data.new_password}`;
+            
+            // محاولة النسخ التلقائي للحافظة
+            navigator.clipboard.writeText(credentials).then(() => {
+                alert(`✅ تم تغيير كلمة المرور ونسخها للحافظة بنجاح!\n\n${credentials}`);
+            }).catch(err => {
+                // في حال منع المتصفح عملية النسخ
+                alert(`✅ تم تغيير كلمة المرور بنجاح!\n\n${credentials}\n\n(يرجى نسخها يدوياً)`);
+            });
         } else {
             alert('حدث خطأ أثناء إعادة التعيين: ' + data.message);
         }
     } catch (err) {
-        alert('فشل الاتصال بالخادم.');
+        alert('فشل الاتصال بالخادم. تأكد من اتصالك بالإنترنت.');
+        console.error('Reset Password Error:', err);
     }
 }
 </script>
