@@ -40,7 +40,8 @@ def check_phone():
     if len(phone) < 9: return jsonify({'available': False})
     
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
-    exists = model.query.filter_by(search_phone=phone[-9:]).first()
+    # تم التصحيح: البحث باستخدام العمود 'phone' الموجود في الموديل
+    exists = model.query.filter_by(phone=phone[-9:]).first()
     return jsonify({'available': exists is None})
 
 # --- عرض القائمة ---
@@ -49,11 +50,9 @@ def check_phone():
 def roles_list():
     if not is_admin(): return redirect(url_for('admin_dashboard.dashboard'))
     
-    # تحديد نوع الموظفين المطلوب عرضهم
     staff_type = request.args.get('type', 'admin')
     model = AdminStaff if staff_type == 'admin' else SupplierStaff
     
-    # جلب البيانات
     staff_list = model.query.order_by(model.created_at.desc()).all()
     
     return render_template('admin/permissions.html', 
@@ -83,14 +82,13 @@ def assign_permissions():
             new_staff = SupplierStaff(username=username, role='worker', supplier_id=supplier.id)
             supplier_info = {'trade_name': supplier.trade_name, 'supplier_code': supplier.supplier_code}
         
-        new_staff.phone = phone
-        new_staff.search_phone = phone[-9:]
+        # التعديل هنا: استخدام الخاصية phone_number للـ setter التي برمجتها في الموديل
+        new_staff.phone_number = phone 
         new_staff.set_password(password)
         
         db.session.add(new_staff)
         db.session.commit()
         
-        # إرجاع كافة البيانات المطلوبة للمودال
         return jsonify({
             'success': True, 
             'username': username, 
