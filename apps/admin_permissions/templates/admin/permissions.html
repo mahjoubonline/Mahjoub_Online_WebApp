@@ -55,12 +55,14 @@
 <script>
     let currentStaff = {};
 
+    // دالة فتح مودال التأكيد
     function resetPassword(staffId, staffType, username) {
         currentStaff = {staffId, staffType, username};
         $('#confirmUsername').text(username);
         $('#confirmResetModal').modal('show');
     }
 
+    // تنفيذ إعادة التعيين عبر AJAX
     $('#btnConfirmReset').click(function() {
         $('#confirmResetModal').modal('hide');
         $.ajax({
@@ -70,19 +72,24 @@
                 if (response.success) {
                     showSuccessModal(response.username, response.new_password);
                 } else {
-                    alert('خطأ: ' + response.message);
+                    alert('خطأ: ' + (response.message || 'فشل التحديث'));
                 }
+            },
+            error: function() {
+                alert('حدث خطأ في الاتصال بالخادم');
             }
         });
     });
 
+    // دالة إظهار مودال النجاح
     function showSuccessModal(username, password) {
+        // تأكد من أن المعرفات في modal_success.html هي successUsername و successPassword
         $('#successUsername').text(username);
         $('#successPassword').text(password);
         $('#modalSuccess').modal('show');
     }
 
-    // تفعيل الجدول مع خيارات البحث والترجمة
+    // تفعيل الجدول عند جاهزية الصفحة
     $(document).ready(function() {
         if ($('#staffTable').length) {
             $('#staffTable').DataTable({
