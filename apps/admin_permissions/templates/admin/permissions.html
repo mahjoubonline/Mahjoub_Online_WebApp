@@ -34,6 +34,13 @@
         border-bottom: 2px solid #ffffff !important;
         padding: 12px !important;
     }
+
+    /* إجبار عناصر DataTable على الظهور */
+    .dataTables_wrapper .dataTables_filter, 
+    .dataTables_wrapper .dataTables_paginate {
+        display: block !important;
+        visibility: visible !important;
+    }
 </style>
 
 <div class="container-fluid py-4" style="direction: rtl;">
@@ -122,27 +129,25 @@
     });
 
     $(document).ready(function() {
-        // استخدام setInterval لضمان تهيئة الجدول فور تحميله في الدوم
-        var checkTable = setInterval(function() {
-            if ($('#staffTable').length > 0) {
-                clearInterval(checkTable);
-                
-                if ($.fn.DataTable.isDataTable('#staffTable')) {
-                    $('#staffTable').DataTable().destroy();
-                }
-
-                $('#staffTable').DataTable({
-                    "pageLength": 10,
-                    "responsive": true,
-                    "paging": true,
-                    "searching": true,
-                    "ordering": true,
-                    "language": { 
-                        "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json" 
-                    }
-                });
+        // تهيئة مباشرة للجدول مع ترجمة داخلية لضمان العمل
+        $('#staffTable').DataTable({
+            "destroy": true,
+            "pageLength": 10,
+            "responsive": true,
+            "paging": true,
+            "searching": true,
+            "ordering": true,
+            "language": {
+                "search": "بحث:",
+                "lengthMenu": "عرض _MENU_ سجل",
+                "info": "عرض _START_ إلى _END_ من أصل _TOTAL_ سجل",
+                "paginate": {
+                    "next": "التالي",
+                    "previous": "السابق"
+                },
+                "emptyTable": "لا توجد بيانات متاحة"
             }
-        }, 100);
+        });
     });
 </script>
 {% endblock %}
