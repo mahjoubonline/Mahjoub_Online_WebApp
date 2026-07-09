@@ -15,7 +15,7 @@ import config
 from apps.extensions import db, login_manager, migrate
 from apps.api.qomrah_webhook import qomrah_bp
 
-# تهيئة الأدوات (بدون تغيير)
+# تهيئة الأدوات
 csrf = CSRFProtect()
 talisman = Talisman()
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"], storage_uri="memory://")
@@ -35,37 +35,64 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
-    
-    # ... (باقي إعدادات talisman و Blueprints كما هي في ملفك)
+
+    # إعدادات الأمان
+    talisman.init_app(app, 
+        content_security_policy={
+            'default-src': ["'self'"],
+            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+            'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
+            'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://code.jquery.com", "https://cdn.jsdelivr.net"],
+            'img-src': ["'self'", "data:", "*"]
+        },
+        force_https=False
+    )
+
     login_manager.login_view = 'suppliers_auth.login'
     app.register_blueprint(qomrah_bp)
     csrf.exempt(qomrah_bp)
 
-    # 6. إعداد البيئة (التشخيص الذكي)
+    # تسجيل الموديولات الديناميكي (باقي الكود كما هو)
+    apps_dir = app.root_path
+    ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api']
+    if os.path.exists(apps_dir):
+        for item in os.listdir(apps_dir):
+            item_path = os.path.join(apps_dir, item)
+            if os.path.isdir(item_path) and item not in ignored_dirs:
+                registry_file = os.path.join(item_path, 'registry.py')
+                if os.path.exists(registry_file):
+                    try:
+                        module = importlib.import_module(f"apps.{item}.registry")
+                        if hasattr(module, 'register_module'):
+                            module.register_module(app)
+                            # ... (بقية منطق التسجيل)
+                    except Exception as e:
+                        print(f"❌ [Registry]: خطأ في تسجيل موديول {item}: {e}")
+
+    # 6. إعداد البيئة (الحل الشجاع)
     with app.app_context():
         try:
-            # اختبار الاتصال الأساسي
-            db.session.execute(text("SELECT 1"))
+            # التأكد من التواجد في الـ Schema الصحيحة
+            db.session.execute(text("SET search_path TO public"))
             
-            # فحص الجداول باستخدام Inspector
+            # فحص الجداول
             inspector = inspect(db.engine)
             tables = inspector.get_table_names()
-            print(f"🔍 [Setup]: الجداول المكتشفة في قاعدة البيانات: {tables}")
+            print(f"🔍 [Setup]: الجداول المكتشفة: {tables}")
             
-            # إذا كانت قاعدة البيانات فارغة تماماً، نقوم بالبناء لمرة واحدة
+            # البناء القسري إذا كانت فارغة
             if not tables:
                 print("⚡ [Setup]: قاعدة البيانات فارغة، جاري إنشاء الجداول...")
                 db.create_all()
             
-            # إضافة المالك (فقط إذا كان الجدول موجوداً)
-            if 'admin_users' in tables:
-                from apps.models.admin_db import AdminUser
-                if not AdminUser.query.filter_by(username='علي محجوب').first():
-                    owner = AdminUser(username='علي محجوب', role='Owner')
-                    owner.set_password('123')
-                    db.session.add(owner)
-                    db.session.commit()
-                    print("✅ [Setup]: تم إنشاء المستخدم المالك.")
+            # إضافة المالك
+            from apps.models.admin_db import AdminUser
+            if not AdminUser.query.filter_by(username='علي محجوب').first():
+                owner = AdminUser(username='علي محجوب', role='Owner')
+                owner.set_password('123')
+                db.session.add(owner)
+                db.session.commit()
+                print("✅ [Setup]: تم إنشاء المستخدم المالك.")
             
         except Exception as e:
             print(f"❌ [Setup]: خطأ حرج في تهيئة قاعدة البيانات: {e}")
