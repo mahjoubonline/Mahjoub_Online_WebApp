@@ -8,12 +8,11 @@ from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_cors import CORS
-from sqlalchemy import inspect, text
+from flask_cors import CORS 
 import config
 
 from apps.extensions import db, login_manager, migrate
-from apps.api.qomrah_webhook import qomrah_bp
+from apps.api.qomrah_webhook import qomrah_bp 
 
 # تهيئة الأدوات
 csrf = CSRFProtect()
@@ -27,16 +26,20 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     
+    # التحقق من الإعدادات الحساسة عند التشغيل
     config.Config.validate_config()
+
+    # تفعيل CORS لدعم التواصل مع Apollo Sandbox وواجهات النظام
     CORS(app, resources={r"/admin/*": {"origins": ["https://studio.apollographql.com", "http://localhost:5000"]}}, supports_credentials=True)
 
+    # 1. تهيئة الإضافات
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
 
-    # إعدادات الأمان
+    # 2. إعدادات الأمان
     talisman.init_app(app, 
         content_security_policy={
             'default-src': ["'self'"],
@@ -49,12 +52,22 @@ def create_app():
     )
 
     login_manager.login_view = 'suppliers_auth.login'
+
+    # 3. تسجيل الـ Blueprints الأساسية
     app.register_blueprint(qomrah_bp)
     csrf.exempt(qomrah_bp)
+    
+    try:
+        from apps.admin.graphql_routes import graphql_bp 
+        app.register_blueprint(graphql_bp)
+        csrf.exempt(graphql_bp) 
+    except ImportError:
+        pass
 
-    # تسجيل الموديولات الديناميكي (باقي الكود كما هو)
+    # 4. تسجيل الموديولات الديناميكي
     apps_dir = app.root_path
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api']
+
     if os.path.exists(apps_dir):
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
@@ -65,37 +78,48 @@ def create_app():
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
-                            # ... (بقية منطق التسجيل)
+                            mod_data = {
+                                "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
+                                "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
+                                "links": getattr(module, 'LINKS', {}),
+                            }
+                            if getattr(module, 'SHOW_IN_SUPPLIER', False):
+                                SUPPLIER_MODULES[item] = mod_data
+                            else:
+                                ADMIN_MODULES[item] = mod_data
                     except Exception as e:
                         print(f"❌ [Registry]: خطأ في تسجيل موديول {item}: {e}")
 
-    # 6. إعداد البيئة (الحل الشجاع)
+    # 5. المسارات الأساسية
+    @app.route('/')
+    def index():
+        return redirect('/supplier/login')
+
+    @app.context_processor
+    def inject_vars():
+        return dict(
+            csrf_token=generate_csrf,
+            registered_modules=ADMIN_MODULES,
+            supplier_modules=SUPPLIER_MODULES
+        )
+
+    # 6. إعداد البيئة الأولية (بشكل آمن لتجنب أخطاء التكرار)
     with app.app_context():
         try:
-            # التأكد من التواجد في الـ Schema الصحيحة
-            db.session.execute(text("SET search_path TO public"))
-            
-            # فحص الجداول
-            inspector = inspect(db.engine)
-            tables = inspector.get_table_names()
-            print(f"🔍 [Setup]: الجداول المكتشفة: {tables}")
-            
-            # البناء القسري إذا كانت فارغة
-            if not tables:
-                print("⚡ [Setup]: قاعدة البيانات فارغة، جاري إنشاء الجداول...")
-                db.create_all()
-            
-            # إضافة المالك
+            db.create_all()
+        except Exception as e:
+            # نتجاهل الأخطاء الناتجة عن وجود الجداول مسبقاً (DuplicateTable)
+            print(f"ℹ️ [Setup]: تخطي إنشاء الجداول (قد تكون موجودة): {e}")
+
+        try:
             from apps.models.admin_db import AdminUser
             if not AdminUser.query.filter_by(username='علي محجوب').first():
                 owner = AdminUser(username='علي محجوب', role='Owner')
                 owner.set_password('123')
                 db.session.add(owner)
                 db.session.commit()
-                print("✅ [Setup]: تم إنشاء المستخدم المالك.")
-            
+                print("✅ [Setup]: تم إنشاء المستخدم المالك بنجاح.")
         except Exception as e:
-            print(f"❌ [Setup]: خطأ حرج في تهيئة قاعدة البيانات: {e}")
-            db.session.rollback()
+            print(f"ℹ️ [Setup]: تعذر إضافة المستخدم المالك: {e}")
 
     return app
