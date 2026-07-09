@@ -1,4 +1,6 @@
 # coding: utf-8
+# 📂 apps/models/supplier_staff_db.py
+
 import os
 from datetime import datetime
 from cryptography.fernet import Fernet
@@ -16,7 +18,7 @@ class SupplierStaff(db.Model, UserMixin):
     
     # التشفير السيادي للهاتف
     _phone_enc = db.Column(db.String(255), nullable=False) 
-    phone = db.Column(db.String(20), nullable=False) # للبحث السريع
+    phone = db.Column(db.String(20), nullable=False) # هذا الحقل سيحوي الرقم للبحث (آخر 9 أرقام)
     
     email = db.Column(db.String(150), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -25,30 +27,31 @@ class SupplierStaff(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # 2. إعدادات الجدول
-    # قمنا بإزالة الفهارس من هنا لأنها موجودة فعلياً في قاعدة البيانات وتسبب خطأ DuplicateTable
-    # استخدمنا 'extend_existing': True للسماح بإعادة تعريف الموديل أثناء التطوير
     __table_args__ = {'extend_existing': True}
 
     # 3. العلاقات
     supplier = db.relationship('Supplier', back_populates='staff_members')
 
-    # 4. التشفير
+    # 4. التشفير (Fernet AES-256)
     @staticmethod
     def _get_key():
         key = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
         return key.encode()
 
     @property
-    def phone_number(self):
+    def phone(self):
+        """الخاصية التي تعيد الرقم الصريح عند الاستدعاء member.phone"""
         try:
             return Fernet(self._get_key()).decrypt(self._phone_enc.encode()).decode()
-        except: return None
+        except: 
+            return "---" # إرجاع نص افتراضي عند فشل التشفير لتجنب تعطل الجدول
 
-    @phone_number.setter
-    def phone_number(self, value):
+    @phone.setter
+    def phone(self, value):
+        """عند تعيين القيمة يتم التشفير وحفظ الفهرس للبحث"""
         if value:
             self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
-            self.phone = str(value)[-9:] 
+            self.phone = str(value)[-9:] # تحديث عمود البحث
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
