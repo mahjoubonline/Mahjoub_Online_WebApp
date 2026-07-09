@@ -1,5 +1,5 @@
-<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog">
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg border-0">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i> تم الاعتماد بنجاح</h5>
@@ -32,11 +32,13 @@
 <script>
     // وظيفة نسخ محتوى الصندوق إلى الحافظة
     function copyCredentials() {
-        const textToCopy = document.getElementById('credBox').innerText;
+        const credBox = document.getElementById('credBox');
+        const textToCopy = credBox.innerText;
         navigator.clipboard.writeText(textToCopy).then(() => {
-            alert("تم نسخ البيانات بنجاح!");
+            alert("تم نسخ بيانات الاعتماد بنجاح!");
         }).catch(err => {
             console.error('فشل النسخ: ', err);
+            alert("حدث خطأ أثناء النسخ");
         });
     }
 </script>
