@@ -21,14 +21,12 @@
     
     .text-royal { color: #210433 !important; }
 
-    /* تنسيق خاص وراقٍ لنافذة تأكيد إعادة التعيين */
     .modal-confirm-header {
         background-color: #fcf8e3 !important;
         border-bottom: 2px solid #f0ad4e !important;
         color: #8a6d3b !important;
     }
 
-    /* تنسيق رأس الجدول الملكي */
     .table thead.table-royal-header th {
         background: linear-gradient(135deg, #491269 0%, #210433 100%) !important;
         color: #ffffff !important;
@@ -90,7 +88,6 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
@@ -125,18 +122,21 @@
     });
 
     $(document).ready(function() {
-        if ($('#staffTable').length && !$.fn.DataTable.isDataTable('#staffTable')) {
-            $('#staffTable').DataTable({
-                "pageLength": 10,
-                "responsive": true,
-                "paging": true,         // تفعيل خاصية التقليب بين الصفحات
-                "searching": true,      // تفعيل شريط البحث الذكي
-                "ordering": true,       // تفعيل الترتيب عند النقر على رؤوس الأعمدة
-                "language": { 
-                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json" 
-                }
-            });
-        }
+        // تأخير بسيط لضمان تحميل الجدول قبل تهيئته
+        setTimeout(function() {
+            if ($('#staffTable').length && !$.fn.DataTable.isDataTable('#staffTable')) {
+                $('#staffTable').DataTable({
+                    "pageLength": 10,
+                    "responsive": true,
+                    "paging": true,
+                    "searching": true,
+                    "ordering": true,
+                    "language": { 
+                        "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json" 
+                    }
+                });
+            }
+        }, 300);
     });
 </script>
 {% endblock %}
