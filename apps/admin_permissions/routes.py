@@ -28,7 +28,6 @@ def generate_random_password(length=12):
 def check_user():
     username = request.args.get('username', '')
     if len(username) < 3: return jsonify({'available': False})
-    # البحث في الجدولين للتأكد من عدم التكرار
     exists = AdminStaff.query.filter_by(username=username).first() or \
              SupplierStaff.query.filter_by(username=username).first()
     return jsonify({'available': exists is None})
@@ -62,7 +61,7 @@ def roles_list():
                            type_filter=staff_type, 
                            suppliers=Supplier.query.all())
 
-# --- إضافة موظف جديد ---
+# --- إضافة موظف جديد (نسخة محسنة) ---
 @admin_permissions_bp.route('/admin/permissions/assign', methods=['POST'])
 @login_required
 def assign_permissions():
@@ -73,7 +72,7 @@ def assign_permissions():
     staff_type = request.form.get('type')
     supplier_id = request.form.get('supplier_id')
     
-    if len(phone) != 9 or not phone.startswith('7'):
+    if not phone or len(phone) != 9 or not phone.startswith('7'):
         return jsonify({'success': False, 'message': 'رقم الهاتف يجب أن يبدأ بـ 7 ويتكون من 9 أرقام'})
     
     password = generate_random_password()
@@ -87,12 +86,10 @@ def assign_permissions():
             new_staff = SupplierStaff(username=username, role='worker', supplier_id=supplier.id)
             supplier_info = {'trade_name': supplier.trade_name, 'supplier_code': supplier.supplier_code}
         
-        # تعبئة الحقول الأساسية
+        # الاعتماد الكلي على Setter الموديل للقيام بالتشفير وتعبئة الحقول
+        # هذا السطر سيقوم بتحديث _phone_enc و phone (للبحث) تلقائياً
         new_staff.phone = phone
-        # حل مشكلة NotNullViolation: تعبئة الحقل المشفر
-        if hasattr(new_staff, '_phone_enc'):
-            new_staff._phone_enc = phone 
-            
+        
         new_staff.set_password(password)
         
         db.session.add(new_staff)
