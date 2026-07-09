@@ -1,77 +1,82 @@
 {% extends "admin/admin_base.html" %}
 
-
 {% block content %}
-<div class="card shadow-sm gold-border">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle" id="staffTable">
-                <thead class="table-royal">
-                    <tr>
-                        <th class="text-center">#</th>
-                        <th>الموظف</th>
-                        <th class="text-center">الدور</th>
-                        {% if type_filter == 'supplier' %}
-                        <th>معلومات المتجر</th>
-                        {% endif %}
-                        <th class="text-center">الحالة</th>
-                        <th class="text-center">الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for member in staff %}
-                    <tr>
-                        <td class="text-center">{{ loop.index }}</td>
-                        <td>
-                            <div class="fw-bold text-dark">{{ member.username }}</div>
-                            <small class="text-muted"><i class="fas fa-phone-alt me-1"></i>{{ member.phone }}</small>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">{{ member.role }}</span>
-                        </td>
-                        {% if type_filter == 'supplier' %}
-                        <td>
-                            {% if member.supplier %}
-                            <div class="fw-bold text-royal">{{ member.supplier.trade_name }}</div>
-                            <small class="text-secondary fw-bold">كود: {{ member.supplier.supplier_code }}</small>
-                            {% else %}
-                            <span class="text-muted"><i class="fas fa-times-circle"></i> غير مرتبط</span>
-                            {% endif %}
-                        </td>
-                        {% endif %}
-                        <td class="text-center">
-                            {% if member.is_active %}
-                            <span class="text-success"><i class="fas fa-check-circle"></i> نشط</span>
-                            {% else %}
-                            <span class="text-danger"><i class="fas fa-times-circle"></i> موقوف</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown">
-                                    <i class="fas fa-cog"></i>
-                                </button>
-                                <ul class="dropdown-menu shadow">
-                                    <li>
-                                        <a class="dropdown-item" href="#" 
-                                           onclick="resetPassword('{{ member.id }}', '{{ type_filter }}', '{{ member.username }}')">
-                                            <i class="fas fa-key text-warning me-2"></i> كلمة مرور جديدة
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="{{ url_for('admin_permissions.toggle_status', id=member.id, type=type_filter) }}">
-                                            <i class="fas fa-power-off {{ 'text-danger' if member.is_active else 'text-success' }} me-2"></i>
-                                            {{ 'إيقاف الحساب' if member.is_active else 'تفعيل الحساب' }}
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{{ url_for('admin_dashboard.dashboard') }}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-right me-1"></i> رجوع
+            </a>
+            <h4 class="text-royal fw-bold">
+                <i class="fas fa-user-shield me-2"></i> إدارة صلاحيات النظام
+            </h4>
         </div>
+        <button class="btn btn-royal" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+            <i class="fas fa-plus-circle me-1"></i> إضافة موظف جديد
+        </button>
     </div>
+
+    {% include 'admin/includes/filters_and_cards.html' %}
+    {% include 'admin/includes/table_data.html' %}
 </div>
+
+{% include 'admin/includes/modal_add_staff.html' %}
+{% include 'admin/includes/modal_success.html' %}
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    // دالة إعادة تعيين كلمة المرور (AJAX)
+    function resetPassword(staffId, staffType, username) {
+        if (!confirm('تنبيه: سيتم تغيير كلمة المرور للموظف: ' + username + '. هل أنت متأكد؟')) return;
+
+        $.ajax({
+            url: `/admin/permissions/reset-password/${staffId}/${staffType}`,
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    // عرض المودال بكلمة المرور الجديدة
+                    showSuccessModal(response.username, response.new_password);
+                } else {
+                    alert('خطأ: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('حدث خطأ في الاتصال بالخادم');
+            }
+        });
+    }
+
+    // دالة إظهار مودال النجاح
+    function showSuccessModal(username, password) {
+        $('#successUsername').text(username);
+        $('#successPassword').text(password);
+        $('#modalSuccess').modal('show');
+    }
+
+    // دالة نسخ النص
+    function copyToClipboard() {
+        var text = $('#successPassword').text();
+        navigator.clipboard.writeText(text).then(function() {
+            alert('تم نسخ كلمة المرور بنجاح!');
+        });
+    }
+
+    $(document).ready(function() {
+        // تهيئة الجدول - تأكد من أن ID الجدول يطابق table_data.html
+        if ($('#staffTable').length) {
+            $('#staffTable').DataTable({
+                "pageLength": 10,
+                "responsive": true,
+                "language": { 
+                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json" 
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}
