@@ -102,7 +102,10 @@
         try {
             const res = await fetch("{{ url_for('admin_permissions.assign_permissions') }}", { 
                 method: 'POST', 
-                body: new FormData(this) 
+                body: new FormData(this),
+                headers: {
+                    "X-CSRFToken": document.querySelector('input[name="csrf_token"]').value
+                }
             });
             const data = await res.json();
             
@@ -110,11 +113,11 @@
                 // إخفاء المودال
                 bootstrap.Modal.getInstance(document.getElementById('addStaffModal')).hide();
                 
-                // استخدام الدالة الموحدة المكتوبة في permissions.html
-                // نمرر البيانات التي يحتاجها المودال (اسم المتجر وكوده موجودان في الـ response)
-                showSuccessModal(data.username, data.new_password, data.trade_name, data.supplier_code);
+                // التعديل هنا: استخدام المتغيرات المطابقة للـ Python (store_name / store_code)
+                showSuccessModal(data.username, data.new_password, data.store_name, data.store_code);
                 
                 this.reset();
+                choices.setChoiceByValue('');
             } else {
                 alert('خطأ: ' + data.message);
             }
