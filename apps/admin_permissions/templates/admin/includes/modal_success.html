@@ -1,7 +1,7 @@
 <style>
     .modal-royal-header {
         background: linear-gradient(135deg, #491269 0%, #210433 70%, #09010e 100%) !important;
-        border-bottom: 2px solid #d4af37 !important; /* خط ذهبي فاصل */
+        border-bottom: 2px solid #d4af37 !important;
         color: #ffffff !important;
     }
 
@@ -26,13 +26,8 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
     }
 
-    .text-royal {
-        color: #491269 !important;
-    }
-    
-    .text-gold {
-        color: #bfa13b !important;
-    }
+    .text-royal { color: #491269 !important; }
+    .text-gold { color: #bfa13b !important; }
 
     .icon-success-animate {
         color: #28a745;
@@ -81,9 +76,10 @@
                     </div>
                 </div>
                 
-                <p class="text-muted mt-3 mb-0 small">
-                    <i class="fas fa-info-circle text-royal me-1"></i> يرجى نسخ البيانات وتزويد الموظف بها مباشرة.
+                <p class="text-danger mt-3 mb-1 fw-bold small">
+                    <i class="fas fa-exclamation-triangle me-1"></i> تنبيه: يرجى تغيير كلمة المرور من لوحة التحكم.
                 </p>
+                <p class="text-muted small">يرجى نسخ البيانات وتزويد الموظف بها مباشرة.</p>
             </div>
             
             <div class="modal-footer justify-content-center bg-light border-0 py-3">
@@ -99,25 +95,22 @@
 </div>
 
 <script>
-    // وظيفة نسخ محتوى الصندوق إلى الحافظة بشكل منسق واحترافي
     function copyCredentials(buttonElement) {
-        const store = document.getElementById('resStore').innerText || 'عام / إدارة';
-        const code = document.getElementById('resCode').innerText || 'لا يوجد';
+        const store = document.getElementById('resStore').innerText;
+        const code = document.getElementById('resCode').innerText;
         const user = document.getElementById('resUser').innerText;
         const pass = document.getElementById('resPass').innerText;
         
-        // تجهيز نص مرتب ومنظم عند اللصق في الواتساب أو الإيميل
-        const textToCopy = `🔐 بيانات حساب الموظف الجديد (منصة محجوب أونلاين):\n` +
+        const textToCopy = `🔐 بيانات حساب الموظف (منصة محجوب أونلاين):\n` +
                            `----------------------------------\n` +
-                           `🏪 المتجر: ${store}\n` +
+                           `🏪 المتجر / الجهة: ${store}\n` +
                            `🎫 كود المتجر: ${code}\n` +
                            `👤 اسم المستخدم: ${user}\n` +
-                           `🔑 كلمة المرور: ${pass}\n` +
+                           `🔑 كلمة المرور المؤقتة: ${pass}\n` +
                            `----------------------------------\n` +
-                           `⚠️ يرجى تغيير كلمة المرور فور الدخول الأول لحماية الحساب.`;
+                           `⚠️ تنبيه: يرجى تغيير كلمة المرور من لوحة التحكم لحماية الحساب.`;
 
         navigator.clipboard.writeText(textToCopy).then(() => {
-            // تحويل مظهر زر النسخ مؤقتاً لإعطاء انطباع تفاعلي رائع (Feedback)
             const originalHTML = buttonElement.innerHTML;
             buttonElement.className = "btn btn-success text-white px-4 fw-semibold";
             buttonElement.innerHTML = "<i class='fas fa-check me-1'></i> تم النسخ!";
@@ -126,10 +119,8 @@
                 buttonElement.className = "btn btn-outline-dark px-4 fw-semibold";
                 buttonElement.innerHTML = originalHTML;
             }, 2000);
-            
         }).catch(err => {
-            console.error('فشل النسخ: ', err);
-            alert("حدث خطأ أثناء النسخ، يرجى تحديد النص ونسخه يدوياً.");
+            alert("حدث خطأ أثناء النسخ.");
         });
     }
 </script>
