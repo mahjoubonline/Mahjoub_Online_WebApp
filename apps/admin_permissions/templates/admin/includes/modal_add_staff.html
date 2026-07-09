@@ -48,7 +48,6 @@
 </div>
 
 <script>
-    // تهيئة Choices.js
     const supplierSelect = document.getElementById('supplierField');
     const choices = new Choices(supplierSelect, { searchEnabled: true, itemSelectText: '' });
 
@@ -56,7 +55,27 @@
         document.getElementById('supplierContainer').style.display = (val === 'supplier') ? 'block' : 'none';
     }
 
-    // منطق التحقق والارسال موجود في الملف الرئيسي لضمان العزل
+    // دالة التحقق اللحظي
+    async function checkAll() {
+        const username = document.getElementById('usernameInput').value;
+        const phone = document.getElementById('phoneInput').value;
+        const type = document.getElementById('staffTypeSelect').value;
+        const submitBtn = document.getElementById('submitBtn');
+
+        const userRes = await fetch(`/admin/permissions/check-user?username=${username}`);
+        const userStatus = await userRes.json();
+        
+        const phoneRes = await fetch(`/admin/permissions/check-phone?phone=${phone}&type=${type}`);
+        const phoneStatus = await phoneRes.json();
+
+        // تحديث الأيقونات (يمكنك إضافة أيقونات FontAwesome هنا)
+        document.getElementById('userStatus').innerHTML = userStatus.available ? '✅' : '❌';
+        document.getElementById('phoneStatus').innerHTML = phoneStatus.available ? '✅' : '❌';
+
+        submitBtn.disabled = !(userStatus.available && phoneStatus.available);
+    }
+
+    // إرسال النموذج
     document.getElementById('addStaffForm').onsubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
@@ -67,6 +86,7 @@
             document.getElementById('resUser').innerText = data.username;
             document.getElementById('resPass').innerText = data.password;
             document.getElementById('resStore').innerText = data.trade_name;
+            document.getElementById('resCode').innerText = data.supplier_code;
             
             bootstrap.Modal.getInstance(document.getElementById('addStaffModal')).hide();
             new bootstrap.Modal(document.getElementById('successModal')).show();
