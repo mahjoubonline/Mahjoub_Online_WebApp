@@ -1,62 +1,121 @@
+<style>
+    /* لمسة ملكية فاخرة خاصة بالجدول وأزرار التحكم */
+    .table-royal-header {
+        background: linear-gradient(135deg, #491269 0%, #210433 70%, #09010e 100%) !important;
+        color: #ffffff !important;
+    }
+    
+    .table-royal-header th {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        border-bottom: 2px solid #05000a !important;
+    }
+
+    .gold-border {
+        border: 1px solid #d4af37 !important; /* إطار ذهبي ناعم يحيط بالبطاقة */
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .btn-royal-sm {
+        background: linear-gradient(135deg, #491269 0%, #210433 100%) !important;
+        color: white !important;
+        border: none !important;
+        transition: all 0.3s ease;
+    }
+
+    .btn-royal-sm:hover {
+        background: linear-gradient(135deg, #210433 0%, #09010e 100%) !important;
+        color: #e2d5f0 !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* تنسيق الحقول الخاصة بأدوات البحث والصفحات لتبدو احترافية */
+    .dataTables_length select, .dataTables_filter input {
+        border: 1px solid #ced4da !important;
+        border-radius: 6px !important;
+        padding: 4px 8px !important;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: linear-gradient(135deg, #491269 0%, #210433 100%) !important;
+        color: white !important;
+        border-radius: 4px;
+        border: none !important;
+    }
+</style>
+
 <div class="card shadow-sm gold-border">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover align-middle" id="staffTable">
-                <thead class="table-royal">
+            <table class="table table-hover align-middle mb-0" id="staffTable">
+                <thead class="table-royal-header">
                     <tr>
-                        <th class="text-center">#</th>
+                        <th class="text-center" style="width: 60px;">#</th>
                         <th>الموظف</th>
                         <th class="text-center">الدور</th>
                         {% if type_filter == 'supplier' %}
                         <th>معلومات المتجر</th>
                         {% endif %}
                         <th class="text-center">الحالة</th>
-                        <th class="text-center">الإجراءات</th>
+                        <th class="text-center" style="width: 100px;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for member in staff %}
                     <tr>
-                        <td class="text-center">{{ loop.index }}</td>
+                        <td class="text-center fw-bold text-secondary">{{ loop.index }}</td>
                         <td>
-                            <div class="fw-bold text-dark">{{ member.username }}</div>
-                            <small class="text-muted"><i class="fas fa-phone-alt me-1"></i>{{ member.phone }}</small>
+                            <div class="fw-bold text-dark mb-1">{{ member.username }}</div>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-phone-alt text-royal me-1"></i> {{ member.phone }}
+                            </small>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">{{ member.role }}</span>
+                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-semibold">{{ member.role }}</span>
                         </td>
                         {% if type_filter == 'supplier' %}
                         <td>
                             {% if member.supplier %}
-                            <div class="fw-bold text-royal">{{ member.supplier.trade_name }}</div>
-                            <small class="text-secondary fw-bold">كود: {{ member.supplier.supplier_code }}</small>
+                            <div class="fw-bold text-dark">{{ member.supplier.trade_name }}</div>
+                            <small class="text-purple-dark fw-bold">كود: {{ member.supplier.supplier_code }}</small>
                             {% else %}
-                            <span class="text-muted"><i class="fas fa-times-circle"></i> غير مرتبط</span>
+                            <span class="text-muted small"><i class="fas fa-times-circle"></i> غير مرتبط</span>
                             {% endif %}
                         </td>
                         {% endif %}
                         <td class="text-center">
                             {% if member.is_active %}
-                            <span class="text-success"><i class="fas fa-check-circle"></i> نشط</span>
+                            <span class="badge bg-success-subtle text-success px-2 py-1.5 rounded">
+                                <i class="fas fa-check-circle me-1"></i> نشط
+                            </span>
                             {% else %}
-                            <span class="text-danger"><i class="fas fa-times-circle"></i> موقوف</span>
+                            <span class="badge bg-danger-subtle text-danger px-2 py-1.5 rounded">
+                                <i class="fas fa-times-circle me-1"></i> موقوف
+                            </span>
                             {% endif %}
                         </td>
                         <td class="text-center">
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown">
-                                    <i class="fas fa-cog"></i>
+                                <button class="btn btn-sm btn-royal-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-cog"></i> التحكم
                                 </button>
-                                <ul class="dropdown-menu shadow">
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                                     <li>
-                                        <a class="dropdown-item" href="#" onclick="handleResetPassword('{{ member.id }}', '{{ type_filter }}', '{{ member.username }}')">
+                                        <a class="dropdown-item py-2" href="#" onclick="resetPassword('{{ member.id }}', '{{ type_filter }}', '{{ member.username }}')">
                                             <i class="fas fa-key text-warning me-2"></i> كلمة مرور جديدة
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('admin_permissions.toggle_status', id=member.id, type=type_filter) }}">
-                                            <i class="fas fa-power-off {{ 'text-danger' if member.is_active else 'text-success' }} me-2"></i>
-                                            {{ 'إيقاف الحساب' if member.is_active else 'تفعيل الحساب' }}
+                                        <hr class="dropdown-divider my-1">
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item py-2" href="{{ url_for('admin_permissions.toggle_status', id=member.id, type=type_filter) }}">
+                                            {% if member.is_active %}
+                                            <i class="fas fa-user-slash text-danger me-2"></i> إيقاف الحساب
+                                            {% else %}
+                                            <i class="fas fa-user-check text-success me-2"></i> تفعيل الحساب
+                                            {% endif %}
                                         </a>
                                     </li>
                                 </ul>
@@ -72,45 +131,30 @@
 
 <script>
 $(document).ready(function() {
-    // تفعيل DataTables للبحث والترقيم
-    if (!$.fn.DataTable.isDataTable('#staffTable')) {
-        $('#staffTable').DataTable({
-            "language": {
-                "search": "بحث:",
-                "paginate": { "next": "التالي", "previous": "السابق" },
-                "info": "عرض _START_ إلى _END_ من أصل _TOTAL_ مدخل",
-                "emptyTable": "لا توجد بيانات متاحة في الجدول",
-                "infoEmpty": "يعرض 0 إلى 0 من أصل 0 مُدخل",
-                "lengthMenu": "عرض _MENU_ مُدخل"
+    // تفعيل وتحديث الـ DataTable لتعمل كل 10 أسطر وبشكل معرب بالكامل
+    if ($.fn.DataTable.isDataTable('#staffTable')) {
+        $('#staffTable').DataTable().destroy();
+    }
+    
+    $('#staffTable').DataTable({
+        "pageLength": 10,
+        "lengthMenu": [5, 10, 25, 50],
+        "searching": true,
+        "ordering": true,
+        "info": true,
+        "paging": true,
+        "language": {
+            "search": "البحث السريع:",
+            "lengthMenu": "عرض _MENU_ موظفين لكل صفحة",
+            "info": "عرض من _START_ إلى _END_ (إجمالي الموظفين: _TOTAL_)",
+            "infoEmpty": "لا توجد سجلات لعرضها",
+            "emptyTable": "الجدول فارغ حالياً",
+            "zeroRecords": "لم يتم العثور على نتائج مطابقة للبحث",
+            "paginate": {
+                "next": "التالي &larr;",
+                "previous": "&rarr; السابق"
             }
-        });
-    }
-});
-
-// دالة إعادة التعيين مع النسخ التلقائي للحافظة
-async function handleResetPassword(id, type, username) {
-    if (!confirm(`تنبيه: سيتم تغيير كلمة المرور للموظف: ${username}. هل أنت متأكد؟`)) return;
-
-    try {
-        const response = await fetch(`/admin/permissions/reset-password/${id}/${type}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            const credentials = `المستخدم: ${data.username}\nكلمة المرور: ${data.new_password}`;
-            
-            // محاولة النسخ التلقائي للحافظة
-            navigator.clipboard.writeText(credentials).then(() => {
-                alert(`✅ تم تغيير كلمة المرور ونسخها للحافظة بنجاح!\n\n${credentials}`);
-            }).catch(err => {
-                // في حال منع المتصفح عملية النسخ
-                alert(`✅ تم تغيير كلمة المرور بنجاح!\n\n${credentials}\n\n(يرجى نسخها يدوياً)`);
-            });
-        } else {
-            alert('حدث خطأ أثناء إعادة التعيين: ' + data.message);
         }
-    } catch (err) {
-        alert('فشل الاتصال بالخادم. تأكد من اتصالك بالإنترنت.');
-        console.error('Reset Password Error:', err);
-    }
-}
+    });
+});
 </script>
