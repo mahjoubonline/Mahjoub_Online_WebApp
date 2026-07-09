@@ -16,7 +16,7 @@ class AdminUser(db.Model, UserMixin):
     __table_args__ = (
         db.Index('idx_adm_username', 'username'),
         db.Index('idx_adm_role', 'role'),
-        db.Index('idx_adm_phone', 'search_phone'), # فهرس للبحث السريع بالهاتف
+        db.Index('idx_adm_phone', 'search_phone'), 
         db.Index('idx_adm_created', 'created_at'),
         {'extend_existing': True}
     )
@@ -28,8 +28,9 @@ class AdminUser(db.Model, UserMixin):
     
     # 2. معلومات الحساب - [نظام تشفير AES-256 السيادي]
     role = db.Column(db.String(20), default='Owner')
-    _phone_enc = db.Column(db.String(255), nullable=True) # التشفير السيادي للهاتف
-    search_phone = db.Column(db.String(20)) # للبحث السريع (آخر 9 أرقام)
+    is_active = db.Column(db.Boolean, default=True) # مضافة لتتوافق مع دوال التفعيل والتعطيل
+    _phone_enc = db.Column(db.String(255), nullable=True) 
+    search_phone = db.Column(db.String(20)) 
     
     # 3. التدقيق الزمني
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -39,8 +40,7 @@ class AdminUser(db.Model, UserMixin):
     @staticmethod
     def _get_key():
         """استرجاع المفتاح السيادي من متغيرات البيئة."""
-        key = os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
-        return key.encode()
+        return os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=').encode()
 
     @property
     def phone(self):
@@ -56,7 +56,7 @@ class AdminUser(db.Model, UserMixin):
         """تشفير الهاتف قبل التخزين مع الاحتفاظ بـ search_phone للبحث."""
         if value:
             self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
-            self.search_phone = str(value)[-9:] # لتسريع الاستعلامات
+            self.search_phone = str(value)[-9:] # الاحتفاظ بآخر 9 أرقام للبحث السريع
 
     # --- نظام تأمين كلمة المرور (PBKDF2) ---
     def set_password(self, password):
