@@ -49,7 +49,8 @@
                                 </button>
                                 <ul class="dropdown-menu shadow">
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('admin_permissions.reset_password', id=member.id, type=type_filter) }}">
+                                        <a class="dropdown-item" href="#" 
+                                           onclick="resetPassword('{{ member.id }}', '{{ type_filter }}', '{{ member.username }}')">
                                             <i class="fas fa-key text-warning me-2"></i> كلمة مرور جديدة
                                         </a>
                                     </li>
