@@ -39,22 +39,11 @@
 
             {% if supplier_modules %}
                 {% for key, module in supplier_modules.items() %}
-                    {% if key != 'suppliers_dashboard' and module.get('links') and module.links is mapping %}
-                        {% for endpoint, link_data in module.links.items() %}
-                            {# حماية من الانهيار في حال فشل url_for #}
-                            {% set is_valid_link = true %}
-                            {% try %}
-                                {% set url = url_for(endpoint) %}
-                            {% except %}
-                                {% set is_valid_link = false %}
-                            {% endtry %}
-                            
-                            {% if is_valid_link %}
-                                <a href="{{ url_for(endpoint) }}" class="nav-link {% if request.endpoint == endpoint %}active{% endif %}">
-                                    <i class="{{ module.get('icon', 'fas fa-folder') }} me-3"></i> 
-                                    <span>{{ link_data.get('title', 'رابط') }}</span>
-                                </a>
-                            {% endif %}
+                    {% if key != 'suppliers_dashboard' and module.links is mapping %}
+                        {% for endpoint, link_title in module.links.items() %}
+                            <a href="{{ url_for(endpoint) }}" class="nav-link {% if request.endpoint == endpoint %}active{% endif %}">
+                                <i class="{{ module.icon|default('fas fa-folder') }} me-3"></i> <span>{{ link_title }}</span>
+                            </a>
                         {% endfor %}
                     {% endif %}
                 {% endfor %}
