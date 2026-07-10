@@ -38,22 +38,20 @@ def create_app():
     csrf.init_app(app)
     limiter.init_app(app)
 
-    # [تعديل هام]: تحديث محمل المستخدم ليشمل AdminUser كأولوية
+    # تحديث محمل المستخدم ليشمل جميع الأنواع
     @login_manager.user_loader
     def load_user(user_id):
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.supplier_staff_db import SupplierStaff
         
-        # 1. البحث في المديرين (المالك) أولاً
+        # البحث بالترتيب حسب الأهمية
         admin = AdminUser.query.get(int(user_id))
         if admin: return admin
         
-        # 2. البحث في الموردين
         supplier = Supplier.query.get(int(user_id))
         if supplier: return supplier
         
-        # 3. البحث في الموظفين
         return SupplierStaff.query.get(int(user_id))
 
     # 2. إعدادات الأمان
@@ -126,9 +124,9 @@ def create_app():
             db.create_all()
             print("✅ [Setup]: تم التحقق من الجداول.")
         except Exception as e:
-            print(f"ℹ️ [Setup]: خطأ أثناء الإنشاء: {e}")
+            print(f"ℹ️ [Setup]: خطأ أثناء الإنشاء (قد يكون بسبب تكرار): {e}")
 
-        # [إضافة المستخدم المالك]
+        # إضافة المستخدم المالك
         try:
             from apps.models.admin_db import AdminUser
             if not AdminUser.query.filter_by(username='علي محجوب').first():
