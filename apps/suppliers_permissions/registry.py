@@ -5,23 +5,22 @@ from apps.suppliers_permissions.routes import suppliers_permissions_bp
 
 # إعدادات تعريف الموديول للنظام الديناميكي
 MODULE_NAME = "إدارة الصلاحيات"
-MODULE_ICON = "fa-user-shield"  # أيقونة احترافية تناسب الصلاحيات والموظفين
+MODULE_ICON = "fa-user-shield"
 
-# تحديد روابط التنقل الخاصة بالموديول والتي تظهر في القائمة الجانبية
-LINKS = [
-    {
+# ✨ الإصلاح هنا: تحويل LINKS إلى Dictionary لتتوافق مع دالة ()module.links.values في ملف base.html
+LINKS = {
+    "permissions_home": {
         "title": "صلاحيات الموظفين",
-        "url": "/permissions",  # المسار التابع للـ Blueprint
+        "url": "/permissions",
         "icon": "fa-users-cog"
     }
-]
+}
 
-# الإعداد الحاسم: تفعيل ظهور هذا الموديول داخل لوحة الموردين بدلاً من لوحة الإدارة العامة
+# تفعيل ظهور هذا الموديول داخل لوحة الموردين
 SHOW_IN_SUPPLIER = True
 
 def register_module(app):
     """
-    دالة تسجيل الموديول المربوطة بمحرك النظام التلقائي في apps/__init__.py
+    دالة تسجيل الموديول المربوطة بمحرك النظام التلقائي
     """
-    # تسجيل الـ Blueprint مع بادئة مسار واضحة ومنظمة للموردين
     app.register_blueprint(suppliers_permissions_bp, url_prefix='/supplier')
