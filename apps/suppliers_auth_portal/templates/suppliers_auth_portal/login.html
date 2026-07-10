@@ -3,40 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="بوابة محجوب أونلاين السيادية للشركاء والموردين - نظام إدارة مركزي آمن.">
     <title>بوابة الشركاء الموحدة | محجوب أونلاين</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;600;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;700;900&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #05020a; --gold: #ce9e49; --card-bg: #0f071c; --error: #ff4d4d; --success: #28a745; }
         
+        * { box-sizing: border-box; }
         body { 
             margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: #fff; 
-            height: 100vh; display: flex; align-items: center; justify-content: center; 
-            padding: 20px; overflow: hidden; 
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; 
+            padding: 20px; line-height: 1.6;
         }
         
         .wrapper { 
-            display: flex; width: 100%; max-width: 900px; max-height: 85vh; 
-            background: rgba(15, 7, 28, 0.95); border: 1px solid #333; 
-            border-radius: 30px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; width: 100%; max-width: 950px; background: var(--card-bg); 
+            border: 1px solid #222; border-radius: 24px; overflow: hidden; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
         }
         
-        .side { flex: 1; padding: 50px; display: flex; flex-direction: column; justify-content: center; }
-        .marketing-side { background: linear-gradient(145deg, #160d26, #05020a); border-left: 1px solid #222; }
+        .side { flex: 1; padding: clamp(20px, 5vw, 60px); display: flex; flex-direction: column; justify-content: center; }
+        .marketing-side { background: linear-gradient(160deg, #1a102a, #05020a); border-left: 1px solid #333; }
         
-        .btn-gold { padding: 15px; background: linear-gradient(90deg, #ce9e49, #9e7634); border: none; border-radius: 12px; font-weight: 900; cursor: pointer; color: #000; margin: 10px 0; width: 100%; transition: transform 0.2s, opacity 0.3s; }
-        .btn-gold:hover { transform: scale(1.02); opacity: 0.9; }
+        h1 { font-size: clamp(1.8rem, 4vw, 2.5rem); margin-bottom: 1rem; }
+        .btn-gold { 
+            padding: 14px; background: linear-gradient(90deg, var(--gold), #9e7634); 
+            border: none; border-radius: 12px; font-weight: 700; cursor: pointer; 
+            color: #000; margin: 10px 0; width: 100%; transition: all 0.3s;
+        }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(206,158,73,0.3); }
         
-        .cyber-input { background: #000; border: 1px solid #333; padding: 15px; color: #fff; border-radius: 12px; margin: 10px 0; width: 100%; box-sizing: border-box; outline: none; transition: border 0.3s; }
+        .cyber-input { 
+            background: #000; border: 1px solid #333; padding: 15px; color: #fff; 
+            border-radius: 12px; margin: 8px 0; width: 100%; outline: none; 
+        }
         .cyber-input:focus { border-color: var(--gold); }
         
         .hidden { display: none; }
-        .forgot-link { color: #666; font-size: 0.8rem; cursor: pointer; text-decoration: underline; margin-top: 10px; }
-        #status-msg { padding: 10px; margin-bottom: 15px; border-radius: 8px; display: none; text-align: center; font-size: 0.85rem; border: 1px solid transparent; }
+        #status-msg { padding: 12px; margin-bottom: 15px; border-radius: 10px; display: none; text-align: center; font-size: 0.9rem; }
         
         @media (max-width: 768px) {
-            body { height: auto; overflow-y: auto; }
-            .wrapper { flex-direction: column; }
+            .wrapper { flex-direction: column; border-radius: 0; }
             .side { padding: 30px; }
+            .marketing-side { display: none; } /* إخفاء الجانب الدعائي في الموبايل لتوفير مساحة */
         }
     </style>
 </head>
@@ -44,49 +53,45 @@
 
 <div class="wrapper">
     <div class="side marketing-side">
-        <h1 style="font-size: 2.2rem; margin-bottom: 10px;">بوابة الشركاء <span style="color:var(--gold)">السيادية</span></h1>
-        <p style="color: #aaa;">نظام إدارة الموردين والمسوقين المركزي لمحجوب أونلاين. الدخول محمي ومراقب.</p>
+        <h1>بوابة الشركاء <span style="color:var(--gold)">السيادية</span></h1>
+        <p style="color: #aaa;">نظام إدارة الموردين والمسوقين المركزي لمحجوب أونلاين. بيئة عمل محمية، مؤمنة، ومصممة للنمو.</p>
     </div>
     
     <div class="side" id="auth-container">
         <div id="status-msg"></div>
+        <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
 
         <div id="main-menu">
-            <h3 style="color: var(--gold); margin-top: 0;">اختر نوع الدخول</h3>
+            <h2 style="color: var(--gold); margin-top: 0;">مرحباً بك مجدداً</h2>
             <button class="btn-gold" onclick="showForm('supplier-login')">دخول الموردين</button>
             <button class="btn-gold" style="background: #222; color: #fff;" onclick="showForm('marketer-login')">دخول المسوقين</button>
         </div>
 
-        <!-- Supplier Login -->
         <div id="supplier-login" class="hidden">
             <h3 style="color: var(--gold);">دخول الموردين</h3>
             <input type="text" id="sup-user" class="cyber-input" placeholder="اسم المستخدم أو الهاتف">
             <input type="password" id="sup-pass" class="cyber-input" placeholder="كلمة المرور">
-            <button class="btn-gold" onclick="loginUser('supplier')">تأكيد الدخول</button>
-            <button onclick="showForm('menu')" style="background:none; border:none; color:#666; cursor:pointer; margin-top:10px;">عودة للقائمة</button>
+            <button class="btn-gold" onclick="loginUser('supplier')">تسجيل الدخول</button>
+            <button onclick="showForm('menu')" style="background:none; border:none; color:#666; cursor:pointer; width:100%; margin-top:10px;">رجوع</button>
         </div>
 
-        <!-- Marketer Login -->
         <div id="marketer-login" class="hidden">
             <h3 style="color: var(--gold);">دخول المسوقين</h3>
             <input type="text" id="marketer-user" class="cyber-input" placeholder="رمز المسوق">
             <input type="password" id="marketer-pass" class="cyber-input" placeholder="كلمة المرور">
-            <button class="btn-gold" onclick="loginUser('marketer')">تأكيد الدخول</button>
-            <button onclick="showForm('menu')" style="background:none; border:none; color:#666; cursor:pointer; margin-top:10px;">عودة للقائمة</button>
+            <button class="btn-gold" onclick="loginUser('marketer')">تسجيل الدخول</button>
+            <button onclick="showForm('menu')" style="background:none; border:none; color:#666; cursor:pointer; width:100%; margin-top:10px;">رجوع</button>
         </div>
     </div>
 </div>
 
 <script>
-    const loginUrl = "{{ url_for('suppliers_auth.login') }}";
-
     function showMessage(text, type) {
         const msg = document.getElementById('status-msg');
         msg.innerText = text;
         msg.style.display = "block";
         msg.style.background = type === 'error' ? "rgba(220, 53, 69, 0.1)" : "rgba(40, 167, 69, 0.1)";
         msg.style.color = type === 'error' ? "#ff4d4d" : "#28a745";
-        msg.style.borderColor = type === 'error' ? "#ff4d4d" : "#28a745";
     }
 
     function showForm(type) {
@@ -98,25 +103,22 @@
 
     async function loginUser(role) {
         const data = role === 'supplier' ? 
-            {type: 'supplier', username: document.getElementById('sup-user').value, password: document.getElementById('sup-pass').value} :
-            {type: 'marketer', username: document.getElementById('marketer-user').value, password: document.getElementById('marketer-pass').value};
+            {username: document.getElementById('sup-user').value, password: document.getElementById('sup-pass').value} :
+            {username: document.getElementById('marketer-user').value, password: document.getElementById('marketer-pass').value};
         
         try {
-            const response = await fetch(loginUrl, {
+            const response = await fetch("{{ url_for('suppliers_auth.login') }}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
+                    'X-CSRFToken': document.getElementById('csrf_token').value
                 },
                 body: JSON.stringify(data)
             });
             const res = await response.json();
             if(res.status === 'success') window.location.href = res.redirect;
             else showMessage(res.message, 'error');
-        } catch(e) { 
-            console.error(e);
-            showMessage('خطأ في الاتصال بالسيرفر', 'error'); 
-        }
+        } catch(e) { showMessage('خطأ في الاتصال بالخادم', 'error'); }
     }
 </script>
 </body>
