@@ -11,6 +11,7 @@ from apps.models.supplier_staff_db import SupplierStaff
 suppliers_bp = Blueprint('suppliers_auth', __name__, template_folder='templates')
 
 def get_wait_time(attempts):
+    """حساب وقت الانتظار: يبدأ من دقيقة ويتضاعف (1، 2، 4، 8...)"""
     if attempts <= 5: return 0
     return 2 ** (attempts - 6)
 
@@ -23,7 +24,7 @@ def login():
         data = request.get_json() or {}
         username = data.get('username', '').strip()
         password = data.get('password', '')
-        user_type = data.get('type')  # الحصول على نوع المستخدم من الفورم
+        user_type = data.get('type')  # 'supplier' أو 'staff'
 
         # 1. التحقق من حالة الحظر
         block_until = session.get('block_until')
@@ -31,21 +32,32 @@ def login():
             remaining = int((datetime.fromisoformat(block_until) - datetime.now()).total_seconds() / 60) + 1
             return jsonify({"status": "error", "message": f"لا يمكنك المحاولة حالياً. يرجى الانتظار {remaining} دقيقة."}), 429
 
-        # 2. البحث عن المستخدم بناءً على النوع (لتجنب التداخل)
+        # 2. البحث الذكي (بحث في النوع المختار ثم في الآخر إذا لزم الأمر)
         target_user = None
+        found_as = None
+
         if user_type == 'supplier':
             target_user = Supplier.query.filter(or_(Supplier.search_phone == username, Supplier.username == username)).first()
+            if target_user: found_as = 'supplier'
         else:
             target_user = SupplierStaff.query.filter(or_(SupplierStaff.search_phone == username, SupplierStaff.username == username)).first()
+            if target_user: found_as = 'staff'
+
+        # إذا لم نجد في النوع المختار، نبحث في الجدول الآخر (مرونة إضافية)
+        if not target_user:
+            target_user = Supplier.query.filter(or_(Supplier.search_phone == username, Supplier.username == username)).first()
+            if target_user: found_as = 'supplier'
+            else:
+                target_user = SupplierStaff.query.filter(or_(SupplierStaff.search_phone == username, SupplierStaff.username == username)).first()
+                if target_user: found_as = 'staff'
 
         # 3. التحقق من وجود المستخدم
         if not target_user:
             return jsonify({"status": "error", "message": "المستخدم غير مسجل في المنصة اللامركزية"}), 404
 
-        # 4. التحقق من كلمة المرور (مع طباعة تصحيحية في الـ Terminal)
-        is_valid = target_user.check_password(password)
-        if not is_valid:
-            print(f"DEBUG: فشل التحقق - المستخدم: {username}, النوع: {user_type}")
+        # 4. التحقق من كلمة المرور
+        if not target_user.check_password(password):
+            print(f"DEBUG: فشل التحقق - المستخدم: {username}, النوع: {found_as}")
             attempts = session.get('login_attempts', 0) + 1
             session['login_attempts'] = attempts
             
@@ -62,13 +74,13 @@ def login():
         # 6. نجاح الدخول
         session.pop('login_attempts', None)
         session.pop('block_until', None)
-        session['user_type'] = user_type
+        session['user_type'] = found_as # تخزين النوع الذي تم العثور عليه فعلياً
         login_user(target_user, remember=True)
         return jsonify({"status": "success", "redirect": url_for('suppliers_dashboard.dashboard')})
 
     except Exception as e:
         print(f"❌ [Login Error]: {str(e)}")
-        return jsonify({"status": "error", "message": "حدث خطأ تقني"}), 500
+        return jsonify({"status": "error", "message": "حدث خطأ تقني في النظام"}), 500
 
 @suppliers_bp.route('/logout')
 @login_required
