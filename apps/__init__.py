@@ -79,6 +79,9 @@ def create_app():
     apps_dir = app.root_path
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api', 'admin', 'auth']
 
+    # قائمة مؤقتة للترتيب
+    temp_admin_modules = []
+
     if os.path.exists(apps_dir):
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
@@ -87,20 +90,31 @@ def create_app():
                 if os.path.exists(registry_file):
                     try:
                         module = importlib.import_module(f"apps.{item}.registry")
+                        
+                        # التحقق من الإخفاء (إذا كانت HIDDEN=True يتم تخطي الموديول)
+                        if getattr(module, 'HIDDEN', False):
+                            continue
+                        
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
-                            # النظام الآن يأخذ الاسم من MODULE_NAME داخل registry الخاص بالموديول مباشرة
+                            
                             mod_data = {
                                 "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
                                 "icon": getattr(module, 'MODULE_ICON', 'fas fa-folder'),
                                 "links": getattr(module, 'LINKS', {}),
+                                "order": getattr(module, 'ORDER', 999) # الترتيب الافتراضي
                             }
+                            
                             if getattr(module, 'SHOW_IN_SUPPLIER', False):
                                 SUPPLIER_MODULES[item] = mod_data
                             else:
-                                ADMIN_MODULES[item] = mod_data
+                                temp_admin_modules.append(mod_data)
                     except Exception as e:
                         print(f"❌ [Registry]: خطأ في تسجيل {item}: {e}")
+
+    # ترتيب الموديولات حسب قيمة ORDER وتحديث القاموس النهائي
+    for mod in sorted(temp_admin_modules, key=lambda x: x['order']):
+        ADMIN_MODULES[mod['display_name']] = mod
 
     # 5. المسارات الأساسية
     @app.route('/')
