@@ -7,10 +7,9 @@ from cryptography.fernet import Fernet
 from apps.extensions import db
 from apps.models.exchange_db import ExchangeRate
 
-# تهيئة آمنة لمفتاح التشفير
 def get_cipher():
-    key = os.getenv('ENCRYPTION_KEY')
-    return Fernet(key.encode()) if key else Fernet(b'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
+    key = os.getenv('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
+    return Fernet(key.encode())
 
 cipher = get_cipher()
 
@@ -40,7 +39,7 @@ class Order(db.Model):
     tracking_tag = db.Column(db.String(100), nullable=True)
     order_reference = db.Column(db.String(100), unique=True, nullable=True)
     
-    # بيانات ظاهرة (غير مشفرة للاستعلامات السريعة)
+    # بيانات ظاهرة للاستعلامات السريعة
     total_price = db.Column(db.Numeric(18, 2), default=0.00)
     items_count = db.Column(db.Integer, default=0)
     status = db.Column(db.String(30), default='pending')
@@ -53,23 +52,22 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # العلاقات (Relationships)
-    supplier = db.relationship('Supplier', back_populates='orders')
-    marketer = db.relationship('Marketer', back_populates='orders')
-    financials = db.relationship('OrderFinancial', back_populates='order', uselist=False, cascade="all, delete-orphan")
+    # العلاقات (Relationships) مع استخدام lazy='joined' لضمان سرعة عرض تفاصيل الطلب
+    supplier = db.relationship('Supplier', back_populates='orders', lazy='joined')
+    marketer = db.relationship('Marketer', back_populates='orders', lazy='joined')
+    items = db.relationship('OrderItem', back_populates='order', cascade="all, delete-orphan", lazy='joined')
+    financials = db.relationship('OrderFinancial', back_populates='order', uselist=False, cascade="all, delete-orphan", lazy='joined')
 
-    # --- جسر البيانات المالية للقوالب ---
+    # --- جسر البيانات المالية ---
     @property
     def amount(self):
-        """تسمح للقالب بالوصول للمبلغ المالي مباشرة عبر order.amount"""
         return self.financials.total_paid if self.financials else 0.0
 
     def get_amount_in_currency(self, currency_code):
-        """تحويل المبلغ لعملة المورد باستخدام سعر الصرف الحالي"""
         rate = ExchangeRate.get_rate(currency_code)
         return self.amount * rate
 
-    # --- منطق التشفير الاحترافي (Encrypted Properties) ---
+    # --- منطق التشفير الاحترافي ---
     @property
     def customer_name(self):
         try:
