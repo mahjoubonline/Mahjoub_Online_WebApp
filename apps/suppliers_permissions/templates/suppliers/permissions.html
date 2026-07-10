@@ -1,0 +1,193 @@
+{% extends 'suppliers/base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4" style="direction: rtl; text-align: right; color: #fff;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div>
+            <h2 class="fw-bold" style="color: #e5c158;">👥 إدارة صلاحيات الموظفين</h2>
+            <p class="text-muted mb-0">يمكنك من هنا إضافة موظفي متجرك وتحديد الأقسام المصرح لهم بزيارتها.</p>
+        </div>
+        <button class="btn btn-gold px-4 py-2 mt-2 mt-sm-0" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+            <i class="fa fa-user-plus me-2"></i> إضافة موظف جديد
+        </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card-custom p-3 d-flex align-items-center">
+                <div class="icon-box bg-purple-light text-purple me-3">
+                    <i class="fa fa-users fa-2x"></i>
+                </div>
+                <div>
+                    <span class="text-muted d-block">إجمالي الموظفين</span>
+                    <h3 class="fw-bold mb-0 text-white">{{ staff_list|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-custom p-4">
+        <h5 class="fw-bold mb-3 text-white"><i class="fa fa-list me-2"></i> موظفي الشريك الحاليين</h5>
+        <div class="table-responsive">
+            <table class="table table-custom align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">اسم المستخدم</th>
+                        <th scope="col">رقم الهاتف</th>
+                        <th scope="col">صلاحية المحفظة</th>
+                        <th scope="col">إدارة الطلبات</th>
+                        <th scope="col">تحديث الإعدادات</th>
+                        <th scope="col">الحالة</th>
+                        <th scope="col">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in staff_list %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="fw-bold text-white">{{ staff.username }}</td>
+                        <td>{{ staff.search_phone }}</td>
+                        <td>
+                            <span class="badge {% if staff.can_view_wallet %}bg-success-custom{% else %}bg-danger-custom{% endif %}">
+                                {{ 'مسموح' if staff.can_view_wallet else 'ممنوع' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {% if staff.can_manage_orders %}bg-success-custom{% else %}bg-danger-custom{% endif %}">
+                                {{ 'مسموح' if staff.can_manage_orders else 'ممنوع' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {% if staff.can_manage_settings %}bg-success-custom{% else %}bg-danger-custom{% endif %}">
+                                {{ 'مسموح' if staff.can_manage_settings else 'ممنوع' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {% if staff.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ 'نشط' if staff.is_active else 'معطل' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="#" class="btn btn-sm btn-outline-warning me-1"><i class="fa fa-edit"></i></a>
+                                <a href="#" class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">لا يوجد موظفين مسجلين تحت هذا الحساب حالياً.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addStaffModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-custom">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-purple-light" id="addStaffModalLabel"><i class="fa fa-user-shield me-2"></i> إضافة موظف جديد</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="" method="POST" class="p-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label class="form-label text-white">اسم المستخدم <span class="text-danger">*</span></label>
+                    <input type="text" name="username" class="form-control input-custom" placeholder="يجب أن يكون فريداً بالإنجليزية" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-white">رقم الهاتف <span class="text-danger">*</span></label>
+                    <input type="text" name="phone" class="form-control input-custom" placeholder="7xxxxxxxx" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-white">كلمة المرور <span class="text-danger">*</span></label>
+                    <input type="password" name="password" class="form-control input-custom" placeholder="••••••••" required>
+                </div>
+
+                <div class="mb-3 p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                    <label class="form-label fw-bold mb-2" style="color: #e5c158;"><i class="fa fa-toggle-on me-1"></i> تعيين الصلاحيات المباشرة:</label>
+                    
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="can_view_wallet" id="walletSwitch">
+                        <label class="form-check-label text-white" for="walletSwitch">السماح برؤية المحفظة والعمليات المالية</label>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="can_manage_orders" id="ordersSwitch" checked>
+                        <label class="form-check-label text-white" for="ordersSwitch">السماح بإدارة الطلبات ومعالجتها</label>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="can_manage_settings" id="settingsSwitch">
+                        <label class="form-check-label text-white" for="settingsSwitch">السماح بتحديث إعدادات المتجر</label>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-gold px-4">حفظ الموظف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card-custom {
+        background: #1e1b29; /* خلفية داكنة متناسقة */
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+    }
+    .modal-custom {
+        background: #181522;
+        border: 1px solid #4a2874;
+        border-radius: 16px;
+    }
+    .input-custom {
+        background: #252136 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #fff !important;
+        border-radius: 8px;
+    }
+    .input-custom:focus {
+        border-color: #e5c158 !important;
+        box-shadow: 0 0 0 0.25rem rgba(229, 193, 88, 0.25) !important;
+    }
+    .btn-gold {
+        background: #e5c158;
+        color: #12101a;
+        font-weight: bold;
+        border-radius: 8px;
+        transition: 0.3s;
+    }
+    .btn-gold:hover {
+        background: #ccaa46;
+        color: #12101a;
+    }
+    .table-custom {
+        color: #d1cfe2;
+    }
+    .table-custom thead th {
+        background: #15131f;
+        color: #e5c158;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+        padding: 12px;
+    }
+    .table-custom tbody td {
+        padding: 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .text-purple-light { color: #bb86fc; }
+    .bg-success-custom { background-color: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid #28a745; }
+    .bg-danger-custom { background-color: rgba(220, 53, 69, 0.2); color: #dc3545; border: 1px solid #dc3545; }
+    .form-check-input:checked { background-color: #e5c158; border-color: #e5c158; }
+</style>
+{% endblock %}
