@@ -27,8 +27,11 @@ class OrderItem(db.Model):
     sku = db.Column(db.String(100), nullable=True) # رمز المنتج
     price_per_unit = db.Column(db.Numeric(18, 2), default=0.00) # سعر القطعة الواحدة
     
-    # علاقة عكسية للوصول للمنتجات من داخل الطلب
-    order = db.relationship('Order', backref=db.backref('items', cascade="all, delete-orphan"))
+    # [تعديل جذري]: استبدال backref بـ back_populates لمنع تضارب الـ Mapper
+    order = db.relationship(
+        'Order', 
+        back_populates='items'
+    )
 
     def __repr__(self):
         return f'<OrderItem {self.title} | Qty: {self.qty}>'
