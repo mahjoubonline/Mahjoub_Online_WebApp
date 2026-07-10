@@ -39,11 +39,14 @@
 
             {% if supplier_modules %}
                 {% for key, module in supplier_modules.items() %}
-                    {% if key != 'suppliers_dashboard' and module.links %}
-                        {% set first_link = module.links.values()|list|first %}
-                        <a href="{{ url_for(first_link) }}" class="nav-link {% if request.endpoint == first_link %}active{% endif %}">
-                            <i class="{{ module.icon|default('fas fa-folder') }} me-3"></i> <span>{{ module.display_name }}</span>
-                        </a>
+                    {% if key != 'suppliers_dashboard' and module.links and module.links is mapping %}
+                        {# حلقة تكرار آمنة تستخرج الـ endpoint والبيانات من القاموس #}
+                        {% for endpoint, link_data in module.links.items() %}
+                            <a href="{{ url_for(endpoint) }}" class="nav-link {% if request.endpoint == endpoint %}active{% endif %}">
+                                <i class="{{ module.icon|default('fas fa-folder') }} me-3"></i> 
+                                <span>{{ link_data.title }}</span>
+                            </a>
+                        {% endfor %}
                     {% endif %}
                 {% endfor %}
             {% endif %}
