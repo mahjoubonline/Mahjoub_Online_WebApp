@@ -38,31 +38,24 @@ def create_app():
     csrf.init_app(app)
     limiter.init_app(app)
 
-    # [تعديل هام]: تحديث محمل المستخدم ليشمل AdminUser كأولوية
     @login_manager.user_loader
     def load_user(user_id):
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.supplier_staff_db import SupplierStaff
-        
-        # 1. البحث في المديرين (المالك) أولاً
         admin = AdminUser.query.get(int(user_id))
         if admin: return admin
-        
-        # 2. البحث في الموردين
         supplier = Supplier.query.get(int(user_id))
         if supplier: return supplier
-        
-        # 3. البحث في الموظفين
         return SupplierStaff.query.get(int(user_id))
 
     # 2. إعدادات الأمان
     talisman.init_app(app, 
         content_security_policy={
             'default-src': ["'self'"],
-            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
             'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
-            'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://code.jquery.com", "https://cdn.jsdelivr.net"],
+            'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://code.jquery.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
             'img-src': ["'self'", "data:", "*"]
         },
         force_https=False
@@ -81,9 +74,9 @@ def create_app():
     except ImportError:
         pass
 
-    # 4. تسجيل الموديولات الديناميكي
+    # 4. تسجيل الموديولات الديناميكي (مع الفلترة الذكية)
     apps_dir = app.root_path
-    ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api']
+    ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api', 'admin', 'auth']
 
     if os.path.exists(apps_dir):
         for item in os.listdir(apps_dir):
@@ -95,15 +88,19 @@ def create_app():
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
-                            mod_data = {
-                                "display_name": getattr(module, 'MODULE_NAME', item.capitalize()),
-                                "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
-                                "links": getattr(module, 'LINKS', {}),
-                            }
-                            if getattr(module, 'SHOW_IN_SUPPLIER', False):
-                                SUPPLIER_MODULES[item] = mod_data
-                            else:
-                                ADMIN_MODULES[item] = mod_data
+                            
+                            # الشرط الجديد: إضافة للموديولات المعروضة فقط إذا كان لديها روابط (LINKS)
+                            module_links = getattr(module, 'LINKS', {})
+                            if module_links:
+                                mod_data = {
+                                    "display_name": getattr(module, 'MODULE_NAME', item.replace('_', ' ').capitalize()),
+                                    "icon": getattr(module, 'MODULE_ICON', 'fa-folder'),
+                                    "links": module_links,
+                                }
+                                if getattr(module, 'SHOW_IN_SUPPLIER', False):
+                                    SUPPLIER_MODULES[item] = mod_data
+                                else:
+                                    ADMIN_MODULES[item] = mod_data
                     except Exception as e:
                         print(f"❌ [Registry]: خطأ في تسجيل موديول {item}: {e}")
 
@@ -124,11 +121,8 @@ def create_app():
     with app.app_context():
         try:
             db.create_all()
-            print("✅ [Setup]: تم التحقق من الجداول.")
-        except Exception as e:
-            print(f"ℹ️ [Setup]: خطأ أثناء الإنشاء: {e}")
+        except: pass
 
-        # [إضافة المستخدم المالك]
         try:
             from apps.models.admin_db import AdminUser
             if not AdminUser.query.filter_by(username='علي محجوب').first():
@@ -136,9 +130,6 @@ def create_app():
                 owner.set_password('123')
                 db.session.add(owner)
                 db.session.commit()
-                print("✅ [Setup]: تم إنشاء المستخدم المالك بنجاح.")
-        except Exception as e:
-            db.session.rollback()
-            print(f"ℹ️ [Setup]: تعذر إضافة المستخدم المالك: {e}")
+        except: db.session.rollback()
 
     return app
