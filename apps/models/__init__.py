@@ -8,7 +8,7 @@
 
 from apps.extensions import db
 
-# 1. الموديلات الأساسية (التي لا تعتمد على علاقات خارجية مع موديلات أخرى)
+# 1. الموديلات الأساسية (التي تملك المفاتيح الأساسية وتُبنى عليها العلاقات)
 from .supplier_db import Supplier
 from .admin_db import AdminUser
 from .marketer_db import Marketer
@@ -24,8 +24,8 @@ from .orders_db import Order
 from .order_items_db import OrderItem
 from .sync_log import SyncLog
 
-# 3. القائمة المصدرة (Export Registry)
-# تأكد أن جميع الكلاسات معرفة ومستوردة أعلاه لتجنب خطأ ImportError
+# القائمة المصدرة (Export Registry)
+# استخدام __all__ يسهل عملية الوصول للموديلات من ملفات أخرى مثل (routes.py)
 __all__ = [
     'db',
     'AdminStaff',
