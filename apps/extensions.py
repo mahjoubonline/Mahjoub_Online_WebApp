@@ -5,10 +5,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from sqlalchemy import MetaData
+from sqlalchemy.orm import joinedload
 from flask import session
 
 # تعريف الـ Naming Convention لمنع تعارض الأسماء في قاعدة البيانات
-# هذا يسهل جداً على Alembic إدارة التغييرات في الجداول
 metadata = MetaData(
     naming_convention={
         "ix": "ix_%(column_0_label)s",
@@ -26,11 +26,10 @@ login_manager = LoginManager()
 @login_manager.user_loader
 def load_user(user_id):
     """
-    دالة موحدة لتحميل المستخدمين بناءً على نوعهم في الجلسة.
-    تستخدم الاستيراد المحلي (Local Import) لمنع الحلقات المفرغة.
+    دالة مطورة لتحميل المستخدمين مع جلب البيانات المرتبطة (Joined Load)
+    لضمان استقرار جلسة العمل للموظفين المرتبطين بشركاء.
     """
     try:
-        # استيراد محلي لتجنب الـ Circular Import
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.supplier_staff_db import SupplierStaff
@@ -39,10 +38,12 @@ def load_user(user_id):
         uid = int(user_id)
         user_type = session.get('user_type')
         
-        # البحث بناءً على النوع المحدّد في الجلسة (الأكثر كفاءة وأماناً)
+        # عند تحميل الموظف، نجلب بيانات الشريك التابع له تلقائياً (Joined Load)
+        if user_type == 'staff':
+            return SupplierStaff.query.options(joinedload(SupplierStaff.supplier)).get(uid)
+            
         if user_type == 'admin': return db.session.get(AdminUser, uid)
         if user_type == 'supplier': return db.session.get(Supplier, uid)
-        if user_type == 'staff': return db.session.get(SupplierStaff, uid)
         if user_type == 'marketer': return db.session.get(Marketer, uid)
         
         # البحث الشامل في حال عدم وجود Session (للاستعادة أو الحالات الاستثنائية)
@@ -55,6 +56,7 @@ def load_user(user_id):
         return None
 
 # إعدادات تسجيل الدخول
-login_manager.login_view = 'auth_portal.login'
+# تأكد أن هذا المسار يطابق الـ Blueprint الذي يستخدمه الموظفون للـ login
+login_manager.login_view = 'suppliers_auth.login'
 login_manager.login_message = "يرجى تسجيل الدخول للوصول إلى لوحة التحكم."
 login_manager.login_message_category = "info"
