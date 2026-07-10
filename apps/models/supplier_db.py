@@ -43,13 +43,12 @@ class Supplier(db.Model, UserMixin):
     last_login = db.Column(db.DateTime, nullable=True)
 
     # العلاقات: باستخدام التحميل الكسول (lazy='select')
-    # تم استخدام back_populates لربطها بـ SupplierStaff بشكل صحيح
     supplier_profile = db.relationship('SupplierProfile', back_populates='supplier', uselist=False, lazy='select', cascade="all, delete-orphan")
     wallet = db.relationship('SupplierWallet', back_populates='supplier', uselist=False, lazy='select', cascade="all, delete-orphan")
     orders = db.relationship('Order', back_populates='supplier', lazy='select', cascade="all, delete-orphan")
     financials = db.relationship('OrderFinancial', back_populates='supplier', lazy='select', cascade="all, delete-orphan")
     
-    # الربط مع الموظفين (تم استخدام back_populates ليتوافق مع SupplierStaff)
+    # الربط مع الموظفين
     staff_members = db.relationship('SupplierStaff', back_populates='supplier', lazy='select', cascade="all, delete-orphan")
 
     # --- نظام التشفير ---
