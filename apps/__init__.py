@@ -9,7 +9,6 @@ from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS 
-from sqlalchemy import text
 import config
 
 from apps.extensions import db, login_manager, migrate
@@ -26,7 +25,6 @@ SUPPLIER_MODULES = {}
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
-    
     config.Config.validate_config()
 
     CORS(app, resources={r"/admin/*": {"origins": ["https://studio.apollographql.com", "http://localhost:5000"]}}, supports_credentials=True)
@@ -45,21 +43,11 @@ def create_app():
         from apps.models.supplier_staff_db import SupplierStaff
         
         user_type = session.get('user_type')
+        if user_type == 'admin': return db.session.get(AdminUser, int(user_id))
+        elif user_type == 'supplier': return db.session.get(Supplier, int(user_id))
+        elif user_type == 'staff': return db.session.get(SupplierStaff, int(user_id))
         
-        if user_type == 'admin':
-            return db.session.get(AdminUser, int(user_id))
-        elif user_type == 'supplier':
-            return db.session.get(Supplier, int(user_id))
-        elif user_type == 'staff':
-            return db.session.get(SupplierStaff, int(user_id))
-            
-        admin = db.session.get(AdminUser, int(user_id))
-        if admin: return admin
-        
-        supplier = db.session.get(Supplier, int(user_id))
-        if supplier: return supplier
-        
-        return db.session.get(SupplierStaff, int(user_id))
+        return db.session.get(AdminUser, int(user_id)) or db.session.get(Supplier, int(user_id)) or db.session.get(SupplierStaff, int(user_id))
 
     # 2. إعدادات الأمان
     talisman.init_app(app, 
@@ -100,7 +88,6 @@ def create_app():
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
-                            
                             module_links = getattr(module, 'LINKS', {})
                             if module_links:
                                 mod_data = {
@@ -123,17 +110,21 @@ def create_app():
     @app.context_processor
     def inject_vars():
         """
-        دالة محمية لتنظيف الموديولات قبل عرضها في اللوحة.
-        تمنع الانهيار إذا كان هناك موديول بتنسيق خاطئ.
+        دالة ذكية: تتحقق من وجود الروابط في التطبيق قبل عرضها.
+        أي رابط غير موجود في الـ url_map سيتم حذفه تلقائياً لمنع الانهيار.
         """
+        available_endpoints = {rule.endpoint for rule in app.url_map.iter_rules()}
         safe_supplier_modules = {}
+
         for key, mod in SUPPLIER_MODULES.items():
-            try:
-                # التحقق من أن الروابط هي قاموس صالح
-                if isinstance(mod.get('links'), dict):
-                    safe_supplier_modules[key] = mod
-            except:
-                continue
+            links = mod.get('links', {})
+            # فلترة الروابط: الاحتفاظ فقط بالمسارات التي لها دالة route مسجلة
+            valid_links = {ep: title for ep, title in links.items() if ep in available_endpoints}
+            
+            if valid_links:
+                safe_mod = mod.copy()
+                safe_mod['links'] = valid_links
+                safe_supplier_modules[key] = safe_mod
                 
         return dict(
             csrf_token=generate_csrf,
