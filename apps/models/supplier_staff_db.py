@@ -31,7 +31,10 @@ class SupplierStaff(db.Model, UserMixin):
     search_phone = db.Column(db.String(20)) 
     
     email = db.Column(db.String(150), nullable=True)
-    password_hash = db.Column(db.String(255), nullable=False)
+    
+    # [تعديل هام]: زيادة الطول إلى 500 لتجنب قص الـ Hash
+    password_hash = db.Column(db.String(500), nullable=False)
+    
     role = db.Column(db.String(50), default='worker')
     is_active = db.Column(db.Boolean, default=True)
     
@@ -41,7 +44,7 @@ class SupplierStaff(db.Model, UserMixin):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # 3. العلاقات: lazy='joined' لتقليل استعلامات JOIN أثناء جلب الموظف
+    # 3. العلاقات
     supplier = db.relationship(
         'Supplier', 
         back_populates='staff_members',
@@ -55,7 +58,6 @@ class SupplierStaff(db.Model, UserMixin):
 
     @property
     def phone(self):
-        """فك تشفير الهاتف عند الاستدعاء"""
         try:
             return Fernet(self._get_key()).decrypt(self._phone_enc.encode()).decode()
         except: 
@@ -63,12 +65,13 @@ class SupplierStaff(db.Model, UserMixin):
 
     @phone.setter
     def phone(self, value):
-        """تشفير الهاتف وتحديث فهرس البحث (آخر 9 أرقام)"""
         if value:
             self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
             self.search_phone = str(value)[-9:] 
 
+    # [تعديل]: تحسين دالة التشفير
     def set_password(self, password):
+        # استخدام pbkdf2:sha256 مع زيادة القوة
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
