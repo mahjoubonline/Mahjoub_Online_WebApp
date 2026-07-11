@@ -32,13 +32,13 @@ class SupplierStaff(db.Model, UserMixin):
     
     email = db.Column(db.String(150), nullable=True)
     
-    # [تعديل هام]: زيادة الطول إلى 500 لتجنب قص الـ Hash
+    # [تعديل هام]: زيادة الطول إلى 500 لتجنب قص الـ Hash الناتج عن pbkdf2:sha256
     password_hash = db.Column(db.String(500), nullable=False)
     
     role = db.Column(db.String(50), default='worker')
     is_active = db.Column(db.Boolean, default=True)
     
-    # [الصلاحيات]: حقول جديدة للتحكم في وصول الموظف للنظام
+    # [الصلاحيات]: حقول للتحكم في وصول الموظف
     can_view_wallet = db.Column(db.Boolean, default=False)
     can_manage_orders = db.Column(db.Boolean, default=False)
     
@@ -51,9 +51,10 @@ class SupplierStaff(db.Model, UserMixin):
         lazy='joined' 
     )
 
-    # 4. التشفير (Fernet AES-256)
+    # 4. التشفير (Fernet AES-256 للهاتف)
     @staticmethod
     def _get_key():
+        # استخدام مفتاح البيئة لضمان سرية البيانات
         return os.environ.get('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=').encode()
 
     @property
@@ -69,13 +70,14 @@ class SupplierStaff(db.Model, UserMixin):
             self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
             self.search_phone = str(value)[-9:] 
 
-    # [تعديل]: تحسين دالة التشفير
+    # 5. التشفير الآمن لكلمة المرور (مع تنظيف المسافات)
     def set_password(self, password):
-        # استخدام pbkdf2:sha256 مع زيادة القوة
-        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+        """تشقير كلمة المرور وتخزينها مع إزالة أي مسافات زائدة."""
+        self.password_hash = generate_password_hash(password.strip(), method='pbkdf2:sha256')
 
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        """التحقق من كلمة المرور مع تنظيف المدخلات."""
+        return check_password_hash(self.password_hash, password.strip())
 
     def __repr__(self):
         return f'<SupplierStaff {self.username} | Active: {self.is_active}>'
