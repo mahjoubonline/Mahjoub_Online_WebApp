@@ -1,93 +1,72 @@
-# coding: utf-8
-# 📂 apps/suppliers_permissions/routes.py
+{% extends 'suppliers/base.html' %}
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, session
-from flask_login import login_required, current_user
-from apps.extensions import db
-from apps.models.supplier_db import Supplier
-from apps.models.supplier_staff_db import SupplierStaff
-import uuid
+{% block content %}
+<div class="container-fluid py-4" style="direction: rtl; text-align: right; font-family: sans-serif;">
 
-# تعريف الـ Blueprint
-suppliers_permissions_bp = Blueprint(
-    'suppliers_permissions', 
-    __name__, 
-    template_folder='templates'
-)
+    <div class="d-flex align-items-center mb-4">
+        <button onclick="window.history.back()" class="btn btn-sm btn-outline-secondary me-3">
+            <i class="fa fa-arrow-right"></i> رجوع
+        </button>
+        <h3 class="fw-bold m-0" style="color: #333;">إدارة صلاحيات الموظفين</h3>
+    </div>
 
-def check_supplier_owner_access():
-    """تحقق أمني صارم لضمان أن الحساب الحالي هو المورد المالك"""
-    # التأكد أن المستخدم هو المورد الأساسي وليس موظفاً أو أدمن
-    return session.get('user_type') == 'supplier' and current_user.__class__.__name__ != 'AdminUser'
+    <button class="btn btn-primary mb-4" data-bs-toggle="modal" data-bs-target="#addStaffModal" style="background-color: #5b4cd1; border: none;">
+        <i class="fa fa-plus-circle me-2"></i> إضافة موظف جديد
+    </button>
 
-@suppliers_permissions_bp.route('/', methods=['GET', 'POST'])
-@suppliers_permissions_bp.route('/permissions', methods=['GET', 'POST'])
-@login_required
-def permissions():
-    if not check_supplier_owner_access():
-        flash("عذراً، هذه الصلاحية متاحة فقط للمورد المالك.", "danger")
-        return redirect(url_for('suppliers_dashboard.dashboard'))
-        
-    supplier = db.session.get(Supplier, current_user.id)
-    new_staff_data = None
+    <div class="table-responsive bg-white p-3 shadow-sm rounded">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>اسم المستخدم</th>
+                    <th>رقم الهاتف</th>
+                    <th>تاريخ الإنشاء</th>
+                    <th>الحالة</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for staff in staff_list %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="fw-bold" style="color: #6c5ce7;">{{ staff.username }}</td>
+                    <td>{{ staff.search_phone }}</td>
+                    <td>{{ staff.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td><span class="badge bg-success">نشط</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary"><i class="fa fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
-    if request.method == 'POST':
-        # منطق إضافة موظف جديد
-        username = request.form.get('username', '').strip()
-        phone = request.form.get('phone', '').strip()
-        password = request.form.get('password', '')
-        
-        if username and phone and password:
-            if SupplierStaff.query.filter((SupplierStaff.username == username) | (SupplierStaff.search_phone == phone)).first():
-                flash("اسم المستخدم أو رقم الهاتف مسجل مسبقاً في النظام.", "danger")
-            else:
-                new_staff = SupplierStaff(
-                    supplier_id=supplier.id,
-                    username=username,
-                    search_phone=phone,
-                    can_view_wallet='can_view_wallet' in request.form,
-                    can_manage_orders='can_manage_orders' in request.form,
-                    can_manage_settings='can_manage_settings' in request.form,
-                    is_active=True
-                )
-                new_staff.set_password(password)
-                # تخزين كلمة المرور مؤقتاً لعرضها في المودال فقط
-                new_staff.raw_password = password 
-                
-                db.session.add(new_staff)
-                db.session.commit()
-                new_staff_data = new_staff
-                flash(f"تم إضافة الموظف {username} بنجاح.", "success")
+<div class="modal fade" id="addStaffModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>إضافة موظف</h5></div>
+            <form method="POST">
+                <div class="modal-body">
+                    <input type="text" name="username" class="form-control mb-2" placeholder="اسم المستخدم" required>
+                    <input type="text" name="phone" class="form-control mb-2" placeholder="رقم الهاتف" required>
+                    <input type="password" name="password" class="form-control" placeholder="كلمة المرور" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-    # جلب القائمة مرتبة حسب الأحدث
-    staff_list = SupplierStaff.query.filter_by(supplier_id=supplier.id).order_by(SupplierStaff.created_at.desc()).all()
-    
-    return render_template(
-        'suppliers/permissions.html', 
-        supplier=supplier, 
-        staff_list=staff_list, 
-        new_staff=new_staff_data
-    )
+<style>
+    .badge { padding: 0.5em 1em; }
+    .table-hover tbody tr:hover { background-color: #f8f9fa; }
+</style>
 
-@suppliers_permissions_bp.route('/action/<int:staff_id>/<action>', methods=['POST'])
-@login_required
-def staff_action(staff_id, action):
-    """التحكم في إجراءات الموظفين (إيقاف/تفعيل، إعادة تعيين كلمة مرور)"""
-    if not check_supplier_owner_access():
-        flash("غير مصرح لك بالقيام بهذا الإجراء.", "danger")
-        return redirect(url_for('suppliers_dashboard.dashboard'))
-        
-    staff = SupplierStaff.query.filter_by(id=staff_id, supplier_id=current_user.id).first_or_404()
-
-    if action == 'toggle_status':
-        staff.is_active = not staff.is_active
-        status_text = "تفعيل" if staff.is_active else "إيقاف"
-        flash(f"تم {status_text} حساب الموظف {staff.username} بنجاح.", "success")
-        
-    elif action == 'reset_password':
-        new_pass = str(uuid.uuid4())[:8] # توليد كلمة مرور عشوائية قوية
-        staff.set_password(new_pass)
-        flash(f"تم إعادة تعيين كلمة مرور الموظف: {new_pass}", "info")
-
-    db.session.commit()
-    return redirect(url_for('suppliers_permissions.permissions'))
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
