@@ -95,9 +95,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// دالة تنفيذ الإجراءات (تفعيل/إيقاف، وإعادة تعيين كلمة المرور)
 async function performAction(staffId, action, username = '') {
-    // التأكيد أولاً إذا كان الإجراء هو إعادة تعيين كلمة المرور
     if (action === 'reset_password') {
         const result = await Swal.fire({
             title: 'إعادة تعيين كلمة المرور؟',
@@ -112,54 +110,46 @@ async function performAction(staffId, action, username = '') {
         if (!result.isConfirmed) return;
     }
 
-    // إرسال الطلب
-    const response = await fetch(`/supplier/action/${staffId}/${action}`, { 
-        method: 'POST',
-        headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
-    });
-    const data = await response.json();
+    try {
+        const response = await fetch(`/supplier/action/${staffId}/${action}`, { 
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}' 
+            }
+        });
 
-    if (data.success) {
-        if (action === 'toggle_status') {
-            // تحديث حالة الشارة (Badge)
-            const badge = document.getElementById(`status-badge-${staffId}`);
-            badge.innerText = data.is_active ? 'نشط' : 'معطل';
-            badge.className = `badge fade-in ${data.is_active ? 'bg-success' : 'bg-dark'}`;
-            
-            Swal.fire({ icon: 'success', title: 'تم تحديث الحالة', timer: 1500, showConfirmButton: false });
-        } 
-        else if (action === 'reset_password') {
-            // استدعاء نافذة بيانات الدخول الموحدة لعرض كلمة المرور الجديدة
-            showCredentialsModal('تم إعادة تعيين كلمة المرور بنجاح', username, data.new_password);
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const data = await response.json();
+
+        if (data.success) {
+            if (action === 'toggle_status') {
+                const badge = document.getElementById(`status-badge-${staffId}`);
+                badge.innerText = data.is_active ? 'نشط' : 'معطل';
+                badge.className = `badge fade-in ${data.is_active ? 'bg-success' : 'bg-dark'}`;
+                Swal.fire({ icon: 'success', title: 'تم تحديث الحالة', timer: 1500, showConfirmButton: false });
+            } else if (action === 'reset_password') {
+                showCredentialsModal('تم إعادة تعيين كلمة المرور بنجاح', username, data.new_password);
+            }
+        } else {
+            Swal.fire({ icon: 'error', title: 'عفواً!', text: data.message || 'حدث خطأ أثناء تنفيذ الإجراء' });
         }
-    } else {
-        Swal.fire({ icon: 'error', title: 'عفواً!', text: 'حدث خطأ أثناء تنفيذ الإجراء' });
+    } catch (error) {
+        Swal.fire({ icon: 'error', title: 'خطأ اتصال', text: 'يرجى التأكد من اتصالك بالإنترنت والمحاولة مجدداً' });
     }
 }
 
-// دالة لفتح نافذة بيانات الدخول الموحدة وتمرير البيانات إليها
 function showCredentialsModal(title, username, password) {
-    // تغيير عنوان النافذة بناءً على العملية
     const titleElement = document.getElementById('credModalTitle');
-    if(titleElement) {
-        titleElement.innerHTML = `<i class="fa fa-check-circle me-2"></i> ${title}`;
-    }
-
+    if(titleElement) titleElement.innerHTML = `<i class="fa fa-check-circle me-2"></i> ${title}`;
     document.getElementById('newUsername').innerText = username;
     document.getElementById('newPassword').innerText = password;
-    
-    // إظهار المودال
     new bootstrap.Modal(document.getElementById('staffCredentialsModal')).show();
 }
 
-// دالة تعديل الصلاحيات (مجهزة للعمل عليها لاحقاً)
 function editPermissions(staffId) {
-    Swal.fire({
-        icon: 'info',
-        title: 'تعديل الصلاحيات',
-        text: 'سيتم برمجة واجهة تعديل الصلاحيات للموظف رقم: ' + staffId,
-        confirmButtonColor: '#4b0082'
-    });
+    Swal.fire({ icon: 'info', title: 'تعديل الصلاحيات', text: 'سيتم توفير هذه الميزة قريباً', confirmButtonColor: '#4b0082' });
 }
 </script>
 {% endblock %}
