@@ -77,10 +77,12 @@ def add_staff():
 
     password = generate_random_password()
     
+    # إنشاء الموظف الجديد مع تمرير صلاحيات الـ Checkbox
+    # (استخدام .get() لتجنب الخطأ وتعيين قيمة افتراضية False إذا لم تكن موجودة)
     new_staff = SupplierStaff(
         supplier_id=current_user.id,
         username=username,
-        search_phone=str(phone)[-9:],
+        phone=phone, # الهاتف سيتم تشفيره تلقائياً عبر setter في الموديل
         is_active=True,
         can_view_wallet=('can_view_wallet' in request.form),
         can_manage_orders=('can_manage_orders' in request.form)
@@ -107,7 +109,6 @@ def staff_action(staff_id, action):
     if action == 'toggle_status':
         staff.is_active = not staff.is_active
         db.session.commit()
-        # تعيد القيمة الحالية لـ is_active ليقوم الفرونت-إند بتحديث الشارة (Badge) بناءً عليها
         return jsonify({"success": True, "is_active": staff.is_active})
     
     elif action == 'reset_password':
