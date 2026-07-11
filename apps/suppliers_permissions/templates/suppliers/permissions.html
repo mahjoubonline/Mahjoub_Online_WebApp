@@ -3,12 +3,19 @@
 {% block content %}
 <div class="container py-5" style="direction: rtl; text-align: right;">
     
+    <div class="mb-4">
+        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm" style="border-radius: 10px;">
+            <i class="fa fa-arrow-right"></i> رجوع
+        </a>
+    </div>
+
     <div class="d-flex justify-content-between align-items-center mb-5">
         <div>
             <h2 class="fw-bold mb-1" style="color: #333;">إدارة صلاحيات الموظفين</h2>
             <p class="text-muted">تحكم في صلاحيات الوصول الخاصة بفريق عملك.</p>
         </div>
-        <button class="btn btn-primary shadow-sm px-4 py-2" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+        <button class="btn shadow-sm px-4 py-2" data-bs-toggle="modal" data-bs-target="#addStaffModal" 
+                style="background-color: #5b4cd1; color: white; border: 2px solid #2d1b4e; border-radius: 10px;">
             <i class="fa fa-plus-circle me-2"></i> إضافة موظف جديد
         </button>
     </div>
@@ -31,7 +38,7 @@
                         {% for staff in staff_list %}
                         <tr>
                             <td class="p-3 text-muted">{{ loop.index }}</td>
-                            <td class="fw-bold text-primary">{{ staff.username }}</td>
+                            <td class="fw-bold" style="color: #5b4cd1;">{{ staff.username }}</td>
                             <td>{{ staff.search_phone }}</td>
                             <td>{{ staff.created_at.strftime('%Y-%m-%d %I:%M %p') }}</td>
                             <td>
@@ -41,7 +48,7 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group">
-                                    <button class="btn btn-sm btn-outline-info" title="تعديل">
+                                    <button class="btn btn-sm btn-outline-info" title="تعديل" style="border-color: #5b4cd1; color: #5b4cd1;">
                                         <i class="fa fa-edit"></i>
                                     </button>
                                     <button class="btn btn-sm btn-outline-danger" title="حذف">
@@ -58,10 +65,26 @@
     </div>
 </div>
 
-<style>
-    .rounded-4 { border-radius: 1rem !important; }
-    .table thead th { border-top: none; color: #666; font-size: 0.9rem; }
-    .btn-primary { background-color: #6c5ce7; border-color: #6c5ce7; }
-    .btn-primary:hover { background-color: #5b4cd1; }
-</style>
+<div class="modal fade" id="addStaffModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #5b4cd1; color: white;">
+                <h5 class="modal-title">إضافة موظف جديد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('suppliers_permissions.permissions') }}">
+                <div class="modal-body">
+                    <input type="text" name="username" class="form-control mb-3" placeholder="اسم المستخدم" required>
+                    <input type="text" name="phone" class="form-control mb-3" placeholder="رقم الهاتف" required>
+                    <input type="password" name="password" class="form-control" placeholder="كلمة المرور" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn text-white" style="background-color: #2d1b4e;">حفظ الموظف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}
