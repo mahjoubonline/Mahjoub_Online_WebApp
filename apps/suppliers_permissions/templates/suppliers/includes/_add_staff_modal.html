@@ -6,14 +6,19 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label">اسم المستخدم</label>
-                        <input type="text" name="username" class="form-control" placeholder="أدخل اسم المستخدم بالإنجليزية" required>
+                        <input type="text" id="username" name="username" class="form-control" 
+                               placeholder="أدخل اسم المستخدم بالإنجليزية" oninput="checkAvailability('username', this.value)" required>
+                        <div id="username-msg" class="mt-1 small fw-bold"></div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">رقم الهاتف</label>
-                        <input type="text" name="phone" class="form-control" placeholder="مثال: 7xxxxxxxx" required>
+                        <input type="text" id="phone" name="phone" class="form-control" 
+                               placeholder="مثال: 7xxxxxxxx" oninput="checkAvailability('phone', this.value)" required>
+                        <div id="phone-msg" class="mt-1 small fw-bold"></div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">كلمة المرور</label>
@@ -30,9 +35,36 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                    <button type="submit" class="btn btn-primary" style="background-color: #5b4cd1;">حفظ الموظف</button>
+                    <button type="submit" id="submit-btn" class="btn btn-primary" style="background-color: #5b4cd1;">حفظ الموظف</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+async function checkAvailability(field, value) {
+    if (value.length < 3) return;
+    
+    const msgDiv = document.getElementById(field + '-msg');
+    const response = await fetch("{{ url_for('suppliers_permissions.check_availability') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ field: field, value: value })
+    });
+    
+    const data = await response.json();
+    const submitBtn = document.getElementById('submit-btn');
+    
+    if (data.available) {
+        msgDiv.innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i> متاح</span>';
+        submitBtn.disabled = false;
+    } else {
+        msgDiv.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle"></i> هذا ' + (field=='username'?'الاسم':'الرقم') + ' مستخدم مسبقاً!</span>';
+        submitBtn.disabled = true;
+    }
+}
+</script>
