@@ -16,7 +16,7 @@
                     {% for staff in staff_list %}
                     <tr id="staff-row-{{ staff.id }}">
                         <td class="p-3">{{ loop.index }}</td>
-                        <td class="fw-bold" style="color: #5b4cd1;">{{ staff.username }}</td>
+                        <td class="fw-bold" style="color: #4b0082;">{{ staff.username }}</td>
                         <td>{{ staff.search_phone }}</td>
                         <td class="text-muted small">{{ staff.created_at.strftime('%Y-%m-%d %I:%M %p') }}</td>
                         <td>
@@ -25,16 +25,28 @@
                             </span>
                         </td>
                         <td class="text-center">
-                            <div class="btn-group">
-                                <button onclick="performAction('{{ staff.id }}', 'toggle_status')" 
-                                        class="btn btn-sm btn-outline-primary" title="تغيير الحالة">
-                                    <i class="fa fa-power-off"></i>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px;">
+                                    <i class="fa fa-cogs"></i> خيارات
                                 </button>
-                                
-                                <button onclick="performAction('{{ staff.id }}', 'reset_password')" 
-                                        class="btn btn-sm btn-outline-warning" title="إعادة تعيين كلمة المرور">
-                                    <i class="fa fa-key"></i>
-                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 text-end" style="direction: rtl;">
+                                    <li>
+                                        <a class="dropdown-item py-2 fw-bold" href="javascript:void(0)" onclick="editPermissions('{{ staff.id }}')">
+                                            <i class="fa fa-edit text-primary ms-2"></i> تعديل الصلاحيات
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item py-2 fw-bold" href="javascript:void(0)" onclick="performAction('{{ staff.id }}', 'reset_password', '{{ staff.username }}')">
+                                            <i class="fa fa-key text-warning ms-2"></i> إعادة تعيين كلمة المرور
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item py-2 fw-bold" href="javascript:void(0)" onclick="performAction('{{ staff.id }}', 'toggle_status')">
+                                            <i class="fa fa-power-off text-danger ms-2"></i> إيقاف / تفعيل
+                                        </a>
+                                    </li>
+                                </ul>
                             </div>
                         </td>
                     </tr>
@@ -44,32 +56,3 @@
         </div>
     </div>
 </div>
-
-<script>
-async function performAction(staffId, action) {
-    // التأكيد قبل إعادة تعيين كلمة المرور
-    if (action === 'reset_password') {
-        const confirmed = confirm('هل أنت متأكد من إعادة تعيين كلمة المرور لهذا الموظف؟');
-        if (!confirmed) return;
-    }
-
-    // إرسال الطلب للسيرفر باستخدام AJAX
-    const response = await fetch(`/supplier/action/${staffId}/${action}`, { 
-        method: 'POST',
-        headers: { 'X-CSRFToken': '{{ csrf_token() }}' } 
-    });
-    const data = await response.json();
-
-    if (data.success) {
-        if (action === 'toggle_status') {
-            // تحديث شارة الحالة (Badge) فورياً
-            const badge = document.getElementById(`status-badge-${staffId}`);
-            badge.innerText = data.is_active ? 'نشط' : 'معطل';
-            badge.className = `badge ${data.is_active ? 'bg-success' : 'bg-dark'}`;
-        } else if (action === 'reset_password') {
-            // عرض كلمة المرور الجديدة
-            alert('تم إعادة تعيين كلمة المرور بنجاح.\nكلمة المرور الجديدة هي: ' + data.new_password);
-        }
-    }
-}
-</script>
