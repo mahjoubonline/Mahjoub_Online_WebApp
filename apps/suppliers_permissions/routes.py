@@ -16,8 +16,8 @@ suppliers_permissions_bp = Blueprint(
 )
 
 def check_supplier_owner_access():
-    """تحقق أمني صارم لضمان أن الحساب الحالي هو المورد المالك"""
-    return session.get('user_type') == 'supplier' and current_user.__class__.__name__ != 'AdminUser'
+    """تحقق أمني صارم: الموظف لا يمكنه الوصول لهذه الصفحة، فقط المورد المالك"""
+    return session.get('user_type') == 'supplier'
 
 @suppliers_permissions_bp.route('/', methods=['GET', 'POST'])
 @suppliers_permissions_bp.route('/permissions', methods=['GET', 'POST'])
@@ -44,9 +44,6 @@ def permissions():
                     supplier_id=supplier.id,
                     username=username,
                     search_phone=phone,
-                    can_view_wallet='can_view_wallet' in request.form,
-                    can_manage_orders='can_manage_orders' in request.form,
-                    can_manage_settings='can_manage_settings' in request.form,
                     is_active=True
                 )
                 new_staff.set_password(password)
@@ -84,10 +81,9 @@ def staff_action(staff_id, action):
         flash(f"تم {status_text} حساب الموظف {staff.username} بنجاح.", "success")
         
     elif action == 'reset_password':
-        new_pass = str(uuid.uuid4())[:8] # توليد كلمة مرور عشوائية
+        new_pass = str(uuid.uuid4())[:8] # توليد كلمة مرور عشوائية من 8 خانات
         staff.set_password(new_pass)
-        # إرسال كلمة المرور الجديدة للمستخدم عبر الفلاش
-        flash(f"تم إعادة تعيين كلمة المرور بنجاح. الجديدة هي: {new_pass}", "info")
+        flash(f"تم إعادة تعيين كلمة المرور بنجاح للموظف {staff.username}. الجديدة هي: {new_pass}", "info")
 
     db.session.commit()
     return redirect(url_for('suppliers_permissions.permissions'))
