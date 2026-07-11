@@ -1,43 +1,57 @@
+<style>
+    .royal-gradient {
+        background: linear-gradient(135deg, #4b0082 0%, #000000 100%) !important;
+        color: white !important;
+        border: none !important;
+    }
+    .modal-header.royal-gradient { border-radius: 15px 15px 0 0; }
+</style>
+
 <div class="modal fade" id="addStaffModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 15px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-            <div class="modal-header" style="background-color: #5b4cd1; color: white; border-radius: 15px 15px 0 0;">
+            <div class="modal-header royal-gradient">
                 <h5 class="modal-title"><i class="fa fa-user-plus me-2"></i> إضافة موظف جديد</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST">
+            <form id="addStaffForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label">اسم المستخدم</label>
-                        <input type="text" id="username" name="username" class="form-control" 
-                               placeholder="أدخل اسم المستخدم بالإنجليزية" oninput="checkAvailability('username', this.value)" required>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="أدخل اسم المستخدم بالإنجليزية" oninput="checkAvailability('username', this.value)" required>
                         <div id="username-msg" class="mt-1 small fw-bold"></div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">رقم الهاتف</label>
-                        <input type="text" id="phone" name="phone" class="form-control" 
-                               placeholder="مثال: 7xxxxxxxx" oninput="checkAvailability('phone', this.value)" required>
+                        <input type="text" id="phone" name="phone" class="form-control" placeholder="مثال: 7xxxxxxxx" oninput="checkAvailability('phone', this.value)" required>
                         <div id="phone-msg" class="mt-1 small fw-bold"></div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">كلمة المرور</label>
-                        <input type="password" name="password" class="form-control" placeholder="********" required>
-                    </div>
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" name="can_view_wallet" id="wallet">
-                        <label class="form-check-label" for="wallet">السماح برؤية المحفظة</label>
-                    </div>
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" name="can_manage_orders" id="orders">
-                        <label class="form-check-label" for="orders">السماح بإدارة الطلبات</label>
-                    </div>
+                    <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="can_view_wallet" id="wallet"><label class="form-check-label" for="wallet">السماح برؤية المحفظة</label></div>
+                    <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="can_manage_orders" id="orders"><label class="form-check-label" for="orders">السماح بإدارة الطلبات</label></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                    <button type="submit" id="submit-btn" class="btn btn-primary" style="background-color: #5b4cd1;">حفظ الموظف</button>
+                    <button type="button" id="submit-btn" class="btn royal-gradient" onclick="submitStaff()">حفظ الموظف</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resultModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header royal-gradient"><h5>بيانات الدخول</h5></div>
+            <div class="modal-body text-center p-4">
+                <p>تم إضافة الموظف بنجاح!</p>
+                <div class="alert alert-light border">
+                    <strong>اسم المستخدم:</strong> <span id="res-username" class="text-primary"></span><br>
+                    <strong>كلمة المرور المؤقتة:</strong> <span id="res-password" class="fw-bold text-dark fs-3"></span>
+                </div>
+                <p class="text-danger small fw-bold">يرجى تغيير كلمة المرور من إعدادات التحكم فور تسجيل الدخول.</p>
+            </div>
+            <div class="modal-footer"><button class="btn royal-gradient w-100" data-bs-dismiss="modal">تم الحفظ</button></div>
         </div>
     </div>
 </div>
@@ -45,26 +59,36 @@
 <script>
 async function checkAvailability(field, value) {
     if (value.length < 3) return;
-    
     const msgDiv = document.getElementById(field + '-msg');
     const response = await fetch("{{ url_for('suppliers_permissions.check_availability') }}", {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token() }}'
-        },
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
         body: JSON.stringify({ field: field, value: value })
     });
-    
     const data = await response.json();
     const submitBtn = document.getElementById('submit-btn');
-    
     if (data.available) {
         msgDiv.innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i> متاح</span>';
         submitBtn.disabled = false;
     } else {
-        msgDiv.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle"></i> هذا ' + (field=='username'?'الاسم':'الرقم') + ' مستخدم مسبقاً!</span>';
+        msgDiv.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle"></i> غير متاح</span>';
         submitBtn.disabled = true;
+    }
+}
+
+async function submitStaff() {
+    const form = document.getElementById('addStaffForm');
+    const formData = new FormData(form);
+    const response = await fetch("{{ url_for('suppliers_permissions.add_staff') }}", {
+        method: 'POST',
+        body: formData
+    });
+    const data = await response.json();
+    if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('addStaffModal')).hide();
+        document.getElementById('res-username').innerText = data.username;
+        document.getElementById('res-password').innerText = data.password;
+        new bootstrap.Modal(document.getElementById('resultModal')).show();
     }
 }
 </script>
