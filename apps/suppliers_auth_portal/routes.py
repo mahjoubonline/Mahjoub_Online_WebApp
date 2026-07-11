@@ -24,7 +24,7 @@ def login():
         if request.is_json:
             data = request.get_json() or {}
             username = data.get('username', '').strip()
-            password = data.get('password', '')
+            password = data.get('password', '') # لا تستخدم strip هنا إذا كنت تريد كلمة مرور تبدأ بمسافة، ولكن عادةً نستخدمها
             user_type = data.get('type')
         else:
             username = request.form.get('username', '').strip()
@@ -54,9 +54,9 @@ def login():
             msg = "المستخدم غير مسجل في المنصة اللامركزية"
             return jsonify({"status": "error", "message": msg}), 404 if request.is_json else render_template('suppliers_auth_portal/login.html', error=msg)
 
-        # 4. التحقق من كلمة المرور
-        if not target_user.check_password(password):
-            # [سطر تصحيح]: هذا السطر سيظهر لك في Logs السيرفر ما إذا كانت البيانات صحيحة
+        # 4. التحقق من كلمة المرور (مع إضافة strip() للتنظيف)
+        if not target_user.check_password(password.strip()):
+            # [تنبيه]: إذا فشل الدخول هنا، فالمشكلة حتماً في اختلاف في كلمة المرور (مسافة إضافية أو حالة أحرف)
             print(f"DEBUG: Login failed for {username}. Hash in DB: {getattr(target_user, 'password_hash', 'None')}")
             
             attempts = session.get('login_attempts', 0) + 1
@@ -68,7 +68,7 @@ def login():
             msg = "كلمة المرور غير صحيحة"
             return jsonify({"status": "error", "message": msg}), 401 if request.is_json else render_template('suppliers_auth_portal/login.html', error=msg)
 
-        # 5. التحقق من التفعيل (مع الرسالة المخصصة للموظف)
+        # 5. التحقق من التفعيل
         if hasattr(target_user, 'is_active') and not target_user.is_active:
             if found_as == 'staff':
                 msg = "تم إيقاف المستخدم من قبل المتجر، يرجى مراجعة المتجر الأساسي."
@@ -76,17 +76,13 @@ def login():
                 msg = "الحساب غير مفعل حالياً."
             return jsonify({"status": "error", "message": msg}), 403 if request.is_json else render_template('suppliers_auth_portal/login.html', error=msg)
 
-        # 6. تسجيل الدخول وتثبيت الجلسة بشكل نهائي
+        # 6. تسجيل الدخول وتثبيت الجلسة
         session.pop('login_attempts', None)
         session.pop('block_until', None)
-        
-        # تثبيت النوع الفعلي لمنع التداخل
         session['user_type'] = found_as
         
-        # عمل تسجيل دخول رسمي في Flask-Login
         login_user(target_user, remember=True)
         
-        # توليد رابط الوجهة الصحيح والمباشر
         redirect_url = url_for('suppliers_dashboard.dashboard')
         
         if request.is_json:
