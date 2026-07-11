@@ -56,6 +56,9 @@ def login():
 
         # 4. التحقق من كلمة المرور
         if not target_user.check_password(password):
+            # [سطر تصحيح]: هذا السطر سيظهر لك في Logs السيرفر ما إذا كانت البيانات صحيحة
+            print(f"DEBUG: Login failed for {username}. Hash in DB: {getattr(target_user, 'password_hash', 'None')}")
+            
             attempts = session.get('login_attempts', 0) + 1
             session['login_attempts'] = attempts
             if attempts >= 5:
