@@ -4,12 +4,13 @@
         color: white !important;
         border: none !important;
     }
-    .modal-header.royal-gradient { border-radius: 15px 15px 0 0; }
+    .modal-content { border-radius: 15px !important; border: none !important; box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important; }
+    .modal-header.royal-gradient { border-radius: 15px 15px 0 0 !important; }
 </style>
 
 <div class="modal fade" id="addStaffModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 15px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <div class="modal-content">
             <div class="modal-header royal-gradient">
                 <h5 class="modal-title"><i class="fa fa-user-plus me-2"></i> إضافة موظف جديد</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -18,12 +19,12 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label">اسم المستخدم</label>
-                        <input type="text" id="username" name="username" class="form-control" placeholder="أدخل اسم المستخدم بالإنجليزية" oninput="checkAvailability('username', this.value)" required>
+                        <label class="form-label fw-bold">اسم المستخدم</label>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="أدخل اسم المستخدم" oninput="checkAvailability('username', this.value)" required>
                         <div id="username-msg" class="mt-1 small fw-bold"></div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">رقم الهاتف</label>
+                        <label class="form-label fw-bold">رقم الهاتف</label>
                         <input type="text" id="phone" name="phone" class="form-control" placeholder="مثال: 7xxxxxxxx" oninput="checkAvailability('phone', this.value)" required>
                         <div id="phone-msg" class="mt-1 small fw-bold"></div>
                     </div>
@@ -32,7 +33,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                    <button type="button" id="submit-btn" class="btn royal-gradient" onclick="submitStaff()">حفظ الموظف</button>
+                    <button type="button" id="submit-btn" class="btn royal-gradient" onclick="submitStaff()" disabled>حفظ الموظف</button>
                 </div>
             </form>
         </div>
@@ -42,14 +43,13 @@
 <div class="modal fade" id="resultModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg">
-            <div class="modal-header royal-gradient"><h5>بيانات الدخول</h5></div>
+            <div class="modal-header royal-gradient"><h5><i class="fa fa-check-circle me-2"></i> بيانات الموظف الجديدة</h5></div>
             <div class="modal-body text-center p-4">
-                <p>تم إضافة الموظف بنجاح!</p>
-                <div class="alert alert-light border">
-                    <strong>اسم المستخدم:</strong> <span id="res-username" class="text-primary"></span><br>
-                    <strong>كلمة المرور المؤقتة:</strong> <span id="res-password" class="fw-bold text-dark fs-3"></span>
+                <div class="alert alert-light border border-primary">
+                    <p>اسم المستخدم: <strong id="res-username" class="text-primary"></strong></p>
+                    <p>كلمة المرور: <strong id="res-password" class="text-danger fs-3"></strong></p>
                 </div>
-                <p class="text-danger small fw-bold">يرجى تغيير كلمة المرور من إعدادات التحكم فور تسجيل الدخول.</p>
+                <p class="text-muted small">يرجى تغيير كلمة المرور من إعدادات التحكم فور تسجيل الدخول.</p>
             </div>
             <div class="modal-footer"><button class="btn royal-gradient w-100" data-bs-dismiss="modal">تم الحفظ</button></div>
         </div>
@@ -71,17 +71,16 @@ async function checkAvailability(field, value) {
         msgDiv.innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i> متاح</span>';
         submitBtn.disabled = false;
     } else {
-        msgDiv.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle"></i> غير متاح</span>';
+        msgDiv.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle"></i> غير متاح!</span>';
         submitBtn.disabled = true;
     }
 }
 
 async function submitStaff() {
     const form = document.getElementById('addStaffForm');
-    const formData = new FormData(form);
     const response = await fetch("{{ url_for('suppliers_permissions.add_staff') }}", {
         method: 'POST',
-        body: formData
+        body: new FormData(form)
     });
     const data = await response.json();
     if (data.success) {
