@@ -16,7 +16,7 @@ suppliers_permissions_bp = Blueprint(
     template_folder='templates'
 )
 
-# دالة للتحقق من صلاحية المالك
+# دالة للتحقق من صلاحية المالك (المورد الأساسي)
 def check_supplier_owner_access():
     return session.get('user_type') == 'supplier'
 
@@ -33,10 +33,11 @@ def permissions():
         return redirect(url_for('suppliers_dashboard.dashboard'))
     
     supplier = db.session.get(Supplier, current_user.id)
-    # جلب الموظفين التابعين للمورد الحالي فقط
+    # جلب الموظفين التابعين للمورد الحالي فقط وعرض الأحدث أولاً
     staff_list = SupplierStaff.query.filter_by(supplier_id=supplier.id).order_by(SupplierStaff.created_at.desc()).all()
     
     return render_template('suppliers/permissions.html', supplier=supplier, staff_list=staff_list)
+
 
 # --- المسار للتحقق اللحظي من توفر البيانات ---
 @suppliers_permissions_bp.route('/check-availability', methods=['POST'])
@@ -46,26 +47,34 @@ def check_availability():
     field = data.get('field')  # 'username' أو 'phone'
     value = data.get('value')
     
-    query = SupplierStaff.query.filter_by(supplier_id=current_user.id)
+    # 🌟 تم التعديل هنا: البحث في كامل جدول الموظفين لضمان عدم تكرار البيانات على مستوى النظام
     if field == 'username':
-        exists = query.filter_by(username=value).first()
+        exists = SupplierStaff.query.filter_by(username=value).first()
     elif field == 'phone':
-        # البحث عن آخر 9 أرقام للهاتف
-        exists = query.filter_by(search_phone=str(value)[-9:]).first()
+        # البحث عن آخر 9 أرقام للهاتف لتجنب مشاكل مفتاح الدولة
+        exists = SupplierStaff.query.filter_by(search_phone=str(value)[-9:]).first()
     else:
         return jsonify({"available": False}), 400
         
     return jsonify({"available": not exists})
+
 
 # --- المسار لإضافة موظف جديد عبر AJAX ---
 @suppliers_permissions_bp.route('/add-staff', methods=['POST'])
 @login_required
 def add_staff():
     if not check_supplier_owner_access():
-        return jsonify({"success": False, "message": "غير مصرح"})
+        return jsonify({"success": False, "message": "غير مصرح لك بإضافة موظفين"}), 403
     
     username = request.form.get('username')
     phone = request.form.get('phone')
+    
+    # تحقق إضافي في الباك-إند للأمان (Double Validation)
+    if SupplierStaff.query.filter_by(username=username).first():
+        return jsonify({"success": False, "message": "اسم المستخدم مسجل مسبقاً"}), 400
+    if SupplierStaff.query.filter_by(search_phone=str(phone)[-9:]).first():
+        return jsonify({"success": False, "message": "رقم الهاتف مسجل مسبقاً"}), 400
+
     password = generate_random_password()
     
     new_staff = SupplierStaff(
@@ -87,11 +96,12 @@ def add_staff():
         "password": password
     })
 
+
 # --- المسار لإدارة عمليات الموظفين (تفعيل/إيقاف/تغيير كلمة المرور) ---
 @suppliers_permissions_bp.route('/action/<int:staff_id>/<action>', methods=['POST'])
 @login_required
 def staff_action(staff_id, action):
-    # التأكد أن الموظف يتبع المورد الحالي فقط
+    # التأكد أن الموظف يتبع المورد الحالي فقط (حماية من التلاعب)
     staff = SupplierStaff.query.filter_by(id=staff_id, supplier_id=current_user.id).first_or_404()
 
     if action == 'toggle_status':
@@ -105,4 +115,4 @@ def staff_action(staff_id, action):
         db.session.commit()
         return jsonify({"success": True, "new_password": new_pass})
 
-    return jsonify({"success": False}), 400
+    return jsonify({"success": False, "message": "إجراء غير معروف"}), 400
