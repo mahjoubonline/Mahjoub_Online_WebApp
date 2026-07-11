@@ -3,6 +3,7 @@
 
 import os
 import importlib
+import logging
 from flask import Flask, redirect, session
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_talisman import Talisman
@@ -17,7 +18,8 @@ from apps.api.qomrah_webhook import qomrah_bp
 # تهيئة الأدوات
 csrf = CSRFProtect()
 talisman = Talisman()
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"], storage_uri="memory://")
+# تحسين الـ Limiter ليكون أكثر مرونة
+limiter = Limiter(key_func=get_remote_address, default_limits=["500 per day", "100 per hour"], storage_uri="memory://")
 
 ADMIN_MODULES = {}
 SUPPLIER_MODULES = {}
@@ -26,6 +28,13 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
     config.Config.validate_config()
+
+    # إعدادات أمان الكوكيز لبيئة الإنتاج
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SECURE=os.environ.get('FLASK_ENV') == 'production',
+        SESSION_COOKIE_SAMESITE='Lax',
+    )
 
     CORS(app, resources={r"/admin/*": {"origins": ["https://studio.apollographql.com", "http://localhost:5000"]}}, supports_credentials=True)
 
@@ -49,16 +58,16 @@ def create_app():
         
         return db.session.get(AdminUser, int(user_id)) or db.session.get(Supplier, int(user_id)) or db.session.get(SupplierStaff, int(user_id))
 
-    # 2. إعدادات الأمان
+    # 2. إعدادات الأمان مع تفعيل HTTPS ديناميكياً
     talisman.init_app(app, 
         content_security_policy={
             'default-src': ["'self'"],
             'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
             'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
             'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://code.jquery.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
-            'img-src': ["'self'", "data:", "*"]
+            'img-src': ["'self'", "data:", "https://*"]
         },
-        force_https=False
+        force_https=(os.environ.get('FLASK_ENV') == 'production')
     )
 
     login_manager.login_view = 'suppliers_auth.login'
@@ -109,16 +118,11 @@ def create_app():
 
     @app.context_processor
     def inject_vars():
-        """
-        حقن البيانات للمدير والمورد مع التحقق من وجود المسارات فعلياً لمنع الانهيار.
-        """
-        # توليد مجموعة (Set) للمسارات المتاحة لسرعة البحث
         available_endpoints = {rule.endpoint for rule in app.url_map.iter_rules()}
         safe_supplier_modules = {}
 
         for key, mod in SUPPLIER_MODULES.items():
             links = mod.get('links', {})
-            # فلترة الروابط: الاحتفاظ فقط بالمسارات التي لها دالة route مسجلة في الـ url_map
             valid_links = {ep: title for ep, title in links.items() if ep in available_endpoints}
             
             if valid_links:
@@ -130,14 +134,16 @@ def create_app():
             csrf_token=generate_csrf,
             registered_modules=ADMIN_MODULES,
             supplier_modules=safe_supplier_modules,
-            url_map=app.url_map # تمرير خريطة المسارات للقوالب للتحقق الديناميكي
+            url_map=app.url_map
         )
 
     # 6. إعداد البيئة وقاعدة البيانات
     with app.app_context():
         try:
+            # يفضل استخدام flask db upgrade بدلاً من db.create_all() في الإنتاج
             db.create_all()
-        except: pass
+        except Exception as e:
+            print(f"Database Initialization Error: {e}")
 
         try:
             from apps.models.admin_db import AdminUser
@@ -146,6 +152,7 @@ def create_app():
                 owner.set_password('123')
                 db.session.add(owner)
                 db.session.commit()
-        except: db.session.rollback()
+        except Exception as e:
+            db.session.rollback()
 
     return app
