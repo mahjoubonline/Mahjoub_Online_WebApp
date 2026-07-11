@@ -20,19 +20,12 @@ def login():
         return render_template('suppliers_auth_portal/login.html')
 
     try:
-        # مسح الجلسة السابقة لضمان عدم وجود تداخل (إجراء وقائي)
+        # مسح الجلسة السابقة لضمان عدم وجود تداخل
         session.clear()
 
-        # دعم قراءة البيانات (JSON أو Form)
-        if request.is_json:
-            data = request.get_json() or {}
-            username = data.get('username', '').strip()
-            password = data.get('password', '')
-            user_type = data.get('type')
-        else:
-            username = request.form.get('username', '').strip()
-            password = request.form.get('password', '')
-            user_type = request.form.get('type')
+        # قراءة البيانات
+        username = request.form.get('username', '').strip() if not request.is_json else request.get_json().get('username', '').strip()
+        password = request.form.get('password', '') if not request.is_json else request.get_json().get('password', '')
 
         # 1. التحقق من الحظر
         block_until = session.get('block_until')
@@ -41,23 +34,20 @@ def login():
             msg = f"لا يمكنك المحاولة حالياً. يرجى الانتظار {remaining} دقيقة."
             return jsonify({"status": "error", "message": msg}), 429 if request.is_json else render_template('suppliers_auth_portal/login.html', error=msg)
 
-        target_user = None
-        found_as = None
+        # 2. البحث الشامل في الجدولين (بدون اشتراط نوع المستخدم)
+        target_user = Supplier.query.filter(or_(Supplier.search_phone == username, Supplier.username == username)).first()
+        found_as = 'supplier' if target_user else None
 
-        # 2. البحث الحازم (Strict Search)
-        if user_type == 'supplier':
-            target_user = Supplier.query.filter(or_(Supplier.search_phone == username, Supplier.username == username)).first()
-            if target_user: found_as = 'supplier'
-        elif user_type == 'staff':
-            target_user = SupplierStaff.query.filter(or_(SupplierStaff.search_phone == username, SupplierStaff.username == username)).first()
-            if target_user: found_as = 'staff'
-
-        # 3. التحقق من وجود المستخدم
         if not target_user:
-            msg = "المستخدم غير مسجل في المنصة"
+            target_user = SupplierStaff.query.filter(or_(SupplierStaff.search_phone == username, SupplierStaff.username == username)).first()
+            found_as = 'staff' if target_user else None
+
+        # 3. التحقق من وجود المستخدم (رسالة واضحة)
+        if not target_user:
+            msg = "المستخدم غير مسجل في المنصة اللامركزية"
             return jsonify({"status": "error", "message": msg}), 404 if request.is_json else render_template('suppliers_auth_portal/login.html', error=msg)
 
-        # 4. التحقق من كلمة المرور
+        # 4. التحقق من كلمة المرور (رسالة واضحة)
         if not target_user.check_password(password.strip()):
             attempts = session.get('login_attempts', 0) + 1
             session['login_attempts'] = attempts
@@ -73,16 +63,12 @@ def login():
             msg = "الحساب غير مفعل حالياً."
             return jsonify({"status": "error", "message": msg}), 403 if request.is_json else render_template('suppliers_auth_portal/login.html', error=msg)
 
-        # 6. تسجيل الدخول وتثبيت الجلسة
+        # 6. تسجيل الدخول
         session['user_type'] = found_as
         login_user(target_user, remember=True)
         
         redirect_url = url_for('suppliers_dashboard.dashboard')
-        
-        if request.is_json:
-            return jsonify({"status": "success", "redirect": redirect_url})
-        else:
-            return redirect(redirect_url)
+        return jsonify({"status": "success", "redirect": redirect_url}) if request.is_json else redirect(redirect_url)
 
     except Exception as e:
         print(f"❌ [Login Error]: {str(e)}")
