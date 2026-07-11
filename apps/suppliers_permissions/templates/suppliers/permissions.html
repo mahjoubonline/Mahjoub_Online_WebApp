@@ -2,24 +2,29 @@
 
 {% block content %}
 <style>
+    /* التنسيقات الملكية والحركات */
     .royal-gradient { background: linear-gradient(135deg, #4b0082 0%, #000000 100%) !important; color: white !important; }
     .card { border-radius: 20px !important; transition: transform 0.3s; }
-    .btn-action { transition: all 0.2s; }
-    .btn-action:hover { transform: scale(1.1); }
-    /* تأثير خفيف عند تحديث الحالة */
+    .dropdown-item { transition: background-color 0.2s; font-size: 0.95rem; }
+    .dropdown-item:hover { background-color: #f8f9fa; }
     .fade-in { animation: fadeIn 0.5s; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <div class="container py-5" style="direction: rtl; text-align: right;">
-    <div class="d-flex justify-content-between align-items-center mb-5">
+    
+    <div class="mb-4">
+        <a href="{{ url_for('suppliers_dashboard.dashboard') }}" class="btn btn-outline-secondary shadow-sm" style="border-radius: 10px;">
+            <i class="fa fa-arrow-right me-2"></i> رجوع للوحة التحكم
+        </a>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold mb-1">إدارة صلاحيات الموظفين</h2>
             <p class="text-muted">تحكم في فريق عملك بتنسيق ملكي احترافي.</p>
         </div>
-        <button class="btn royal-gradient shadow-sm px-4 py-2" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+        <button class="btn royal-gradient shadow-sm px-4 py-2" data-bs-toggle="modal" data-bs-target="#addStaffModal" style="border-radius: 10px;">
             <i class="fa fa-plus-circle me-2"></i> إضافة موظف جديد
         </button>
     </div>
@@ -32,6 +37,8 @@
                         <tr>
                             <th class="p-3">#</th>
                             <th>اسم المستخدم</th>
+                            <th>رقم الهاتف</th>
+                            <th>تاريخ الإضافة</th>
                             <th>الحالة</th>
                             <th class="text-center">الإجراءات</th>
                         </tr>
@@ -40,15 +47,38 @@
                         {% for staff in staff_list %}
                         <tr id="staff-row-{{ staff.id }}">
                             <td class="p-3">{{ loop.index }}</td>
-                            <td class="fw-bold">{{ staff.username }}</td>
+                            <td class="fw-bold" style="color: #4b0082;">{{ staff.username }}</td>
+                            <td class="text-muted">{{ staff.search_phone }}</td>
+                            <td class="text-muted small">{{ staff.created_at.strftime('%Y-%m-%d') }}</td>
                             <td>
                                 <span class="badge {{ 'bg-success' if staff.is_active else 'bg-dark' }}" id="status-badge-{{ staff.id }}">
                                     {{ 'نشط' if staff.is_active else 'معطل' }}
                                 </span>
                             </td>
                             <td class="text-center">
-                                <button onclick="performAction('{{ staff.id }}', 'toggle_status')" class="btn btn-sm btn-outline-primary btn-action"><i class="fa fa-power-off"></i></button>
-                                <button onclick="performAction('{{ staff.id }}', 'reset_password')" class="btn btn-sm btn-outline-warning btn-action"><i class="fa fa-key"></i></button>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px;">
+                                        <i class="fa fa-cogs"></i> خيارات
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 text-end" style="direction: rtl;">
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-bold" href="javascript:void(0)" onclick="editPermissions('{{ staff.id }}')">
+                                                <i class="fa fa-edit text-primary ms-2"></i> تعديل الصلاحيات
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-bold" href="javascript:void(0)" onclick="performAction('{{ staff.id }}', 'reset_password', '{{ staff.username }}')">
+                                                <i class="fa fa-key text-warning ms-2"></i> إعادة تعيين كلمة المرور
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item py-2 fw-bold" href="javascript:void(0)" onclick="performAction('{{ staff.id }}', 'toggle_status')">
+                                                <i class="fa fa-power-off text-danger ms-2"></i> إيقاف / تفعيل
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -60,42 +90,76 @@
 </div>
 
 {% include 'suppliers/includes/_add_staff_modal.html' %}
+{% include 'suppliers/includes/_credentials_modal.html' %}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-async function performAction(staffId, action) {
-    // استخدام SweetAlert2 بدلاً من confirm/alert
+// دالة تنفيذ الإجراءات (تفعيل/إيقاف، وإعادة تعيين كلمة المرور)
+async function performAction(staffId, action, username = '') {
+    // التأكيد أولاً إذا كان الإجراء هو إعادة تعيين كلمة المرور
     if (action === 'reset_password') {
         const result = await Swal.fire({
             title: 'إعادة تعيين كلمة المرور؟',
-            text: "سيتم إنشاء كلمة مرور جديدة تلقائياً",
+            text: `سيتم إنشاء كلمة مرور جديدة تلقائياً للموظف: ${username}`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#4b0082',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'نعم، قم بالتعيين'
+            confirmButtonText: 'نعم، قم بالتعيين',
+            cancelButtonText: 'إلغاء'
         });
         if (!result.isConfirmed) return;
     }
 
-    const response = await fetch(`/supplier/action/${staffId}/${action}`, { method: 'POST' });
+    // إرسال الطلب
+    const response = await fetch(`/supplier/action/${staffId}/${action}`, { 
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+    });
     const data = await response.json();
 
     if (data.success) {
         if (action === 'toggle_status') {
+            // تحديث حالة الشارة (Badge)
             const badge = document.getElementById(`status-badge-${staffId}`);
             badge.innerText = data.is_active ? 'نشط' : 'معطل';
             badge.className = `badge fade-in ${data.is_active ? 'bg-success' : 'bg-dark'}`;
             
             Swal.fire({ icon: 'success', title: 'تم تحديث الحالة', timer: 1500, showConfirmButton: false });
-        } else if (action === 'reset_password') {
-            Swal.fire({
-                title: 'تم تغيير كلمة المرور!',
-                html: `كلمة المرور الجديدة: <br><strong style="font-size: 1.5rem; color: #4b0082;">${data.new_password}</strong>`,
-                icon: 'success',
-                confirmButtonText: 'حسناً'
-            });
+        } 
+        else if (action === 'reset_password') {
+            // استدعاء نافذة بيانات الدخول الموحدة لعرض كلمة المرور الجديدة
+            showCredentialsModal('تم إعادة تعيين كلمة المرور بنجاح', username, data.new_password);
         }
+    } else {
+        Swal.fire({ icon: 'error', title: 'عفواً!', text: 'حدث خطأ أثناء تنفيذ الإجراء' });
     }
+}
+
+// دالة لفتح نافذة بيانات الدخول الموحدة وتمرير البيانات إليها
+function showCredentialsModal(title, username, password) {
+    // تغيير عنوان النافذة بناءً على العملية
+    const titleElement = document.getElementById('credModalTitle');
+    if(titleElement) {
+        titleElement.innerHTML = `<i class="fa fa-check-circle me-2"></i> ${title}`;
+    }
+
+    document.getElementById('newUsername').innerText = username;
+    document.getElementById('newPassword').innerText = password;
+    
+    // إظهار المودال
+    new bootstrap.Modal(document.getElementById('staffCredentialsModal')).show();
+}
+
+// دالة تعديل الصلاحيات (مجهزة للعمل عليها لاحقاً)
+function editPermissions(staffId) {
+    Swal.fire({
+        icon: 'info',
+        title: 'تعديل الصلاحيات',
+        text: 'سيتم برمجة واجهة تعديل الصلاحيات للموظف رقم: ' + staffId,
+        confirmButtonColor: '#4b0082'
+    });
 }
 </script>
 {% endblock %}
