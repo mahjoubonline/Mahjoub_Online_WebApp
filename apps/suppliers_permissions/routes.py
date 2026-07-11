@@ -47,11 +47,13 @@ def check_availability():
     field = data.get('field')  # 'username' أو 'phone'
     value = data.get('value')
     
+    if not value: return jsonify({"available": False}), 400
+
     # البحث في كامل جدول الموظفين لضمان عدم تكرار البيانات على مستوى النظام
     if field == 'username':
         exists = SupplierStaff.query.filter_by(username=value).first()
     elif field == 'phone':
-        # البحث عن آخر 9 أرقام للهاتف لتجنب مشاكل مفتاح الدولة
+        # البحث عن آخر 9 أرقام للهاتف
         exists = SupplierStaff.query.filter_by(search_phone=str(value)[-9:]).first()
     else:
         return jsonify({"available": False}), 400
@@ -77,15 +79,18 @@ def add_staff():
 
     password = generate_random_password()
     
-    # إنشاء الموظف الجديد مع تمرير صلاحيات الـ Checkbox
-    # (استخدام .get() لتجنب الخطأ وتعيين قيمة افتراضية False إذا لم تكن موجودة)
+    # تحويل قيم الصلاحيات من 'true' (string) إلى Boolean
+    can_view = request.form.get('can_view_wallet') == 'true'
+    can_manage = request.form.get('can_manage_orders') == 'true'
+
+    # إنشاء الموظف الجديد
     new_staff = SupplierStaff(
         supplier_id=current_user.id,
         username=username,
         phone=phone, # الهاتف سيتم تشفيره تلقائياً عبر setter في الموديل
         is_active=True,
-        can_view_wallet=('can_view_wallet' in request.form),
-        can_manage_orders=('can_manage_orders' in request.form)
+        can_view_wallet=can_view,
+        can_manage_orders=can_manage
     )
     new_staff.set_password(password)
     
@@ -103,7 +108,7 @@ def add_staff():
 @suppliers_permissions_bp.route('/action/<int:staff_id>/<action>', methods=['POST'])
 @login_required
 def staff_action(staff_id, action):
-    # التأكد أن الموظف يتبع المورد الحالي فقط (حماية من التلاعب)
+    # التأكد أن الموظف يتبع المورد الحالي فقط
     staff = SupplierStaff.query.filter_by(id=staff_id, supplier_id=current_user.id).first_or_404()
 
     if action == 'toggle_status':
