@@ -1,5 +1,7 @@
 {% extends 'suppliers/base.html' %}
 
+{% block title %}لوحة تحكم المورد | {{ supplier.trade_name if supplier else 'غير متاح' }}{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4" style="direction: rtl; text-align: right; color: #fff;">
     
