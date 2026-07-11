@@ -21,7 +21,7 @@ class SupplierStaff(db.Model, UserMixin):
         {'extend_existing': True}
     )
     
-    # 1. الأعمدة
+    # 1. الأعمدة الأساسية
     id = db.Column(db.Integer, primary_key=True)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
     username = db.Column(db.String(100), nullable=False)
@@ -34,10 +34,14 @@ class SupplierStaff(db.Model, UserMixin):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), default='worker')
     is_active = db.Column(db.Boolean, default=True)
+    
+    # [الصلاحيات]: حقول جديدة للتحكم في وصول الموظف للنظام
+    can_view_wallet = db.Column(db.Boolean, default=False)
+    can_manage_orders = db.Column(db.Boolean, default=False)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # 3. العلاقات: استخدمنا lazy='joined' لأن الموظف يحتاج دائماً لبيانات المورد التابع له
-    # هذا يقلل عدد الاستعلامات ويحسن أداء لوحة التحكم بشكل ملحوظ
+    # 3. العلاقات: lazy='joined' لتقليل استعلامات JOIN أثناء جلب الموظف
     supplier = db.relationship(
         'Supplier', 
         back_populates='staff_members',
@@ -59,7 +63,7 @@ class SupplierStaff(db.Model, UserMixin):
 
     @phone.setter
     def phone(self, value):
-        """تشفير الهاتف وتحديث فهرس البحث"""
+        """تشفير الهاتف وتحديث فهرس البحث (آخر 9 أرقام)"""
         if value:
             self._phone_enc = Fernet(self._get_key()).encrypt(str(value).encode()).decode()
             self.search_phone = str(value)[-9:] 
@@ -71,4 +75,4 @@ class SupplierStaff(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-        return f'<SupplierStaff {self.username} | Role: {self.role}>'
+        return f'<SupplierStaff {self.username} | Active: {self.is_active}>'
