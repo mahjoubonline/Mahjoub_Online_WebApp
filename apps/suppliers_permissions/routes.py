@@ -20,7 +20,7 @@ suppliers_permissions_bp = Blueprint(
 def check_supplier_owner_access():
     return session.get('user_type') == 'supplier'
 
-# دالة لتوليد كلمة مرور عشوائية قوية
+# دالة لتوليد كلمة مرور عشوائية قوية (تستخدم ASCII الصافي)
 def generate_random_password(length=8):
     alphabet = string.ascii_letters + string.digits
     return ''.join(secrets.choice(alphabet) for i in range(length))
@@ -45,16 +45,15 @@ def permissions():
 def check_availability():
     data = request.get_json()
     field = data.get('field')  # 'username' أو 'phone'
-    value = data.get('value')
+    value = str(data.get('value', '')).strip()
     
     if not value: return jsonify({"available": False}), 400
 
-    # البحث في كامل جدول الموظفين لضمان عدم تكرار البيانات على مستوى النظام
+    # البحث في جدول الموظفين لضمان عدم تكرار البيانات
     if field == 'username':
         exists = SupplierStaff.query.filter_by(username=value).first()
     elif field == 'phone':
-        # البحث عن آخر 9 أرقام للهاتف
-        exists = SupplierStaff.query.filter_by(search_phone=str(value)[-9:]).first()
+        exists = SupplierStaff.query.filter_by(search_phone=value[-9:]).first()
     else:
         return jsonify({"available": False}), 400
         
@@ -68,13 +67,13 @@ def add_staff():
     if not check_supplier_owner_access():
         return jsonify({"success": False, "message": "غير مصرح لك بإضافة موظفين"}), 403
     
-    username = request.form.get('username')
-    phone = request.form.get('phone')
+    username = request.form.get('username', '').strip()
+    phone = request.form.get('phone', '').strip()
     
     # تحقق إضافي في الباك-إند للأمان
     if SupplierStaff.query.filter_by(username=username).first():
         return jsonify({"success": False, "message": "اسم المستخدم مسجل مسبقاً"}), 400
-    if SupplierStaff.query.filter_by(search_phone=str(phone)[-9:]).first():
+    if SupplierStaff.query.filter_by(search_phone=phone[-9:]).first():
         return jsonify({"success": False, "message": "رقم الهاتف مسجل مسبقاً"}), 400
 
     password = generate_random_password()
@@ -87,11 +86,12 @@ def add_staff():
     new_staff = SupplierStaff(
         supplier_id=current_user.id,
         username=username,
-        phone=phone, # الهاتف سيتم تشفيره تلقائياً عبر setter في الموديل
+        phone=phone,
         is_active=True,
         can_view_wallet=can_view,
         can_manage_orders=can_manage
     )
+    # استخدام الدالة المحدثة التي تنظف كلمة المرور قبل التشفير
     new_staff.set_password(password)
     
     db.session.add(new_staff)
@@ -104,7 +104,7 @@ def add_staff():
     })
 
 
-# --- المسار لإدارة عمليات الموظفين (تفعيل/إيقاف/تغيير كلمة المرور) ---
+# --- المسار لإدارة عمليات الموظفين ---
 @suppliers_permissions_bp.route('/action/<int:staff_id>/<action>', methods=['POST'])
 @login_required
 def staff_action(staff_id, action):
@@ -118,6 +118,7 @@ def staff_action(staff_id, action):
     
     elif action == 'reset_password':
         new_pass = generate_random_password()
+        # تنظيف وتشفير كلمة المرور الجديدة
         staff.set_password(new_pass)
         db.session.commit()
         return jsonify({"success": True, "new_password": new_pass})
