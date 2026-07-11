@@ -3,9 +3,9 @@
 from apps.suppliers_permissions.routes import suppliers_permissions_bp
 
 MODULE_NAME = "إدارة الصلاحيات"
-MODULE_ICON = "fas fa-users-cog" # تأكد من إضافة fas لتعمل الأيقونة
+MODULE_ICON = "fas fa-users-cog"
 
-# الصيغة الصحيحة: { 'endpoint_name': 'الاسم الذي سيظهر للمستخدم' }
+# هذا السطر هو مفتاح ظهور الرابط في الشريط الجانبي
 LINKS = {
     "suppliers_permissions.permissions": "صلاحيات الموظفين"
 }
