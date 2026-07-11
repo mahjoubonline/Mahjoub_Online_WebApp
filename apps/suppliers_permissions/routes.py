@@ -16,7 +16,7 @@ suppliers_permissions_bp = Blueprint(
 )
 
 def check_supplier_owner_access():
-    """تحقق أمني صارم: الموظف لا يمكنه الوصول لهذه الصفحة، فقط المورد المالك"""
+    """تحقق أمني صارم: فقط المورد المالك يمكنه الوصول"""
     return session.get('user_type') == 'supplier'
 
 @suppliers_permissions_bp.route('/', methods=['GET', 'POST'])
@@ -31,7 +31,6 @@ def permissions():
     new_staff_data = None
 
     if request.method == 'POST':
-        # منطق إضافة موظف جديد
         username = request.form.get('username', '').strip()
         phone = request.form.get('phone', '').strip()
         password = request.form.get('password', '')
@@ -47,7 +46,6 @@ def permissions():
                     is_active=True
                 )
                 new_staff.set_password(password)
-                # تخزين كلمة المرور مؤقتاً لعرضها في المودال فقط
                 new_staff.raw_password = password 
                 
                 db.session.add(new_staff)
@@ -55,7 +53,6 @@ def permissions():
                 new_staff_data = new_staff
                 flash(f"تم إضافة الموظف {username} بنجاح.", "success")
 
-    # جلب القائمة مرتبة حسب الأحدث
     staff_list = SupplierStaff.query.filter_by(supplier_id=supplier.id).order_by(SupplierStaff.created_at.desc()).all()
     
     return render_template(
@@ -68,7 +65,7 @@ def permissions():
 @suppliers_permissions_bp.route('/action/<int:staff_id>/<action>', methods=['POST'])
 @login_required
 def staff_action(staff_id, action):
-    """التحكم في إجراءات الموظفين (إيقاف/تفعيل، إعادة تعيين كلمة مرور)"""
+    """إدارة عمليات الموظفين (تفعيل/إيقاف، حذف، إعادة تعيين كلمة مرور)"""
     if not check_supplier_owner_access():
         flash("غير مصرح لك بالقيام بهذا الإجراء.", "danger")
         return redirect(url_for('suppliers_dashboard.dashboard'))
@@ -81,9 +78,13 @@ def staff_action(staff_id, action):
         flash(f"تم {status_text} حساب الموظف {staff.username} بنجاح.", "success")
         
     elif action == 'reset_password':
-        new_pass = str(uuid.uuid4())[:8] # توليد كلمة مرور عشوائية من 8 خانات
+        new_pass = str(uuid.uuid4())[:8]
         staff.set_password(new_pass)
         flash(f"تم إعادة تعيين كلمة المرور بنجاح للموظف {staff.username}. الجديدة هي: {new_pass}", "info")
+        
+    elif action == 'delete':
+        db.session.delete(staff)
+        flash(f"تم حذف الموظف {staff.username} نهائياً.", "warning")
 
     db.session.commit()
     return redirect(url_for('suppliers_permissions.permissions'))
