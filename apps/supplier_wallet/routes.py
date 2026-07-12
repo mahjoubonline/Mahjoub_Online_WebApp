@@ -9,13 +9,13 @@ from apps.api.sync_engine import SyncEngine
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
-# تأكد من أن اسم الـ Blueprint هنا هو 'supplier_wallet'
+# تم تحديد اسم الـ Blueprint بوضوح ليتطابق مع الـ registry
 supplier_wallet_bp = Blueprint('supplier_wallet', __name__, template_folder='templates')
 
 @supplier_wallet_bp.route('/my-wallet', methods=['GET'])
 @login_required
 def view_my_wallet():
-    # 1. تحديد الـ s_id بمرونة وأمان كامل للمورد وموظفيه
+    # 1. تحديد الـ s_id
     user_type = session.get('user_type')
     
     if user_type == 'supplier':
@@ -74,7 +74,7 @@ def view_my_wallet():
     total_debit = stats.total_debit or 0
     calculated_balance = total_credit - total_debit
 
-    # منطق التدقيق للمدير فقط
+    # منطق التدقيق
     wallet_imbalance = None
     if getattr(current_user, 'is_admin', False):
         if abs(float(wallet.balance) - float(calculated_balance)) > 0.01:
@@ -90,7 +90,7 @@ def view_my_wallet():
                         .offset((page - 1) * per_page)\
                         .limit(per_page).all()
 
-    # 8. استجابة
+    # 8. استجابة (مع دعم التحديث الديناميكي)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template('supplier_wallet/_table_partial.html', 
                                transactions=transactions, 
