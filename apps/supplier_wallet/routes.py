@@ -1,6 +1,7 @@
 # coding: utf-8
 # 📂 apps/supplier_wallet/routes.py
 
+import os
 from flask import Blueprint, render_template, abort, request, session
 from flask_login import login_required, current_user
 from flask_paginate import Pagination, get_page_parameter
@@ -9,8 +10,12 @@ from apps.api.sync_engine import SyncEngine
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
-# تم تعريف الـ Blueprint باسم فريد لضمان عدم التعارض
-supplier_wallet_bp = Blueprint('supplier_wallet', __name__, template_folder='templates')
+# تعريف الـ Blueprint مع تحديد مسار القوالب لضمان الاستقلالية
+supplier_wallet_bp = Blueprint(
+    'supplier_wallet', 
+    __name__, 
+    template_folder='templates'
+)
 
 @supplier_wallet_bp.route('/my-wallet', methods=['GET'])
 @login_required
@@ -29,7 +34,7 @@ def view_my_wallet():
     if not s_id:
         abort(400, description="يجب تحديد معرف المورد لعرض المحفظة.")
     
-    # 2. جلب محفظة المورد (استخدام try-except للتعامل مع أخطاء قواعد البيانات)
+    # 2. جلب محفظة المورد
     try:
         wallet = SupplierWallet.query.filter_by(supplier_id=int(s_id)).first()
     except ValueError:
@@ -97,13 +102,14 @@ def view_my_wallet():
                         .limit(per_page).all()
 
     # 8. استجابة (مع دعم الـ AJAX)
+    # ملاحظة: تأكد أن ملفات القوالب موجودة داخل مجلد 'templates' الخاص بالموديول
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render_template('supplier_wallet/_table_partial.html', 
+        return render_template('_table_partial.html', 
                                transactions=transactions, 
                                total_debit=total_debit, 
                                total_credit=total_credit)
 
-    return render_template('supplier_wallet/supplier_wallet.html', 
+    return render_template('supplier_wallet.html', 
                            wallet=wallet, 
                            transactions=transactions, 
                            pagination=pagination,
