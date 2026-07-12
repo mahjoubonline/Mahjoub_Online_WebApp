@@ -1,28 +1,25 @@
 # coding: utf-8
-# 📂 apps/supplier_wallet/registry.py
+# 📂 apps/suppliers_wallet/registry.py
 
+# لاحظ تغيير كلمة supplier_wallet إلى suppliers_wallet لتطابق اسم المجلد
 from apps.suppliers_wallet.routes import supplier_wallet_bp
 
-# 1. إعدادات الموديول للظهور
+# 1. إعدادات الموديول
 MODULE_NAME = "محفظة المورد"
 MODULE_ICON = "fas fa-wallet"
 
-# 2. هذا المتغير هو الذي يجعله يظهر في قائمة المورد الجانبية (نظام العزل)
+# 2. إظهار في القائمة
 SHOW_IN_SUPPLIER = True
 
-# 3. الروابط: تم تصحيح الترتيب (اسم المسار أولاً ثم النص الظاهر)
-# ليتطابق مع المنطق المستخدم في نظام القائمة الجانبية لديك
+# 3. الروابط
 LINKS = {
     "supplier_wallet.view_my_wallet": "محفظتي"
 }
 
 def register_module(app):
-    """
-    تسجيل الموديول في النظام
-    """
     try:
-        # تسجيل الـ Blueprint الخاص بمحفظة المورد
+        # تسجيل الـ Blueprint
         app.register_blueprint(supplier_wallet_bp, url_prefix='/supplier/wallet')
         print("✅ [Registry]: تم تسجيل موديول 'محفظة المورد' بنجاح.")
     except Exception as e:
-        print(f"❌ [Registry Error]: فشل تسجيل موديول 'supplier_wallet': {e}")
+        print(f"❌ [Registry Error]: فشل تسجيل موديول 'suppliers_wallet': {e}")
