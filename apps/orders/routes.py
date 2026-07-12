@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/orders/routes.py - النسخة النهائية المصححة
+# 📂 apps/orders/routes.py - النسخة المعدلة
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session, abort, current_app
 from flask_login import login_required
@@ -29,7 +29,6 @@ def dashboard():
     can_add_order = 'orders.add_new_order' in current_app.view_functions
     can_sync = 'orders.sync_all' in current_app.view_functions
     
-    # تصحيح: استخدام total_paid_raw (العمود الفعلي) بدلاً من total_paid (الخاصية) لتجنب خطأ البرمجة
     total_sales = db.session.query(func.sum(OrderFinancial.total_paid_raw)).scalar() or 0
     completed_count = Order.query.filter_by(status='completed').count()
     cancelled_count = Order.query.filter_by(status='cancelled').count()
@@ -86,10 +85,15 @@ def add_new_order():
             )
             db.session.add(new_order)
             
+            # تم تعديل هذا الجزء لتمرير القيم الإجبارية وتجنب خطأ NotNullViolation
             new_financial = OrderFinancial(
                 order_id=order_id,
                 supplier_id=supplier_id,
-                total_paid=total_price, # هذا سيقوم بتعبئة total_paid_raw تلقائياً عبر setter
+                total_paid=total_price,
+                supplier_cost_raw=0.0,            # قيمة افتراضية
+                mahjoub_commission_raw=0.0,       # قيمة افتراضية
+                shipping_fees=0.0,               # قيمة افتراضية
+                currency='SAR',                  # تعيين العملة افتراضياً
                 settlement_status='pending'
             )
             db.session.add(new_financial)
@@ -99,7 +103,7 @@ def add_new_order():
         except Exception as e:
             db.session.rollback()
             logger.error(f"خطأ إضافة طلب: {e}")
-            flash("حدث خطأ أثناء إضافة الطلب.", "danger")
+            flash(f"حدث خطأ أثناء إضافة الطلب: {str(e)}", "danger")
         return redirect(url_for('orders.dashboard'))
     
     return render_template('admin/add_order.html', suppliers=Supplier.query.all())
