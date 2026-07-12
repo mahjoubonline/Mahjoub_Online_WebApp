@@ -1,11 +1,11 @@
-# 📂 apps/suppliers_wallet/registry.py
-from apps.suppliers_wallet.routes import supplier_wallet_bp
+# 📂 apps/supplier_wallet/registry.py
+# تعديل الاستيراد ليكون متوافقاً مع اسم المجلد الحقيقي (بدون s)
+from apps.supplier_wallet.routes import supplier_wallet_bp 
 
 MODULE_NAME = "محفظة المورد"
 MODULE_ICON = "fas fa-wallet"
 SHOW_IN_SUPPLIER = True
 
-# تأكد أن المفتاح هو الـ Endpoint والقيمة هي الاسم
 LINKS = {
     "supplier_wallet.view_my_wallet": "محفظتي"
 }
