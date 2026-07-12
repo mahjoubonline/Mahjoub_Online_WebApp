@@ -101,15 +101,14 @@ def view_my_wallet():
                         .offset((page - 1) * per_page)\
                         .limit(per_page).all()
 
-    # 8. استجابة (باستخدام المسار الصحيح للقوالب)
+    # 8. استجابة (باستخدام المسارات الصحيحة للمجلد الفرعي)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        # تأكد أن اسم الملف داخل مجلد templates يطابق هذا الاسم
-        return render_template('_table_partial.html', 
+        return render_template('supplier_wallet/_table_partial.html', 
                                transactions=transactions, 
                                total_debit=total_debit, 
                                total_credit=total_credit)
 
-    return render_template('supplier_wallet.html', 
+    return render_template('supplier_wallet/supplier_wallet.html', 
                            wallet=wallet, 
                            transactions=transactions, 
                            pagination=pagination,
