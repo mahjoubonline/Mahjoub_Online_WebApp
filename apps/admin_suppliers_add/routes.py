@@ -56,7 +56,7 @@ def add_supplier_or_staff():
             new_supplier.set_password(temp_password)
             db.session.add(new_supplier)
             
-            # [سر الحل]: flush() لتوليد الـ ID فوراً
+            # [سر الحل]: flush() لتوليد الـ ID فوراً في قاعدة البيانات قبل الحفظ النهائي
             db.session.flush() 
 
             # 2. إنشاء المحفظة يدوياً الآن بعد الحصول على ID المورد
@@ -69,7 +69,7 @@ def add_supplier_or_staff():
             # 3. الحفظ النهائي لكل شيء
             db.session.commit()
             
-            # الآن البيانات مؤكدة وموجودة!
+            # حفظ البيانات في الجلسة لعرضها في صفحة النجاح
             session['new_user_data'] = {
                 'trade_name': trade_name,
                 'username': username,
