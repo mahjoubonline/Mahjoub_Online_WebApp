@@ -4,8 +4,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_required
 from sqlalchemy.orm import lazyload
 from apps.models.product_db import Product
-from apps.extensions import db
-# استيراد الكلاس الموحد للاتصال بـ قمرة
+from apps.extensions import db, csrf # تأكد من استيراد csrf من extensions
 from apps.services.graphql_client import QomrahGraphQLClient
 import logging
 
@@ -45,11 +44,13 @@ def add_product():
 
 @admin_product_bp.route('/sync', methods=['POST'])
 @login_required
+@csrf.exempt # هذا السطر يحل مشكلة الـ 400 Bad Request الناتجة عن CSRF
 def sync_products():
     """مسار المزامنة الفعلي الذي يتصل بـ قمرة عبر الكلاس QomrahGraphQLClient"""
     try:
-        # 1. جلب المنتجات من قمرة باستخدام الكلاس
-        # ملاحظة: تأكد من وجود دالة fetch_products داخل QomrahGraphQLClient في graphql_client.py
+        logging.info("بدء عملية المزامنة...")
+        
+        # 1. جلب المنتجات من قمرة
         products_data = QomrahGraphQLClient.fetch_products()
         
         if not products_data:
@@ -57,7 +58,7 @@ def sync_products():
 
         # 2. تحديث قاعدة البيانات
         for item in products_data:
-            # البحث عن المنتج بـ qid (المعرف القادم من قمرة)
+            # البحث عن المنتج بـ qid
             product = Product.query.filter_by(qid=str(item.get('_id'))).first()
             
             if not product:
@@ -65,7 +66,7 @@ def sync_products():
                 new_product = Product(
                     qid=str(item.get('_id')),
                     title=item.get('title', 'منتج غير معرف'),
-                    supplier_id=1, # المورد الافتراضي
+                    supplier_id=1, 
                     sku=item.get('sku', 'N/A')
                 )
                 new_product.cost_price = item.get('price', 0) 
@@ -76,10 +77,10 @@ def sync_products():
                 product.cost_price = item.get('price', product.cost_price)
         
         db.session.commit()
+        logging.info(f"تمت مزامنة {len(products_data)} منتج بنجاح.")
         return jsonify({"status": "success", "message": f"تمت مزامنة {len(products_data)} منتج بنجاح!"})
         
     except Exception as e:
         db.session.rollback()
-        # تسجيل الخطأ لسهولة التتبع في سجلات السيرفر
-        logging.error(f"Error during sync: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        logging.error(f"خطأ أثناء المزامنة: {str(e)}")
+        return jsonify({"status": "error", "message": "حدث خطأ داخلي أثناء المزامنة"}), 500
