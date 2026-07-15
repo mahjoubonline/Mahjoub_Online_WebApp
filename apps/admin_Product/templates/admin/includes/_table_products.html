@@ -39,11 +39,36 @@
     function startProductSync() {
         const btn = document.getElementById('startSyncBtn');
         const progressArea = document.getElementById('sync-progress-area');
+        const progressBar = document.getElementById('sync-bar');
+        const statusText = document.getElementById('sync-status');
         
         btn.disabled = true;
         progressArea.classList.remove('d-none');
-        
-        // هنا سيتم استدعاء الـ Fetch API للـ registry.py الخاص بك
-        console.log("تم بدء عملية المزامنة...");
+        progressBar.style.width = '30%';
+        statusText.innerText = "جاري الاتصال بقمرة...";
+
+        fetch("{{ url_for('admin_product.sync_products') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                progressBar.style.width = '100%';
+                statusText.innerText = data.message;
+                statusText.classList.replace('text-primary', 'text-success');
+                setTimeout(() => { location.reload(); }, 1000);
+            } else {
+                statusText.innerText = "خطأ: " + data.message;
+                statusText.classList.replace('text-primary', 'text-danger');
+            }
+        })
+        .catch(error => {
+            statusText.innerText = "حدث خطأ أثناء الاتصال.";
+            statusText.classList.replace('text-primary', 'text-danger');
+        })
+        .finally(() => {
+            btn.disabled = false;
+        });
     }
 </script>
