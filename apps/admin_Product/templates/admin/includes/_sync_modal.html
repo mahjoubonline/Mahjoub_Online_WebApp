@@ -5,33 +5,44 @@
         const progressBar = document.getElementById('sync-bar');
         const statusText = document.getElementById('sync-status');
         
+        // التحقق من وجود العناصر لتجنب أخطاء JavaScript
+        if (!btn || !progressArea || !progressBar || !statusText) return;
+        
         btn.disabled = true;
         progressArea.classList.remove('d-none');
-        progressBar.style.width = '50%';
+        progressBar.style.width = '30%';
         statusText.innerText = "جاري الاتصال بـ قمرة...";
+        statusText.className = "mt-2 small text-primary fw-bold";
 
-        // الاتصال بـ backend
+        // الاتصال بـ backend مع إرسال CSRF Token
         fetch("{{ url_for('admin_product.sync_products') }}", {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}' // ضروري جداً لتجاوز حماية CSRF
+            }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('فشل في الاتصال بالسيرفر');
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'success') {
                 progressBar.style.width = '100%';
                 statusText.innerText = data.message;
-                statusText.classList.replace('text-primary', 'text-success');
+                statusText.className = "mt-2 small text-success fw-bold";
                 
                 // إعادة تحميل الصفحة بعد ثانية لرؤية النتائج
                 setTimeout(() => { location.reload(); }, 1500);
             } else {
-                statusText.innerText = "خطأ: " + data.message;
-                statusText.classList.replace('text-primary', 'text-danger');
+                statusText.innerText = "خطأ: " + (data.message || 'حدث خطأ غير معروف');
+                statusText.className = "mt-2 small text-danger fw-bold";
             }
         })
         .catch(error => {
+            console.error("Sync Error:", error);
             statusText.innerText = "تعذر الاتصال بالخادم.";
-            statusText.classList.replace('text-primary', 'text-danger');
+            statusText.className = "mt-2 small text-danger fw-bold";
         })
         .finally(() => {
             btn.disabled = false;
