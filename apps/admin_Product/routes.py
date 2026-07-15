@@ -5,8 +5,8 @@ from flask_login import login_required
 from sqlalchemy.orm import lazyload
 from apps.models.product_db import Product
 from apps.extensions import db
-# استيراد خدمة المزامنة التي أنشأتها
-from apps.services.graphql_client import fetch_products_from_qomrah
+# تم تعديل الاستيراد هنا ليتناسب مع الكلاس
+from apps.services.graphql_client import QomrahGraphQLClient
 
 # تعريف البلوبرينت
 admin_product_bp = Blueprint(
@@ -45,14 +45,15 @@ def add_product():
 @admin_product_bp.route('/sync', methods=['POST'])
 @login_required
 def sync_products():
-    """مسار المزامنة الفعلي الذي يتصل بخدمة graphql_client"""
+    """مسار المزامنة الفعلي الذي يستخدم كلاس QomrahGraphQLClient"""
     try:
-        # 1. جلب المنتجات من قمرة عبر الخدمة
-        products_data = fetch_products_from_qomrah()
+        # 1. جلب المنتجات باستخدام الكلاس (بافتراض إضافة دالة fetch_products للكلاس)
+        # ملاحظة: تأكد أنك أضفت دالة fetch_products داخل كلاس QomrahGraphQLClient في ملف graphql_client.py
+        products_data = QomrahGraphQLClient.fetch_products()
         
         # 2. تحديث قاعدة البيانات
         for item in products_data:
-            # البحث عن المنتج بـ qid (المعرف القادم من قمرة)
+            # البحث عن المنتج بـ qid
             product = Product.query.filter_by(qid=str(item['_id'])).first()
             
             if not product:
@@ -60,10 +61,10 @@ def sync_products():
                 new_product = Product(
                     qid=str(item['_id']),
                     title=item['title'],
-                    supplier_id=1, # افترضنا 1 كمورد افتراضي
+                    supplier_id=1, 
                     sku=item.get('sku')
                 )
-                new_product.cost_price = item.get('price') # استخدام الساتر للتشفير
+                new_product.cost_price = item.get('price') 
                 db.session.add(new_product)
             else:
                 # تحديث البيانات الموجودة
