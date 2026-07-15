@@ -1,16 +1,19 @@
-# coding: utf-8
-# 📂 apps/admin_platform_treasury/registry.py
+LINKS = {
+    "treasury_bp.dashboard": "الخزينة المركزية", # تأكد أن هذا هو اسم الـ endpoint في routes.py الخاص بالخزينة
+    # ... بقية الروابط
+}# 📂 apps/admin_financial_control/registry.py
 
-# نجعلها فارغة لأننا قمنا بتجميعها في موديول 'الرقابة المالية'
-LINKS = {} 
+MODULE_NAME = "الرقابة المالية"
+MODULE_ICON = "fas fa-shield-alt"
+
+# هنا نضع كل الروابط التي ستظهر عند الضغط على "الرقابة المالية"
+LINKS = {
+    "treasury_bp.dashboard": "الخزينة المركزية",
+    "wallet_app.dashboard": "محفظة الموردين",
+    "admin_exchange.manage_rates": "أسعار الصرف"
+}
 
 def register_module(app):
-    """
-    تسجيل الموديول وتفعيله (يعمل في الخلفية، ولا يظهر في القائمة كعنصر مستقل).
-    """
-    try:
-        from apps.admin_platform_treasury.routes import treasury_bp
-        app.register_blueprint(treasury_bp, url_prefix='/admin/treasury')
-        print("✅ [Registry]: تم تسجيل موديول 'Admin Platform Treasury' بنجاح (مدمج في الرقابة المالية).")
-    except Exception as e:
-        print(f"❌ [Registry Error]: {e}")
+    # إذا كان هذا الموديول يحتاج لتسجيل Blueprint خاص به، أضفه هنا.
+    # إذا كان مجرد "قائمة تجميعية" لروابط موديولات أخرى، اترك دالة التسجيل فارغة.
+    print("✅ [Registry]: تم تسجيل موديول 'الرقابة المالية' كقائمة منسدلة بنجاح.")
