@@ -6,7 +6,7 @@ MODULE_NAME = "إدارة المنتجات"
 MODULE_ICON = "fas fa-box-open"
 SHOW_IN_SUPPLIER = False 
 
-# الترتيب الصحيح هو { "endpoint": "اسم الرابط" }
+# الترتيب الصحيح: المفتاح (Key) هو الـ Endpoint، والقيمة (Value) هي الاسم الظاهر في القائمة الجانبية
 LINKS = {
     "admin_product.manage_products": "قائمة المنتجات",
     "admin_product.add_product": "إضافة منتج"
