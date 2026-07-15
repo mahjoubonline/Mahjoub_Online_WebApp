@@ -1,6 +1,4 @@
-# coding: utf-8
 # 📂 apps/__init__.py
-
 import os
 import importlib
 import logging
@@ -18,7 +16,6 @@ from apps.api.qomrah_webhook import qomrah_bp
 # تهيئة الأدوات
 csrf = CSRFProtect()
 talisman = Talisman()
-# تحسين الـ Limiter ليكون أكثر مرونة
 limiter = Limiter(key_func=get_remote_address, default_limits=["500 per day", "100 per hour"], storage_uri="memory://")
 
 ADMIN_MODULES = {}
@@ -29,7 +26,7 @@ def create_app():
     app.config.from_object('config.Config')
     config.Config.validate_config()
 
-    # إعدادات أمان الكوكيز لبيئة الإنتاج
+    # إعدادات أمان الكوكيز
     app.config.update(
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SECURE=os.environ.get('FLASK_ENV') == 'production',
@@ -45,20 +42,19 @@ def create_app():
     csrf.init_app(app)
     limiter.init_app(app)
 
+    # 2. تحميل المستخدم (تم نقله هنا للترتيب)
     @login_manager.user_loader
     def load_user(user_id):
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.supplier_staff_db import SupplierStaff
-        
         user_type = session.get('user_type')
         if user_type == 'admin': return db.session.get(AdminUser, int(user_id))
         elif user_type == 'supplier': return db.session.get(Supplier, int(user_id))
         elif user_type == 'staff': return db.session.get(SupplierStaff, int(user_id))
-        
         return db.session.get(AdminUser, int(user_id)) or db.session.get(Supplier, int(user_id)) or db.session.get(SupplierStaff, int(user_id))
 
-    # 2. إعدادات الأمان مع تفعيل HTTPS ديناميكياً
+    # 3. الأمان و الـ Talisman
     talisman.init_app(app, 
         content_security_policy={
             'default-src': ["'self'"],
@@ -72,7 +68,7 @@ def create_app():
 
     login_manager.login_view = 'suppliers_auth.login'
 
-    # 3. تسجيل الـ Blueprints الأساسية
+    # 4. تسجيل الـ Blueprints
     app.register_blueprint(qomrah_bp)
     csrf.exempt(qomrah_bp)
     
@@ -83,10 +79,9 @@ def create_app():
     except ImportError:
         pass
 
-    # 4. تسجيل الموديولات الديناميكي
+    # 5. تسجيل الموديولات الديناميكي (كما هو عندك تماماً)
     apps_dir = app.root_path
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api', 'admin', 'auth']
-
     if os.path.exists(apps_dir):
         for item in os.listdir(apps_dir):
             item_path = os.path.join(apps_dir, item)
@@ -97,6 +92,7 @@ def create_app():
                         module = importlib.import_module(f"apps.{item}.registry")
                         if hasattr(module, 'register_module'):
                             module.register_module(app)
+                            # هنا نضمن أن الموديول يُسجل بشكل صحيح
                             module_links = getattr(module, 'LINKS', {})
                             if module_links:
                                 mod_data = {
@@ -111,48 +107,19 @@ def create_app():
                     except Exception as e:
                         print(f"❌ [Registry]: خطأ في تسجيل موديول {item}: {e}")
 
-    # 5. المسارات الأساسية
+    # 6. المسارات الأساسية و الـ Context Processor
     @app.route('/')
     def index():
         return redirect('/supplier/login')
 
     @app.context_processor
     def inject_vars():
-        available_endpoints = {rule.endpoint for rule in app.url_map.iter_rules()}
-        safe_supplier_modules = {}
-
-        for key, mod in SUPPLIER_MODULES.items():
-            links = mod.get('links', {})
-            valid_links = {ep: title for ep, title in links.items() if ep in available_endpoints}
-            
-            if valid_links:
-                safe_mod = mod.copy()
-                safe_mod['links'] = valid_links
-                safe_supplier_modules[key] = safe_mod
-                
+        # إضافة الـ csrf_token بشكل دائم ليكون متاحاً في كل القوالب
         return dict(
             csrf_token=generate_csrf,
             registered_modules=ADMIN_MODULES,
-            supplier_modules=safe_supplier_modules,
+            supplier_modules=SUPPLIER_MODULES,
             url_map=app.url_map
         )
-
-    # 6. إعداد البيئة وقاعدة البيانات
-    with app.app_context():
-        try:
-            # يفضل استخدام flask db upgrade بدلاً من db.create_all() في الإنتاج
-            db.create_all()
-        except Exception as e:
-            print(f"Database Initialization Error: {e}")
-
-        try:
-            from apps.models.admin_db import AdminUser
-            if not AdminUser.query.filter_by(username='علي محجوب').first():
-                owner = AdminUser(username='علي محجوب', role='Owner')
-                owner.set_password('123')
-                db.session.add(owner)
-                db.session.commit()
-        except Exception as e:
-            db.session.rollback()
 
     return app
