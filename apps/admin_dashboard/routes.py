@@ -1,4 +1,3 @@
-# coding: utf-8
 # 📂 apps/admin_dashboard/routes.py
 
 from flask import Blueprint, render_template, flash
@@ -7,31 +6,27 @@ from apps.extensions import db
 from apps.models import Supplier, SupplierWallet, WalletTransaction
 from sqlalchemy import func
 
-# 1. إنشاء الـ Blueprint
-admin_dashboard = Blueprint(
-    'admin_dashboard', 
+# 1. تعديل اسم الـ Blueprint ليصبح admin_dashboard_bp
+admin_dashboard_bp = Blueprint(
+    'admin_dashboard_bp', 
     __name__, 
     template_folder='templates'
 )
 
-# 2. مسار لوحة التحكم
-@admin_dashboard.route('/dashboard', methods=['GET'])
+# 2. تعديل اسم الدالة المرتبطة بالـ Blueprint
+@admin_dashboard_bp.route('/dashboard', methods=['GET'])
 @login_required
 def dashboard():
-    """عرض لوحة تحكم النظام الرئيسية مع الأرصدة المجمعة والبيانات الحية."""
-    
+    # ... (باقي كود الدالة كما هو تماماً) ...
     try:
-        # جلب إجمالي الأرصدة من المحافظ باستخدام دوال التجميع لسرعة الأداء (SQL Level)
         totals = db.session.query(
             func.sum(SupplierWallet.balance_sar).label('total_sar'),
             func.sum(SupplierWallet.balance_yer).label('total_yer'),
             func.sum(SupplierWallet.balance_usd).label('total_usd')
         ).first()
         
-        # جلب عدد الموردين المتاحين
         supplier_count = db.session.query(func.count(Supplier.id)).scalar()
         
-        # جلب آخر 10 معاملات مالية مع تحميل بيانات المحفظة المرتبطة بها (Joined Loading)
         recent_transactions = WalletTransaction.query.order_by(
             WalletTransaction.created_at.desc()
         ).limit(10).all()
@@ -47,9 +42,8 @@ def dashboard():
         return render_template('admin/dashboard.html', **context)
 
     except Exception as e:
-        # تسجيل الخطأ في السجلات وإعلام المسؤول عبر الواجهة
         print(f"❌ [Dashboard Error]: {str(e)}")
-        flash("حدث خطأ أثناء تحميل بيانات لوحة التحكم، يرجى المحاولة لاحقاً.", "danger")
+        flash("حدث خطأ أثناء تحميل بيانات لوحة التحكم.", "danger")
         return render_template('admin/dashboard.html', 
                                total_suppliers=0, 
                                total_balance_sar=0.0, 
