@@ -46,29 +46,7 @@
         progressArea.classList.remove('d-none');
         progressBar.style.width = '30%';
         statusText.innerText = "جاري الاتصال بقمرة...";
+        statusText.className = "mt-2 small text-primary fw-bold";
 
-        fetch("{{ url_for('admin_product.sync_products') }}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                progressBar.style.width = '100%';
-                statusText.innerText = data.message;
-                statusText.classList.replace('text-primary', 'text-success');
-                setTimeout(() => { location.reload(); }, 1000);
-            } else {
-                statusText.innerText = "خطأ: " + data.message;
-                statusText.classList.replace('text-primary', 'text-danger');
-            }
-        })
-        .catch(error => {
-            statusText.innerText = "حدث خطأ أثناء الاتصال.";
-            statusText.classList.replace('text-primary', 'text-danger');
-        })
-        .finally(() => {
-            btn.disabled = false;
-        });
-    }
-</script>
+        // إرسال الطلب مع الـ CSRF Token المعتمد في Flask-WTF
+        fetch("{{ url_for('admin_product.sync_products
