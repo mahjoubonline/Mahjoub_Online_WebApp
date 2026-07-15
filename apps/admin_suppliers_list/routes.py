@@ -7,6 +7,7 @@ from apps.extensions import db
 from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet
 
+# إنشاء الـ Blueprint
 suppliers_bp = Blueprint('suppliers_bp', __name__, template_folder='templates')
 
 @suppliers_bp.route('/list')
@@ -37,7 +38,8 @@ def list_suppliers():
         )
     except Exception as e:
         flash(f"خطأ في عرض الخزينة: {str(e)}", "error")
-        return redirect(url_for('admin_dashboard.index'))
+        # تم التصحيح: توجيه صحيح للـ Blueprint الجديد
+        return redirect(url_for('admin_dashboard_bp.dashboard'))
 
 @suppliers_bp.route('/settle/<int:supplier_id>/<string:currency>')
 @login_required
