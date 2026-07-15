@@ -2,6 +2,7 @@
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from flask_login import login_required
+from sqlalchemy.orm import lazyload
 from apps.models.product_db import Product
 
 # تعريف البلوبرينت
@@ -18,11 +19,14 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
-    pagination = Product.query.order_by(Product.created_at.desc()).paginate(
-        page=page, 
-        per_page=per_page, 
-        error_out=False
-    )
+    # استخدام lazyload لمنع الـ JOIN التلقائي الذي يسبب خطأ في Postgres
+    pagination = Product.query.options(lazyload(Product.supplier))\
+        .order_by(Product.created_at.desc())\
+        .paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
     
     return render_template(
         'admin/admin_Product.html', 
@@ -34,19 +38,20 @@ def manage_products():
 @login_required
 def add_product():
     """
-    تم التعديل: هذا المسار الآن يفتح صفحة قائمة المنتجات (admin_Product.html)
-    مباشرة بدلاً من البحث عن صفحة الإضافة.
+    مسار آمن: يفتح صفحة قائمة المنتجات مباشرة لتجنب خطأ TemplateNotFound.
     """
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
-    pagination = Product.query.order_by(Product.created_at.desc()).paginate(
-        page=page, 
-        per_page=per_page, 
-        error_out=False
-    )
+    # استخدام lazyload هنا أيضاً لضمان استقرار استعلام قاعدة البيانات
+    pagination = Product.query.options(lazyload(Product.supplier))\
+        .order_by(Product.created_at.desc())\
+        .paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False
+        )
     
-    # نقوم باستدعاء صفحة admin_Product.html مباشرة
     return render_template(
         'admin/admin_Product.html', 
         products=pagination.items,
