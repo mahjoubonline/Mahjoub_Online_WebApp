@@ -1,13 +1,14 @@
+# coding: utf-8
 # 📂 apps/admin_exchange/routes.py
-import os
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from apps.extensions import db
 from apps.models.exchange_db import ExchangeRate
 
-# تحديد المسار للقوالب
+# تم تعديل الاسم ليتوافق مع المعايير (admin_exchange_bp)
 admin_exchange_bp = Blueprint(
-    'admin_exchange', 
+    'admin_exchange_bp', 
     __name__, 
     template_folder='templates'
 )
@@ -15,13 +16,12 @@ admin_exchange_bp = Blueprint(
 @admin_exchange_bp.route('/exchange-rates', methods=['GET', 'POST'])
 @login_required
 def manage_rates():
-    # التحقق من الصلاحيات (Admin أو Owner فقط)
+    # التحقق من الصلاحيات
     user_role = getattr(current_user, 'role', None)
-    
-    # تحسين التحقق من الصلاحيات ليشمل معرفة نوع المستخدم (AdminUser)
     if not (getattr(current_user, 'is_admin', False) or user_role == 'Owner'):
         flash("غير مصرح لك بالوصول لهذه الصفحة.", "danger")
-        return redirect(url_for('admin_dashboard.dashboard'))
+        # تم التصحيح: توجيه صحيح للـ Blueprint المحدث
+        return redirect(url_for('admin_dashboard_bp.dashboard'))
 
     # معالجة إضافة أو تحديث سعر الصرف
     if request.method == 'POST':
@@ -30,13 +30,10 @@ def manage_rates():
         
         if not code or not raw_rate:
             flash("يرجى إدخال رمز العملة والسعر بشكل صحيح.", "warning")
-            return redirect(url_for('admin_exchange.manage_rates'))
+            return redirect(url_for('admin_exchange_bp.manage_rates'))
         
         try:
-            # تحويل السعر إلى رقم عشري لضمان الحفظ في قاعدة البيانات
             new_rate = float(raw_rate)
-            
-            # التحديث أو الإضافة
             rate_entry = ExchangeRate.query.filter_by(currency_code=code).first()
             
             if rate_entry:
@@ -55,10 +52,8 @@ def manage_rates():
         except ValueError:
             flash("سعر الصرف يجب أن يكون رقماً صحيحاً أو عشرياً.", "danger")
         
-        return redirect(url_for('admin_exchange.manage_rates'))
+        return redirect(url_for('admin_exchange_bp.manage_rates'))
 
-    # جلب كافة الأسعار للعرض في الجدول
+    # جلب كافة الأسعار للعرض
     rates = ExchangeRate.query.all()
-    
-    # عرض الصفحة
     return render_template('admin/exchange_rates.html', rates=rates)
