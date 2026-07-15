@@ -7,7 +7,7 @@ from apps.extensions import db
 from apps.models import WalletTransaction, SupplierWallet
 from sqlalchemy import func
 
-# تعريف البلوبرنت
+# تأكد من استخدام نفس الاسم الموجود في registry.py
 treasury_bp = Blueprint(
     'treasury_bp', 
     __name__, 
@@ -15,7 +15,7 @@ treasury_bp = Blueprint(
 )
 
 def _process_transaction(t):
-    """دالة مساعدة لمعالجة بيانات المعاملة الواحدة (لتجنب التكرار)."""
+    """دالة مساعدة لمعالجة بيانات المعاملة الواحدة."""
     is_credit = t.trans_type in ['credit', 'adjustment_credit', 'sale_revenue']
     return {
         'voucher_number': t.voucher_number,
@@ -52,7 +52,6 @@ def dashboard():
         page=page, per_page=per_page, error_out=False
     )
     
-    # معالجة البيانات باستخدام الدالة المساعدة
     processed_transactions = [_process_transaction(t) for t in pagination.items]
 
     return render_template(
@@ -77,7 +76,6 @@ def filter_treasury():
             WalletTransaction.currency == currency
         ).order_by(WalletTransaction.created_at.desc()).all()
         
-        # معالجة البيانات باستخدام نفس الدالة المساعدة
         processed = [_process_transaction(t) for t in transactions]
         
         return render_template(
