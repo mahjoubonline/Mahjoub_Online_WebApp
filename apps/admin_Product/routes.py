@@ -7,6 +7,7 @@ from apps.models.product_db import Product
 from apps.extensions import db
 # استيراد الكلاس الموحد للاتصال بـ قمرة
 from apps.services.graphql_client import QomrahGraphQLClient
+import logging
 
 # تعريف البلوبرينت
 admin_product_bp = Blueprint(
@@ -48,7 +49,7 @@ def sync_products():
     """مسار المزامنة الفعلي الذي يتصل بـ قمرة عبر الكلاس QomrahGraphQLClient"""
     try:
         # 1. جلب المنتجات من قمرة باستخدام الكلاس
-        # تأكد أن الكلاس QomrahGraphQLClient يحتوي على دالة fetch_products
+        # ملاحظة: تأكد من وجود دالة fetch_products داخل QomrahGraphQLClient في graphql_client.py
         products_data = QomrahGraphQLClient.fetch_products()
         
         if not products_data:
@@ -79,7 +80,6 @@ def sync_products():
         
     except Exception as e:
         db.session.rollback()
-        # تسجيل الخطأ لسهولة التتبع
-        import logging
+        # تسجيل الخطأ لسهولة التتبع في سجلات السيرفر
         logging.error(f"Error during sync: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
