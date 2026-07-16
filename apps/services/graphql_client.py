@@ -1,3 +1,6 @@
+# coding: utf-8
+# 📂 apps/services/graphql_client.py
+
 import requests
 import os
 import logging
@@ -5,17 +8,15 @@ import urllib3
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# إيقاف تحذيرات SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class QomrahGraphQLClient:
-    BASE_URL = "https://api.qomrah.com/graphql"
+    # الرابط الجديد المعتمد للمزامنة
+    BASE_URL = "https://mahjoub.online/admin/graphql"
     
     @staticmethod
     def _get_session():
-        """إنشاء جلسة مع استراتيجية إعادة محاولة ذكية للأخطاء المؤقتة"""
         session = requests.Session()
-        # محاولة إعادة الاتصال عند حدوث أخطاء خادم (5xx)
         retry_strategy = Retry(
             total=3,
             backoff_factor=1,
@@ -27,11 +28,11 @@ class QomrahGraphQLClient:
 
     @staticmethod
     def execute_query(query, variables=None):
-        """دالة عامة لتنفيذ أي استعلام GraphQL"""
         api_key = os.environ.get('QUMRA_API_KEY')
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
         }
         
         session = QomrahGraphQLClient._get_session()
@@ -52,5 +53,5 @@ class QomrahGraphQLClient:
             return result.get('data')
             
         except Exception as e:
-            logging.error(f"خطأ أثناء الاتصال بـ GraphQL: {str(e)}")
+            logging.error(f"خطأ الاتصال بـ {QomrahGraphQLClient.BASE_URL}: {str(e)}")
             return None
