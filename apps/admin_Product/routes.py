@@ -7,6 +7,8 @@ from sqlalchemy.orm import lazyload
 from apps.models.product_db import Product
 from apps.extensions import db
 from apps.services.graphql_client import QomrahGraphQLClient
+# ملاحظة: إذا أردت استخدام المحرك الموحد مستقبلاً، يمكنك إلغاء تعليق السطر التالي:
+# from apps.api.product_sync_engine import ProductSyncEngine
 
 # تعريف البلوبرنت الخاص بإدارة المنتجات
 admin_product_bp = Blueprint(
@@ -21,8 +23,7 @@ def manage_products():
     """عرض قائمة المنتجات مع نظام التصفح"""
     page = request.args.get('page', 1, type=int)
     per_page = 10
-    pagination = Product.query.options(lazyload(Product.supplier))\
-        .order_by(Product.created_at.desc())\
+    pagination = Product.query.order_by(Product.created_at.desc())\
         .paginate(page=page, per_page=per_page, error_out=False)
     
     return render_template(
@@ -34,7 +35,7 @@ def manage_products():
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
 def proxy_sync():
-    """الوكيل (Proxy) لجلب البيانات من قمرة باستخدام الكلاس الموحد"""
+    """الوكيل (Proxy) لجلب البيانات من قمرة عبر GraphQL"""
     query = """
     query { 
         findAllProducts(page: 1, limit: 100) { 
@@ -43,13 +44,12 @@ def proxy_sync():
     }
     """
     
-    # استخدام الخدمة الموحدة للاتصال بـ GraphQL
     data = QomrahGraphQLClient.execute_query(query)
     
     if data is None:
         return jsonify({
             "status": "error", 
-            "message": "فشل الاتصال بخدمة المزامنة. تحقق من الـ Logs."
+            "message": "فشل الاتصال بخدمة المزامنة."
         }), 500
         
     return jsonify({"status": "success", "data": data})
@@ -67,7 +67,6 @@ def save_sync():
 
         count = 0
         for item in products_data:
-            # التأكد من هوية المنتج الفريدة
             qid = str(item.get('_id'))
             product = Product.query.filter_by(qid=qid).first()
             
@@ -82,7 +81,6 @@ def save_sync():
                 new_product = Product(
                     qid=qid,
                     title=item.get('title', 'منتج غير معرف'),
-                    supplier_id=1, # تأكد من أن هذا الـ ID موجود فعلياً في جدول الموردين
                     sku=item.get('sku', 'N/A'),
                     cost_price=price
                 )
@@ -92,11 +90,12 @@ def save_sync():
                 # تحديث بيانات المنتج الموجود
                 product.title = item.get('title', product.title)
                 product.cost_price = price
+                product.sku = item.get('sku', product.sku)
         
         db.session.commit()
         return jsonify({
             "status": "success", 
-            "message": f"تمت معالجة {len(products_data)} منتج، وتم إضافة {count} منتج جديد."
+            "message": f"تمت المعالجة. إضافة {count} منتج جديد وتحديث الباقي."
         })
         
     except Exception as e:
