@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> رجوع</button>
-        <button type="button" id="sync-btn" class="btn btn-primary" onclick="startSync()">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#syncModal">
             <i class="fas fa-sync-alt"></i> مزامنة المنتجات
         </button>
     </div>
@@ -50,58 +50,6 @@
     </nav>
 </div>
 
-<script>
-    async function startSync() {
-        const btn = document.getElementById('sync-btn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاتصال...';
+{% include 'admin/includes/_sync_modal.html' %}
 
-        try {
-            // 1. الجلب
-            const response = await fetch("{{ url_for('admin_product_bp.proxy_sync') }}", {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': "{{ csrf_token() }}" 
-                }
-            });
-
-            if (!response.ok) throw new Error("فشل الاتصال بخدمة المزامنة");
-
-            const result = await response.json();
-            
-            // تم تحديث المسار بناءً على الـ API الجديد الذي يرجع data مباشرة
-            const products = result.data;
-
-            if (!products || products.length === 0) throw new Error("لا توجد منتجات لجلبها من المصدر.");
-
-            // 2. الحفظ
-            btn.innerHTML = '<i class="fas fa-save fa-spin"></i> جاري التحديث...';
-            
-            const saveResponse = await fetch("{{ url_for('admin_product_bp.save_sync') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': "{{ csrf_token() }}"
-                },
-                body: JSON.stringify({ products: products })
-            });
-
-            const saveResult = await saveResponse.json();
-            
-            if (saveResponse.ok && saveResult.status === 'success') {
-                alert(saveResult.message);
-                location.reload();
-            } else {
-                throw new Error(saveResult.message || "فشل عملية الحفظ.");
-            }
-        } catch (err) {
-            console.error("Sync Error:", err);
-            alert('خطأ أثناء المزامنة: ' + err.message);
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> مزامنة المنتجات';
-        }
-    }
-</script>
 {% endblock %}
