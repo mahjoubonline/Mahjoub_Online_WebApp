@@ -1,19 +1,18 @@
-# 📂 apps/admin_suppliers_add/registry.py
-from .routes import admin_suppliers_add_bp
+# 📂 apps/admin_suppliers_list/registry.py
+from .routes import suppliers_bp
 
-# الإعدادات للظهور في القائمة الجانبية
-MODULE_NAME = "الموردين"
-MODULE_ICON = "fas fa-user-plus"
+MODULE_NAME = "إدارة الموردين"
+MODULE_ICON = "fas fa-users"
 
-# الربط البرمجي: Key يربط اسم الـ Blueprint باسم الدالة المحددة في routes.py
+# هنا السر: نضع روابط الموديولين معاً في مكان واحد
 LINKS = {
-    "admin_suppliers_add_bp.add_supplier_or_staff": "إضافة مورد جديد"
+    "suppliers_bp.list_suppliers": "قائمة الشركاء",
+    "admin_suppliers_add_bp.add_supplier_or_staff": "تعميد شريك جديد"
 }
 
 def register_module(app):
     try:
-        # تسجيل الـ Blueprint بمسار مخصص لضمان تفرده
-        app.register_blueprint(admin_suppliers_add_bp, url_prefix='/admin/suppliers_add')
-        print("✅ [Registry]: تم تسجيل موديول 'admin_suppliers_add' بنجاح.")
+        app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
+        print("✅ [Registry]: تم تسجيل موديول الموردين.")
     except Exception as e:
-        print(f"❌ [Registry Error]: فشل تسجيل موديول التعميد: {e}")
+        print(f"❌ [Registry Error]: {e}")
