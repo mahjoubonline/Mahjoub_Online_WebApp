@@ -9,7 +9,7 @@ from apps.extensions import db, csrf
 from apps.services.graphql_client import QomrahGraphQLClient
 import logging
 
-# تم تعديل الاسم إلى admin_product_bp ليتوافق مع المعايير
+# تعريف البلوبرنت باسم متوافق مع النظام
 admin_product_bp = Blueprint(
     'admin_product_bp', 
     __name__, 
@@ -23,6 +23,7 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
+    # استخدام lazyload لتحسين الأداء عند جلب بيانات المورد المرتبط
     pagination = Product.query.options(lazyload(Product.supplier))\
         .order_by(Product.created_at.desc())\
         .paginate(
@@ -40,14 +41,15 @@ def manage_products():
 @admin_product_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_product():
-    """إعادة توجيه آمنة باستخدام اسم البلوبرينت المحدث"""
-    return redirect(url_for('admin_product_bp.manage_products'))
+    """صفحة إضافة منتج جديد"""
+    # في حال كان هناك نموذج POST للإضافة، ستقوم بإضافته هنا لاحقاً
+    return render_template('admin/admin_add_product.html')
 
 @admin_product_bp.route('/sync', methods=['POST'])
 @login_required
 @csrf.exempt 
 def sync_products():
-    """مسار المزامنة الفعلي مع قمرة"""
+    """مسار المزامنة الفعلي مع منصة قمرة"""
     try:
         logging.info("بدء عملية المزامنة...")
         
@@ -63,7 +65,7 @@ def sync_products():
                 new_product = Product(
                     qid=str(item.get('_id')),
                     title=item.get('title', 'منتج غير معرف'),
-                    supplier_id=1,
+                    supplier_id=1, # سيتم تطوير هذا لاحقاً ليكون ديناميكياً
                     sku=item.get('sku', 'N/A')
                 )
                 new_product.cost_price = item.get('price', 0) 
