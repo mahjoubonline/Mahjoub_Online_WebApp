@@ -14,15 +14,22 @@ admin_suppliers_add_bp = Blueprint('admin_suppliers_add_bp', __name__, template_
 @admin_suppliers_add_bp.route('/check_availability', methods=['POST'])
 @login_required
 def check_availability():
+    """التحقق من توفر البيانات عبر Ajax"""
     data = request.get_json()
+    if not data: return jsonify({'available': False})
+    
     field = data.get('field')
     value = data.get('value')
     if not value: return jsonify({'available': False})
     
     exists = False
-    if field == 'username': exists = Supplier.query.filter_by(username=value).first()
-    elif field == 'phone': exists = Supplier.query.filter_by(search_phone=str(value)[-9:]).first()
-    elif field == 'trade_name': exists = Supplier.query.filter_by(trade_name=value).first()
+    if field == 'username': 
+        exists = Supplier.query.filter_by(username=value).first()
+    elif field == 'phone': 
+        exists = Supplier.query.filter_by(search_phone=str(value)[-9:]).first()
+    elif field == 'trade_name': 
+        exists = Supplier.query.filter_by(trade_name=value).first()
+        
     return jsonify({'available': not exists})
 
 @admin_suppliers_add_bp.route('/add', methods=['GET', 'POST'])
@@ -36,6 +43,7 @@ def add_supplier_or_staff():
             phone = request.form.get('phone', '').strip()
             phone_9 = phone[-9:]
             
+            # التحقق من وجود المورد مسبقاً
             existing = Supplier.query.filter((Supplier.username == username) | (Supplier.search_phone == phone_9)).first()
             if existing:
                 flash("اسم المستخدم أو رقم الهاتف مستخدم مسبقاً", "danger")
@@ -54,7 +62,7 @@ def add_supplier_or_staff():
             )
             new_supplier.set_password(temp_password)
             db.session.add(new_supplier)
-            db.session.flush() 
+            db.session.flush() # الحصول على ID المورد
 
             # 2. إنشاء المحفظة
             new_wallet = SupplierWallet(
@@ -64,8 +72,8 @@ def add_supplier_or_staff():
             db.session.add(new_wallet)
             db.session.commit()
             
+            # تخزين البيانات في الجلسة لعرضها في النافذة المنبثقة
             session['new_user_data'] = {
-                'trade_name': trade_name,
                 'username': username,
                 'password': temp_password,
                 'wallet_code': new_wallet.wallet_code
@@ -79,5 +87,6 @@ def add_supplier_or_staff():
             flash("حدث خطأ تقني، يرجى المحاولة لاحقاً", "danger")
             return redirect(url_for('admin_suppliers_add_bp.add_supplier_or_staff'))
 
+    # استرجاع البيانات بعد إعادة التوجيه وعرض القالب
     new_user = session.pop('new_user_data', None)
     return render_template('admin_suppliers_add/admin_suppliers_add.html', new_user=new_user)
