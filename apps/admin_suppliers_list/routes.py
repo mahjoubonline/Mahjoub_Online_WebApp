@@ -7,16 +7,17 @@ from apps.extensions import db
 from apps.models.supplier_db import Supplier
 from apps.models.wallet_db import SupplierWallet
 
-# إنشاء الـ Blueprint
-suppliers_bp = Blueprint('suppliers_bp', __name__, template_folder='templates')
+# 1. إنشاء الـ Blueprint بالاسم الموحد
+suppliers_bp = Blueprint(
+    'suppliers_bp', 
+    __name__, 
+    template_folder='templates'
+)
 
-@suppliers_bp.route('/list')
+@suppliers_bp.route('/list', methods=['GET'])
 @login_required
 def list_suppliers():
-    """
-    عرض قائمة الموردين مع دمج بياناتهم المالية.
-    تم استخدام نظام الجلب المباشر لضمان دقة ظهور الأرصدة.
-    """
+    """عرض قائمة الموردين مع دمج بياناتهم المالية."""
     try:
         # جلب الموردين
         suppliers = Supplier.query.all()
@@ -37,16 +38,16 @@ def list_suppliers():
             suppliers_data=suppliers_data
         )
     except Exception as e:
-        flash(f"خطأ في عرض الخزينة: {str(e)}", "error")
-        # تم التصحيح: توجيه صحيح للـ Blueprint الجديد
+        flash(f"خطأ في عرض قائمة الموردين: {str(e)}", "danger")
+        # التوجيه للوحة التحكم عند الفشل
         return redirect(url_for('admin_dashboard_bp.dashboard'))
 
-@suppliers_bp.route('/settle/<int:supplier_id>/<string:currency>')
+@suppliers_bp.route('/settle/<int:supplier_id>/<string:currency>', methods=['POST', 'GET'])
 @login_required
 def settle_supplier_funds(supplier_id, currency):
     wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first()
     if not wallet:
-        flash("خطأ: المحفظة غير موجودة.", "error")
+        flash("خطأ: المحفظة غير موجودة.", "danger")
         return redirect(url_for('suppliers_bp.list_suppliers'))
 
     # التصفية السيادية
@@ -55,5 +56,5 @@ def settle_supplier_funds(supplier_id, currency):
     elif currency == 'SAR': wallet.balance_sar = 0
     
     db.session.commit()
-    flash(f"✅ تمت التصفية لعملة {currency}", "success")
+    flash(f"✅ تمت التصفية لعملة {currency} بنجاح", "success")
     return redirect(url_for('suppliers_bp.list_suppliers'))
