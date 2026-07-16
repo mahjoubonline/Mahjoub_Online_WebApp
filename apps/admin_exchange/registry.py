@@ -1,14 +1,19 @@
+# coding: utf-8
 # 📂 apps/admin_exchange/registry.py
+
 from apps.admin_exchange.routes import admin_exchange_bp
 
 MODULE_NAME = "أسعار الصرف"
 MODULE_ICON = "fas fa-exchange-alt"
 
-# إضافة الروابط لجعلها تظهر في القائمة الجانبية بشكل صحيح
+# تم تصحيح اسم المسار هنا ليتطابق مع الدالة 'manage_rates' في ملف routes.py
 LINKS = {
-    "admin_exchange_bp.index": "إدارة أسعار الصرف"
+    "admin_exchange_bp.manage_rates": "إدارة أسعار الصرف"
 }
 
 def register_module(app):
-    app.register_blueprint(admin_exchange_bp, url_prefix='/admin/exchange')
-    print("✅ [Registry]: تم تسجيل موديول 'admin_exchange' بنجاح.")
+    try:
+        app.register_blueprint(admin_exchange_bp, url_prefix='/admin/exchange')
+        print("✅ [Registry]: تم تسجيل موديول 'admin_exchange' بنجاح.")
+    except Exception as e:
+        print(f"❌ [Registry Error]: فشل تسجيل موديول الصرف: {e}")
