@@ -32,12 +32,12 @@
         </div>
         
         <div class="d-flex gap-2">
-            <a href="{{ url_for('orders.add_new_order') if can_add_order else '#' }}" 
+            <a href="{{ safe_url_for('orders.add_new_order') if can_add_order else '#' }}" 
                class="btn btn-primary shadow-sm" style="background-color: var(--royal-purple); border-color: var(--royal-purple);">
                 <i class="fas fa-plus me-2"></i>طلب جديد
             </a>
             
-            <form action="{{ url_for('orders.sync_all') if can_sync else '#' }}" method="POST" class="m-0">
+            <form action="{{ safe_url_for('orders.sync_all') if can_sync else '#' }}" method="POST" class="m-0">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-royal-back shadow-sm">
                     <i class="fas fa-sync-alt me-2"></i>مزامنة يدوي
