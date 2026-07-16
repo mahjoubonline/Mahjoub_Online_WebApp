@@ -2,7 +2,7 @@
 # 📂 apps/api/sync_engine.py
 
 import logging
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from apps.extensions import db
 from apps.models.orders_db import Order
 from apps.models.financials_db import OrderFinancial
@@ -15,27 +15,30 @@ class SyncEngine:
 
     @staticmethod
     def process_incoming_orders(orders_data):
-        """
-        معالجة جماعية للطلبات: commit واحد فقط في النهاية لزيادة الأداء.
-        """
+        """معالجة جماعية للطلبات لزيادة الأداء."""
         if not orders_data:
             logger.warning("⚠️ لم يتم استلام أي بيانات للمزامنة.")
             return 0
             
         total_synced = 0
         for order_data in orders_data:
-            # نمرر commit=False لكي لا يحفظ السيرفر بعد كل طلب
+            # commit=False لتجميع الحفظ في عملية واحدة
             if SyncEngine.process_financials(order_data, commit=False):
                 total_synced += 1
         
-        # حفظ كل شيء دفعة واحدة في نهاية العملية
-        db.session.commit()
-        logger.info(f"✅ تمت المعالجة بنجاح. إجمالي الطلبات المحدثة: {total_synced}")
+        try:
+            db.session.commit()
+            logger.info(f"✅ تمت المعالجة بنجاح. إجمالي الطلبات المحدثة: {total_synced}")
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"❌ فشل الحفظ الجماعي: {e}")
+            return 0
+            
         return total_synced
 
     @staticmethod
     def process_financials(order_data, commit=True):
-        """معالجة مالية وهيكلية للطلب"""
+        """معالجة مالية وهيكلية للطلب مع دقة محاسبية عالية."""
         order_id = str(order_data.get('_id'))
         
         # 1. تحديد المورد
@@ -49,11 +52,11 @@ class SyncEngine:
                 logger.error(f"❌ تعذر تحديد المورد للطلب {order_id}")
                 return False
 
-        # 2. معالجة السعر
+        # 2. معالجة السعر بدقة
         try:
             total_price = Decimal(str(order_data.get('totalPrice', 0)))
         except (InvalidOperation, ValueError, TypeError):
-            total_price = Decimal('0')
+            total_price = Decimal('0.00')
             
         try:
             # 3. تحديث أو إنشاء الطلب
@@ -71,9 +74,9 @@ class SyncEngine:
             else:
                 order.total_price = float(total_price)
             
-            db.session.flush() # لتوليد الـ ID إذا لزم الأمر
+            db.session.flush()
 
-            # 4. تحديث عناصر الطلب (مسح القديم وإضافة الجديد)
+            # 4. تحديث عناصر الطلب
             OrderItem.query.filter_by(order_id=order_id).delete()
             for item in order_data.get('items', []):
                 new_item = OrderItem(
@@ -85,14 +88,18 @@ class SyncEngine:
                 )
                 db.session.add(new_item)
 
-            # 5. التحديث المالي
+            # 5. التحديث المالي بدقة (20% للمحجوب - 80% للمورد)
             financial_record = OrderFinancial.query.filter_by(order_id=order_id).first()
             if not financial_record:
                 financial_record = OrderFinancial(order_id=order_id, supplier_id=supplier_id)
             
+            # حساب العمولات مع التقريب الصحيح
+            mahjoub_comm = (total_price * Decimal('0.20')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            supplier_cost = total_price - mahjoub_comm
+            
             financial_record.total_paid = float(total_price)
-            financial_record.mahjoub_commission = float(total_price * Decimal('0.20'))
-            financial_record.supplier_cost = float(total_price * Decimal('0.80'))
+            financial_record.mahjoub_commission = float(mahjoub_comm)
+            financial_record.supplier_cost = float(supplier_cost)
             
             db.session.add(financial_record)
 
