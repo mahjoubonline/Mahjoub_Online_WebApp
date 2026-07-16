@@ -3,17 +3,14 @@
 
 import os
 import importlib
-import logging
 from flask import Flask, redirect, session, url_for, request
 from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS 
-from flask_login import current_user
 from werkzeug.routing import BuildError
 import config
-
 from apps.extensions import db, login_manager, migrate
 
 # تهيئة الأدوات
@@ -39,21 +36,26 @@ def create_app():
 
     db.init_app(app)
     
-    # --- التعديل المطلوب: بناء الجداول تلقائياً ---
+    # بناء الجداول التلقائي وزراعة المالك
     with app.app_context():
-        # استيراد الموديلات الأساسية ليتعرف عليها SQLAlchemy
         from apps.models.admin_db import AdminUser
         from apps.models.supplier_db import Supplier
         from apps.models.supplier_staff_db import SupplierStaff
         from apps.models.product_db import Product
-        # استيراد موديل المحفظة الذي يسبب خطأ UndefinedTable
         try:
             from apps.models.wallet_db import SupplierWallet 
         except ImportError:
             pass
         
         db.create_all()
-    # ---------------------------------------------
+
+        # زراعة المالك "علي محجوب"
+        if not AdminUser.query.filter_by(username='ali_mahjoub').first():
+            new_admin = AdminUser(username='ali_mahjoub', role='Owner')
+            new_admin.set_password('123')
+            db.session.add(new_admin)
+            db.session.commit()
+            print("✅ [Seed]: تم زرع المالك علي محجوب بنجاح.")
 
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -125,20 +127,11 @@ def create_app():
     @app.context_processor
     def inject_vars():
         def safe_url_for(endpoint, **values):
-            try:
-                return url_for(endpoint, **values)
+            try: return url_for(endpoint, **values)
             except BuildError:
                 alt_endpoint = f"{endpoint}_bp" if not endpoint.endswith('_bp') else endpoint.replace('_bp', '')
-                try:
-                    return url_for(alt_endpoint, **values)
-                except BuildError:
-                    return '#'
-        
-        return dict(
-            csrf_token=generate_csrf,
-            registered_modules=ADMIN_MODULES,
-            supplier_modules=SUPPLIER_MODULES,
-            safe_url_for=safe_url_for 
-        )
+                try: return url_for(alt_endpoint, **values)
+                except BuildError: return '#'
+        return dict(csrf_token=generate_csrf, registered_modules=ADMIN_MODULES, supplier_modules=SUPPLIER_MODULES, safe_url_for=safe_url_for)
 
     return app
