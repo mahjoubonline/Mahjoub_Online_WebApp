@@ -48,8 +48,8 @@
         statusText.innerText = "جاري الاتصال بقمرة...";
         statusText.className = "mt-2 small text-primary fw-bold";
 
-        // إرسال الطلب
-        fetch("{{ url_for('admin_product.sync_products') }}", {
+        // تصحيح الرابط ليتناسب مع اسم البلوبرنت الجديد: admin_product_bp
+        fetch("{{ url_for('admin_product_bp.sync_products') }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
