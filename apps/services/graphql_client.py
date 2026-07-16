@@ -2,6 +2,10 @@
 import requests
 import os
 import logging
+import urllib3
+
+# إخفاء تحذير انتهاء صلاحية الشهادة لعدم إغراق السجلات (Logs)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class QomrahGraphQLClient:
     """كلاس موحد للاتصال بـ قمرة عبر GraphQL"""
@@ -38,10 +42,12 @@ class QomrahGraphQLClient:
           }
         }
         """
+        # إضافة verify=False لتجاوز مشكلة الشهادة المنتهية
         response = requests.post(
             QomrahGraphQLClient.BASE_URL, 
             json={'query': query}, 
-            headers=QomrahGraphQLClient._get_headers(headers)
+            headers=QomrahGraphQLClient._get_headers(headers),
+            verify=False 
         )
         if response.status_code == 200:
             return response.json().get('data', {}).get('findAllOrders', [])
@@ -62,10 +68,12 @@ class QomrahGraphQLClient:
           }
         }
         """
+        # إضافة verify=False لتجاوز مشكلة الشهادة المنتهية
         response = requests.post(
             QomrahGraphQLClient.BASE_URL, 
             json={'query': query}, 
-            headers=QomrahGraphQLClient._get_headers()
+            headers=QomrahGraphQLClient._get_headers(),
+            verify=False
         )
         if response.status_code == 200:
             return response.json().get('data', {}).get('findAllProducts', [])
