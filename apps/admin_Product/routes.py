@@ -2,7 +2,7 @@
 # 📂 apps/admin_Product/routes.py
 
 import os
-import requests  # استيراد مكتبة الـ requests
+import requests
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from flask_login import login_required
 from sqlalchemy.orm import lazyload
@@ -11,7 +11,6 @@ from apps.models.product_db import Product
 from apps.extensions import db, csrf
 import logging
 
-# تعريف البلوبرنت
 admin_product_bp = Blueprint(
     'admin_product_bp', 
     __name__, 
@@ -33,22 +32,19 @@ def manage_products():
         pagination=pagination
     )
 
-# --- المسار الجديد (الوكيل) لحل مشكلة CORS ---
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
 def proxy_sync():
-    """مسار وكيل لجلب البيانات من قمرة لتجاوز مشاكل CORS"""
+    """الوكيل (Proxy) لجلب البيانات من قمرة"""
     query = "query { findAllProducts(page: 1, limit: 100) { items { _id title price sku } } }"
     headers = {
         "Authorization": f"Bearer {os.environ.get('QUMRA_API_KEY')}",
         "Content-Type": "application/json"
     }
     try:
-        # السيرفر يتصل بـ قمرة بدلاً من المتصفح
         response = requests.post("https://api.qomrah.com/graphql", json={'query': query}, headers=headers, timeout=30)
         return jsonify(response.json())
     except Exception as e:
-        logging.error(f"خطأ في البروكسي: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
