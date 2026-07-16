@@ -6,10 +6,10 @@ MODULE_NAME = "إدارة المنتجات"
 MODULE_ICON = "fas fa-box-open"
 SHOW_IN_SUPPLIER = False 
 
-# المفتاح (Key) هو الـ endpoint، والقيمة هي الاسم الظاهر
+# التعديل: تم تحديث المفاتيح لتطابق اسم الـ Blueprint الجديد (admin_product_bp)
 LINKS = {
-    "admin_product.manage_products": "قائمة المنتجات",
-    "admin_product.add_product": "إضافة منتج"
+    "admin_product_bp.manage_products": "قائمة المنتجات",
+    "admin_product_bp.add_product": "إضافة منتج"
 }
 
 def register_module(app):
