@@ -48,5 +48,30 @@
         statusText.innerText = "جاري الاتصال بقمرة...";
         statusText.className = "mt-2 small text-primary fw-bold";
 
-        // إرسال الطلب مع الـ CSRF Token المعتمد في Flask-WTF
-        fetch("{{ url_for('admin_product.sync_products
+        // إرسال الطلب
+        fetch("{{ url_for('admin_product.sync_products') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                progressBar.style.width = '100%';
+                statusText.innerText = "تمت المزامنة بنجاح!";
+                statusText.className = "mt-2 small text-success fw-bold";
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                throw new Error(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            statusText.innerText = "خطأ: " + error.message;
+            statusText.className = "mt-2 small text-danger fw-bold";
+            btn.disabled = false;
+        });
+    }
+</script>
