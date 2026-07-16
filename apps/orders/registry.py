@@ -2,17 +2,15 @@
 from apps.orders.routes import orders_bp
 
 MODULE_NAME = "الطلبات"
-MODULE_ICON = "fa-shopping-cart"
+MODULE_ICON = "fas fa-shopping-cart" # أضفت 'fas' لضمان عمل الأيقونة
 
-# التصحيح: يجب أن يتطابق الـ endpoint تماماً مع اسم البلوبرينت المسجل في routes.py
-# وبما أنك سجلت البلوبرينت باسم 'orders' في routes.py، يجب أن يكون الـ endpoint هو 'orders.dashboard'
+# التصحيح: الـ Key هو المسار البرمجي، والـ Value هو النص الظاهر للمستخدم
 LINKS = {
-    "قائمة الطلبات": "orders.dashboard"
+    "orders_bp.dashboard": "قائمة الطلبات" 
 }
 
 def register_module(app):
     try:
-        # تأكد أن الـ url_prefix متوافق مع ما يتوقعه التطبيق
         app.register_blueprint(orders_bp, url_prefix='/orders')
         print("✅ [Registry]: تم تسجيل موديول 'Orders' بنجاح تحت المسار /orders.")
     except Exception as e:
