@@ -1,8 +1,7 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - نسخة نهائية مع تصحيح الترويسات الأمنية
+# 📂 apps/api/sync_engine.py - نسخة نهائية مع تصحيح الترويسات الأمنية ومنطق معالجة الأخطاء
 
 import logging
-import requests
 from decimal import Decimal, InvalidOperation
 from apps.extensions import db
 from apps.models.orders_db import Order
@@ -10,7 +9,6 @@ from apps.models.sync_log import SyncLog
 from apps.models.financials_db import OrderFinancial
 from apps.models.order_items_db import OrderItem
 from apps.models.supplier_db import Supplier
-# افترضنا وجود كلاس العميل الذي سيتم تعديله ليتضمن الترويسات
 from apps.services.graphql_client import QomrahGraphQLClient
 
 logger = logging.getLogger(__name__)
@@ -19,21 +17,26 @@ class SyncEngine:
     
     @staticmethod
     def run_manual_sync():
-        """تشغيل المزامنة مع إضافة الترويسات الأمنية لتجنب خطأ CSRF"""
+        """تشغيل المزامنة مع إضافة الترويسات الأمنية ومعالجة قوية لأخطاء الشبكة"""
         logger.info("بدء المزامنة اليدوية للطلبات...")
         
-        # الترويسات الأمنية المطلوبة لتجاوز حماية الـ CSRF في GraphQL
+        # الترويسات الأمنية المطلوبة
         headers = {
             'Content-Type': 'application/json',
             'x-apollo-operation-name': 'SyncOperation',
             'apollo-require-preflight': 'true'
         }
         
-        # جلب البيانات باستخدام الترويسات
-        orders = QomrahGraphQLClient.fetch_orders(headers=headers)
+        # محاولة جلب البيانات مع معالجة استباقية لأي فشل في الاتصال
+        try:
+            orders = QomrahGraphQLClient.fetch_orders(headers=headers)
+        except Exception as e:
+            logger.critical(f"❌ فشل كارثي في الاتصال بـ قمرة: {e}")
+            return False
         
+        # التحقق من وجود بيانات
         if not orders:
-            logger.info("لم يتم جلب أي طلبات.")
+            logger.warning("⚠️ لم يتم جلب أي بيانات. قد يكون السيرفر محظوراً أو لا توجد طلبات جديدة.")
             return False
             
         total_synced = 0
@@ -41,7 +44,7 @@ class SyncEngine:
             if SyncEngine.process_financials(order_data):
                 total_synced += 1
                 
-        logger.info(f"انتهت المزامنة بنجاح. إجمالي الطلبات المحدثة: {total_synced}")
+        logger.info(f"✅ انتهت المزامنة بنجاح. إجمالي الطلبات المحدثة: {total_synced}")
         return True
 
     @staticmethod
@@ -97,7 +100,6 @@ class SyncEngine:
             if not financial_record:
                 financial_record = OrderFinancial(order_id=order_id, supplier_id=supplier_id)
             
-            # القيم المحدثة ستشفر تلقائياً عبر الموديل
             financial_record.total_paid = float(total_price)
             financial_record.mahjoub_commission = float(total_price * Decimal('0.20'))
             financial_record.supplier_cost = float(total_price * Decimal('0.80'))
