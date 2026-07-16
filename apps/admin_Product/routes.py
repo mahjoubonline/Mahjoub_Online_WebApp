@@ -30,17 +30,17 @@ def manage_products():
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
 def proxy_sync():
-    """الوكيل لجلب القوائم (Menus) وتصحيح المسارات بناءً على الـ API"""
+    """الوكيل لجلب المنتجات باستخدام الحقول الصحيحة والمتداخلة"""
     
-    # الاستعلام المحدث بناءً على اسم العملية في Apollo
+    # الاستعلام المحدث بناءً على Schema الـ API
     query = """
     query { 
-        findAllMenus { 
+        findAllProducts(input: {}) { 
             data { 
-                _id 
+                qid 
                 title 
-                price 
-                sku 
+                pricing { price } 
+                identification { sku } 
             } 
         } 
     }
@@ -48,23 +48,20 @@ def proxy_sync():
     
     data = QomrahGraphQLClient.execute_query(query)
     
-    if data is None or 'findAllMenus' not in data:
+    if data is None or 'findAllProducts' not in data:
         return jsonify({
             "status": "error", 
-            "message": "فشل جلب البيانات. تأكد من هيكل الاستعلام."
+            "message": "فشل جلب البيانات من المصدر."
         }), 500
         
-    # هنا نقوم بإعادة البيانات الموجودة داخل 'data' التابعة لـ 'findAllMenus'
-    # وهذا يتطابق مع ما سنعالجه في save_sync
-    return jsonify({"status": "success", "data": data['findAllMenus']['data']})
+    return jsonify({"status": "success", "data": data['findAllProducts']['data']})
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync():
-    """حفظ البيانات المجلوبة"""
+    """حفظ البيانات المجلوبة مع مراعاة الحقول المتداخلة"""
     try:
         data = request.json
-        # يجب أن تأتي البيانات من الطلب القادم من الفرونت-إند (الذي استلم الـ data)
         products_data = data.get('products', [])
         
         if not products_data:
@@ -72,11 +69,15 @@ def save_sync():
 
         count = 0
         for item in products_data:
-            qid = str(item.get('_id'))
+            qid = str(item.get('qid')) # تم تغيير _id إلى qid
             product = Product.query.filter_by(qid=qid).first()
             
+            # استخراج القيم من الحقول المتداخلة
+            pricing = item.get('pricing', {}) or {}
+            identification = item.get('identification', {}) or {}
+            
             try:
-                price = float(item.get('price', 0))
+                price = float(pricing.get('price', 0))
             except (ValueError, TypeError):
                 price = 0.0
 
@@ -84,7 +85,7 @@ def save_sync():
                 new_product = Product(
                     qid=qid,
                     title=item.get('title', 'منتج غير معرف'),
-                    sku=item.get('sku', 'N/A'),
+                    sku=identification.get('sku', 'N/A'),
                     cost_price=price
                 )
                 db.session.add(new_product)
@@ -92,14 +93,14 @@ def save_sync():
             else:
                 product.title = item.get('title', product.title)
                 product.cost_price = price
-                product.sku = item.get('sku', product.sku)
+                product.sku = identification.get('sku', product.sku)
         
         db.session.commit()
         return jsonify({
             "status": "success", 
-            "message": f"تمت المزامنة: إضافة {count} وتحديث الباقي."
+            "message": f"تمت المزامنة بنجاح: تمت معالجة {len(products_data)} منتج."
         })
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"status": "error", "message": f"خطأ: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": f"خطأ في الحفظ: {str(e)}"}), 500
