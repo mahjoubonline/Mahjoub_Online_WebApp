@@ -8,52 +8,45 @@
         btn.disabled = true;
         progressArea.classList.remove('d-none');
         
-        // الخطوة 1: الجلب من قمرة مباشرة
         progressBar.style.width = '30%';
-        statusText.innerText = "جاري الجلب من قمرة...";
+        statusText.innerText = "جاري الجلب عبر السيرفر...";
         
         try {
-            const response = await fetch("https://api.qomrah.com/graphql", {
+            // التعديل الجوهري: الاتصال بسيرفرك وليس بقمرة مباشرة
+            const response = await fetch("/admin/products/proxy-sync", {
                 method: 'POST',
-                headers: {
+                headers: { 
                     'Content-Type': 'application/json',
-                    // تأكد أنك تمرر المفتاح بشكل آمن من السيرفر أو استخدم متغير ثابت إذا كان متاحاً
-                    'Authorization': 'Bearer {{ config.QUMRA_API_KEY }}' 
-                },
-                body: JSON.stringify({
-                    query: "query { findAllProducts(page: 1, limit: 100) { items { _id title price sku } } }"
-                })
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content 
+                }
             });
 
             const result = await response.json();
             const products = result.data?.findAllProducts?.items;
             
-            if (!products) throw new Error("لم يتم العثور على منتجات في الاستجابة");
+            if (!products) throw new Error("لا توجد منتجات أو خطأ في الاتصال");
 
-            // الخطوة 2: إرسال البيانات للسيرفر ليحفظها
             progressBar.style.width = '60%';
             statusText.innerText = "جاري الحفظ في قاعدة البيانات...";
 
-            const saveResponse = await fetch("{{ url_for('admin_product_bp.save_sync') }}", {
+            const saveResponse = await fetch("/admin/products/save-sync", {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content
                 },
                 body: JSON.stringify({ products: products })
             });
 
             const saveResult = await saveResponse.json();
-
             if (saveResult.status === 'success') {
                 progressBar.style.width = '100%';
-                statusText.innerText = saveResult.message;
+                statusText.innerText = "تمت المزامنة بنجاح!";
                 statusText.className = "mt-2 small text-success fw-bold";
                 setTimeout(() => { location.reload(); }, 1500);
             } else {
                 throw new Error(saveResult.message);
             }
-
         } catch (error) {
             console.error("Sync Error:", error);
             statusText.innerText = "خطأ: " + error.message;
