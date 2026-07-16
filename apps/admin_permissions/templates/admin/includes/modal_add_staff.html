@@ -99,7 +99,8 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
 
         try {
-            const res = await fetch("{{ url_for('admin_permissions.assign_permissions') }}", { 
+            // تم تحديث المسار هنا ليتوافق مع الـ Blueprint: admin_permissions_bp
+            const res = await fetch("{{ url_for('admin_permissions_bp.assign_permissions') }}", { 
                 method: 'POST', 
                 body: new FormData(this),
                 headers: { "X-CSRFToken": document.querySelector('input[name="csrf_token"]').value }
@@ -111,7 +112,7 @@
                 modal.hide();
                 showSuccessModal(data.username, data.new_password, data.store_name, data.store_code);
                 this.reset();
-                choices.removeActiveItems(); // إعادة ضبط الاختيارات
+                choices.removeActiveItems(); 
             } else {
                 alert('خطأ: ' + data.message);
             }
