@@ -75,6 +75,11 @@ def create_app():
     app.register_blueprint(qomrah_bp)
     csrf.exempt(qomrah_bp)
     
+    # --- التعديل الجذري: استيراد واستثناء مسارات المزامنة ---
+    from apps.admin_Product.routes import admin_product_bp
+    csrf.exempt(admin_product_bp)
+    # -----------------------------------------------------
+    
     try:
         from apps.admin.graphql_routes import graphql_bp 
         app.register_blueprint(graphql_bp)
@@ -111,17 +116,14 @@ def create_app():
 
     @app.context_processor
     def inject_vars():
-        # دالة ذكية تصحح الروابط تلقائياً
         def safe_url_for(endpoint, **values):
             try:
                 return url_for(endpoint, **values)
             except BuildError:
-                # محاولة تصحيح ذكية: إذا فشل، جرب إضافة أو إزالة _bp
                 alt_endpoint = f"{endpoint}_bp" if not endpoint.endswith('_bp') else endpoint.replace('_bp', '')
                 try:
                     return url_for(alt_endpoint, **values)
                 except BuildError:
-                    print(f"⚠️ [Routing Alert]: لا يمكن بناء الرابط للـ Endpoint '{endpoint}' أو '{alt_endpoint}'")
                     return '#'
         
         return dict(
