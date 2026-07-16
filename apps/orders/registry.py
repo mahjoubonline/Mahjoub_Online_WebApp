@@ -2,11 +2,11 @@
 from apps.orders.routes import orders_bp
 
 MODULE_NAME = "الطلبات"
-MODULE_ICON = "fas fa-shopping-cart" # أضفت 'fas' لضمان عمل الأيقونة
+MODULE_ICON = "fas fa-shopping-cart"
 
-# التصحيح: الـ Key هو المسار البرمجي، والـ Value هو النص الظاهر للمستخدم
+# التصحيح: يجب أن يبدأ المفتاح باسم الـ Blueprint (orders) وليس باسم المتغير (orders_bp)
 LINKS = {
-    "orders_bp.dashboard": "قائمة الطلبات" 
+    "orders.dashboard": "قائمة الطلبات" 
 }
 
 def register_module(app):
