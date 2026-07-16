@@ -3,13 +3,11 @@
 
 import os
 import requests
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 from sqlalchemy.orm import lazyload
-from datetime import datetime
 from apps.models.product_db import Product
-from apps.extensions import db, csrf
-import logging
+from apps.extensions import db
 
 admin_product_bp = Blueprint(
     'admin_product_bp', 
@@ -35,17 +33,34 @@ def manage_products():
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
 def proxy_sync():
-    """الوكيل (Proxy) لجلب البيانات من قمرة"""
+    """الوكيل (Proxy) لجلب البيانات من قمرة بشكل آمن"""
+    api_key = os.environ.get('QUMRA_API_KEY')
+    
+    if not api_key:
+        return jsonify({"status": "error", "message": "API Key غير متاح في إعدادات السيرفر"}), 500
+
     query = "query { findAllProducts(page: 1, limit: 100) { items { _id title price sku } } }"
     headers = {
-        "Authorization": f"Bearer {os.environ.get('QUMRA_API_KEY')}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    
     try:
-        response = requests.post("https://api.qomrah.com/graphql", json={'query': query}, headers=headers, timeout=30)
+        response = requests.post(
+            "https://api.qomrah.com/graphql", 
+            json={'query': query}, 
+            headers=headers, 
+            timeout=45
+        )
+        
+        # التأكد من نجاح الاتصال بـ قمرة
+        if response.status_code != 200:
+            return jsonify({"status": "error", "message": f"خطأ من قمرة: {response.status_code}"}), response.status_code
+            
         return jsonify(response.json())
+        
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": f"فشل الاتصال: {str(e)}"}), 500
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
@@ -53,28 +68,39 @@ def save_sync():
     try:
         data = request.json
         products_data = data.get('products', [])
+        
         if not products_data:
-            return jsonify({"status": "error", "message": "لا توجد بيانات للمزامنة"})
+            return jsonify({"status": "error", "message": "لا توجد منتجات للمزامنة"})
 
         count = 0
         for item in products_data:
-            product = Product.query.filter_by(qid=str(item.get('_id'))).first()
+            # التأكد من تحويل القيم بشكل آمن
+            qid = str(item.get('_id'))
+            product = Product.query.filter_by(qid=qid).first()
+            
+            # محاولة تحويل السعر لـ float مع معالجة الأخطاء
+            try:
+                price = float(item.get('price', 0))
+            except (ValueError, TypeError):
+                price = 0.0
+
             if not product:
                 new_product = Product(
-                    qid=str(item.get('_id')),
+                    qid=qid,
                     title=item.get('title', 'منتج غير معرف'),
                     supplier_id=1,
                     sku=item.get('sku', 'N/A'),
-                    cost_price=float(item.get('price', 0))
+                    cost_price=price
                 )
                 db.session.add(new_product)
                 count += 1
             else:
                 product.title = item.get('title', product.title)
-                product.cost_price = float(item.get('price', product.cost_price))
+                product.cost_price = price
         
         db.session.commit()
-        return jsonify({"status": "success", "message": f"تم حفظ {count} منتج جديد."})
+        return jsonify({"status": "success", "message": f"تمت معالجة {len(products_data)} منتج، وتم حفظ {count} جديد."})
+        
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
