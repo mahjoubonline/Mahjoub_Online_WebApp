@@ -21,9 +21,9 @@ LOGIN_PATH = os.environ.get('ADMIN_LOGIN_PATH', '/m7jb_sovereign_hq_v2_99x')
 def login():
     """بوابة دخول موحدة للمالك وموظفي الإدارة."""
     
-    # 1. التحقق من وجود جلسة فعالة للمالك أو الموظف
+    # 1. التحقق من وجود جلسة فعالة - تصحيح المسار هنا
     if current_user.is_authenticated and session.get('user_type') in ['admin', 'staff']:
-        return redirect(url_for('admin_dashboard.dashboard'))
+        return redirect(url_for('admin_dashboard_bp.dashboard'))
 
     if request.method == 'POST':
         username = request.form.get('username')
@@ -38,35 +38,29 @@ def login():
             user = admin
             user_type = 'admin'
         else:
-            # 3. التحقق من موظف الإدارة (AdminStaff) إذا لم يكن مالكاً
+            # 3. التحقق من موظف الإدارة (AdminStaff)
             staff = AdminStaff.query.filter_by(username=username).first()
             if staff and staff.check_password(password):
                 user = staff
                 user_type = 'staff'
         
-        # 4. معالجة الدخول في حال تطابق البيانات
+        # 4. معالجة الدخول
         if user and user.is_active:
             login_user(user, remember=True)
             session['user_type'] = user_type
             
             flash(f'مرحباً بك يا {user.role}.', 'success')
             
-            # محاولة التحويل إلى لوحة التحكم
-            try:
-                return redirect(url_for('admin_dashboard.dashboard'))
-            except Exception as e:
-                current_app.logger.error(f"Error redirecting to dashboard: {e}")
-                flash('خطأ في تحديد مسار لوحة التحكم، يرجى التواصل مع الدعم التقني.', 'danger')
-                return redirect(url_for('auth_portal.login'))
+            # تصحيح المسار هنا إلى admin_dashboard_bp.dashboard
+            return redirect(url_for('admin_dashboard_bp.dashboard'))
         else:
-            # رسالة خطأ موحدة لأغراض أمنية
             flash('بيانات دخول غير صحيحة أو الحساب غير مفعل.', 'danger')
             
     return render_template('auth/login.html')
 
 @auth_portal.route('/logout')
 def logout():
-    """تسجيل الخروج مع مسح شامل للجلسة لمنع تداخل الصلاحيات."""
+    """تسجيل الخروج مع مسح شامل للجلسة."""
     logout_user()
     session.clear() 
     flash('تم تسجيل الخروج بنجاح.', 'info')
