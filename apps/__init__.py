@@ -11,6 +11,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS 
 from flask_login import current_user
+from werkzeug.routing import BuildError # استيراد ضروري للحماية
 import config
 
 from apps.extensions import db, login_manager, migrate
@@ -54,7 +55,6 @@ def create_app():
         elif user_type == 'staff': return db.session.get(SupplierStaff, int(user_id))
         return db.session.get(AdminUser, int(user_id)) or db.session.get(Supplier, int(user_id)) or db.session.get(SupplierStaff, int(user_id))
 
-    # معالجة محاولة الوصول غير المصرح
     @login_manager.unauthorized_handler
     def unauthorized():
         if request.path.startswith('/admin'):
@@ -114,16 +114,27 @@ def create_app():
         if current_user.is_authenticated:
             if session.get('user_type') in ['admin', 'staff']:
                 return redirect(url_for('admin_dashboard_bp.dashboard'))
-            return redirect(url_for('suppliers_dashboard.dashboard')) # تأكد من اسم الـ Blueprint للموردين
+            return redirect(url_for('suppliers_dashboard.dashboard'))
         return redirect('/supplier/login')
 
     @app.context_processor
     def inject_vars():
+        # دالة آمنة لبناء الروابط تمنع انهيار القالب في حال وجود Endpoint خطأ
+        def safe_url_for(endpoint):
+            try:
+                return url_for(endpoint)
+            except BuildError:
+                print(f"⚠️ [Routing Alert]: لا يمكن بناء الرابط للـ Endpoint '{endpoint}'")
+                return '#'
+            except Exception as e:
+                return '#'
+        
         return dict(
             csrf_token=generate_csrf,
             registered_modules=ADMIN_MODULES,
             supplier_modules=SUPPLIER_MODULES,
-            url_map=app.url_map
+            url_map=app.url_map,
+            safe_url_for=safe_url_for # إضافة الدالة للقوالب
         )
 
     return app
