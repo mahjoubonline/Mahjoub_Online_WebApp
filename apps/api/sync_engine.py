@@ -1,3 +1,4 @@
+# coding: utf-8
 # 📂 apps/api/product_sync_engine.py
 
 import logging
@@ -20,7 +21,7 @@ class ProductSyncEngine:
                 qid = str(item.get('_id'))
                 product = Product.query.filter_by(qid=qid).first()
                 
-                # تحديث أو إنشاء
+                # تحديث أو إنشاء المنتج
                 if not product:
                     product = Product(qid=qid)
                     db.session.add(product)
@@ -37,3 +38,10 @@ class ProductSyncEngine:
         
         db.session.commit()
         return synced_count
+
+    @staticmethod
+    def process_financials(data):
+        """دالة إضافية لمعالجة العمليات المالية (لضمان توافق الـ Webhook)"""
+        # إذا كانت نفس منطق معالجة المنتجات، يمكنك استدعاء الدالة السابقة
+        # أو إضافة المنطق الخاص بالعمليات المالية هنا
+        return True # استبدل هذه القيمة بالمنطق المطلوب
