@@ -1,60 +1,24 @@
-# coding: utf-8
-# 📂 apps/admin_suppliers_list/routes.py
+# 📂 apps/admin_suppliers_list/registry.py
 
-from flask import Blueprint, render_template, flash, redirect, url_for
-from flask_login import login_required
-from apps.extensions import db
-from apps.models.supplier_db import Supplier
-from apps.models.wallet_db import SupplierWallet
+# 1. استورد البلوبرينت الخاص بالقائمة من موقعه الصحيح
+from .routes import suppliers_bp
 
-# 1. إنشاء الـ Blueprint بالاسم الموحد
-suppliers_bp = Blueprint(
-    'suppliers_bp', 
-    __name__, 
-    template_folder='templates'
-)
+# 2. استورد البلوبرينت الخاص بالإضافة من موقعه الصحيح وليس من ملف القائمة
+from apps.admin_suppliers_add.routes import admin_suppliers_add_bp
 
-@suppliers_bp.route('/list', methods=['GET'])
-@login_required
-def list_suppliers():
-    """عرض قائمة الموردين مع دمج بياناتهم المالية."""
+MODULE_NAME = "إدارة الموردين"
+MODULE_ICON = "fas fa-users"
+
+LINKS = {
+    "suppliers_bp.list_suppliers": "قائمة الشركاء",
+    "admin_suppliers_add_bp.add_supplier_or_staff": "تعميد شريك جديد"
+}
+
+def register_module(app):
     try:
-        # جلب الموردين
-        suppliers = Supplier.query.all()
-        suppliers_data = []
-        
-        for s in suppliers:
-            # جلب المحفظة المرتبطة بالمورد مباشرة
-            wallet = SupplierWallet.query.filter_by(supplier_id=s.id).first()
-            suppliers_data.append({
-                'supplier': s,
-                'balance_usd': wallet.balance_usd if wallet else 0,
-                'balance_yer': wallet.balance_yer if wallet else 0,
-                'balance_sar': wallet.balance_sar if wallet else 0
-            })
-        
-        return render_template(
-            'admin_suppliers_list/admin_suppliers_list.html', 
-            suppliers_data=suppliers_data
-        )
+        # تسجيل كلاهما
+        app.register_blueprint(suppliers_bp, url_prefix='/admin/suppliers')
+        app.register_blueprint(admin_suppliers_add_bp, url_prefix='/admin/suppliers_add')
+        print("✅ [Registry]: تم تسجيل موديول الموردين (القائمة + الإضافة) بنجاح.")
     except Exception as e:
-        flash(f"خطأ في عرض قائمة الموردين: {str(e)}", "danger")
-        # التوجيه للوحة التحكم عند الفشل
-        return redirect(url_for('admin_dashboard_bp.dashboard'))
-
-@suppliers_bp.route('/settle/<int:supplier_id>/<string:currency>', methods=['POST', 'GET'])
-@login_required
-def settle_supplier_funds(supplier_id, currency):
-    wallet = SupplierWallet.query.filter_by(supplier_id=supplier_id).first()
-    if not wallet:
-        flash("خطأ: المحفظة غير موجودة.", "danger")
-        return redirect(url_for('suppliers_bp.list_suppliers'))
-
-    # التصفية السيادية
-    if currency == 'USD': wallet.balance_usd = 0
-    elif currency == 'YER': wallet.balance_yer = 0
-    elif currency == 'SAR': wallet.balance_sar = 0
-    
-    db.session.commit()
-    flash(f"✅ تمت التصفية لعملة {currency} بنجاح", "success")
-    return redirect(url_for('suppliers_bp.list_suppliers'))
+        print(f"❌ [Registry Error]: فشل التسجيل: {e}")
