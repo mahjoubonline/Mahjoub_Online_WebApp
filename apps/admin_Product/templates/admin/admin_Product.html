@@ -12,9 +12,9 @@
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <a href="{{ url_for('admin_dashboard.dashboard') }}" class="btn btn-outline-dark">
+        <button onclick="history.back()" class="btn btn-outline-dark">
             <i class="fas fa-arrow-right"></i> رجوع
-        </a>
+        </button>
         
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-primary" onclick="syncProducts()">
@@ -68,12 +68,11 @@
 
 <script>
     function syncProducts() {
-        // إرسال طلب المزامنة مع تضمين الـ CSRF Token
         fetch("{{ url_for('admin_product.sync_products') }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}' // هذا يمنع خطأ 400
+                'X-CSRFToken': '{{ csrf_token() }}'
             }
         })
         .then(response => response.json())
