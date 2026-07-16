@@ -68,12 +68,12 @@
 
     <div class="col-md-8 d-flex align-items-center justify-content-md-end">
         <div class="btn-group shadow-sm rounded-3 overflow-hidden" role="group" aria-label="Filters">
-            <a href="{{ url_for('admin_permissions.roles_list', type='admin') }}" 
+            <a href="{{ url_for('admin_permissions_bp.roles_list', type='admin') }}" 
                class="btn {{ 'btn-royal' if type_filter == 'admin' else 'btn-outline-royal' }} px-4 py-2.5 d-flex align-items-center">
                <i class="fas fa-user-shield me-2"></i> الإدارة المركزية
             </a>
             
-            <a href="{{ url_for('admin_permissions.roles_list', type='supplier') }}" 
+            <a href="{{ url_for('admin_permissions_bp.roles_list', type='supplier') }}" 
                class="btn {{ 'btn-royal' if type_filter == 'supplier' else 'btn-outline-royal' }} px-4 py-2.5 d-flex align-items-center">
                <i class="fas fa-store me-2"></i> موظفي الشركاء
             </a>
