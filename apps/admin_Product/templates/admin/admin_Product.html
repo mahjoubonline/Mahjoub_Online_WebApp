@@ -71,12 +71,12 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الجلب من قمرة...';
 
         try {
-            // 1. جلب البيانات من قمرة مباشرة من المتصفح (تجاوز حظر السيرفر)
+            // 1. جلب البيانات من قمرة مباشرة - استخدام المتغير الممرر من السيرفر QUMRA_API_KEY
             const response = await fetch("https://api.qomrah.com/graphql", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer {{ os.environ.get("QUMRA_API_KEY") }}' 
+                    'Authorization': 'Bearer {{ QUMRA_API_KEY }}' 
                 },
                 body: JSON.stringify({
                     query: "query { findAllProducts(page: 1, limit: 100) { items { _id title price sku } } }"
@@ -88,7 +88,7 @@
 
             if (!products) throw new Error("لم يتم العثور على منتجات في الاستجابة");
 
-            // 2. إرسال البيانات للسيرفر الخاص بنا ليتم حفظها في قاعدة البيانات
+            // 2. إرسال البيانات للسيرفر ليتم حفظها
             btn.innerHTML = '<i class="fas fa-save fa-spin"></i> جاري الحفظ في القاعدة...';
             
             const saveResponse = await fetch("{{ url_for('admin_product_bp.save_sync') }}", {
