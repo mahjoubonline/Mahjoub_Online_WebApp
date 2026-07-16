@@ -15,7 +15,6 @@ from werkzeug.routing import BuildError
 import config
 
 from apps.extensions import db, login_manager, migrate
-from apps.api.qomrah_webhook import qomrah_bp 
 
 # تهيئة الأدوات
 csrf = CSRFProtect()
@@ -72,14 +71,6 @@ def create_app():
         force_https=(os.environ.get('FLASK_ENV') == 'production')
     )
 
-    app.register_blueprint(qomrah_bp)
-    csrf.exempt(qomrah_bp)
-    
-    # --- التعديل الجذري: استيراد واستثناء مسارات المزامنة ---
-    from apps.admin_Product.routes import admin_product_bp
-    csrf.exempt(admin_product_bp)
-    # -----------------------------------------------------
-    
     try:
         from apps.admin.graphql_routes import graphql_bp 
         app.register_blueprint(graphql_bp)
@@ -87,7 +78,7 @@ def create_app():
     except ImportError:
         pass
 
-    # تسجيل الموديولات
+    # تسجيل الموديولات ديناميكياً
     apps_dir = app.root_path
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api', 'admin']
     if os.path.exists(apps_dir):
