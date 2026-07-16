@@ -53,7 +53,9 @@
             if (!response.ok) throw new Error("فشل الاتصال بالخادم المحلي");
 
             const result = await response.json();
-            const products = result.data?.findAllProducts?.items;
+            
+            // التعديل هنا: البيانات تأتي مباشرة في result.data بعد تعديلاتنا في routes.py
+            const products = result.data;
 
             if (!products || products.length === 0) throw new Error("لم يتم العثور على منتجات في المصدر");
 
@@ -88,9 +90,6 @@
             console.error("Sync Error:", err);
             statusText.innerText = "حدث خطأ: " + err.message;
             statusText.classList.add('text-danger');
-            alert('خطأ أثناء المزامنة: ' + err.message);
-            
-            // إظهار المعلومات مرة أخرى للسماح بإعادة المحاولة
             btn.disabled = false;
         }
     }
