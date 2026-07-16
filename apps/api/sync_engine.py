@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/api/sync_engine.py - نسخة محدثة لاستقبال البيانات من المتصفح
+# 📂 apps/api/sync_engine.py
 
 import logging
 from decimal import Decimal, InvalidOperation
@@ -12,12 +12,11 @@ from apps.models.supplier_db import Supplier
 logger = logging.getLogger(__name__)
 
 class SyncEngine:
-    
+
     @staticmethod
     def process_incoming_orders(orders_data):
         """
-        دالة جديدة لاستقبال البيانات القادمة من المتصفح ومعالجتها.
-        لم تعد هذه الدالة تتصل بـ QomrahGraphQLClient مباشرة.
+        معالجة جماعية للطلبات: commit واحد فقط في النهاية لزيادة الأداء.
         """
         if not orders_data:
             logger.warning("⚠️ لم يتم استلام أي بيانات للمزامنة.")
@@ -25,17 +24,21 @@ class SyncEngine:
             
         total_synced = 0
         for order_data in orders_data:
-            if SyncEngine.process_financials(order_data):
+            # نمرر commit=False لكي لا يحفظ السيرفر بعد كل طلب
+            if SyncEngine.process_financials(order_data, commit=False):
                 total_synced += 1
-                
+        
+        # حفظ كل شيء دفعة واحدة في نهاية العملية
+        db.session.commit()
         logger.info(f"✅ تمت المعالجة بنجاح. إجمالي الطلبات المحدثة: {total_synced}")
         return total_synced
 
     @staticmethod
-    def process_financials(order_data):
-        """معالجة مالية مع تصحيح أسماء الحقول بناءً على Schema قمرة"""
+    def process_financials(order_data, commit=True):
+        """معالجة مالية وهيكلية للطلب"""
         order_id = str(order_data.get('_id'))
         
+        # 1. تحديد المورد
         supplier_id = order_data.get('supplier_id')
         if not supplier_id:
             tracking_tag = order_data.get('tracking_tag')
@@ -46,14 +49,14 @@ class SyncEngine:
                 logger.error(f"❌ تعذر تحديد المورد للطلب {order_id}")
                 return False
 
+        # 2. معالجة السعر
         try:
             total_price = Decimal(str(order_data.get('totalPrice', 0)))
         except (InvalidOperation, ValueError, TypeError):
             total_price = Decimal('0')
             
-        items = order_data.get('items', [])
-
         try:
+            # 3. تحديث أو إنشاء الطلب
             order = Order.query.get(order_id)
             if not order:
                 order = Order(
@@ -65,11 +68,14 @@ class SyncEngine:
                     status='pending'
                 )
                 db.session.add(order)
-                db.session.flush()
+            else:
+                order.total_price = float(total_price)
+            
+            db.session.flush() # لتوليد الـ ID إذا لزم الأمر
 
-            # تحديث عناصر الطلب
+            # 4. تحديث عناصر الطلب (مسح القديم وإضافة الجديد)
             OrderItem.query.filter_by(order_id=order_id).delete()
-            for item in items:
+            for item in order_data.get('items', []):
                 new_item = OrderItem(
                     order_id=order_id,
                     title=item.get('productName', 'منتج غير معرف'),
@@ -79,7 +85,7 @@ class SyncEngine:
                 )
                 db.session.add(new_item)
 
-            # التحديث المالي
+            # 5. التحديث المالي
             financial_record = OrderFinancial.query.filter_by(order_id=order_id).first()
             if not financial_record:
                 financial_record = OrderFinancial(order_id=order_id, supplier_id=supplier_id)
@@ -89,7 +95,9 @@ class SyncEngine:
             financial_record.supplier_cost = float(total_price * Decimal('0.80'))
             
             db.session.add(financial_record)
-            db.session.commit()
+
+            if commit:
+                db.session.commit()
             return True
 
         except Exception as e:
