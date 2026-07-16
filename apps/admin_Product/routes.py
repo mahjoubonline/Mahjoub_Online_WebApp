@@ -82,7 +82,7 @@ def save_sync():
                 new_product = Product(
                     qid=qid,
                     title=item.get('title', 'منتج غير معرف'),
-                    supplier_id=1, # تأكد من أن هذا الـ ID موجود فعلياً
+                    supplier_id=1, # تأكد من أن هذا الـ ID موجود فعلياً في جدول الموردين
                     sku=item.get('sku', 'N/A'),
                     cost_price=price
                 )
