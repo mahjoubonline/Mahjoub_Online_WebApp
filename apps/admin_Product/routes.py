@@ -6,20 +6,16 @@ from flask_login import login_required
 from apps.services.graphql_client import QomrahGraphQLClient
 import math
 
-# ملاحظة: يتم تسجيل هذا البلوبرينت في registry.py بالمسار prefix='/admin/products'
-# لذا فإن المسارات أدناه ستكون تحت هذا النطاق تلقائياً.
 admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
 
 @admin_product_bp.route('/', methods=['GET'])
 @login_required
 def manage_products():
-    """تحميل صفحة المنتجات - الرابط الفعلي سيكون /admin/products/"""
     return render_template('admin/admin_Product.html')
 
 @admin_product_bp.route('/get-products', methods=['GET'])
 @login_required
 def get_products_api():
-    """مسار API لجلب المنتجات - الرابط الفعلي /admin/products/get-products"""
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').lower()
     per_page = 10
@@ -36,7 +32,19 @@ def get_products_api():
     """
     
     result = QomrahGraphQLClient.execute_query(query)
+    
+    # --- إضافة تشخيص للأخطاء ---
+    if result is None:
+        print("DEBUG: GraphQL returned None")
+    else:
+        print(f"DEBUG: GraphQL returned: {result.keys()}")
+    
     all_products = result.get('findAllProducts', {}).get('data', []) if result else []
+    
+    # إذا كانت القائمة فارغة، نطبع السجل للتأكد
+    if not all_products:
+        print(f"DEBUG: No products found. Full result: {result}")
+    # ---------------------------
     
     if search:
         all_products = [p for p in all_products if search in p.get('title', '').lower() or 
@@ -56,11 +64,9 @@ def get_products_api():
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
 def proxy_sync():
-    """مسار المزامنة - الرابط الفعلي /admin/products/proxy-sync"""
     return jsonify({"status": "success", "message": "تم تحديث البيانات من المصدر"})
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync():
-    """مسار الحفظ - الرابط الفعلي /admin/products/save-sync"""
     return jsonify({"status": "success", "message": "تم التخطي"})
