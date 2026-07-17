@@ -10,13 +10,15 @@
     .text-custom { color: var(--dark-purple); }
     .product-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
     .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; }
+    /* إضافة لمسة بصرية عند التحميل */
+    .loading { opacity: 0.5; pointer-events: none; }
 </style>
 
-<div class="container-fluid">
+<div class="container-fluid" id="mainContainer">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> رجوع</button>
         
-        <!-- حقل البحث المباشر -->
+        <!-- حقل البحث -->
         <div class="d-flex flex-grow-1 mx-3">
             <input type="text" id="searchInput" class="form-control" 
                    placeholder="ابحث باسم المنتج، SKU أو الباركود..." 
@@ -55,7 +57,7 @@
         {% endfor %}
     </div>
 
-    <!-- نظام ترقيم الصفحات -->
+    <!-- ترقيم الصفحات -->
     <nav aria-label="Page navigation" class="mt-5">
         <ul class="pagination justify-content-center">
             <li class="page-item {% if not pagination.has_prev() %}disabled{% endif %}">
@@ -76,16 +78,29 @@
 <script>
     let timeout = null;
     const searchInput = document.getElementById('searchInput');
+    const container = document.getElementById('mainContainer');
 
     searchInput.addEventListener('input', function() {
         clearTimeout(timeout);
-        // الانتظار لمدة 500ms بعد آخر حرف كتبه المستخدم
+        
+        // إظهار حالة التحميل
+        if(searchInput.value.length > 0) {
+            container.classList.add('loading');
+        }
+
         timeout = setTimeout(() => {
-            const searchTerm = searchInput.value;
-            // الانتقال للرابط مع معامل البحث (Flask سيقوم بمعالجة الطلب وإعادة تحميل الصفحة بالنتائج)
+            const searchTerm = searchInput.value.trim();
             window.location.href = `{{ url_for('admin_product_bp.manage_products') }}?search=${encodeURIComponent(searchTerm)}`;
-        }, 500);
+        }, 600);
     });
+
+    // الحفاظ على التركيز في خانة البحث
+    window.onload = () => {
+        if (searchInput.value.length > 0) {
+            searchInput.focus();
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+        }
+    };
 </script>
 
 {% include 'admin/includes/_sync_modal.html' %}
