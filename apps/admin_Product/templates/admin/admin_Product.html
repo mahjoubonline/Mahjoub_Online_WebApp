@@ -44,7 +44,7 @@
         </div>
         {% else %}
         <div class="col-12 text-center py-5">
-            <p class="text-muted">لا توجد منتجات مطابقة للبحث.</p>
+            <p class="text-muted">لا توجد منتجات مطابقة للبحث في هذه الصفحة.</p>
         </div>
         {% endfor %}
     </div>
@@ -72,14 +72,15 @@
 </div>
 
 <script>
-    // البحث اللحظي
+    // البحث اللحظي داخل الصفحة الحالية
     document.getElementById('searchInput').addEventListener('keyup', function() {
         let filter = this.value.toUpperCase();
         let items = document.getElementsByClassName('product-item');
         
         for (let item of items) {
             let title = item.querySelector('.card-title').innerText.toUpperCase();
-            item.style.display = (title.indexOf(filter) > -1) ? "" : "none";
+            let sku = item.querySelector('.text-secondary').innerText.toUpperCase();
+            item.style.display = (title.indexOf(filter) > -1 || sku.indexOf(filter) > -1) ? "" : "none";
         }
     });
 </script>
