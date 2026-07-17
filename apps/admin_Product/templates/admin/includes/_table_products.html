@@ -25,17 +25,25 @@
             </tbody>
         </table>
     </div>
+    <!-- الترقيم -->
+    <div class="card-footer bg-white">
+        <nav><ul class="pagination justify-content-center mb-0" id="tablePagination"></ul></nav>
+    </div>
 </div>
 
 {% include 'admin/includes/_sync_modal.html' %}
 
 <script>
-    // جلب المنتجات وتعبئة الجدول - تم تعديل المسار هنا
-    async function loadTableProducts() {
+    let currentTablePage = 1;
+
+    async function loadTableProducts(page = 1) {
+        currentTablePage = page;
+        const tbody = document.getElementById('productTableBody');
+        
         try {
-            const response = await fetch('/admin/get-products'); // تم التعديل هنا
+            // التعديل: استخدام المسار الصحيح المعتمد على registry.py
+            const response = await fetch(`/admin/products/get-products?page=${page}`);
             const data = await response.json();
-            const tbody = document.getElementById('productTableBody');
             
             tbody.innerHTML = ''; 
             
@@ -48,7 +56,7 @@
                 const img = (product.images && product.images.length > 0) ? product.images[0].fileUrl : '/static/images/default.png';
                 const row = `
                 <tr class="product-row">
-                    <td><img src="${img}" class="rounded" style="width: 40px; height: 40px; object-fit: cover;" alt="img"></td>
+                    <td><img src="${img}" class="rounded" style="width: 40px; height: 40px; object-fit: cover;"></td>
                     <td class="fw-semibold text-dark product-name">${product.title}</td>
                     <td><span class="badge ${product.quantity > 0 ? 'bg-success' : 'bg-danger'}">${product.quantity || 0}</span></td>
                     <td class="text-primary fw-bold">${product.pricing.price || 0} ر.س</td>
@@ -57,24 +65,20 @@
                 </tr>`;
                 tbody.insertAdjacentHTML('beforeend', row);
             });
+            renderTablePagination(data.pages);
         } catch (e) {
-            console.error(e);
-            document.getElementById('productTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">خطأ في تحميل البيانات.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">خطأ في تحميل البيانات.</td></tr>';
         }
     }
 
-    document.addEventListener('DOMContentLoaded', loadTableProducts);
-
-    // البحث اللحظي
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('keyup', function() {
-            let filter = this.value.toUpperCase();
-            document.querySelectorAll('.product-row').forEach(row => {
-                let name = row.querySelector('.product-name').innerText.toUpperCase();
-                let sku = row.querySelector('.product-sku').innerText.toUpperCase();
-                row.style.display = (name.indexOf(filter) > -1 || sku.indexOf(filter) > -1) ? "" : "none";
-            });
-        });
+    function renderTablePagination(totalPages) {
+        const pag = document.getElementById('tablePagination');
+        pag.innerHTML = `
+            <li class="page-item ${currentTablePage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="event.preventDefault(); loadTableProducts(${currentTablePage - 1})">السابق</a></li>
+            <li class="page-item active"><a class="page-link">${currentTablePage} من ${totalPages}</a></li>
+            <li class="page-item ${currentTablePage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="event.preventDefault(); loadTableProducts(${currentTablePage + 1})">التالي</a></li>
+        `;
     }
+
+    document.addEventListener('DOMContentLoaded', () => loadTableProducts(1));
 </script>
