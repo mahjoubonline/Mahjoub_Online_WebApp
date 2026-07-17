@@ -17,7 +17,8 @@
         <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> رجوع</button>
         
         <form id="searchForm" class="d-flex flex-grow-1 mx-3">
-            <input type="text" id="searchInput" name="search" class="form-control" placeholder="ابحث بالاسم أو SKU..." value="{{ search }}">
+            <!-- تمت إزالة name="search" و action لمنع إعادة تحميل الصفحة -->
+            <input type="text" id="searchInput" class="form-control" placeholder="ابحث بالاسم أو SKU...">
         </form>
 
         <button type="button" class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#syncModal">
@@ -26,9 +27,9 @@
     </div>
 
     <!-- شبكة المنتجات -->
-    <div class="row row-cols-1 row-cols-md-5 g-3">
+    <div class="row row-cols-1 row-cols-md-5 g-3" id="productGrid">
         {% for product in products %}
-        <div class="col">
+        <div class="col product-item">
             <a href="{{ url_for('admin_product_bp.edit_product', product_id=product.id) }}" class="text-decoration-none">
                 <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden">
                     <div class="bg-light text-center" style="height: 150px; overflow: hidden;">
@@ -52,13 +53,13 @@
     <nav aria-label="Page navigation" class="mt-5">
         <ul class="pagination justify-content-center">
             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.prev_num, search=search) }}">السابق</a>
+                <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.prev_num) }}">السابق</a>
             </li>
             
             {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                 {% if page_num %}
                     <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                        <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=page_num, search=search) }}">{{ page_num }}</a>
+                        <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=page_num) }}">{{ page_num }}</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -66,20 +67,27 @@
             {% endfor %}
 
             <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.next_num, search=search) }}">التالي</a>
+                <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.next_num) }}">التالي</a>
             </li>
         </ul>
     </nav>
 </div>
 
-<!-- سكربت البحث اللحظي -->
+<!-- سكربت البحث اللحظي بدون إعادة تحميل الصفحة -->
 <script>
-    let timer;
     document.getElementById('searchInput').addEventListener('keyup', function() {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-            window.location.href = "{{ url_for('admin_product_bp.manage_products') }}?search=" + this.value;
-        }, 500);
+        let filter = this.value.toUpperCase();
+        let productGrid = document.getElementById('productGrid');
+        let products = productGrid.getElementsByClassName('product-item');
+        
+        for (let i = 0; i < products.length; i++) {
+            let title = products[i].querySelector('.card-title').innerText.toUpperCase();
+            if (title.indexOf(filter) > -1) {
+                products[i].style.display = "";
+            } else {
+                products[i].style.display = "none";
+            }
+        }
     });
 </script>
 
