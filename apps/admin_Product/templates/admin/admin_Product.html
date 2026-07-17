@@ -34,12 +34,13 @@
     // جلب المنتجات عند تحميل الصفحة (خلفية)
     async function loadProducts() {
         try {
-            const response = await fetch('/admin/api/get-products');
+            // تم تعديل الرابط ليتطابق مع routes.py (المسار هو /admin/get-products)
+            const response = await fetch('/admin/get-products');
             const data = await response.json();
             const grid = document.getElementById('productGrid');
             const loading = document.getElementById('loadingIndicator');
             
-            loading.remove(); // إخفاء علامة التحميل
+            if (loading) loading.remove();
             
             if (data.products.length === 0) {
                 grid.innerHTML = '<div class="col-12 text-center py-5 text-muted">لا توجد منتجات.</div>';
@@ -47,7 +48,7 @@
             }
 
             data.products.forEach(product => {
-                const img = product.images.length > 0 ? product.images[0].fileUrl : '/static/images/default.png';
+                const img = (product.images && product.images.length > 0) ? product.images[0].fileUrl : '/static/images/default.png';
                 const card = `
                     <div class="col product-item">
                         <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden">
@@ -67,6 +68,7 @@
                 grid.insertAdjacentHTML('beforeend', card);
             });
         } catch (e) {
+            console.error(e);
             document.getElementById('loadingIndicator').innerHTML = '<p class="text-danger">حدث خطأ في تحميل البيانات.</p>';
         }
     }
