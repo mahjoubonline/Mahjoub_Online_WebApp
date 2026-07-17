@@ -8,9 +8,15 @@ from apps.models.product_db import Product
 logger = logging.getLogger(__name__)
 
 class ProductSyncEngine:
+    """
+    محرك معالجة ومزامنة بيانات المنتجات الواردة من API
+    """
 
     @staticmethod
     def process_products(products_data):
+        """
+        تقوم بمعالجة قائمة المنتجات وتحديثها أو إضافتها إلى قاعدة البيانات
+        """
         if not products_data or not isinstance(products_data, list):
             logger.warning("❌ لم يتم استقبال بيانات صالحة للمزامنة.")
             return 0
@@ -18,14 +24,18 @@ class ProductSyncEngine:
         synced_count = 0
         for item in products_data:
             try:
+                # التحقق من وجود معرف المنتج
                 qid = str(item.get('qid'))
+                if not qid: continue
+                
+                # البحث عن المنتج أو إنشاؤه
                 product = Product.query.filter_by(qid=qid).first() or Product(qid=qid)
                 
                 # تحديث البيانات الأساسية
                 product.title = item.get('title', 'منتج غير معرف')
                 product.quantity = item.get('quantity', 0)
                 
-                # استخراج البيانات المتداخلة
+                # استخراج البيانات المتداخلة بأمان
                 pricing = item.get('pricing', {}) or {}
                 identification = item.get('identification', {}) or {}
                 weight_info = item.get('weight', {}) or {}
@@ -39,15 +49,17 @@ class ProductSyncEngine:
                 product.weight_val = weight_info.get('weight')
                 product.weight_unit = weight_info.get('unit')
                 
-                # الصور (أول صورة)
+                # الصور (أول صورة فقط)
                 if isinstance(images, list) and len(images) > 0:
                     product.image_url = images[0].get('fileUrl')
 
                 db.session.add(product)
                 synced_count += 1
             except Exception as e:
+                # الاستمرار في المعالجة حتى لو فشل منتج واحد
                 logger.error(f"❌ خطأ في معالجة المنتج {item.get('qid', 'unknown')}: {e}")
                 continue
         
+        # حفظ التغييرات دفعة واحدة
         db.session.commit()
         return synced_count
