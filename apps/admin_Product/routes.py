@@ -27,7 +27,6 @@ class PaginationMock:
 def manage_products():
     page = request.args.get('page', 1, type=int)
     
-    # استعلام جلب المنتجات (نستخدم limit: 10 ليتناسب مع الترقيم)
     query = """
     query Data($input: GetAllProductsInput) {
       findAllProducts(input: $input) {
@@ -52,13 +51,18 @@ def manage_products():
                            products=products, 
                            pagination=PaginationMock(pag_info))
 
+# إضافة الدالة الفارغة ليتناسب الـ Router مع الـ Registry الديناميكي
+@admin_product_bp.route('/add', methods=['GET'])
+@login_required
+def add_product():
+    return render_template('admin/add_product.html')
+
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
 def proxy_sync():
     try:
         logger.info("بدء عملية المزامنة الخلفية مع قمرة...")
         
-        # جلب البيانات من قمرة (تم رفع الليمت لضمان شمولية التحديث)
         query = """
         query {
           findAllProducts(input: {page: 1, limit: 100}) {
@@ -78,7 +82,6 @@ def proxy_sync():
             logger.error("فشل الاتصال بـ قمرة أثناء المزامنة")
             return jsonify({"status": "error", "message": "فشل الاتصال بـ قمرة"}), 500
         
-        # معالجة وحفظ البيانات في قاعدة البيانات باستخدام المحرك
         products_data = result['findAllProducts'].get('data', [])
         count = ProductSyncEngine.process_products(products_data)
         
