@@ -16,11 +16,11 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> رجوع</button>
         
-        <!-- تعديل الفورم ليكون بحثاً حقيقياً يرسل للمتصفح -->
+        <!-- تم تحديث الفورم لاستخدام حقل باسم search كما يتوقع الـ routes -->
         <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" class="d-flex flex-grow-1 mx-3">
             <input type="text" name="search" id="searchInput" class="form-control" 
-                   placeholder="ابحث باسم المنتج..." value="{{ request.args.get('search', '') }}">
-            <button type="submit" class="btn btn-outline-secondary ms-2">بحث</button>
+                   placeholder="ابحث باسم المنتج، SKU أو الباركود..." value="{{ request.args.get('search', '') }}">
+            <button type="submit" class="btn btn-custom ms-2">بحث</button>
         </form>
 
         <button type="button" class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#syncModal">
@@ -48,10 +48,14 @@
                 </div>
             </a>
         </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <p class="text-muted">لا توجد نتائج مطابقة للبحث.</p>
+        </div>
         {% endfor %}
     </div>
 
-    <!-- نظام ترقيم الصفحات (معدل ليدعم البحث) -->
+    <!-- نظام ترقيم الصفحات (معدل ليدعم البحث عبر تمرير المتغير search) -->
     <nav aria-label="Page navigation" class="mt-5">
         <ul class="pagination justify-content-center">
             <li class="page-item {% if not pagination.has_prev() %}disabled{% endif %}">
@@ -68,4 +72,6 @@
         </ul>
     </nav>
 </div>
+
+{% include 'admin/includes/_sync_modal.html' %}
 {% endblock %}
