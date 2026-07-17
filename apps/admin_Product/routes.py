@@ -31,7 +31,6 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').strip()
     
-    # الحل الصحيح: استخدام findAllProducts دائماً وإضافة الـ search للـ input
     query = """
     query Data($input: GetAllProductsInput) {
       findAllProducts(input: $input) {
@@ -41,19 +40,18 @@ def manage_products():
     }
     """
     
-    # نمرر نص البحث داخل الـ input (هذا هو المعيار المتعارف عليه في الـ API التي تدعم الـ findAll)
-    variables = {
-        "input": {
-            "page": page, 
-            "limit": 10,
-            "search": search if search else None
-        }
-    }
+    # بناء الـ input ديناميكياً
+    input_data = {"page": page, "limit": 10}
+    if search:
+        input_data["search"] = search
+        
+    variables = {"input": input_data}
     data_key = 'findAllProducts'
     
     try:
         result = QomrahGraphQLClient.execute_query(query, variables=variables)
-        logger.info(f"GraphQL Response: {result}")
+        # تتبع الرد في الـ Logs لاكتشاف هل الفلترة تعمل أم لا
+        logger.info(f"GraphQL Response for search '{search}': {result}")
     except Exception as e:
         logger.error(f"GraphQL Error: {e}")
         result = {}
