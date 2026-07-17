@@ -2,23 +2,23 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="syncModalLabel">مزامنة المنتجات</h5>
+                <h5 class="modal-title" id="syncModalLabel">مزامنة جميع المنتجات</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div id="sync-progress-area" class="d-none">
                     <div class="progress mb-3">
-                        <div id="sync-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        <div id="sync-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%"></div>
                     </div>
-                    <p id="sync-status" class="text-center small text-muted">جاري البدء...</p>
+                    <p id="sync-status" class="text-center small">جاري البدء...</p>
                 </div>
                 <div id="sync-info">
-                    <p>سيتم جلب البيانات المحدثة من قمرة وتحديث قاعدة بيانات "محجوب".</p>
+                    <p>سيتم سحب كافة البيانات من قمرة وحفظها في قاعدة بياناتنا. هذه العملية قد تستغرق بضع ثوانٍ.</p>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                <button type="button" id="startSyncBtn" class="btn btn-primary" onclick="startProductSync()">بدء المزامنة</button>
+                <button type="button" id="startSyncBtn" class="btn btn-primary" onclick="startProductSync()">بدء المزامنة الكاملة</button>
             </div>
         </div>
     </div>
@@ -27,18 +27,16 @@
 <script>
     async function startProductSync() {
         const btn = document.getElementById('startSyncBtn');
-        const progressArea = document.getElementById('sync-progress-area');
         const progressBar = document.getElementById('sync-bar');
         const statusText = document.getElementById('sync-status');
-        const infoArea = document.getElementById('sync-info');
         
         btn.disabled = true;
-        infoArea.classList.add('d-none');
-        progressArea.classList.remove('d-none');
+        document.getElementById('sync-info').classList.add('d-none');
+        document.getElementById('sync-progress-area').classList.remove('d-none');
         
         progressBar.style.width = '30%';
-        statusText.innerText = "جاري جلب البيانات...";
-        
+        statusText.innerText = "جاري الاتصال بقمرة وجلب كافة المنتجات...";
+
         try {
             // 1. جلب البيانات
             const response = await fetch("{{ url_for('admin_product_bp.proxy_sync') }}", {
@@ -49,7 +47,6 @@
             if (!response.ok) throw new Error("فشل الاتصال بخدمة المزامنة");
 
             const result = await response.json();
-            // استخراج المنتجات بدقة
             const products = result.data?.findAllProducts?.data;
 
             if (!products || products.length === 0) {
@@ -57,32 +54,27 @@
             }
 
             progressBar.style.width = '60%';
-            statusText.innerText = `تم جلب ${products.length} منتج، جاري الحفظ...`;
+            statusText.innerText = `تم جلب ${products.length} منتج، جاري حفظهم في قاعدة البيانات...`;
 
-            // 2. إرسال المنتجات مباشرة (بدون تعقيد في الهيكل)
+            // 2. إرسال البيانات للحفظ
             const saveResponse = await fetch("{{ url_for('admin_product_bp.save_sync') }}", {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': "{{ csrf_token() }}"
-                },
-                body: JSON.stringify({ products: products }) // إرسال مباشر
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" },
+                body: JSON.stringify({ products: products })
             });
 
             const saveResult = await saveResponse.json();
-            
+
             if (saveResponse.ok && saveResult.status === 'success') {
                 progressBar.style.width = '100%';
-                statusText.innerText = "تمت المزامنة بنجاح!";
-                statusText.classList.add('text-success');
-                setTimeout(() => { location.reload(); }, 1000);
+                statusText.innerHTML = `<span class="text-success">تمت المزامنة بنجاح لـ ${products.length} منتج!</span>`;
+                setTimeout(() => { location.reload(); }, 1500);
             } else {
-                throw new Error(saveResult.message || "فشل عملية الحفظ");
+                throw new Error(saveResult.message || "حدث خطأ أثناء الحفظ");
             }
-            
+
         } catch (err) {
-            statusText.innerText = "خطأ: " + err.message;
-            statusText.classList.add('text-danger');
+            statusText.innerHTML = `<span class="text-danger">خطأ: ${err.message}</span>`;
             btn.disabled = false;
         }
     }
