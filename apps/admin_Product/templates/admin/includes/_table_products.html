@@ -1,7 +1,6 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
         <h5 class="mb-0 fw-bold">قائمة المنتجات (تفصيلية)</h5>
-        <!-- تم تغيير الدالة لتطابق منطق المودال -->
         <button type="button" class="btn btn-sm btn-custom" data-bs-toggle="modal" data-bs-target="#syncModal">
             <i class="fas fa-sync-alt"></i> تحديث البيانات
         </button>
@@ -20,7 +19,6 @@
                 </tr>
             </thead>
             <tbody id="productTableBody">
-                <!-- سيتم ملء هذا الجسم عبر JavaScript -->
                 <tr id="emptyRow">
                     <td colspan="6" class="text-center py-4 text-muted">جاري تحميل البيانات...</td>
                 </tr>
@@ -32,22 +30,22 @@
 {% include 'admin/includes/_sync_modal.html' %}
 
 <script>
-    // جلب المنتجات وتعبئة الجدول
+    // جلب المنتجات وتعبئة الجدول - تم تعديل المسار هنا
     async function loadTableProducts() {
         try {
-            const response = await fetch('/admin/api/get-products');
+            const response = await fetch('/admin/get-products'); // تم التعديل هنا
             const data = await response.json();
             const tbody = document.getElementById('productTableBody');
             
-            tbody.innerHTML = ''; // تفريغ الجدول
+            tbody.innerHTML = ''; 
             
-            if (data.products.length === 0) {
+            if (!data.products || data.products.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">لا توجد منتجات.</td></tr>';
                 return;
             }
 
             data.products.forEach(product => {
-                const img = product.images.length > 0 ? product.images[0].fileUrl : '/static/images/default.png';
+                const img = (product.images && product.images.length > 0) ? product.images[0].fileUrl : '/static/images/default.png';
                 const row = `
                 <tr class="product-row">
                     <td><img src="${img}" class="rounded" style="width: 40px; height: 40px; object-fit: cover;" alt="img"></td>
@@ -60,11 +58,11 @@
                 tbody.insertAdjacentHTML('beforeend', row);
             });
         } catch (e) {
+            console.error(e);
             document.getElementById('productTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">خطأ في تحميل البيانات.</td></tr>';
         }
     }
 
-    // تشغيل التحميل عند فتح الصفحة
     document.addEventListener('DOMContentLoaded', loadTableProducts);
 
     // البحث اللحظي
