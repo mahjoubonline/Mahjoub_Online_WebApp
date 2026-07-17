@@ -16,12 +16,13 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '', type=str)
     
-    # بناء الاستعلام (فلترة بالاسم أو الـ SKU)
+    # بناء الاستعلام مع فلترة مرنة
     query = Product.query
     if search:
         query = query.filter(or_(Product.title.contains(search), Product.sku.contains(search)))
         
-    pagination = query.order_by(Product.created_at.desc()).paginate(page=page, per_page=12, error_out=False)
+    # ضبط عدد المنتجات لكل صفحة (20) ودعم الترقيم الكامل
+    pagination = query.order_by(Product.created_at.desc()).paginate(page=page, per_page=20, error_out=False)
     
     return render_template('admin/admin_Product.html', 
                            products=pagination.items, 
