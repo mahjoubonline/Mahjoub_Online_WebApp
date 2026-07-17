@@ -45,38 +45,40 @@ def proxy_sync():
 def save_sync():
     try:
         payload = request.json
-        # نقوم هنا بطباعة ما وصلنا فعلاً لنعرف لماذا لا يتم الحفظ
-        print(f"DEBUG: Received payload keys: {payload.keys() if payload else 'Empty'}")
-        
-        # استخراج المنتجات مباشرة (بناءً على التعديل في الـ JavaScript)
-        # إذا كنت سترسل { products: [...] }
+        # استقبال البيانات مباشرة من مفتاح 'products' المرسل من المودال
         products_data = payload.get('products', []) 
         
         if not products_data:
-            return jsonify({"status": "error", "message": "لم يتم استقبال أي منتجات"}), 400
+            return jsonify({"status": "error", "message": "لم يتم استقبال أي منتجات للحفظ"}), 400
         
         for item in products_data:
             qid = str(item.get('qid'))
             if not qid: continue
             
-            product = Product.query.filter_by(qid=qid).first() or Product(qid=qid)
+            # البحث عن المنتج لتحديثه أو إنشاء واحد جديد
+            product = Product.query.filter_by(qid=qid).first()
+            if not product:
+                product = Product(qid=qid)
+                db.session.add(product) # إضافة الجديد للجلسة
             
+            # تحديث الحقول
             product.title = item.get('title') or "بدون عنوان"
             product.quantity = item.get('quantity', 0)
-            product.sku = item.get('identification', {}).get('sku')
+            product.sku = item.get('identification', {}).get('sku') if item.get('identification') else None
             product.cost_price = item.get('pricing', {}).get('price') or 0.0
             
+            # معالجة الصور
             images = item.get('images', [])
             product.image_url = images[0].get('fileUrl') if isinstance(images, list) and images else None
             
+            # معالجة الوزن
             weight_info = item.get('weight', {}) or {}
             product.weight_val = weight_info.get('weight')
             product.weight_unit = weight_info.get('unit')
             
-            db.session.add(product)
-            
+        # تنفيذ عملية الحفظ دفعة واحدة
         db.session.commit()
-        return jsonify({"status": "success", "message": f"تمت معالجة {len(products_data)} منتج"})
+        return jsonify({"status": "success", "message": f"تمت مزامنة {len(products_data)} منتج بنجاح"})
         
     except Exception as e:
         db.session.rollback()
