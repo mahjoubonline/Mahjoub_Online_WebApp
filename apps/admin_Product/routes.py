@@ -11,17 +11,18 @@ admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='temp
 @admin_product_bp.route('/', methods=['GET'])
 @login_required
 def manage_products():
-    """تحميل صفحة المنتجات بهيكل فارغ أولاً لضمان السرعة القصوى"""
+    """تحميل صفحة المنتجات بهيكل فارغ أولاً لضمان السرعة القصوى للمستخدم"""
     return render_template('admin/admin_Product.html')
 
 @admin_product_bp.route('/api/get-products', methods=['GET'])
 @login_required
 def get_products_api():
-    """مسار API لجلب البيانات في الخلفية، لن يسبب بطء النظام"""
+    """مسار API لجلب المنتجات في الخلفية (Async Fetch) لمنع بطء السيرفر"""
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').lower()
     per_page = 10
     
+    # استعلام جلب البيانات (يتم تنفيذه في الخلفية فقط عند الحاجة)
     query = """
     query Data {
       findAllProducts(input: { limit: 99999 }) {
@@ -33,10 +34,11 @@ def get_products_api():
     }
     """
     
+    # تنفيذ الطلب باستخدام الكلاس المحسن
     result = QomrahGraphQLClient.execute_query(query)
-    all_products = result.get('data', {}).get('findAllProducts', {}).get('data', []) if result else []
+    all_products = result.get('findAllProducts', {}).get('data', []) if result else []
     
-    # الفلترة
+    # الفلترة المحلية
     if search:
         all_products = [p for p in all_products if search in p.get('title', '').lower() or 
                         (p.get('identification') and p['identification'].get('sku') and search in p['identification']['sku'].lower())]
@@ -57,3 +59,8 @@ def get_products_api():
 @login_required
 def proxy_sync():
     return jsonify({"status": "success", "message": "تم تحديث البيانات من المصدر"})
+
+@admin_product_bp.route('/save-sync', methods=['POST'])
+@login_required
+def save_sync():
+    return jsonify({"status": "success", "message": "تم التخطي: لا يوجد حفظ في قاعدة البيانات"})
