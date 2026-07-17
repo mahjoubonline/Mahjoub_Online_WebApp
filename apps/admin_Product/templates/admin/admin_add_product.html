@@ -1,48 +1,118 @@
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
-<div class="container mt-4">
+<style>
+    :root { --dark-purple: #2d0b36; }
+    .btn-custom { background-color: var(--dark-purple); color: #fff; border: none; }
+    .btn-custom:hover { background-color: #1a0620; color: #eee; }
+    .text-custom { color: var(--dark-purple); }
+    .form-control:focus { border-color: var(--dark-purple); box-shadow: 0 0 0 0.2rem rgba(45, 11, 54, 0.25); }
+    .icon-box {
+        width: 60px; height: 60px;
+        background-color: #f8f9fa; color: var(--dark-purple);
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 24px; margin: 0 auto 20px;
+    }
+    /* تنسيق المعاينة */
+    #imagePreview { max-height: 150px; border-radius: 10px; border: 2px solid #ddd; padding: 5px; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> رجوع للوراء</button>
+        <h4 class="m-0 text-custom fw-bold">إضافة منتج جديد</h4>
+    </div>
+
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white border-bottom p-3">
-                    <h4 class="mb-0 text-primary">
-                        <i class="fas fa-plus-circle me-2"></i> إضافة منتج جديد
-                    </h4>
+            <div class="card shadow-sm border-0 rounded-4 p-4">
+                <div class="text-center">
+                    <div class="icon-box shadow-sm">
+                        <i class="fas fa-box-open"></i>
+                    </div>
+                    <p class="text-muted small">هذه الواجهة مخصصة للعرض وتجربة المستخدم (لا تقوم بحفظ البيانات في القاعدة)</p>
                 </div>
-                <div class="card-body p-4">
-                    <form method="POST" action="{{ url_for('admin_product_bp.add_product') }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <hr class="mb-4">
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">اسم المنتج</label>
-                            <input type="text" name="title" class="form-control" required placeholder="أدخل اسم المنتج...">
+                <form onsubmit="showMockSuccess(event)">
+                    <div class="row">
+                        <!-- اسم المنتج -->
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-bold small">اسم المنتج</label>
+                            <input type="text" class="form-control form-control-lg bg-light" placeholder="مثال: طقم قدور معدن 5 قطع..." required>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">سعر التكلفة</label>
-                                <input type="number" step="0.01" name="cost_price" class="form-control" required placeholder="0.00">
+                        <!-- السعر والكمية -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small">السعر (ر.س)</label>
+                            <input type="number" step="0.01" class="form-control bg-light" placeholder="0.00" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small">الكمية المتاحة</label>
+                            <input type="number" class="form-control bg-light" placeholder="0" required>
+                        </div>
+
+                        <!-- رمز الـ SKU -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold small">رمز المنتج (SKU)</label>
+                            <input type="text" class="form-control bg-light" placeholder="مثال: SK-12345">
+                        </div>
+
+                        <!-- صورة المنتج مع المعاينة -->
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-bold small">صورة المنتج (رابط)</label>
+                            <input type="url" id="imgUrlInput" class="form-control bg-light" 
+                                   placeholder="https://example.com/image.png" oninput="previewImage()">
+                            
+                            <!-- مكان ظهور الصورة -->
+                            <div id="imagePreviewContainer" class="mt-3 text-center" style="display: none;">
+                                <img id="imagePreview" src="" alt="معاينة">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">الكمية</label>
-                                <input type="number" name="quantity" class="form-control" required placeholder="العدد المتوفر...">
-                            </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">رمز المنتج (SKU)</label>
-                            <input type="text" name="sku" class="form-control" placeholder="اختياري...">
-                        </div>
-
-                        <div class="d-flex justify-content-between mt-4">
-                            <button type="button" onclick="history.back()" class="btn btn-outline-secondary">إلغاء</button>
-                            <button type="submit" class="btn btn-mahjoub-gold px-4">حفظ المنتج</button>
-                        </div>
-                    </form>
-                </div>
+                    <div class="d-grid mt-3">
+                        <button type="submit" class="btn btn-custom btn-lg shadow-sm">
+                            <i class="fas fa-check-circle me-2"></i> حفظ المنتج (محاكاة)
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // دالة معاينة الصورة
+    function previewImage() {
+        const url = document.getElementById('imgUrlInput').value;
+        const container = document.getElementById('imagePreviewContainer');
+        const img = document.getElementById('imagePreview');
+        
+        if (url && url.startsWith('http')) {
+            img.src = url;
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    // دالة نجاح العملية
+    function showMockSuccess(event) {
+        event.preventDefault(); 
+        Swal.fire({
+            title: 'عملية ناجحة!',
+            text: 'تمت محاكاة إضافة المنتج بنجاح. (لم يتم الحفظ في القاعدة)',
+            icon: 'success',
+            confirmButtonColor: '#2d0b36',
+            confirmButtonText: 'حسناً'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "{{ url_for('admin_product_bp.manage_products') }}";
+            }
+        });
+    }
+</script>
 {% endblock %}
