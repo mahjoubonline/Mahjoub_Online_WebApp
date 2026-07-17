@@ -38,35 +38,36 @@ def proxy_sync():
     if not data:
         return jsonify({"status": "error", "message": "فشل الاتصال بخدمة المزامنة"}), 500
     
-    # نرسل الـ data مباشرة كما تعودنا
     return jsonify({"status": "success", "data": data})
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync():
     try:
-        # هنا الـ payload القادم من الـ fetch في الفرونت إيند يجب أن يحتوي على المفتاح 'data'
         payload = request.json
-        products_data = payload.get('data', {}).get('findAllProducts', {}).get('data', [])
+        # نقوم هنا بطباعة ما وصلنا فعلاً لنعرف لماذا لا يتم الحفظ
+        print(f"DEBUG: Received payload keys: {payload.keys() if payload else 'Empty'}")
+        
+        # استخراج المنتجات مباشرة (بناءً على التعديل في الـ JavaScript)
+        # إذا كنت سترسل { products: [...] }
+        products_data = payload.get('products', []) 
         
         if not products_data:
-            return jsonify({"status": "error", "message": "لا توجد بيانات للمزامنة"}), 400
+            return jsonify({"status": "error", "message": "لم يتم استقبال أي منتجات"}), 400
         
         for item in products_data:
             qid = str(item.get('qid'))
             if not qid: continue
             
-            product = Product.query.filter_by(qid=qid).first()
-            if not product:
-                product = Product(qid=qid, title=item.get('title') or "بدون عنوان")
+            product = Product.query.filter_by(qid=qid).first() or Product(qid=qid)
             
-            product.title = item.get('title') or product.title
+            product.title = item.get('title') or "بدون عنوان"
             product.quantity = item.get('quantity', 0)
             product.sku = item.get('identification', {}).get('sku')
             product.cost_price = item.get('pricing', {}).get('price') or 0.0
             
             images = item.get('images', [])
-            product.image_url = images[0].get('fileUrl') if images and isinstance(images, list) else None
+            product.image_url = images[0].get('fileUrl') if isinstance(images, list) and images else None
             
             weight_info = item.get('weight', {}) or {}
             product.weight_val = weight_info.get('weight')
@@ -75,9 +76,9 @@ def save_sync():
             db.session.add(product)
             
         db.session.commit()
-        return jsonify({"status": "success", "message": f"تمت مزامنة {len(products_data)} منتج بنجاح"})
+        return jsonify({"status": "success", "message": f"تمت معالجة {len(products_data)} منتج"})
         
     except Exception as e:
         db.session.rollback()
-        print(f"DEBUG SYNC ERROR: {str(e)}") 
+        print(f"CRITICAL SYNC ERROR: {str(e)}") 
         return jsonify({"status": "error", "message": str(e)}), 500
