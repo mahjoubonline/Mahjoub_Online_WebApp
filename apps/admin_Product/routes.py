@@ -19,7 +19,6 @@ def manage_products():
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
 def proxy_sync():
-    # تم تصحيح الحقل من costPrice إلى price بناءً على رسالة الخطأ
     query = """
     query Data($input: GetAllProductsInput) {
       findAllProducts(input: $input) {
@@ -44,34 +43,37 @@ def proxy_sync():
 @login_required
 def save_sync():
     try:
-        # استخراج البيانات بنفس الهيكل المعتمد
-        products_data = request.json.get('data', {}).get('findAllProducts', {}).get('data', [])
+        payload = request.json
+        products_data = payload.get('data', {}).get('findAllProducts', {}).get('data', [])
         
         for item in products_data:
             qid = str(item.get('qid'))
-            product = Product.query.filter_by(qid=qid).first() or Product(qid=qid)
+            if not qid: continue
             
-            # تحديث البيانات الأساسية
-            product.title = item.get('title')
-            product.quantity = item.get('quantity', 0)
+            product = Product.query.filter_by(qid=qid).first()
+            if not product:
+                # التأكد من وجود title قبل الإنشاء لتجنب NotNullViolation
+                product = Product(qid=qid, title=item.get('title') or "بدون عنوان")
+            
+            product.title = item.get('title') or product.title
+            product.quantity = item.get('quantity') or 0
             product.sku = item.get('identification', {}).get('sku')
+            product.cost_price = item.get('pricing', {}).get('price') or 0.0
             
-            # تم تصحيح المفتاح هنا أيضاً ليطابق الاستعلام الجديد (price)
-            product.cost_price = item.get('pricing', {}).get('price', 0.0)
-            
-            # تحديث البيانات المضافة
             images = item.get('images', [])
-            product.image_url = images[0].get('fileUrl') if images else None
+            product.image_url = images[0].get('fileUrl') if images and isinstance(images, list) else None
             
-            weight_info = item.get('weight', {})
+            weight_info = item.get('weight', {}) or {}
             product.weight_val = weight_info.get('weight')
             product.weight_unit = weight_info.get('unit')
             
             db.session.add(product)
             
         db.session.commit()
-        return jsonify({"status": "success", "message": "تمت مزامنة المنتجات وتحديث البيانات بنجاح"})
+        return jsonify({"status": "success", "message": "تمت المزامنة بنجاح"})
         
     except Exception as e:
         db.session.rollback()
+        # طباعة الخطأ الحقيقي في الـ Logs
+        print(f"DEBUG SYNC ERROR: {str(e)}") 
         return jsonify({"status": "error", "message": str(e)}), 500
