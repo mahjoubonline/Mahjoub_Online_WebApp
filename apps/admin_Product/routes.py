@@ -4,7 +4,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 from apps.services.graphql_client import QomrahGraphQLClient
-import math
 
 admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
 
@@ -16,49 +15,43 @@ def manage_products():
 @admin_product_bp.route('/get-products', methods=['GET'])
 @login_required
 def get_products_api():
+    # استقبال رقم الصفحة من الواجهة (الافتراضي 1)
     page = request.args.get('page', 1, type=int)
-    search = request.args.get('search', '').lower()
-    per_page = 10
+    search = request.args.get('search', '')
     
+    # الاستعلام المحدث مع استخدام الـ variables لدعم الترقيم والبحث
     query = """
-    query Data {
-      findAllProducts(input: { limit: 99999 }) {
+    query Data($input: GetAllProductsInput) {
+      findAllProducts(input: $input) {
         data {
           qid, title, quantity, pricing { price }, 
           images { fileUrl }, identification { sku }
         }
+        pagination { totalPages, currentPage, totalItems }
       }
     }
     """
     
-    result = QomrahGraphQLClient.execute_query(query)
+    # تحضير المتغيرات للـ GraphQL
+    variables = {
+        "input": {
+            "page": page,
+            "limit": 10,
+            "search": search if search else None
+        }
+    }
     
-    # --- إضافة تشخيص للأخطاء ---
-    if result is None:
-        print("DEBUG: GraphQL returned None")
-    else:
-        print(f"DEBUG: GraphQL returned: {result.keys()}")
+    # تنفيذ الاستعلام
+    result = QomrahGraphQLClient.execute_query(query, variables=variables)
     
-    all_products = result.get('findAllProducts', {}).get('data', []) if result else []
+    if not result or 'findAllProducts' not in result:
+        return jsonify({"products": [], "pagination": {"totalPages": 1, "currentPage": 1}})
     
-    # إذا كانت القائمة فارغة، نطبع السجل للتأكد
-    if not all_products:
-        print(f"DEBUG: No products found. Full result: {result}")
-    # ---------------------------
-    
-    if search:
-        all_products = [p for p in all_products if search in p.get('title', '').lower() or 
-                        (p.get('identification') and p['identification'].get('sku') and search in p['identification']['sku'].lower())]
-    
-    total = len(all_products)
-    start = (page - 1) * per_page
-    end = start + per_page
-    paginated_products = all_products[start:end]
+    data = result.get('findAllProducts', {})
     
     return jsonify({
-        "products": paginated_products,
-        "total": total,
-        "pages": math.ceil(total / per_page) if total > 0 else 1
+        "products": data.get('data', []),
+        "pagination": data.get('pagination', {})
     })
 
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
