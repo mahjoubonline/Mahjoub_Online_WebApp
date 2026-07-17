@@ -37,39 +37,36 @@
         progressArea.classList.remove('d-none');
         
         progressBar.style.width = '30%';
-        statusText.innerText = "جاري الاتصال بالسيرفر وجلب البيانات...";
+        statusText.innerText = "جاري جلب البيانات...";
         
         try {
-            // 1. جلب البيانات من الـ Proxy
+            // 1. جلب البيانات
             const response = await fetch("{{ url_for('admin_product_bp.proxy_sync') }}", {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': "{{ csrf_token() }}" 
-                }
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" }
             });
 
             if (!response.ok) throw new Error("فشل الاتصال بخدمة المزامنة");
 
             const result = await response.json();
-            // بما أن الـ proxy_sync سيعيد هيكل الـ GraphQL
+            // استخراج المنتجات بدقة
             const products = result.data?.findAllProducts?.data;
 
             if (!products || products.length === 0) {
-                throw new Error("لم يتم العثور على منتجات في المصدر");
+                throw new Error("لا توجد منتجات لجلبها من المصدر");
             }
 
             progressBar.style.width = '60%';
-            statusText.innerText = `تم جلب ${products.length} منتج، جاري المعالجة والحفظ...`;
+            statusText.innerText = `تم جلب ${products.length} منتج، جاري الحفظ...`;
 
-            // 2. إرسال البيانات للمعالجة (تطابق الهيكل الذي أعددناه في save_sync)
+            // 2. إرسال المنتجات مباشرة (بدون تعقيد في الهيكل)
             const saveResponse = await fetch("{{ url_for('admin_product_bp.save_sync') }}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': "{{ csrf_token() }}"
                 },
-                body: JSON.stringify({ data: { findAllProducts: { data: products } } })
+                body: JSON.stringify({ products: products }) // إرسال مباشر
             });
 
             const saveResult = await saveResponse.json();
@@ -80,7 +77,7 @@
                 statusText.classList.add('text-success');
                 setTimeout(() => { location.reload(); }, 1000);
             } else {
-                throw new Error(saveResult.message || "فشل حفظ البيانات");
+                throw new Error(saveResult.message || "فشل عملية الحفظ");
             }
             
         } catch (err) {
