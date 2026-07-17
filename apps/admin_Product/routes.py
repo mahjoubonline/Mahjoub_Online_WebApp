@@ -11,14 +11,14 @@ admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='temp
 @admin_product_bp.route('/', methods=['GET'])
 @login_required
 def manage_products():
+    # استلام معايير البحث والصفحة من الرابط
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').lower()
     
-    # الاقتراح الأفضل: 10 بطاقات في الصفحة (2 صف × 5 بطاقات)
-    # هذا يجعل الصفحة سريعة التحميل جداً ويقلل الضغط على المتصفح
+    # تحديد 10 بطاقات في الصفحة (2 صف × 5 بطاقات)
     per_page = 10
     
-    # 1. الاستعلام المفتوح لجلب كل المنتجات
+    # 1. الاستعلام المفتوح لجلب كل المنتجات من "قمرة"
     query = """
     query Data {
       findAllProducts(input: { limit: 99999 }) {
@@ -34,10 +34,10 @@ def manage_products():
     result = QomrahGraphQLClient.execute_query(query)
     all_products = result.get('data', {}).get('findAllProducts', {}).get('data', []) if result else []
     
-    # 3. الفلترة المحلية
+    # 3. الفلترة المحلية (للبحث عن اسم المنتج أو الـ SKU)
     if search:
         all_products = [p for p in all_products if search in p.get('title', '').lower() or 
-                        (p.get('identification') and search in p['identification'].get('sku', '').lower())]
+                        (p.get('identification') and p['identification'].get('sku') and search in p['identification']['sku'].lower())]
     
     # 4. الترقيم اليدوي
     total = len(all_products)
@@ -45,7 +45,7 @@ def manage_products():
     end = start + per_page
     paginated_products = all_products[start:end]
     
-    # 5. كائن الترقيم
+    # 5. كائن الترقيم المخصص
     class Pagination:
         def __init__(self, page, per_page, total):
             self.page = page
@@ -67,9 +67,11 @@ def manage_products():
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
 def proxy_sync():
+    # هذا المسار مخصص لعمليات التحديث المستقبلية
     return jsonify({"status": "success", "message": "تم تحديث البيانات من المصدر"})
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync():
+    # مسار احتياطي لعمليات الحفظ (لا يوجد حفظ حالياً)
     return jsonify({"status": "success", "message": "تم التخطي: لا يوجد حفظ في قاعدة البيانات"})
