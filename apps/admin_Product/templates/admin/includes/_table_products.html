@@ -1,7 +1,7 @@
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
         <h5 class="mb-0 fw-bold">قائمة المنتجات (تفصيلية)</h5>
-        <button type="button" class="btn btn-sm btn-custom" data-bs-toggle="modal" data-bs-target="#syncModal">
+        <button type="button" class="btn btn-sm btn-custom" onclick="syncProducts()">
             <i class="fas fa-sync-alt"></i> تحديث البيانات
         </button>
     </div>
@@ -22,7 +22,6 @@
                 {% for product in products %}
                 <tr class="product-row">
                     <td>
-                        <!-- الوصول للصورة: product.images هو قائمة -->
                         <img src="{{ product.images[0].fileUrl if product.images and product.images|length > 0 else '/static/images/default.png' }}" 
                              class="rounded" style="width: 40px; height: 40px; object-fit: cover;" alt="img">
                     </td>
@@ -32,18 +31,13 @@
                             {{ product.quantity or 0 }}
                         </span>
                     </td>
-                    <!-- الوصول للسعر: داخل كائن pricing -->
                     <td class="text-primary fw-bold">{{ product.pricing.price or 0 }} ر.س</td>
-                    <td class="text-muted small">
-                        <!-- ملاحظة: API قمرة غالباً لا يعيد المورد في هذا الاستعلام، وضعنا افتراضي -->
-                        {{ product.supplier_name or '---' }}
-                    </td>
-                    <!-- الوصول للـ SKU: داخل كائن identification -->
-                    <td><span class="badge bg-light text-dark border">{{ product.identification.sku or '---' }}</span></td>
+                    <td class="text-muted small">---</td>
+                    <td><span class="badge bg-light text-dark border product-sku">{{ product.identification.sku or '---' }}</span></td>
                 </tr>
                 {% else %}
-                <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">لا توجد منتجات لعرضها.</td>
+                <tr id="emptyRow">
+                    <td colspan="6" class="text-center py-4 text-muted">جاري تحميل البيانات...</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -54,18 +48,31 @@
 {% include 'admin/includes/_sync_modal.html' %}
 
 <script>
-    // سكربت البحث اللحظي
-    document.getElementById('searchInput').addEventListener('keyup', function() {
-        let filter = this.value.toUpperCase();
-        let rows = document.getElementsByClassName('product-row');
-        
-        for (let i = 0; i < rows.length; i++) {
-            let nameCell = rows[i].querySelector('.product-name');
-            let skuCell = rows[i].querySelector('.badge.border'); // البحث أيضاً في SKU
+    // سكربت البحث اللحظي المطور
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            let filter = this.value.toUpperCase();
+            let rows = document.getElementsByClassName('product-row');
             
-            let txtValue = (nameCell.textContent || nameCell.innerText) + " " + (skuCell.textContent || skuCell.innerText);
-            
-            rows[i].style.display = (txtValue.toUpperCase().indexOf(filter) > -1) ? "" : "none";
-        }
-    });
+            for (let i = 0; i < rows.length; i++) {
+                let nameCell = rows[i].querySelector('.product-name');
+                let skuCell = rows[i].querySelector('.product-sku');
+                
+                let txtValue = (nameCell.textContent || nameCell.innerText) + " " + (skuCell ? skuCell.innerText : "");
+                rows[i].style.display = (txtValue.toUpperCase().indexOf(filter) > -1) ? "" : "none";
+            }
+        });
+    }
+
+    // دالة تحديث البيانات (تستدعي المسار الخلفي)
+    function syncProducts() {
+        alert("بدأت عملية المزامنة في الخلفية...");
+        fetch('/admin/proxy-sync', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message);
+                location.reload(); // إعادة تحميل الصفحة لتحديث البيانات
+            });
+    }
 </script>
