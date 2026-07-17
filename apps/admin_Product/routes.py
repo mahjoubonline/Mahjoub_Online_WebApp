@@ -55,7 +55,8 @@ def manage_products():
 @admin_product_bp.route('/add', methods=['GET'])
 @login_required
 def add_product():
-    return render_template('admin/add_product.html')
+    # تم تحديث المسار ليتطابق مع اسم الملف الجديد: admin_add_product.html
+    return render_template('admin/admin_add_product.html')
 
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
