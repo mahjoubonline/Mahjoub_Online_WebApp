@@ -1,18 +1,27 @@
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
+<style>
+    /* الألوان: بنفسجي داكن يميل للسواد */
+    :root { --dark-purple: #2d0b36; }
+    .btn-custom { background-color: var(--dark-purple); color: #fff; border: none; }
+    .btn-custom:hover { background-color: #1a0620; color: #eee; }
+    .page-item.active .page-link { background-color: var(--dark-purple); border-color: var(--dark-purple); color: white; }
+    .page-link { color: var(--dark-purple); }
+    .text-custom { color: var(--dark-purple); }
+</style>
+
 <div class="container-fluid">
     <!-- شريط الأدوات: البحث، الرجوع، المزامنة -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> رجوع</button>
         
-        <form class="d-flex flex-grow-1 mx-3" method="GET" action="{{ url_for('admin_product_bp.manage_products') }}">
-            <input type="text" name="search" class="form-control" placeholder="ابحث بالاسم أو SKU..." value="{{ search }}">
-            <button class="btn btn-primary ms-2" type="submit"><i class="fas fa-search"></i></button>
+        <form id="searchForm" class="d-flex flex-grow-1 mx-3">
+            <input type="text" id="searchInput" name="search" class="form-control" placeholder="ابحث بالاسم أو SKU..." value="{{ search }}">
         </form>
 
-        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#syncModal">
-            <i class="fas fa-sync-alt"></i> مزامنة
+        <button type="button" class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#syncModal">
+            <i class="fas fa-sync-alt"></i> مزامنة ({{ pagination.total }})
         </button>
     </div>
 
@@ -30,7 +39,7 @@
                         <h6 class="card-title fw-bold text-truncate" title="{{ product.title }}">{{ product.title }}</h6>
                         <div class="d-flex justify-content-between small text-muted">
                             <span>الكمية: {{ product.quantity or 0 }}</span>
-                            <span class="text-primary fw-bold">{{ product.cost_price or 0 }} ر.س</span>
+                            <span class="text-custom fw-bold">{{ product.cost_price or 0 }} ر.س</span>
                         </div>
                     </div>
                 </div>
@@ -39,15 +48,13 @@
         {% endfor %}
     </div>
 
-    <!-- نظام ترقيم صفحات متطور -->
+    <!-- نظام ترقيم الصفحات -->
     <nav aria-label="Page navigation" class="mt-5">
         <ul class="pagination justify-content-center">
-            <!-- زر السابق -->
             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.prev_num, search=search) }}">السابق</a>
             </li>
             
-            <!-- أرقام الصفحات -->
             {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                 {% if page_num %}
                     <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
@@ -58,13 +65,23 @@
                 {% endif %}
             {% endfor %}
 
-            <!-- زر التالي -->
             <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.next_num, search=search) }}">التالي</a>
             </li>
         </ul>
     </nav>
 </div>
+
+<!-- سكربت البحث اللحظي -->
+<script>
+    let timer;
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            window.location.href = "{{ url_for('admin_product_bp.manage_products') }}?search=" + this.value;
+        }, 500);
+    });
+</script>
 
 {% include 'admin/includes/_sync_modal.html' %}
 {% endblock %}
