@@ -47,23 +47,14 @@
             progressBar.style.width = '100%';
             statusText.innerHTML = `<span class="text-success">${data.message}</span>`;
             
+            // انتظر ثانية واحدة ثم قم بتحديث الصفحة لجلب البيانات الجديدة
             setTimeout(() => {
                 const modalElement = document.getElementById('syncModal');
                 const modal = bootstrap.Modal.getInstance(modalElement);
                 if (modal) modal.hide();
                 
-                // التعديل: استدعاء الدالة المتاحة في الصفحة (سواء كانت للشبكة أو للجدول)
-                if (typeof loadProducts === 'function') {
-                    loadProducts();
-                } else if (typeof loadTableProducts === 'function') {
-                    loadTableProducts();
-                }
-                
-                // إعادة ضبط المودال
-                btn.disabled = false;
-                document.getElementById('sync-info').classList.remove('d-none');
-                document.getElementById('sync-progress-area').classList.add('d-none');
-                progressBar.style.width = '0%';
+                // إعادة تحميل الصفحة لجلب البيانات المحدثة من السيرفر
+                window.location.reload(); 
             }, 1000);
             
         } catch (err) {
