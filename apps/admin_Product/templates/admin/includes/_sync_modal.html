@@ -2,7 +2,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="syncModalLabel">مزامنة جميع المنتجات</h5>
+                <h5 class="modal-title" id="syncModalLabel">تحديث قائمة المنتجات</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -10,15 +10,15 @@
                     <div class="progress mb-3">
                         <div id="sync-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%"></div>
                     </div>
-                    <p id="sync-status" class="text-center small">جاري البدء...</p>
+                    <p id="sync-status" class="text-center small">جاري التحديث...</p>
                 </div>
                 <div id="sync-info">
-                    <p>سيتم سحب كافة البيانات من قمرة وحفظها في قاعدة بياناتنا. هذه العملية قد تستغرق بضع ثوانٍ.</p>
+                    <p>يتم جلب أحدث المنتجات مباشرة من "قمرة". هل تريد تحديث القائمة الآن؟</p>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                <button type="button" id="startSyncBtn" class="btn btn-primary" onclick="startProductSync()">بدء المزامنة الكاملة</button>
+                <button type="button" id="startSyncBtn" class="btn btn-primary" onclick="startProductSync()">تحديث البيانات الآن</button>
             </div>
         </div>
     </div>
@@ -34,47 +34,19 @@
         document.getElementById('sync-info').classList.add('d-none');
         document.getElementById('sync-progress-area').classList.remove('d-none');
         
-        progressBar.style.width = '30%';
-        statusText.innerText = "جاري الاتصال بقمرة وجلب كافة المنتجات...";
+        progressBar.style.width = '50%';
+        statusText.innerText = "جاري الاتصال بـ قمرة لجلب أحدث البيانات...";
 
         try {
-            // 1. جلب البيانات
-            const response = await fetch("{{ url_for('admin_product_bp.proxy_sync') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" }
-            });
-
-            if (!response.ok) throw new Error("فشل الاتصال بخدمة المزامنة");
-
-            const result = await response.json();
-            const products = result.data?.findAllProducts?.data;
-
-            if (!products || products.length === 0) {
-                throw new Error("لا توجد منتجات لجلبها من المصدر");
-            }
-
-            progressBar.style.width = '60%';
-            statusText.innerText = `تم جلب ${products.length} منتج، جاري حفظهم في قاعدة البيانات...`;
-
-            // 2. إرسال البيانات للحفظ
-            const saveResponse = await fetch("{{ url_for('admin_product_bp.save_sync') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" },
-                body: JSON.stringify({ products: products })
-            });
-
-            const saveResult = await saveResponse.json();
-
-            if (saveResponse.ok && saveResult.status === 'success') {
-                progressBar.style.width = '100%';
-                statusText.innerHTML = `<span class="text-success">تمت المزامنة بنجاح لـ ${products.length} منتج!</span>`;
-                setTimeout(() => { location.reload(); }, 1500);
-            } else {
-                throw new Error(saveResult.message || "حدث خطأ أثناء الحفظ");
-            }
-
+            // نقوم بعمل تحديث كامل للصفحة (لأن الصفحة نفسها هي التي تجلب البيانات تلقائياً عند تحميلها)
+            progressBar.style.width = '100%';
+            statusText.innerHTML = `<span class="text-success">تم جلب أحدث البيانات بنجاح!</span>`;
+            
+            // إعادة تحميل الصفحة لتفعيل طلب الـ GraphQL الجديد
+            setTimeout(() => { location.reload(); }, 800);
+            
         } catch (err) {
-            statusText.innerHTML = `<span class="text-danger">خطأ: ${err.message}</span>`;
+            statusText.innerHTML = `<span class="text-danger">خطأ في التحديث: ${err.message}</span>`;
             btn.disabled = false;
         }
     }
