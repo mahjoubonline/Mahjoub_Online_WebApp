@@ -13,7 +13,7 @@
                     <p id="sync-status" class="text-center small">جاري التحديث...</p>
                 </div>
                 <div id="sync-info">
-                    <p>يتم جلب أحدث المنتجات مباشرة من "قمرة". هل تريد تحديث القائمة الآن؟</p>
+                    <p>سيتم جلب أحدث المنتجات مباشرة من "قمرة". هل تريد تحديث القائمة الآن؟</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -29,21 +29,35 @@
         const btn = document.getElementById('startSyncBtn');
         const progressBar = document.getElementById('sync-bar');
         const statusText = document.getElementById('sync-status');
+        const grid = document.getElementById('productGrid');
         
         btn.disabled = true;
         document.getElementById('sync-info').classList.add('d-none');
         document.getElementById('sync-progress-area').classList.remove('d-none');
         
         progressBar.style.width = '50%';
-        statusText.innerText = "جاري الاتصال بـ قمرة لجلب أحدث البيانات...";
+        statusText.innerText = "جاري جلب البيانات المحدثة...";
 
         try {
-            // نقوم بعمل تحديث كامل للصفحة (لأن الصفحة نفسها هي التي تجلب البيانات تلقائياً عند تحميلها)
+            // محاكاة عملية التحديث
             progressBar.style.width = '100%';
-            statusText.innerHTML = `<span class="text-success">تم جلب أحدث البيانات بنجاح!</span>`;
+            statusText.innerHTML = `<span class="text-success">تم جلب البيانات بنجاح!</span>`;
             
-            // إعادة تحميل الصفحة لتفعيل طلب الـ GraphQL الجديد
-            setTimeout(() => { location.reload(); }, 800);
+            // إغلاق المودال بعد ثانية
+            setTimeout(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('syncModal'));
+                modal.hide();
+                
+                // إعادة تحميل المنتجات في الصفحة الحالية دون عمل Reload للصفحة
+                grid.innerHTML = '<div class="col-12 text-center py-5" id="loadingIndicator"><div class="spinner-border text-custom" role="status"></div><p class="mt-2">جاري تحديث القائمة...</p></div>';
+                loadProducts(); 
+                
+                // إعادة ضبط المودال للحالة الأصلية
+                btn.disabled = false;
+                document.getElementById('sync-info').classList.remove('d-none');
+                document.getElementById('sync-progress-area').classList.add('d-none');
+                progressBar.style.width = '0%';
+            }, 1000);
             
         } catch (err) {
             statusText.innerHTML = `<span class="text-danger">خطأ في التحديث: ${err.message}</span>`;
