@@ -6,23 +6,25 @@ from flask_login import login_required
 from apps.services.graphql_client import QomrahGraphQLClient
 import math
 
+# ملاحظة: عند تسجيل هذا البلوبرينت في التطبيق الرئيسي، تأكد من مسار الـ prefix
+# إذا كان التطبيق يسجل البلوبرينت بـ url_prefix='/admin'
+# فإن المسار النهائي سيكون /admin/get-products
 admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
 
 @admin_product_bp.route('/', methods=['GET'])
 @login_required
 def manage_products():
-    """تحميل صفحة المنتجات بهيكل فارغ أولاً لضمان السرعة القصوى للمستخدم"""
+    """تحميل صفحة المنتجات بهيكل فارغ أولاً لضمان السرعة القصوى"""
     return render_template('admin/admin_Product.html')
 
-@admin_product_bp.route('/api/get-products', methods=['GET'])
+@admin_product_bp.route('/get-products', methods=['GET'])
 @login_required
 def get_products_api():
-    """مسار API لجلب المنتجات في الخلفية (Async Fetch) لمنع بطء السيرفر"""
+    """مسار API لجلب المنتجات - تم تعديل المسار لتجنب التضارب"""
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').lower()
     per_page = 10
     
-    # استعلام جلب البيانات (يتم تنفيذه في الخلفية فقط عند الحاجة)
     query = """
     query Data {
       findAllProducts(input: { limit: 99999 }) {
@@ -34,16 +36,14 @@ def get_products_api():
     }
     """
     
-    # تنفيذ الطلب باستخدام الكلاس المحسن
     result = QomrahGraphQLClient.execute_query(query)
+    # تعديل مسار استخراج البيانات ليكون أكثر دقة
     all_products = result.get('findAllProducts', {}).get('data', []) if result else []
     
-    # الفلترة المحلية
     if search:
         all_products = [p for p in all_products if search in p.get('title', '').lower() or 
                         (p.get('identification') and p['identification'].get('sku') and search in p['identification']['sku'].lower())]
     
-    # الترقيم
     total = len(all_products)
     start = (page - 1) * per_page
     end = start + per_page
@@ -63,4 +63,4 @@ def proxy_sync():
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync():
-    return jsonify({"status": "success", "message": "تم التخطي: لا يوجد حفظ في قاعدة البيانات"})
+    return jsonify({"status": "success", "message": "تم التخطي"})
