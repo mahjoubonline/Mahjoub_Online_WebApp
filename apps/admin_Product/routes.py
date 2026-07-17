@@ -32,6 +32,7 @@ class PaginationMock:
 @login_required
 def manage_products():
     page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '') # استلام نص البحث
     
     query = """
     query Data($input: GetAllProductsInput) {
@@ -41,7 +42,8 @@ def manage_products():
       }
     }
     """
-    variables = {"input": {"page": page, "limit": 10}}
+    # تمرير قيمة البحث للـ GraphQL (تأكد أن الـ API يدعم خاصية search في input)
+    variables = {"input": {"page": page, "limit": 10, "search": search}}
     
     try:
         result = QomrahGraphQLClient.execute_query(query, variables=variables)
