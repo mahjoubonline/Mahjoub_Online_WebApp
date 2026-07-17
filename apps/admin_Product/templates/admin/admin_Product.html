@@ -13,49 +13,22 @@
     <div class="row row-cols-1 row-cols-md-5 g-3">
         {% for product in products %}
         <div class="col">
-            <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden cursor-pointer" 
-                 data-bs-toggle="modal" data-bs-target="#productModal{{ product.id }}">
-                
-                <!-- الصورة -->
-                <div class="bg-light text-center" style="height: 150px; overflow: hidden;">
-                    <img src="{{ product.image_url or '/static/images/default.png' }}" 
-                         class="w-100 h-100" style="object-fit: cover;" alt="{{ product.title }}">
-                </div>
-
-                <div class="card-body p-2">
-                    <h6 class="card-title fw-bold text-truncate" title="{{ product.title }}">{{ product.title }}</h6>
-                    <div class="d-flex justify-content-between small text-muted">
-                        <span>الكمية: {{ product.quantity or 0 }}</span>
-                        <span class="text-primary fw-bold">{{ product.cost_price or 0 }} ر.س</span>
+            <!-- تم استبدال data-bs-toggle برابط التعديل المباشر -->
+            <a href="{{ url_for('admin_product_bp.edit_product', product_id=product.id) }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden">
+                    <div class="bg-light text-center" style="height: 150px; overflow: hidden;">
+                        <img src="{{ product.image_url or '/static/images/default.png' }}" 
+                             class="w-100 h-100" style="object-fit: cover;" alt="{{ product.title }}">
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- قالب منبثق مستقل لكل منتج -->
-        <div class="modal fade" id="productModal{{ product.id }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">{{ product.title }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6 text-center">
-                                <img src="{{ product.image_url or '/static/images/default.png' }}" class="img-fluid rounded">
-                            </div>
-                            <div class="col-md-6">
-                                <p><strong>SKU:</strong> {{ product.sku }}</p>
-                                <p><strong>السعر:</strong> {{ product.cost_price }} ر.س</p>
-                                <p><strong>الكمية المتوفرة:</strong> {{ product.quantity }}</p>
-                                <p><strong>المورد:</strong> {{ product.supplier.name if product.supplier else 'منتج خاص' }}</p>
-                                <p><strong>الوزن:</strong> {{ product.weight_val or 'N/A' }} {{ product.weight_unit or '' }}</p>
-                            </div>
+                    <div class="card-body p-2">
+                        <h6 class="card-title fw-bold text-truncate" title="{{ product.title }}">{{ product.title }}</h6>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>الكمية: {{ product.quantity or 0 }}</span>
+                            <span class="text-primary fw-bold">{{ product.cost_price or 0 }} ر.س</span>
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         {% endfor %}
     </div>
