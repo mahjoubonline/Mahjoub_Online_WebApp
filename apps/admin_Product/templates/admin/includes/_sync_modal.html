@@ -38,27 +38,33 @@
         statusText.innerText = "جاري الاتصال بالسيرفر لبدء المزامنة...";
 
         try {
+            // جلب الـ CSRF Token من الميتا تاغ في الصفحة
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
             const response = await fetch('/admin/products/proxy-sync', { 
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                }
             });
+
+            if (!response.ok) throw new Error('فشل الاتصال');
+            
             const data = await response.json();
             
             progressBar.style.width = '100%';
             statusText.innerHTML = `<span class="text-success">${data.message}</span>`;
             
-            // انتظر ثانية واحدة ثم قم بتحديث الصفحة لجلب البيانات الجديدة
             setTimeout(() => {
                 const modalElement = document.getElementById('syncModal');
                 const modal = bootstrap.Modal.getInstance(modalElement);
                 if (modal) modal.hide();
-                
-                // إعادة تحميل الصفحة لجلب البيانات المحدثة من السيرفر
                 window.location.reload(); 
             }, 1000);
             
         } catch (err) {
-            statusText.innerHTML = `<span class="text-danger">خطأ: فشل الاتصال بالسيرفر.</span>`;
+            statusText.innerHTML = `<span class="text-danger">خطأ: تأكد من الصلاحيات أو اتصال السيرفر.</span>`;
             btn.disabled = false;
         }
     }
