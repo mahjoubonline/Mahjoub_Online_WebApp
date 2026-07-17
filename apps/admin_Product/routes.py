@@ -13,6 +13,11 @@ logger = logging.getLogger(__name__)
 
 admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
 
+# إضافة الدوال المفقودة في قوالب Jinja2
+@admin_product_bp.app_context_processor
+def inject_utils():
+    return dict(max=max, min=min)
+
 class PaginationMock:
     def __init__(self, p):
         self.page = p.get('currentPage', 1)
@@ -55,7 +60,6 @@ def manage_products():
 @admin_product_bp.route('/add', methods=['GET'])
 @login_required
 def add_product():
-    # تم تحديث المسار ليتطابق مع اسم الملف الجديد: admin_add_product.html
     return render_template('admin/admin_add_product.html')
 
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
