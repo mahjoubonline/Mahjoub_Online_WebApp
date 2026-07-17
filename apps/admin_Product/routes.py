@@ -31,30 +31,25 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').strip()
     
-    # اختيار الدالة بناءً على وجود نص بحث
-    if search:
-        # التعديل: استخدام الصيغة المباشرة التي طلبها مساعد قمرة
-        query = """
-        query Search($query: String!) {
-          searchProducts(query: $query, limit: 10) {
-            data { qid, title, quantity, pricing { price }, images { fileUrl }, identification { sku } }
-            pagination { totalPages, currentPage, totalItems }
-          }
+    # الحل الصحيح: استخدام findAllProducts دائماً وإضافة الـ search للـ input
+    query = """
+    query Data($input: GetAllProductsInput) {
+      findAllProducts(input: $input) {
+        data { qid, title, quantity, pricing { price }, images { fileUrl }, identification { sku } }
+        pagination { totalPages, currentPage, totalItems }
+      }
+    }
+    """
+    
+    # نمرر نص البحث داخل الـ input (هذا هو المعيار المتعارف عليه في الـ API التي تدعم الـ findAll)
+    variables = {
+        "input": {
+            "page": page, 
+            "limit": 10,
+            "search": search if search else None
         }
-        """
-        variables = {"query": search}
-        data_key = 'searchProducts'
-    else:
-        query = """
-        query Data($input: GetAllProductsInput) {
-          findAllProducts(input: $input) {
-            data { qid, title, quantity, pricing { price }, images { fileUrl }, identification { sku } }
-            pagination { totalPages, currentPage, totalItems }
-          }
-        }
-        """
-        variables = {"input": {"page": page, "limit": 10}}
-        data_key = 'findAllProducts'
+    }
+    data_key = 'findAllProducts'
     
     try:
         result = QomrahGraphQLClient.execute_query(query, variables=variables)
