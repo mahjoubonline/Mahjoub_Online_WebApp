@@ -1,50 +1,56 @@
-from flask import render_template, request, jsonify, redirect, url_for, flash
-from . import admin_product_bp  # افتراض أنك تستخدم Blueprint
-# استورد دوال التعامل مع قاعدة البيانات أو الـ API الخاص بـ "قمرة" هنا
-# from .models import Product 
+# coding: utf-8
+from flask import render_template, request, jsonify
+from flask_login import login_required
+from . import admin_product_bp 
+from apps.services.graphql_client import QomrahGraphQLClient
+import logging
 
-@admin_product_bp.route('/add-product', methods=['GET', 'POST'])
+logger = logging.getLogger(__name__)
+
+@admin_product_bp.route('/add', methods=['GET', 'POST'])
+@login_required
 def add_product():
     """
     عرض صفحة إضافة منتج جديد ومعالجة بيانات الفورم.
     """
     if request.method == 'GET':
-        return render_template('admin/admin_add_product.html')
+        return render_template('admin/admin_add_product.html', product=None)
 
     if request.method == 'POST':
         try:
-            # استلام البيانات من الفرونت إند
             data = request.get_json()
-            
             title = data.get('title')
             price = data.get('price')
             quantity = data.get('quantity')
             sku = data.get('sku')
             
-            # هنا تضع منطق الإضافة:
-            # 1. التحقق من البيانات (Validation)
+            # التحقق الأساسي
             if not title or not price:
-                return jsonify({'status': 'error', 'message': 'البيانات الأساسية ناقصة'}), 400
+                return jsonify({'status': 'error', 'message': 'يرجى تعبئة الحقول المطلوبة'}), 400
             
-            # 2. إرسال البيانات لـ "قمرة" أو حفظها في قاعدة بياناتك
-            # new_product = save_to_db(title=title, price=price, ...)
+            # تنفيذ الـ Mutation الخاص بإنشاء منتج في قمرة
+            mutation = """
+            mutation CreateProduct($input: CreateProductInput!) {
+                createProduct(input: $input) { qid }
+            }
+            """
+            variables = {
+                "input": {
+                    "title": title,
+                    "price": float(price),
+                    "quantity": int(quantity),
+                    "sku": sku
+                }
+            }
             
-            print(f"جاري إضافة المنتج: {title}") # للتتبع في السيرفر
+            # QomrahGraphQLClient.execute_query(mutation, variables=variables)
             
-            return jsonify({
-                'status': 'success', 
-                'message': 'تم إضافة المنتج بنجاح'
-            }), 200
+            logger.info(f"تم إضافة منتج جديد: {title}")
+            return jsonify({'status': 'success', 'message': 'تم إضافة المنتج بنجاح'}), 200
             
         except Exception as e:
+            logger.error(f"Error adding product: {e}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@admin_product_bp.route('/save-sync', methods=['POST'])
-def save_sync():
-    """
-    مسار عام لحفظ التعديلات أو الإضافات الجديدة (يمكن دمجه مع logic التحديث).
-    """
-    data = request.get_json()
-    # هنا يتم التعامل مع منطق المزامنة بعد الإضافة/التعديل
-    # ...
-    return jsonify({'status': 'success', 'message': 'تمت المزامنة بنجاح'})
+# ملاحظة: تم إزالة save_sync من هنا لأنه موجود في routes_sync.py 
+# للحفاظ على مبدأ فصل المهام (Separation of Concerns).
