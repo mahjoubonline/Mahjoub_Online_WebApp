@@ -1,8 +1,8 @@
 # coding: utf-8
 from flask import render_template, request, jsonify
 from flask_login import login_required
-# التعديل هنا: الاستيراد من . بدلاً من .routes
-from . import admin_product_bp 
+# التعديل هنا: الاستيراد الصحيح ليتوافق مع وجود الـ Blueprint في ملف routes.py
+from .routes import admin_product_bp 
 from apps.services.graphql_client import QomrahGraphQLClient
 import logging
 
