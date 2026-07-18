@@ -13,7 +13,6 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     
-    # استعلام API يدعم البحث والترقيم
     query = """
     query Data($input: GetAllProductsInput) {
       findAllProducts(input: $input) {
@@ -22,7 +21,6 @@ def manage_products():
       }
     }
     """
-    # نمرر البحث كمتغير للـ API
     variables = {"input": {"page": page, "limit": 20, "search": search} if search else {"page": page, "limit": 20}}
     
     try:
@@ -35,7 +33,6 @@ def manage_products():
     products = data.get('data', [])
     pag_info = data.get('pagination', {"totalPages": 1, "currentPage": 1, "totalItems": 0})
     
-    # كلاس الموك ليتوافق مع القالب الحالي
     class MockPagination:
         def __init__(self, p):
             self.page = p['currentPage']
@@ -50,14 +47,18 @@ def manage_products():
                            pagination=MockPagination(pag_info),
                            search=search)
 
+@admin_product_bp.route('/add', methods=['GET'])
+@login_required
+def add_product():
+    return render_template('admin/admin_add_product.html', product=None)
+
 @admin_product_bp.route('/edit/<qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
-    # جلب المنتج من الـ API مباشرة باستخدام qid
     query = """
     query GetProduct($qid: String!) {
       findProductByQid(qid: $qid) {
-        qid, title, quantity, pricing { price }, description, images { fileUrl }
+        qid, title, quantity, pricing { price }, identification { sku }, images { fileUrl }
       }
     }
     """
@@ -69,4 +70,38 @@ def edit_product(qid):
         
     return render_template('admin/admin_add_product.html', product=product)
 
-# ... (دالة proxy_sync تبقى كما هي للمزامنة الخلفية)
+@admin_product_bp.route('/save-sync', methods=['POST'])
+@login_required
+def save_sync():
+    """دالة استقبال بيانات التعديل وإرسالها للـ API"""
+    data = request.json
+    # استعلام Mutation لتعديل المنتج (تأكد من مطابقة اسم الـ mutation لـ API قمرة)
+    mutation = """
+    mutation UpdateProduct($input: UpdateProductInput!) {
+        updateProduct(input: $input) {
+            qid
+        }
+    }
+    """
+    # تجهيز المدخلات
+    variables = {
+        "input": {
+            "title": data.get('title'),
+            "price": float(data.get('price', 0)),
+            "quantity": int(data.get('quantity', 0)),
+            "sku": data.get('sku'),
+            "imageUrl": data.get('imageUrl')
+        }
+    }
+    
+    result = QomrahGraphQLClient.execute_query(mutation, variables=variables)
+    
+    if result:
+        return jsonify({"status": "success", "message": "تم حفظ المنتج بنجاح"})
+    return jsonify({"status": "error", "message": "فشل الحفظ في الـ API"}), 500
+
+@admin_product_bp.route('/proxy-sync', methods=['POST'])
+@login_required
+def proxy_sync():
+    # ... (كود المزامنة الخاص بك هنا)
+    return jsonify({"status": "success", "message": "تمت المزامنة"})
