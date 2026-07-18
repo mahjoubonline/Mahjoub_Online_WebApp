@@ -1,12 +1,12 @@
-# 📂 apps/admin_Product/registry.py
-
+from flask import Blueprint
 from .routes import admin_product_bp
+# استيراد الملفات هنا لضمان تشغيل الكود بداخلها وبالتالي تسجيل الراوترات
+from . import routes, routes_add, routes_edit, routes_sync
 
 MODULE_NAME = "إدارة المنتجات"
 MODULE_ICON = "fas fa-box-open"
 SHOW_IN_SUPPLIER = False 
 
-# التعديل: تم تحديث المفاتيح لتطابق اسم الـ Blueprint الجديد (admin_product_bp)
 LINKS = {
     "admin_product_bp.manage_products": "قائمة المنتجات",
     "admin_product_bp.add_product": "إضافة منتج"
