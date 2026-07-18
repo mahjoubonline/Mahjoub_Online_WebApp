@@ -97,9 +97,12 @@
     if (searchInput) {
         searchInput.addEventListener('input', function() {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                searchForm.submit();
-            }, 600);
+            // تحسين الأداء: يبدأ البحث فقط إذا كان النص فارغاً (لإلغاء البحث) أو طوله أكبر من حرفين
+            if (this.value.length === 0 || this.value.length > 2) {
+                searchTimeout = setTimeout(() => {
+                    searchForm.submit();
+                }, 600);
+            }
         });
     }
 </script>
