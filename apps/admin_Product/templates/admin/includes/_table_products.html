@@ -27,7 +27,8 @@
             </thead>
             <tbody>
                 {% for product in products %}
-                <tr onclick="window.location.href='{{ url_for('admin_product_bp.add_product') }}';">
+                <!-- تم تحديث الرابط ليفتح صفحة التعديل لكل منتج على حدة -->
+                <tr onclick="window.location.href='{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}';">
                     <td>
                         <img src="{{ product.images[0].fileUrl if product.images and product.images|length > 0 else '/static/images/default.png' }}" 
                               class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
@@ -50,18 +51,18 @@
         </table>
     </div>
 
-    <!-- الترقيم المحدث ليتوافق مع نظام Cursor -->
+    <!-- ترقيم الصفحات المحدث -->
     <div class="card-footer bg-white py-3">
         <nav aria-label="Page navigation">
             <ul class="pagination justify-content-center mb-0">
                 <li class="page-item {{ 'disabled' if not pagination.has_prev() }}">
-                    <a class="page-link" href="?search={{ request.args.get('search', '') }}">« السابق</a>
+                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.prev_num(), search=request.args.get('search', '')) }}">« السابق</a>
                 </li>
                 <li class="page-item active">
-                    <span class="page-link">تصفح</span>
+                    <span class="page-link">{{ pagination.page }} / {{ pagination.pages }}</span>
                 </li>
                 <li class="page-item {{ 'disabled' if not pagination.has_next() }}">
-                    <a class="page-link" href="?search={{ request.args.get('search', '') }}">التالي »</a>
+                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.next_num(), search=request.args.get('search', '')) }}">التالي »</a>
                 </li>
             </ul>
         </nav>
