@@ -3,7 +3,7 @@
 
 from flask import render_template, request, flash
 from flask_login import login_required
-from apps.admin_Product import admin_product_bp
+from .registry import admin_product_bp  # تم تعديل الاستيراد ليتطابق تماماً مع موديول المزامنة
 from apps.services.graphql_client import QomrahGraphQLClient
 
 # استعلام جلب المنتجات من واجهة قمرة
@@ -28,7 +28,7 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('title', '').strip()
     
-    # رفع حد الجلب لـ 100 منتج لضمان كفاءة الفلترة النصية المحلية لـ (title)
+    # جلب 100 منتج لضمان وجود كمية كافية لتصفيتها محلياً بواسطة بايثون
     variables = {
         "input": {
             "page": page,
@@ -47,21 +47,21 @@ def manage_products():
             result = response['findAllProducts']
             all_products = result.get('data', []) or []
             
-            # محاكاة لعملية الفلترة النصية المتقدمة CONTAINS يدوياً في بايثون
+            # تفعيل عملية الفلترة النصية (CONTAINS) محلياً داخل السيرفر
             if search:
                 products = [
                     p for p in all_products 
                     if p.get('title') and search.lower() in str(p.get('title')).lower()
                 ]
-                # عند البحث المحلي نثبت الترقيم في صفحة واحدة للمخرجات المفلترة
+                # تثبيت الترقيم لصفحة واحدة عند ظهور نتائج الفلترة المخصصة
                 pagination = {"currentPage": 1, "totalPages": 1}
             else:
                 products = all_products
                 pagination = result.get('pagination', {"currentPage": page, "totalPages": 1})
                 
     except Exception as e:
-        print(f"❌ خطأ في موديول المنتجات: {e}")
-        flash("حدث خطأ أثناء معالجة أو جلب البيانات.")
+        print(f"❌ خطأ في موديول المنتجات أثناء الفلترة: {e}")
+        flash("حدث خطأ أثناء معالجة البيانات.")
 
     return render_template(
         'admin/admin_product.html',
