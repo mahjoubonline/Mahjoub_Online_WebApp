@@ -1,8 +1,8 @@
 # coding: utf-8
 from flask import request, jsonify
 from flask_login import login_required
-# التعديل هنا: الاستيراد من .routes لأن الـ Blueprint معرف هناك
-from .routes import admin_product_bp
+# تصحيح الاستيراد: الاعتماد على registry لتوحيد الـ Blueprint ومنع Circular Import
+from .registry import admin_product_bp
 from apps.services.graphql_client import QomrahGraphQLClient
 import logging
 
