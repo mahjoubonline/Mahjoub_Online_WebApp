@@ -83,7 +83,7 @@
         };
 
         try {
-            // تأكد أن هذا الرابط هو نفسه المسمى في routes_edit.py
+            // يتم التحديث عبر المسار الموحد المربوط بـ admin_product_bp
             const response = await fetch("{{ url_for('admin_product_bp.update_product') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
