@@ -10,7 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# 🚀 استعلام جلب بيانات المنتج متضمناً الـ supplier_id
+# 🚀 استعلام جلب بيانات المنتج من قمرة
 FIND_PRODUCT_QUERY = """
 query GetProduct($qid: ID!) {
   findProductByQid(qid: $qid) {
@@ -24,32 +24,33 @@ query GetProduct($qid: ID!) {
 }
 """
 
-# تم تغيير <qid> إلى <path:qid> لحل مشكلة الرموز الخاصة في الرابط
 @admin_product_bp.route('/edit/<path:qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
     """
-    راوتر لجلب بيانات المنتج وعرض صفحة التعديل مع قائمة الموردين.
+    راوتر لجلب بيانات المنتج من قمرة، وجلب قائمة الموردين من قاعدة بياناتنا المحلية.
     """
     try:
-        # 1. جلب البيانات من قمرة
-        # الـ qid يصل هنا كاملاً ومحفوظاً برموزه
+        # 1. جلب بيانات المنتج الأساسية من قمرة
         response = QomrahGraphQLClient.execute_query(FIND_PRODUCT_QUERY, variables={"qid": qid})
         result = response.get('data', {}) if response else {}
         product = result.get('findProductByQid')
         
-        # 2. التحقق من وجود البيانات
+        # 2. التحقق من وجود المنتج
         if not product:
-            logger.error(f"❌ المنتج غير موجود أو خطأ في الاستعلام لـ {qid}")
+            logger.error(f"❌ المنتج غير موجود في قمرة لـ qid: {qid}")
             return "المنتج غير موجود في قاعدة بيانات قمرة", 404
             
-        # 3. جلب قائمة الموردين من قاعدة بياناتنا المحلية للربط
+        # 3. جلب قائمة الموردين من جدول المودلز المحلي (Local Database)
+        # هذا يضمن فصل بيانات الموردين عن نظام قمرة كما هو مطلوب
         suppliers = Supplier.query.all()
         
-        # 4. عرض الصفحة مع بيانات المنتج وقائمة الموردين
-        return render_template('admin/admin_edit_product.html', 
-                               product=product, 
-                               suppliers=suppliers)
+        # 4. تمرير البيانات للقالب (الذي سيستخدم suppliers في حلقة for)
+        return render_template(
+            'admin/admin_edit_product.html', 
+            product=product, 
+            suppliers=suppliers
+        )
         
     except Exception as e:
         logger.error(f"❌ خطأ أثناء جلب تفاصيل المنتج {qid}: {e}")
@@ -59,7 +60,7 @@ def edit_product(qid):
 @login_required
 def update_product():
     """
-    راوتر لاستقبال تحديثات المنتج (عبر AJAX).
+    راوتر لاستقبال تحديثات المنتج وإرسالها إلى قمرة (عبر AJAX).
     """
     data = request.get_json()
     if not data or 'qid' not in data:
@@ -75,7 +76,7 @@ def update_product():
     """
     
     try:
-        # إرسال البيانات المجمعة للميوتيشن
+        # إرسال البيانات المجمعة (بما في ذلك supplier_id المختار محلياً) إلى قمرة
         response = QomrahGraphQLClient.execute_query(mutation, variables={"input": data}) or {}
         result = response.get('data', {}).get('updateProduct', {})
         
