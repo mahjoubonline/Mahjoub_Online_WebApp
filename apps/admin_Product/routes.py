@@ -1,9 +1,11 @@
 # coding: utf-8
 import logging
-from flask import render_template, request
+from flask import Blueprint, render_template, request
 from flask_login import login_required
-from . import admin_product_bp  # هذا سيتم استيراده الآن من __init__.py بنجاح
 from apps.services.graphql_client import QomrahGraphQLClient
+
+# تعريف الـ Blueprint هنا هو الحل الوحيد بما أن __init__.py فارغ
+admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
 
 logger = logging.getLogger(__name__)
 
@@ -48,5 +50,5 @@ def manage_products():
                            pagination=ProPagination(pag_info),
                            search=search)
 
-# تم حذف الاستيراد من هنا (from . import routes_add...) 
-# لأن الاستيراد يتم الآن بشكل تلقائي ومركزي داخل __init__.py
+# استيراد الملفات الأخرى هنا لربطها بالـ Blueprint المعرف أعلاه
+from . import routes_add, routes_edit, routes_sync
