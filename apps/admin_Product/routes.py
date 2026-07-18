@@ -25,19 +25,6 @@ query Data($input: GetAllProductsInput) {
 }
 """
 
-# استعلام جلب تفاصيل منتج واحد للتعديل
-GET_PRODUCT_BY_ID_QUERY = """
-query Data($qid: ID!) {
-  findProductById(qid: $qid) {
-    qid
-    title
-    pricing { price }
-    quantity
-    images { fileUrl }
-  }
-}
-"""
-
 @admin_product_bp.route('/', methods=['GET'])
 @login_required
 def manage_products():
@@ -72,24 +59,3 @@ def manage_products():
         pagination=pagination,
         search=search
     )
-
-@admin_product_bp.route('/edit/<qid>', methods=['GET'])
-@login_required
-def edit_product(qid):
-    """جلب بيانات المنتج من قمرة وعرضها في صفحة التعديل"""
-    try:
-        variables = {"qid": qid}
-        response = QomrahGraphQLClient.execute_query(GET_PRODUCT_BY_ID_QUERY, variables)
-        
-        product = {}
-        if response and 'data' in response and response['data'].get('findProductById'):
-            product = response['data']['findProductById']
-        else:
-            flash("لم يتم العثور على المنتج في قمرة.")
-            
-        return render_template('admin/admin_edit_product.html', product=product)
-        
-    except Exception as e:
-        logger.error(f"❌ خطأ في جلب تفاصيل المنتج {qid}: {e}")
-        flash("حدث خطأ أثناء تحميل بيانات المنتج للتعديل.")
-        return render_template('admin/admin_edit_product.html', product={})
