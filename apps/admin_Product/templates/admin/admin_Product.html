@@ -5,18 +5,14 @@
     :root { --dark-purple: #2d0b36; }
     .btn-custom { background-color: var(--dark-purple); color: #fff; border: none; }
     .btn-custom:hover { background-color: #1a0620; color: #eee; }
-    .page-item.active .page-link { background-color: var(--dark-purple); border-color: var(--dark-purple); color: white; }
-    .page-link { color: var(--dark-purple); }
     .text-custom { color: var(--dark-purple); }
-    .product-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
-    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; }
 </style>
 
 <div class="container-fluid">
+    <!-- الرأس: العنوان وأزرار الإجراءات -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold mb-0">قائمة المنتجات</h3>
         
-        <!-- نموذج البحث -->
         <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" class="d-flex flex-grow-1 mx-3">
             <input type="text" name="search" id="searchInput" class="form-control" placeholder="ابحث باسم المنتج (البحث تلقائي)..." value="{{ search }}">
         </form>
@@ -37,45 +33,9 @@
         الصفحة <strong>{{ pagination.page }}</strong> من <strong>{{ pagination.pages }}</strong>
     </div>
 
-    <!-- شبكة المنتجات -->
-    <div class="row row-cols-1 row-cols-md-5 g-3">
-        {% for product in products %}
-        <div class="col">
-            <a href="{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}" class="text-decoration-none">
-                <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden product-card">
-                    <div class="bg-light text-center" style="height: 150px; overflow: hidden;">
-                        <img src="{{ product.images[0].fileUrl if product.images and product.images|length > 0 else '/static/images/default.png' }}" 
-                             class="w-100 h-100" style="object-fit: cover;" alt="{{ product.title }}">
-                    </div>
-                    <div class="card-body p-2">
-                        <h6 class="card-title fw-bold text-truncate" title="{{ product.title }}">{{ product.title }}</h6>
-                        <div class="d-flex justify-content-between small text-muted">
-                            <span>الكمية: {{ product.quantity or 0 }}</span>
-                            <span class="text-custom fw-bold">{{ product.pricing.price if product.pricing else 0 }} ر.س</span>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-        {% else %}
-        <div class="col-12 text-center py-5">
-            <p class="text-muted">لا توجد منتجات مطابقة للبحث.</p>
-        </div>
-        {% endfor %}
-    </div>
+    <!-- استدعاء الجدول التفصيلي -->
+    {% include 'admin/includes/_table_products.html' %}
 
-    <!-- نظام الترقيم الاحترافي -->
-    <nav aria-label="Page navigation" class="mt-5">
-        <ul class="pagination justify-content-center">
-            <li class="page-item {% if not pagination.has_prev() %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.prev_num(), search=search) }}">« السابق</a>
-            </li>
-            <li class="page-item active"><span class="page-link">{{ pagination.page }}</span></li>
-            <li class="page-item {% if not pagination.has_next() %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.next_num(), search=search) }}">التالي »</a>
-            </li>
-        </ul>
-    </nav>
 </div>
 
 <script>
@@ -86,7 +46,7 @@
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             this.form.submit();
-        }, 600); // يبحث بعد 600ms من التوقف عن الكتابة
+        }, 600);
     });
 </script>
 
