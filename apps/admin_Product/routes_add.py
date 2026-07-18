@@ -1,15 +1,27 @@
-# apps/admin_Product/routes_add.py
-
 # coding: utf-8
-from flask import render_template
+from flask import render_template, request, jsonify
 from flask_login import login_required
-from .routes import admin_product_bp
+# الاستيراد الصحيح للـ Blueprint من ملف الـ registry المركزي
+from .registry import admin_product_bp
+from apps.services.graphql_client import QomrahGraphQLClient
+import logging
 
-@admin_product_bp.route('/add', methods=['GET'])
+logger = logging.getLogger(__name__)
+
+@admin_product_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_product():
     """
-    راوتر لعرض صفحة إضافة منتج.
-    يستخدم الـ Blueprint المعرف في routes.py لمنع التعارضات.
+    صفحة إضافة منتج جديد.
+    - في حالة GET: نعرض نموذج الإضافة.
+    - في حالة POST: نقوم بمعالجة البيانات (إذا كنت سترسلها عبر AJAX).
     """
-    return render_template('admin/admin_add_product.html', product=None)
+    if request.method == 'GET':
+        return render_template('admin/add_product.html')
+
+    # إذا كان هناك منطق POST لمعالجة الإضافة
+    # يمكننا إضافة منطق GraphQL هنا لاحقاً
+    return jsonify({"status": "error", "message": "لم يتم تفعيل الإضافة بعد"})
+
+# ملاحظة: تأكد أن القالب موجود في المسار:
+# apps/admin_Product/templates/admin/add_product.html
