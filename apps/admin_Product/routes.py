@@ -22,11 +22,12 @@ def manage_products():
     }
     """
     
+    # استخدام limit: 50 لضمان سرعة الصفحة، مع تفعيل البحث في حقل 'title'
     variables = {
         "input": {
             "page": page, 
-            "limit": 12, 
-            "search": search if search else None
+            "limit": 50, 
+            "title": search if search else None
         }
     }
     
