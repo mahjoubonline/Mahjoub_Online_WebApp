@@ -33,6 +33,7 @@
         
         <div class="col-md-4 search-wrapper">
             <i class="fas fa-search"></i>
+            <!-- النموذج يرسل 'search' ليتم استقباله في الـ route باسم 'search' -->
             <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" id="searchForm">
                 <input type="text" name="search" id="searchInput" class="form-control shadow-sm" 
                        placeholder="ابحث عن منتج بالاسم..." value="{{ search }}">
@@ -77,7 +78,7 @@
         {% endfor %}
     </div>
 
-    <!-- الترقيم -->
+    <!-- الترقيم: تم تحديث الرابط لضمان تمرير قيمة 'search' الحالية -->
     {% if pagination and pagination.totalPages > 1 %}
     <nav class="mt-5">
         <ul class="pagination justify-content-center">
