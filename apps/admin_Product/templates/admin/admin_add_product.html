@@ -20,7 +20,8 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow-sm border-0 rounded-4 p-4">
-                <form id="productForm" onsubmit="saveProduct(event)">
+                <form id="productForm">
+                    <input type="hidden" id="qid" value="{{ product.qid if product else '' }}">
                     <div class="row">
                         <div class="col-md-12 mb-3">
                             <label class="form-label fw-bold small">اسم المنتج</label>
@@ -36,13 +37,13 @@
                             <input type="number" id="quantity" class="form-control" value="{{ product.quantity if product else '' }}" required>
                         </div>
 
-                        <!-- قسم رفع الصورة والكاميرا -->
+                        <!-- قسم رفع الصورة -->
                         <div class="col-md-12 mb-4">
                             <label class="form-label fw-bold small">صورة المنتج</label>
                             <div class="image-upload-box" onclick="document.getElementById('fileInput').click()">
                                 <i class="fas fa-camera fa-2x text-muted"></i>
                                 <p class="mt-2 mb-0">اضغط لالتقاط صورة أو اختيار ملف</p>
-                                <input type="file" id="fileInput" class="d-none" accept="image/*" capture="environment" onchange="handleImage(this)">
+                                <input type="file" id="fileInput" class="d-none" accept="image/*" onchange="handleImage(this)">
                             </div>
                             <div id="previewArea" class="text-center mt-3" style="{{ 'display:block' if product and product.images else 'display:none' }}">
                                 <img id="imagePreview" src="{{ product.images[0].fileUrl if product and product.images else '' }}">
@@ -51,7 +52,7 @@
                     </div>
 
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-custom btn-lg">حفظ البيانات</button>
+                        <button type="submit" class="btn btn-custom btn-lg" id="submitBtn">حفظ البيانات</button>
                     </div>
                 </form>
             </div>
@@ -72,12 +73,36 @@
         }
     }
 
-    async function saveProduct(event) {
-        event.preventDefault();
-        // هنا يمكنك إضافة منطق الـ Fetch لـ save-sync الذي أنشأناه سابقاً
-        Swal.fire('تم الحفظ!', 'تمت معالجة البيانات بنجاح.', 'success').then(() => {
-            window.location.href = "{{ url_for('admin_product_bp.manage_products') }}";
-        });
-    }
+    document.getElementById('productForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const payload = {
+            qid: document.getElementById('qid').value,
+            title: document.getElementById('title').value,
+            price: parseFloat(document.getElementById('price').value),
+            quantity: parseInt(document.getElementById('quantity').value)
+        };
+
+        const endpoint = payload.qid ? "{{ url_for('admin_product_bp.save_sync') }}" : "{{ url_for('admin_product_bp.add_product') }}";
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            
+            if(result.status === 'success') {
+                Swal.fire('تم الحفظ!', result.message, 'success').then(() => {
+                    window.location.href = "{{ url_for('admin_product_bp.manage_products') }}";
+                });
+            } else {
+                Swal.fire('خطأ!', result.message, 'error');
+            }
+        } catch (err) {
+            Swal.fire('خطأ!', 'فشل الاتصال بالسيرفر', 'error');
+        }
+    });
 </script>
 {% endblock %}
