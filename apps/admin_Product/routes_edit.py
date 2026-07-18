@@ -1,8 +1,13 @@
 # coding: utf-8
+# 📂 apps/admin_Product/routes_edit.py
+
 from flask import render_template, request, jsonify
 from flask_login import login_required
+# ✅ الاستيراد الآمن المباشر من الـ registry لمنع التعارض الدائري
 from .registry import admin_product_bp 
 from apps.services.graphql_client import QomrahGraphQLClient
+# 🚀 استيراد الاستعلام المركزي الخاص بجلب تفاصيل المنتج
+from apps.services.graphql_queries import FIND_PRODUCT_BY_QID
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,27 +18,9 @@ def edit_product(qid):
     """
     راوتر لجلب بيانات المنتج وعرض صفحة التعديل.
     """
-    query = """
-    query GetProduct($qid: String!) {
-      findProductByQid(qid: $qid) {
-        qid
-        title
-        quantity
-        pricing {
-          price
-        }
-        identification {
-          sku
-        }
-        images {
-          fileUrl
-        }
-      }
-    }
-    """
-    
     try:
-        result = QomrahGraphQLClient.execute_query(query, variables={"qid": qid}) or {}
+        # 🚀 استخدام الاستعلام المستورد مركزياً بدلاً من النص الطويل القديم
+        result = QomrahGraphQLClient.execute_query(FIND_PRODUCT_BY_QID, variables={"qid": qid}) or {}
         product = result.get('findProductByQid')
         
         if not product:
