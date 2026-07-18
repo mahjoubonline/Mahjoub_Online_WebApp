@@ -5,12 +5,12 @@ from flask import render_template, request, jsonify
 from flask_login import login_required
 from .registry import admin_product_bp 
 from apps.services.graphql_client import QomrahGraphQLClient
-from apps.models.suppliers_db import Supplier
+from apps.models.supplier_db import Supplier  # تم التصحيح: اسم الملف هو supplier_db
 import logging
 
 logger = logging.getLogger(__name__)
 
-# 🚀 تم تحديث الاستعلام لجلب supplier_id من قمرة
+# 🚀 استعلام جلب بيانات المنتج متضمناً الـ supplier_id
 FIND_PRODUCT_QUERY = """
 query GetProduct($qid: ID!) {
   findProductByQid(qid: $qid) {
@@ -73,7 +73,7 @@ def update_product():
     """
     
     try:
-        # إرسال البيانات المجمعة بما فيها الـ supplier_id
+        # إرسال البيانات المجمعة بما فيها الـ supplier_id للميوتيشن
         result = QomrahGraphQLClient.execute_query(mutation, variables={"input": data}) or {}
         response_data = result.get('data', {}).get('updateProduct', {})
         
