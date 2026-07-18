@@ -14,37 +14,40 @@
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> رجوع</button>
+        <h3 class="fw-bold mb-0">قائمة المنتجات</h3>
         
-        <!-- نموذج البحث المحدث -->
+        <!-- نموذج البحث -->
         <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" class="d-flex flex-grow-1 mx-3">
             <input type="text" name="search" id="searchInput" class="form-control" placeholder="ابحث باسم المنتج..." value="{{ request.args.get('search', '') }}">
         </form>
 
-        <button type="button" class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#syncModal">
-            <!-- استخدام شرط بسيط لتجنب خطأ الـ total في حال كان الكائن يختلف -->
-            <i class="fas fa-sync-alt"></i> مزامنة ({{ pagination.total if pagination.total is defined else '0' }})
-        </button>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin_product_bp.add_product') }}" class="btn btn-success">
+                <i class="fas fa-plus"></i> إضافة
+            </a>
+            <button type="button" class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#syncModal">
+                <i class="fas fa-sync-alt"></i> مزامنة
+            </button>
+        </div>
     </div>
 
     <!-- شبكة المنتجات -->
-    <div class="row row-cols-1 row-cols-md-5 g-3" id="productGrid">
+    <div class="row row-cols-1 row-cols-md-5 g-3">
         {% for product in products %}
-        <div class="col product-item">
+        <div class="col">
+            <!-- التأكد من تمرير الـ qid بشكل صحيح -->
             <a href="{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}" class="text-decoration-none">
                 <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden product-card">
                     <div class="bg-light text-center" style="height: 150px; overflow: hidden;">
-                        <!-- التأكد من هيكلة البيانات لتعمل مع الـ API والقاعدة المحلية -->
                         <img src="{{ product.images[0].fileUrl if product.images and product.images|length > 0 else '/static/images/default.png' }}" 
-                              class="w-100 h-100" style="object-fit: cover;" alt="{{ product.title }}">
+                             class="w-100 h-100" style="object-fit: cover;" alt="{{ product.title }}">
                     </div>
                     <div class="card-body p-2">
                         <h6 class="card-title fw-bold text-truncate" title="{{ product.title }}">{{ product.title }}</h6>
                         <div class="d-flex justify-content-between small text-muted">
                             <span>الكمية: {{ product.quantity or 0 }}</span>
-                            <!-- التحقق من مكان وجود السعر في هيكل البيانات -->
                             <span class="text-custom fw-bold">
-                                {{ product.pricing.price if product.pricing and product.pricing.price else (product.price or 0) }} ر.س
+                                {{ product.pricing.price if product.pricing and product.pricing.price else 0 }} ر.س
                             </span>
                         </div>
                     </div>
@@ -53,38 +56,26 @@
         </div>
         {% else %}
         <div class="col-12 text-center py-5">
-            <p class="text-muted">لا توجد منتجات لعرضها.</p>
+            <p class="text-muted">لا توجد منتجات لعرضها. حاول المزامنة أو البحث عن اسم آخر.</p>
         </div>
         {% endfor %}
     </div>
 
-    <!-- نظام ترقيم الصفحات -->
+    <!-- نظام ترقيم الصفحات (متوافق مع MockPagination) -->
     <nav aria-label="Page navigation" class="mt-5">
         <ul class="pagination justify-content-center">
             <li class="page-item {% if not pagination.has_prev() %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.prev_num(), search=request.args.get('search', '')) }}">«</a>
             </li>
-            
-            {% for page_num in range(max(1, pagination.page - 2), min(pagination.pages + 1, pagination.page + 3)) %}
-                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=page_num, search=request.args.get('search', '')) }}">{{ page_num }}</a>
-                </li>
-            {% endfor %}
-
+            <li class="page-item active">
+                <span class="page-link">{{ pagination.page }}</span>
+            </li>
             <li class="page-item {% if not pagination.has_next() %}disabled{% endif %}">
                 <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.next_num(), search=request.args.get('search', '')) }}">»</a>
             </li>
         </ul>
     </nav>
 </div>
-
-<script>
-    document.getElementById('searchInput').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            this.form.submit();
-        }
-    });
-</script>
 
 {% include 'admin/includes/_sync_modal.html' %}
 {% endblock %}
