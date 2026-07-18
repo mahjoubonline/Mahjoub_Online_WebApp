@@ -1,3 +1,4 @@
+<!-- apps/admin_Product/templates/admin/admin_add_product.html -->
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
@@ -83,6 +84,7 @@
             quantity: parseInt(document.getElementById('quantity').value)
         };
 
+        // نستخدم save_sync للحفظ في حال وجود qid (تعديل)، أو نستخدم مسار الإضافة
         const endpoint = payload.qid ? "{{ url_for('admin_product_bp.save_sync') }}" : "{{ url_for('admin_product_bp.add_product') }}";
 
         try {
