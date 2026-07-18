@@ -31,14 +31,16 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('title', '').strip()
     
-    # نرسل null إذا كان البحث فارغاً، فقد تتوقع قمرة ذلك
-    variables = {
-        "input": {
-            "page": page,
-            "limit": 50,
-            "title": search if search else None 
-        }
+    # بناء المتغيرات: لا نرسل حقل title نهائياً إذا لم يكن هناك نص بحث
+    input_data = {
+        "page": page,
+        "limit": 50
     }
+    
+    if search:
+        input_data["title"] = search
+        
+    variables = {"input": input_data}
     
     products = []
     pagination = {"currentPage": page, "totalPages": 1}
@@ -46,21 +48,19 @@ def manage_products():
     try:
         response = QomrahGraphQLClient.execute_query(GET_ALL_PRODUCTS_QUERY, variables)
         
-        # --- [تصحيح]: قمنا بتوسيع طريقة قراءة البيانات لتكون أكثر مرونة ---
-        # أضفت هذا السطر للتشخيص (انظر الـ Terminal الخاص بك عند فتح الصفحة)
+        # للتشخيص: يمكنك رؤية ما يعيده السيرفر في الـ Terminal
         print(f"DEBUG: Response from Qomrah: {response}") 
         
         if response:
-            # إذا كانت الاستجابة مغلفة بـ 'data' نستخدمها، وإلا نأخذ الاستجابة كما هي
+            # استخراج البيانات بمرونة
             root = response.get('data', response)
             result = root.get('findAllProducts', {})
             
             products = result.get('data') if result.get('data') is not None else []
             pagination = result.get('pagination') or {"currentPage": page, "totalPages": 1}
             
-            # إذا لم تكن هناك بيانات من قمرة، حاول طباعة ما يوجد في الـ Terminal
             if not products:
-                logger.warning("⚠️ قمرة لم تُرجع أي منتجات.")
+                logger.warning("⚠️ قمرة لم تُرجع أي منتجات (قائمة فارغة).")
                 
     except Exception as e:
         logger.error(f"❌ خطأ أثناء جلب البيانات: {e}")
