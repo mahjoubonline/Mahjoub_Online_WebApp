@@ -3,10 +3,14 @@
 
 from flask import render_template, request, flash
 from flask_login import login_required
-from .registry import admin_product_bp  # تم تعديل الاستيراد ليتطابق تماماً مع موديول المزامنة
+# الاستيراد من registry للوصول للـ Blueprint المعرّف هناك
+from .registry import admin_product_bp
 from apps.services.graphql_client import QomrahGraphQLClient
+import logging
 
-# استعلام جلب المنتجات من واجهة قمرة
+logger = logging.getLogger(__name__)
+
+# استعلام جلب المنتجات (نقلناه هنا ليكون قريباً من المسار)
 GET_ALL_PRODUCTS_QUERY = """
 query Data($input: GetAllProductsInput) {
   findAllProducts(input: $input) {
@@ -28,7 +32,6 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('title', '').strip()
     
-    # جلب 100 منتج لضمان وجود كمية كافية لتصفيتها محلياً بواسطة بايثون
     variables = {
         "input": {
             "page": page,
@@ -47,20 +50,18 @@ def manage_products():
             result = response['findAllProducts']
             all_products = result.get('data', []) or []
             
-            # تفعيل عملية الفلترة النصية (CONTAINS) محلياً داخل السيرفر
             if search:
                 products = [
                     p for p in all_products 
                     if p.get('title') and search.lower() in str(p.get('title')).lower()
                 ]
-                # تثبيت الترقيم لصفحة واحدة عند ظهور نتائج الفلترة المخصصة
                 pagination = {"currentPage": 1, "totalPages": 1}
             else:
                 products = all_products
                 pagination = result.get('pagination', {"currentPage": page, "totalPages": 1})
                 
     except Exception as e:
-        print(f"❌ خطأ في موديول المنتجات أثناء الفلترة: {e}")
+        logger.error(f"❌ خطأ في موديول المنتجات أثناء الفلترة: {e}")
         flash("حدث خطأ أثناء معالجة البيانات.")
 
     return render_template(
