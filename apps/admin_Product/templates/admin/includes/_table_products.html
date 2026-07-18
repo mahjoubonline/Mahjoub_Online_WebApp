@@ -27,7 +27,6 @@
             </thead>
             <tbody>
                 {% for product in products %}
-                <!-- تم تحديث الرابط ليفتح صفحة التعديل لكل منتج على حدة -->
                 <tr onclick="window.location.href='{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}';">
                     <td>
                         <img src="{{ product.images[0].fileUrl if product.images and product.images|length > 0 else '/static/images/default.png' }}" 
@@ -39,8 +38,15 @@
                             {{ product.quantity or 0 }}
                         </span>
                     </td>
-                    <td class="text-custom fw-bold">{{ product.pricing.price or 0 }} ر.س</td>
-                    <td><span class="badge bg-light text-dark border">{{ product.identification.sku or '---' }}</span></td>
+                    <!-- تعديل عرض السعر ليدعم صيغة الـ API أو قاعدة البيانات المحلية -->
+                    <td class="text-custom fw-bold">
+                        {{ product.pricing.price if product.pricing and product.pricing.price else (product.price or 0) }} ر.س
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border">
+                            {{ product.identification.sku if product.identification and product.identification.sku else (product.sku or '---') }}
+                        </span>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
