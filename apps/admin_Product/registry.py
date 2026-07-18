@@ -4,6 +4,8 @@
 from flask import Blueprint, render_template, request
 from flask_login import login_required
 from apps.services.graphql_client import QomrahGraphQLClient
+# الاستيراد المركزي النظيف للاستعلامات لتنظيف الكود 🚀
+from apps.services.graphql_queries import GET_ALL_PRODUCTS
 import logging
 
 # 1. تعريف الـ Blueprint وتجهيز الـ Logger
@@ -27,18 +29,9 @@ def manage_products():
     if search:
         variables["input"]["title"] = search
     
-    # استعلام جلب المنتجات من قمرة
-    query = """
-    query Data($input: GetAllProductsInput) {
-      findAllProducts(input: $input) {
-        data { qid, title, quantity, pricing { price }, images { fileUrl } }
-        pagination { totalPages, currentPage, totalItems }
-      }
-    }
-    """
-    
     try:
-        result = QomrahGraphQLClient.execute_query(query, variables=variables) or {}
+        # 🚀 استدعاء المتغير المركزي المستورد مباشرة هنا بدلاً من النص القديم المزدحم
+        result = QomrahGraphQLClient.execute_query(GET_ALL_PRODUCTS, variables=variables) or {}
     except Exception as e:
         logger.error(f"❌ GraphQL Error inside registry: {e}")
         result = {}
@@ -77,6 +70,6 @@ def register_module(app):
     """دالة تسجيل الـ Blueprint وتعيين المسار الموحد للمنتجات"""
     try:
         app.register_blueprint(admin_product_bp, url_prefix='/admin/products')
-        print("✅ [Registry]: تم تسجيل موديول 'إدارة المنتجات' بنجاح عبر registry.py")
+        print("✅ [Registry]: تم تسجيل موديول 'إدارة المنتجات' بنجاح بعد التنظيف المركزي المستورد.")
     except Exception as e:
         print(f"❌ [Registry Error]: فشل تسجيل موديول 'إدارة المنتجات': {e}")
