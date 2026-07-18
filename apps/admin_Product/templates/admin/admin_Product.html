@@ -1,3 +1,4 @@
+<!-- apps/admin_Product/templates/admin/admin_Product.html -->
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
@@ -5,7 +6,8 @@
     :root { --dark-purple: #2d0b36; }
     .btn-custom { background-color: var(--dark-purple); color: #fff; border: none; }
     .btn-custom:hover { background-color: #1a0620; color: #eee; }
-    .text-custom { color: var(--dark-purple); }
+    .product-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; text-decoration: none; display: block; }
+    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; }
 </style>
 
 <div class="container-fluid">
@@ -13,7 +15,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold mb-0">قائمة المنتجات</h3>
         
-        <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" class="d-flex flex-grow-1 mx-3">
+        <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" class="d-flex flex-grow-1 mx-3" id="searchForm">
             <input type="text" name="search" id="searchInput" class="form-control" 
                    placeholder="ابحث باسم المنتج (البحث تلقائي)..." value="{{ search | default('') }}">
         </form>
@@ -36,20 +38,48 @@
     </div>
     {% endif %}
 
-    <!-- استدعاء الجدول التفصيلي -->
-    {% include 'admin/includes/_table_products.html' %}
+    <!-- عرض البطاقات الاحترافية -->
+    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
+        {% for product in products %}
+        <div class="col">
+            <a href="{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}" class="product-card">
+                <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden">
+                    <img src="{{ product.images[0].fileUrl if product.images else 'https://via.placeholder.com/200' }}" 
+                         class="card-img-top" alt="{{ product.title }}" style="height: 160px; object-fit: cover;">
+                    <div class="card-body">
+                        <h6 class="card-title fw-bold text-dark mb-3" style="height: 2.5em; overflow: hidden;">{{ product.title }}</h6>
+                        <div class="d-flex justify-content-between align-items-center">
+                            {# عرض السعر والعملة ديناميكياً من بيانات المنتج #}
+                            <span class="badge bg-dark">
+                                {{ product.pricing.price }} {{ product.pricing.currency | default('ر.س') }}
+                            </span>
+                            <span class="badge {{ 'bg-success' if product.quantity > 0 else 'bg-danger' }}">
+                                المخزون: {{ product.quantity }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <p class="text-muted fs-4">لا توجد منتجات تطابق بحثك.</p>
+        </div>
+        {% endfor %}
+    </div>
 
 </div>
 
 <script>
-    // تفعيل البحث التلقائي عند الكتابة
     let searchTimeout;
     const searchInput = document.getElementById('searchInput');
+    const searchForm = document.getElementById('searchForm');
+    
     if (searchInput) {
         searchInput.addEventListener('input', function() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
-                this.form.submit();
+                searchForm.submit();
             }, 600);
         });
     }
