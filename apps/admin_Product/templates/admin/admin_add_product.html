@@ -6,67 +6,52 @@
     .btn-custom { background-color: var(--dark-purple); color: #fff; border: none; }
     .btn-custom:hover { background-color: #1a0620; color: #eee; }
     .text-custom { color: var(--dark-purple); }
-    .form-control:focus { border-color: var(--dark-purple); box-shadow: 0 0 0 0.2rem rgba(45, 11, 54, 0.25); }
-    .icon-box {
-        width: 60px; height: 60px;
-        background-color: #f8f9fa; color: var(--dark-purple);
-        border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        font-size: 24px; margin: 0 auto 20px;
-    }
-    #imagePreview { max-height: 150px; border-radius: 10px; border: 2px solid #ddd; padding: 5px; }
+    .image-upload-box { border: 2px dashed #ddd; padding: 20px; text-align: center; border-radius: 10px; cursor: pointer; transition: 0.3s; }
+    .image-upload-box:hover { border-color: var(--dark-purple); }
+    #imagePreview { max-height: 150px; border-radius: 10px; margin-top: 10px; }
 </style>
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> رجوع للوراء</button>
+        <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> رجوع</button>
         <h4 class="m-0 text-custom fw-bold">{{ "تعديل منتج" if product else "إضافة منتج جديد" }}</h4>
     </div>
 
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow-sm border-0 rounded-4 p-4">
-                <div class="text-center">
-                    <div class="icon-box shadow-sm">
-                        <i class="fas fa-box-open"></i>
-                    </div>
-                </div>
-                
-                <hr class="mb-4">
-
                 <form id="productForm" onsubmit="saveProduct(event)">
                     <div class="row">
                         <div class="col-md-12 mb-3">
                             <label class="form-label fw-bold small">اسم المنتج</label>
-                            <input type="text" id="title" class="form-control form-control-lg bg-light" value="{{ product.title if product else '' }}" required>
+                            <input type="text" id="title" class="form-control" value="{{ product.title if product else '' }}" required>
                         </div>
 
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold small">السعر (ر.س)</label>
-                            <input type="number" id="price" step="0.01" class="form-control bg-light" value="{{ product.pricing.price if product else '' }}" required>
+                            <input type="number" id="price" step="0.01" class="form-control" value="{{ product.pricing.price if product else '' }}" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold small">الكمية المتاحة</label>
-                            <input type="number" id="quantity" class="form-control bg-light" value="{{ product.quantity if product else '' }}" required>
+                            <label class="form-label fw-bold small">الكمية</label>
+                            <input type="number" id="quantity" class="form-control" value="{{ product.quantity if product else '' }}" required>
                         </div>
 
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold small">رمز المنتج (SKU)</label>
-                            <input type="text" id="sku" class="form-control bg-light" value="{{ product.identification.sku if product else '' }}">
-                        </div>
-
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label fw-bold small">صورة المنتج (رابط)</label>
-                            <input type="url" id="imgUrlInput" class="form-control bg-light" oninput="previewImage()" value="{{ product.images[0].fileUrl if product and product.images else '' }}">
-                            <div id="imagePreviewContainer" class="mt-3 text-center" style="display: {{ 'block' if product and product.images else 'none' }};">
-                                <img id="imagePreview" src="{{ product.images[0].fileUrl if product and product.images else '' }}" alt="معاينة">
+                        <!-- قسم رفع الصورة والكاميرا -->
+                        <div class="col-md-12 mb-4">
+                            <label class="form-label fw-bold small">صورة المنتج</label>
+                            <div class="image-upload-box" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-camera fa-2x text-muted"></i>
+                                <p class="mt-2 mb-0">اضغط لالتقاط صورة أو اختيار ملف</p>
+                                <input type="file" id="fileInput" class="d-none" accept="image/*" capture="environment" onchange="handleImage(this)">
+                            </div>
+                            <div id="previewArea" class="text-center mt-3" style="{{ 'display:block' if product and product.images else 'display:none' }}">
+                                <img id="imagePreview" src="{{ product.images[0].fileUrl if product and product.images else '' }}">
                             </div>
                         </div>
                     </div>
 
-                    <div class="d-grid mt-3">
-                        <button type="submit" class="btn btn-custom btn-lg shadow-sm">
-                            <i class="fas fa-check-circle me-2"></i> {{ "حفظ التعديلات" if product else "إضافة المنتج" }}
-                        </button>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-custom btn-lg">حفظ البيانات</button>
                     </div>
                 </form>
             </div>
@@ -76,26 +61,21 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    function previewImage() {
-        const url = document.getElementById('imgUrlInput').value;
-        const container = document.getElementById('imagePreviewContainer');
-        const img = document.getElementById('imagePreview');
-        if (url && url.startsWith('http')) {
-            img.src = url;
-            container.style.display = 'block';
-        } else {
-            container.style.display = 'none';
+    function handleImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('previewArea').style.display = 'block';
+            }
+            reader.readAsDataURL(input.files[0]);
         }
     }
 
-    function saveProduct(event) {
+    async function saveProduct(event) {
         event.preventDefault();
-        Swal.fire({
-            title: 'تم الحفظ!',
-            text: 'تم تحديث بيانات المنتج بنجاح.',
-            icon: 'success',
-            confirmButtonColor: '#2d0b36'
-        }).then(() => {
+        // هنا يمكنك إضافة منطق الـ Fetch لـ save-sync الذي أنشأناه سابقاً
+        Swal.fire('تم الحفظ!', 'تمت معالجة البيانات بنجاح.', 'success').then(() => {
             window.location.href = "{{ url_for('admin_product_bp.manage_products') }}";
         });
     }
