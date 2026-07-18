@@ -1,4 +1,3 @@
-<!-- apps/admin_Product/templates/admin/admin_edit_product.html -->
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
@@ -29,7 +28,7 @@
                         <!-- اسم المنتج -->
                         <div class="col-md-12 mb-3">
                             <label class="form-label fw-bold small">اسم المنتج</label>
-                            <input type="text" id="title" class="form-control" value="{{ product.title }}" required>
+                            <input type="text" id="title" class="form-control" value="{{ product.title or '' }}" required>
                         </div>
 
                         <!-- السعر والكمية -->
@@ -42,16 +41,11 @@
                             <input type="number" id="quantity" class="form-control" value="{{ product.quantity or 0 }}" required>
                         </div>
 
-                        <!-- اختيار المورد -->
+                        <!-- المورد (محلي) -->
                         <div class="col-md-12 mb-3">
-                            <label class="form-label fw-bold small text-custom">المورد المرتبط</label>
+                            <label class="form-label fw-bold small text-custom">المورد</label>
                             <select id="supplier_id" class="form-select border-primary" required>
-                                <option value="">اختر المورد...</option>
-                                {% for supplier in suppliers %}
-                                    <option value="{{ supplier.id }}" {% if product.supplier_id|string == supplier.id|string %}selected{% endif %}>
-                                        {{ supplier.full_name }}
-                                    </option>
-                                {% endfor %}
+                                <option value="local">المورد الأساسي (محلي)</option>
                             </select>
                         </div>
 
