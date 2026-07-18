@@ -14,7 +14,8 @@
         <h3 class="fw-bold mb-0">قائمة المنتجات</h3>
         
         <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" class="d-flex flex-grow-1 mx-3">
-            <input type="text" name="search" id="searchInput" class="form-control" placeholder="ابحث باسم المنتج (البحث تلقائي)..." value="{{ search }}">
+            <input type="text" name="search" id="searchInput" class="form-control" 
+                   placeholder="ابحث باسم المنتج (البحث تلقائي)..." value="{{ search | default('') }}">
         </form>
 
         <div class="d-flex gap-2">
@@ -28,10 +29,12 @@
     </div>
 
     <!-- إحصائيات -->
+    {% if pagination %}
     <div class="text-center mb-4 text-muted">
         إجمالي المنتجات: <strong>{{ pagination.total }}</strong> | 
         الصفحة <strong>{{ pagination.page }}</strong> من <strong>{{ pagination.pages }}</strong>
     </div>
+    {% endif %}
 
     <!-- استدعاء الجدول التفصيلي -->
     {% include 'admin/includes/_table_products.html' %}
@@ -42,12 +45,14 @@
     // تفعيل البحث التلقائي عند الكتابة
     let searchTimeout;
     const searchInput = document.getElementById('searchInput');
-    searchInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            this.form.submit();
-        }, 600);
-    });
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.form.submit();
+            }, 600);
+        });
+    }
 </script>
 
 {% include 'admin/includes/_sync_modal.html' %}
