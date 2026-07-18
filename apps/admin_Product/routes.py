@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 from apps.services.graphql_client import QomrahGraphQLClient
 from apps.api.sync_engine import ProductSyncEngine
-from apps.models.product_db import Product  # استيراد الموديل لجلب البيانات
+from apps.models.product_db import Product
 
 logger = logging.getLogger(__name__)
 admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
@@ -15,22 +15,20 @@ admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='temp
 def inject_utils():
     return dict(max=max, min=min)
 
-class PaginationMock:
-    def __init__(self, p):
-        self.page = p.get('currentPage', 1)
-        self.pages = p.get('totalPages', 1)
-        self.total = p.get('totalItems', 0)
-    def has_prev(self): return self.page > 1
-    def has_next(self): return self.page < self.pages
-    def prev_num(self): return self.page - 1
-    def next_num(self): return self.page + 1
-
 @admin_product_bp.route('/', methods=['GET'])
 @login_required
 def manage_products():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     
+    # 1. إذا كان هناك بحث: نبحث في قاعدة البيانات المحلية (البحث الشامل)
+    if search:
+        pagination = Product.query.filter(Product.title.ilike(f'%{search}%')).paginate(page=page, per_page=20, error_out=False)
+        return render_template('admin/admin_Product.html', 
+                               products=pagination.items, 
+                               pagination=pagination)
+
+    # 2. إذا لم يكن هناك بحث: نجلب البيانات من الـ API (عرض افتراضي)
     query = """
     query Data($input: GetAllProductsInput) {
       findAllProducts(input: $input) {
@@ -39,7 +37,7 @@ def manage_products():
       }
     }
     """
-    variables = {"input": {"page": page, "limit": 20, "search": search}}
+    variables = {"input": {"page": page, "limit": 20}} # تمت إزالة search هنا لتجنب الخطأ
     
     try:
         result = QomrahGraphQLClient.execute_query(query, variables=variables)
@@ -51,9 +49,20 @@ def manage_products():
     products = data.get('data', [])
     pag_info = data.get('pagination', {"totalPages": 1, "currentPage": 1, "totalItems": 0})
     
+    # تحويل بيانات الـ API لنمط يدعم الترقيم (محاكاة)
+    class MockPagination:
+        def __init__(self, p):
+            self.page = p['currentPage']
+            self.pages = p['totalPages']
+            self.has_prev = lambda: self.page > 1
+            self.has_next = lambda: self.page < self.pages
+            self.prev_num = lambda: self.page - 1
+            self.next_num = lambda: self.page + 1
+            self.total = p['totalItems']
+            
     return render_template('admin/admin_Product.html', 
                            products=products, 
-                           pagination=PaginationMock(pag_info))
+                           pagination=MockPagination(pag_info))
 
 @admin_product_bp.route('/proxy-sync', methods=['POST'])
 @login_required
@@ -88,11 +97,9 @@ def proxy_sync():
 def add_product():
     return render_template('admin/admin_add_product.html', product=None)
 
-# المسار الجديد لفتح صفحة التعديل
 @admin_product_bp.route('/edit/<qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
-    # جلب المنتج من قاعدة بياناتك المحلية
     product = Product.query.filter_by(qid=qid).first()
     return render_template('admin/admin_add_product.html', product=product)
 
