@@ -1,69 +1,88 @@
-<!-- apps/admin_Product/templates/admin/admin_Product.html -->
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
 <style>
-    :root { --dark-purple: #2d0b36; }
+    :root { --dark-purple: #2d0b36; --accent-gold: #c5a059; }
     .btn-custom { background-color: var(--dark-purple); color: #fff; border: none; }
-    .btn-custom:hover { background-color: #1a0620; color: #eee; }
-    .product-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; text-decoration: none; display: block; }
-    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; }
-    .pagination .page-link { color: var(--dark-purple); }
-    .pagination .page-item.active .page-link { background-color: var(--dark-purple); border-color: var(--dark-purple); color: #fff; }
+    .btn-custom:hover { background-color: #4a1558; color: #fff; }
+    
+    /* تحسين البطاقات */
+    .product-card { transition: all 0.3s ease; text-decoration: none; display: block; }
+    .product-card:hover { transform: translateY(-8px); }
+    .card { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    
+    /* البحث */
+    .search-wrapper { position: relative; }
+    .search-wrapper i { position: absolute; left: 15px; top: 12px; color: #999; }
+    #searchInput { padding-left: 40px; border-radius: 25px; }
+    
+    /* شارات الحالة */
+    .badge-qty { font-size: 0.75rem; padding: 5px 10px; border-radius: 20px; }
 </style>
 
 <div class="container-fluid py-4">
-    <!-- الرأس: زر الرجوع والعنوان -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div class="d-flex align-items-center gap-3">
-            <button onclick="history.back()" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-right"></i> رجوع</button>
-            <h3 class="fw-bold mb-0">قائمة المنتجات</h3>
+    <!-- الرأس: عنوان أنيق مع أدوات التحكم -->
+    <div class="row align-items-center mb-4">
+        <div class="col-md-4">
+            <h3 class="fw-bold mb-0 text-dark">
+                <i class="fas fa-boxes text-muted me-2"></i> إدارة المنتجات
+            </h3>
         </div>
         
-        <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" class="d-flex flex-grow-1 mx-4" id="searchForm">
-            <input type="text" name="search" id="searchInput" class="form-control" 
-                   placeholder="بحث..." value="{{ search }}">
-        </form>
+        <div class="col-md-4 search-wrapper">
+            <i class="fas fa-search"></i>
+            <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" id="searchForm">
+                <input type="text" name="search" id="searchInput" class="form-control shadow-sm" 
+                       placeholder="ابحث عن منتج بالاسم..." value="{{ search }}">
+            </form>
+        </div>
 
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('admin_product_bp.add_product') }}" class="btn btn-success"><i class="fas fa-plus"></i> إضافة</a>
-            <button type="button" class="btn btn-custom" data-bs-toggle="modal" data-bs-target="#syncModal">
-                <i class="fas fa-sync-alt"></i> مزامنة
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <a href="{{ url_for('admin_product_bp.add_product') }}" class="btn btn-success px-4 shadow-sm">
+                <i class="fas fa-plus me-1"></i> إضافة منتج
+            </a>
+            <button type="button" class="btn btn-custom px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#syncModal">
+                <i class="fas fa-sync-alt me-1"></i> مزامنة
             </button>
         </div>
     </div>
 
-    <!-- عرض البطاقات -->
-    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
+    <!-- شبكة المنتجات -->
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
         {% for product in products %}
         <div class="col">
             <a href="{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}" class="product-card">
-                <div class="card h-100 shadow-sm border-0 rounded-3 overflow-hidden">
+                <div class="card h-100 border-0">
                     <img src="{{ product.images[0].fileUrl if product.images else '/static/images/default.png' }}" 
-                         class="card-img-top" style="height: 160px; object-fit: cover;">
+                         class="card-img-top" style="height: 180px; object-fit: cover;">
                     <div class="card-body">
-                        <h6 class="fw-bold text-dark mb-2 text-truncate">{{ product.title }}</h6>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <span class="badge bg-dark">{{ product.pricing.price }} ر.س</span>
-                            <span class="badge {{ 'bg-success' if product.quantity > 0 else 'bg-danger' }}">الكمية: {{ product.quantity }}</span>
+                        <h6 class="fw-bold mb-2 text-truncate">{{ product.title }}</h6>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="text-primary fw-bold">{{ product.pricing.price }} ر.س</span>
+                            <span class="badge {{ 'bg-success' if product.quantity > 0 else 'bg-danger' }} badge-qty">
+                                {{ product.quantity }} متوفر
+                            </span>
                         </div>
                     </div>
                 </div>
             </a>
         </div>
         {% else %}
-        <div class="col-12 text-center py-5"><p class="text-muted fs-4">لا توجد منتجات مطابقة.</p></div>
+        <div class="col-12 text-center py-5">
+            <div class="display-1 text-muted"><i class="fas fa-box-open"></i></div>
+            <p class="text-muted fs-4">لا توجد منتجات مطابقة للبحث الحالي.</p>
+        </div>
         {% endfor %}
     </div>
 
-    <!-- الترقيم الاحترافي (السابق والتالي فقط) -->
-    {% if pagination %}
+    <!-- ترقيم احترافي -->
+    {% if pagination and pagination.totalPages > 1 %}
     <nav class="mt-5">
         <ul class="pagination justify-content-center">
             <li class="page-item {{ 'disabled' if pagination.currentPage <= 1 }}">
                 <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage-1, search=search) }}">السابق</a>
             </li>
-            <li class="page-item active"><span class="page-link">{{ pagination.currentPage }} / {{ pagination.totalPages }}</span></li>
+            <li class="page-item active shadow-sm"><span class="page-link">{{ pagination.currentPage }} / {{ pagination.totalPages }}</span></li>
             <li class="page-item {{ 'disabled' if pagination.currentPage >= pagination.totalPages }}">
                 <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage+1, search=search) }}">التالي</a>
             </li>
@@ -73,11 +92,12 @@
 </div>
 
 <script>
+    // خاصية البحث التلقائي مع تأخير (Debounce)
     let timeout = null;
     const input = document.getElementById('searchInput');
     input.addEventListener('keyup', () => {
         clearTimeout(timeout);
-        timeout = setTimeout(() => { document.getElementById('searchForm').submit(); }, 800);
+        timeout = setTimeout(() => { document.getElementById('searchForm').submit(); }, 600);
     });
 </script>
 
