@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/admin_Product/routes_edit.py
+# 📂 apps/admin_product/routes_edit.py
 
 from flask import render_template, request, jsonify
 from flask_login import login_required
