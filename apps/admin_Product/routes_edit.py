@@ -1,9 +1,9 @@
 # apps/admin_Product/routes_edit.py
-
 # coding: utf-8
 from flask import render_template, request, jsonify
 from flask_login import login_required
-from .routes import admin_product_bp 
+# تم التعديل هنا: الاستيراد من registry لتوحيد الـ Blueprint ومنع Circular Import
+from .registry import admin_product_bp 
 from apps.services.graphql_client import QomrahGraphQLClient
 import logging
 
