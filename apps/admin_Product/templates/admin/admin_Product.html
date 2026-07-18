@@ -33,7 +33,6 @@
         <div class="col-md-4 search-wrapper">
             <i class="fas fa-search"></i>
             <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" id="searchForm">
-                <!-- تم تغيير name من search إلى title -->
                 <input type="text" name="title" id="searchInput" class="form-control shadow-sm" 
                        placeholder="ابحث عن منتج بالاسم..." value="{{ search }}">
             </form>
@@ -49,56 +48,89 @@
         </div>
     </div>
 
-    <!-- شبكة المنتجات -->
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
-        {% for product in products %}
-        <div class="col">
-            <a href="{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}" class="product-card">
-                <div class="card h-100 border-0">
-                    <img src="{{ product.images[0].fileUrl if product.images else '/static/images/default.png' }}" 
-                         class="card-img-top" style="height: 180px; object-fit: cover;">
-                    <div class="card-body">
-                        <h6 class="fw-bold mb-2 text-truncate">{{ product.title }}</h6>
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <span class="text-primary fw-bold">{{ product.pricing.price }}</span>
-                            <span class="badge {{ 'bg-success' if product.quantity > 0 else 'bg-danger' }} badge-qty">
-                                {{ product.quantity }} متوفر
-                            </span>
+    <!-- حاوية النتائج: تم تجميع المنتجات والترقيم بداخلها ليسهل تحديثها عبر AJAX -->
+    <div id="results-container">
+        <!-- شبكة المنتجات -->
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
+            {% for product in products %}
+            <div class="col">
+                <a href="{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}" class="product-card">
+                    <div class="card h-100 border-0">
+                        <img src="{{ product.images[0].fileUrl if product.images else '/static/images/default.png' }}" 
+                             class="card-img-top" style="height: 180px; object-fit: cover;">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-2 text-truncate">{{ product.title }}</h6>
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <span class="text-primary fw-bold">{{ product.pricing.price }}</span>
+                                <span class="badge {{ 'bg-success' if product.quantity > 0 else 'bg-danger' }} badge-qty">
+                                    {{ product.quantity }} متوفر
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </a>
+                </a>
+            </div>
+            {% else %}
+            <div class="col-12 text-center py-5">
+                <div class="display-1 text-muted"><i class="fas fa-box-open"></i></div>
+                <p class="text-muted fs-4">لا توجد منتجات مطابقة للبحث الحالي.</p>
+            </div>
+            {% endfor %}
         </div>
-        {% else %}
-        <div class="col-12 text-center py-5">
-            <div class="display-1 text-muted"><i class="fas fa-box-open"></i></div>
-            <p class="text-muted fs-4">لا توجد منتجات مطابقة للبحث الحالي.</p>
-        </div>
-        {% endfor %}
-    </div>
 
-    <!-- الترقيم (تم تعديل المعامل إلى title) -->
-    {% if pagination and pagination.totalPages > 1 %}
-    <nav class="mt-5">
-        <ul class="pagination justify-content-center">
-            <li class="page-item {{ 'disabled' if pagination.currentPage <= 1 }}">
-                <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage-1, title=search) }}">السابق</a>
-            </li>
-            <li class="page-item active shadow-sm"><span class="page-link">{{ pagination.currentPage }} / {{ pagination.totalPages }}</span></li>
-            <li class="page-item {{ 'disabled' if pagination.currentPage >= pagination.totalPages }}">
-                <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage+1, title=search) }}">التالي</a>
-            </li>
-        </ul>
-    </nav>
-    {% endif %}
+        <!-- الترقيم -->
+        {% if pagination and pagination.totalPages > 1 %}
+        <nav class="mt-5">
+            <ul class="pagination justify-content-center">
+                <li class="page-item {{ 'disabled' if pagination.currentPage <= 1 }}">
+                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage-1, title=search) }}">السابق</a>
+                </li>
+                <li class="page-item active shadow-sm"><span class="page-link">{{ pagination.currentPage }} / {{ pagination.totalPages }}</span></li>
+                <li class="page-item {{ 'disabled' if pagination.currentPage >= pagination.totalPages }}">
+                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage+1, title=search) }}">التالي</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
 </div>
 
 <script>
     let timeout = null;
-    const input = document.getElementById('searchInput');
-    input.addEventListener('keyup', () => {
+    const searchInput = document.getElementById('searchInput');
+    const searchForm = document.getElementById('searchForm');
+    const resultsContainer = document.getElementById('results-container');
+
+    // منع المتصفح من إعادة تحميل الصفحة إذا ضغط المستخدم على Enter
+    searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+    });
+
+    // تحديث النتائج ديناميكياً عند الكتابة
+    searchInput.addEventListener('keyup', () => {
         clearTimeout(timeout);
-        timeout = setTimeout(() => { document.getElementById('searchForm').submit(); }, 600);
+        
+        timeout = setTimeout(async () => {
+            const query = searchInput.value;
+            
+            try {
+                // جلب بيانات الصفحة الجديدة بناءً على نص البحث
+                const response = await fetch(`{{ url_for('admin_product_bp.manage_products') }}?title=${encodeURIComponent(query)}`);
+                const html = await response.text();
+                
+                // تحويل النص المستلم إلى DOM لاستخراج المنتجات الجديدة
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newResults = doc.getElementById('results-container');
+                
+                // استبدال المنتجات القديمة بالجديدة
+                if (newResults) {
+                    resultsContainer.innerHTML = newResults.innerHTML;
+                }
+            } catch (error) {
+                console.error("حدث خطأ أثناء جلب النتائج:", error);
+            }
+        }, 600); // تأخير 600 جزء من الثانية بعد التوقف عن الكتابة
     });
 </script>
 
