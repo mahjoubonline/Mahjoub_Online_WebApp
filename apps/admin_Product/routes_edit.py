@@ -54,9 +54,10 @@ def edit_product(qid):
         else:
             flash("خطأ في الاتصال بخادم البيانات.")
             
+        # إرسال البيانات للقالب. القالب مهيأ للتعامل مع قاموس فارغ إذا فشل الجلب
         return render_template('admin/admin_edit_product.html', product=product)
         
     except Exception as e:
-        logger.error(f"❌ خطأ في جلب تفاصيل المنتج {clean_qid}: {e}")
+        logger.error(f"❌ خطأ في جلب تفاصيل المنتج {clean_qid}: {str(e)}")
         flash("حدث خطأ تقني أثناء تحميل بيانات المنتج.")
         return render_template('admin/admin_edit_product.html', product={})
