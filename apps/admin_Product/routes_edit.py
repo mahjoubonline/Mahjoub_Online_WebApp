@@ -1,81 +1,33 @@
-# coding: utf-8
-# 📂 apps/admin_Product/routes_edit.py
+# في ملف apps/admin_Product/routes_edit.py
 
-from flask import render_template, request, jsonify
-from flask_login import login_required
-# ✅ الاستيراد الآمن المباشر من الـ registry لمنع التعارض الدائري
-from .registry import admin_product_bp 
-from apps.services.graphql_client import QomrahGraphQLClient
-import logging
-
-logger = logging.getLogger(__name__)
-
-# 🚀 تم تعريف الاستعلام هنا مباشرة لتجنب أي خطأ في استيراد ملفات غير موجودة
-FIND_PRODUCT_QUERY = """
-query GetProduct($qid: ID!) {
-  findProductByQid(qid: $qid) {
-    qid
-    title
-    quantity
-    pricing { price }
-    images { fileUrl }
-  }
-}
-"""
+from apps.models.product_db import Product # (فقط إذا أردت التحقق من السجلات المالية المرتبطة بالمنتج)
+from apps.models.suppliers_db import Supplier
 
 @admin_product_bp.route('/edit/<qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
-    """
-    راوتر لجلب بيانات المنتج وعرض صفحة التعديل.
-    """
     try:
-        # 🚀 استخدام الاستعلام المعرف محلياً
+        # 1. جلب بيانات المنتج من قمرة (المصدر الوحيد للحقيقة)
         result = QomrahGraphQLClient.execute_query(FIND_PRODUCT_QUERY, variables={"qid": qid}) or {}
         product = result.get('findProductByQid')
         
         if not product:
-            logger.error(f"Product not found: {qid}")
-            return "المنتج غير موجود", 404
+            return "المنتج غير موجود في قمرة", 404
             
-        return render_template('admin/admin_edit_product.html', product=product)
+        # 2. البحث فقط عن المورد المرتبط بهذا الـ QID في قاعدة بياناتنا
+        # بما أننا لا نحفظ بيانات المنتج، نبحث عن سجل ربط (إذا كان لديك جدول وسيط) 
+        # أو نكتفي بجلب قائمة الموردين ليختار المشرف منها.
+        suppliers = Supplier.query.all()
+        
+        # يمكنك جلب المورد الحالي المرتبط بهذا المنتج لو وجد
+        # current_supplier = ... 
+        
+        return render_template(
+            'admin/admin_edit_product.html', 
+            product=product,
+            suppliers=suppliers # نمرر القائمة للواجهة
+        )
         
     except Exception as e:
         logger.error(f"Error fetching product {qid}: {e}")
         return "حدث خطأ أثناء جلب بيانات المنتج", 500
-
-@admin_product_bp.route('/update-product', methods=['POST'])
-@login_required
-def update_product():
-    """
-    راوتر لاستقبال تحديثات المنتج (يتم استدعاؤه عبر AJAX).
-    """
-    data = request.get_json()
-    if not data or 'qid' not in data:
-        return jsonify({"status": "error", "message": "بيانات غير مكتملة"}), 400
-        
-    # الـ Mutation المخصص لتحديث بيانات المنتج
-    mutation = """
-    mutation UpdateProduct($input: UpdateProductInput!) {
-      updateProduct(input: $input) {
-        status
-        message
-      }
-    }
-    """
-    
-    try:
-        # إرسال البيانات كـ input كما هو متعارف عليه في GraphQL
-        result = QomrahGraphQLClient.execute_query(mutation, variables={"input": data}) or {}
-        
-        # التأكد من نتيجة الـ Mutation
-        response_data = result.get('updateProduct', {})
-        if response_data.get('status') == 'success':
-            logger.info(f"Successfully updated product {data['qid']}")
-            return jsonify({"status": "success", "message": "تم تحديث المنتج بنجاح"})
-        else:
-            return jsonify({"status": "error", "message": response_data.get('message', 'فشل التحديث')})
-        
-    except Exception as e:
-        logger.error(f"Error updating product {data.get('qid')}: {e}")
-        return jsonify({"status": "error", "message": "فشل الاتصال بنظام التحديث"}), 500
