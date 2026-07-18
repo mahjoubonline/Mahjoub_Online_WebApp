@@ -38,34 +38,40 @@
         statusText.innerText = "جاري الاتصال بالسيرفر لبدء المزامنة...";
 
         try {
-            // جلب الـ CSRF Token من الميتا تاغ في الصفحة
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            // جلب الـ CSRF Token من الميتا تاغ مع معالجة احترازية
+            const metaTag = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = metaTag ? metaTag.getAttribute('content') : '';
             
-            // استخدام url_for لتوليد الرابط الصحيح برمجياً
+            // طلب المزامنة
             const response = await fetch("{{ url_for('admin_product_bp.proxy_sync') }}", { 
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken || ''
+                    'X-CSRFToken': csrfToken
                 }
             });
 
-            if (!response.ok) throw new Error('فشل الاتصال');
+            // قراءة رسالة الخطأ من السيرفر في حال فشل الطلب
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({message: 'خطأ غير معروف أثناء المزامنة'}));
+                throw new Error(errorData.message);
+            }
             
             const data = await response.json();
             
             progressBar.style.width = '100%';
             statusText.innerHTML = `<span class="text-success">${data.message}</span>`;
             
+            // إخفاء المودال وإعادة تحميل الصفحة بعد النجاح
             setTimeout(() => {
                 const modalElement = document.getElementById('syncModal');
                 const modal = bootstrap.Modal.getInstance(modalElement);
                 if (modal) modal.hide();
                 window.location.reload(); 
-            }, 1000);
+            }, 1500);
             
         } catch (err) {
-            statusText.innerHTML = `<span class="text-danger">خطأ: تأكد من الصلاحيات أو اتصال السيرفر.</span>`;
+            statusText.innerHTML = `<span class="text-danger">خطأ: ${err.message}</span>`;
             btn.disabled = false;
         }
     }
