@@ -1,11 +1,10 @@
 # coding: utf-8
 import logging
-from flask import Blueprint, render_template, request
+from flask import render_template, request
 from flask_login import login_required
 from apps.services.graphql_client import QomrahGraphQLClient
-
-# تعريف الـ Blueprint
-admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
+# نقوم باستيراد الـ Blueprint من ملف الـ registry لتجنب الحلقات المفرغة
+from .registry import admin_product_bp
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +14,7 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     
+    # تحسين الاستعلام ليشمل الترقيم والبحث
     query = """
     query Data($input: GetAllProductsInput) {
       findAllProducts(input: $input) {
@@ -23,6 +23,8 @@ def manage_products():
       }
     }
     """
+    
+    # منطق المتغيرات للبحث
     variables = {"input": {"page": page, "limit": 20, "search": search} if search else {"page": page, "limit": 20}}
     
     try:
@@ -35,8 +37,12 @@ def manage_products():
     products = data.get('data', [])
     pag_info = data.get('pagination', {"totalPages": 1, "currentPage": 1, "totalItems": 0})
     
+    # فئة مساعدة لتسهيل التعامل مع الترقيم في الـ Jinja2
     class ProPagination:
         def __init__(self, p):
+            self.currentPage = p['currentPage']
+            self.totalPages = p['totalPages']
+            self.totalItems = p['totalItems']
             self.page = p['currentPage']
             self.pages = p['totalPages']
             self.total = p['totalItems']
@@ -49,7 +55,3 @@ def manage_products():
                            products=products, 
                            pagination=ProPagination(pag_info),
                            search=search)
-
-# استيراد الملفات الأخرى هنا لربطها بالـ Blueprint المعرف أعلاه
-# هذا يضمن أن جميع الراوترات في الملفات الفرعية ستتم إضافتها لهذا الـ Blueprint
-from . import routes_add, routes_edit, routes_sync
