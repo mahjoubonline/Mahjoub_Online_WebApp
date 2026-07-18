@@ -1,40 +1,56 @@
 # coding: utf-8
 import logging
-from flask import render_template, request, jsonify
+from flask import render_template, request
 from flask_login import login_required
 from apps.services.graphql_client import QomrahGraphQLClient
 from .registry import admin_product_bp
 
 logger = logging.getLogger(__name__)
 
-@admin_product_bp.route('/add', methods=['GET', 'POST'])
+@admin_product_bp.route('/', methods=['GET'])
 @login_required
-def add_product():
-    if request.method == 'GET':
-        return render_template('admin/admin_add_product.html')
-
-    # في حالة POST: استقبال البيانات من الفورم عبر AJAX
-    data = request.json
+def manage_products():
+    # استقبال المتغيرات
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '').strip()
     
-    mutation = """
-    mutation CreateProduct($input: CreateProductInput!) {
-      createProduct(input: $input) {
-        status
-        message
+    # استعلام GraphQL مع دعم البحث عبر حقل 'title'
+    query = """
+    query Data($input: GetAllProductsInput) {
+      findAllProducts(input: $input) {
+        data { qid, title, quantity, pricing { price }, images { fileUrl } }
+        pagination { totalPages, currentPage, totalItems }
       }
     }
     """
     
+    # منطق البحث: إذا وُجد نص بحث، نرسله إلى 'title' في الـ Schema
+    variables = {
+        "input": {
+            "page": page, 
+            "limit": 50, 
+            "title": search if search else None
+        }
+    }
+    
     try:
-        # إرسال البيانات المدخلة إلى السيرفر
-        result = QomrahGraphQLClient.execute_query(mutation, variables={"input": data}) or {}
-        response = result.get('createProduct', {})
-        
-        if response.get('status') == 'success':
-            return jsonify({"status": "success", "message": "تم إضافة المنتج بنجاح"})
-        else:
-            return jsonify({"status": "error", "message": response.get('message', 'فشل الإضافة')})
-            
+        result = QomrahGraphQLClient.execute_query(query, variables=variables) or {}
     except Exception as e:
-        logger.error(f"Error adding product: {e}")
-        return jsonify({"status": "error", "message": "خطأ في الاتصال بالسيرفر"}), 500
+        logger.error(f"GraphQL Error: {e}")
+        result = {}
+
+    data = result.get('findAllProducts', {})
+    products = data.get('data', [])
+    pag_info = data.get('pagination', {"totalPages": 1, "currentPage": 1, "totalItems": 0})
+    
+    # كلاس الترقيم
+    class ProPagination:
+        def __init__(self, p):
+            self.currentPage = p.get('currentPage', 1)
+            self.totalPages = p.get('totalPages', 1)
+            self.totalItems = p.get('totalItems', 0)
+            
+    return render_template('admin/admin_Product.html', 
+                           products=products, 
+                           pagination=ProPagination(pag_info),
+                           search=search)
