@@ -48,9 +48,8 @@
         </div>
     </div>
 
-    <!-- حاوية النتائج: تم تجميع المنتجات والترقيم بداخلها ليسهل تحديثها عبر AJAX -->
+    <!-- حاوية النتائج -->
     <div id="results-container">
-        <!-- شبكة المنتجات -->
         <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
             {% for product in products %}
             <div class="col">
@@ -61,7 +60,8 @@
                         <div class="card-body">
                             <h6 class="fw-bold mb-2 text-truncate">{{ product.title }}</h6>
                             <div class="d-flex justify-content-between align-items-center mt-2">
-                                <span class="text-primary fw-bold">{{ product.pricing.price }}</span>
+                                <!-- تم إضافة ر.س هنا -->
+                                <span class="text-primary fw-bold">{{ product.pricing.price }} ر.س</span>
                                 <span class="badge {{ 'bg-success' if product.quantity > 0 else 'bg-danger' }} badge-qty">
                                     {{ product.quantity }} متوفر
                                 </span>
@@ -101,36 +101,21 @@
     const searchForm = document.getElementById('searchForm');
     const resultsContainer = document.getElementById('results-container');
 
-    // منع المتصفح من إعادة تحميل الصفحة إذا ضغط المستخدم على Enter
-    searchForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-    });
+    searchForm.addEventListener('submit', (e) => { e.preventDefault(); });
 
-    // تحديث النتائج ديناميكياً عند الكتابة
     searchInput.addEventListener('keyup', () => {
         clearTimeout(timeout);
-        
         timeout = setTimeout(async () => {
             const query = searchInput.value;
-            
             try {
-                // جلب بيانات الصفحة الجديدة بناءً على نص البحث
                 const response = await fetch(`{{ url_for('admin_product_bp.manage_products') }}?title=${encodeURIComponent(query)}`);
                 const html = await response.text();
-                
-                // تحويل النص المستلم إلى DOM لاستخراج المنتجات الجديدة
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 const newResults = doc.getElementById('results-container');
-                
-                // استبدال المنتجات القديمة بالجديدة
-                if (newResults) {
-                    resultsContainer.innerHTML = newResults.innerHTML;
-                }
-            } catch (error) {
-                console.error("حدث خطأ أثناء جلب النتائج:", error);
-            }
-        }, 600); // تأخير 600 جزء من الثانية بعد التوقف عن الكتابة
+                if (newResults) { resultsContainer.innerHTML = newResults.innerHTML; }
+            } catch (error) { console.error("حدث خطأ:", error); }
+        }, 600);
     });
 </script>
 
