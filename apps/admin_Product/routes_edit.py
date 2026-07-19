@@ -32,7 +32,7 @@ def edit_product(qid):
         mapping = ProductSupplierMapping.query.filter_by(product_qid=clean_qid).first()
         mapping_data = {"selected_supplier_id": mapping.supplier_id if mapping else None}
 
-        # 4. جلب بيانات المنتج من قمرة (مع التعديلات الهيكلية للـ Schema الجديدة)
+        # 4. جلب بيانات المنتج من قمرة مع هيكل المتغيرات المحدث ليتوافق مع الـ Schema
         prod_query = """
         query GetProd($qid: String!) { 
             findProductByQid(qid: $qid) { 
