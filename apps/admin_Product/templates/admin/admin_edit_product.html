@@ -1,5 +1,5 @@
 <!-- 📂 apps/admin_Product/templates/admin/admin_edit_product.html -->
-{% extends "admin/base.html" %}
+{% extends "admin/admin_base.html" %}
 
 {% block content %}
 <style>
@@ -17,20 +17,19 @@
                 <h4 class="mb-4 text-custom fw-bold">تعديل المنتج: {{ product.title }}</h4>
                 
                 <form id="editProductForm" onsubmit="saveProduct(event)">
-                    <!-- حقل مخفي للمعالج -->
                     <input type="hidden" id="qid" value="{{ product.qid }}">
 
                     <div class="row">
                         <!-- اسم المنتج -->
                         <div class="col-md-12 mb-3">
                             <label class="form-label">اسم المنتج</label>
-                            <input type="text" class="form-control" id="title" value="{{ product.title }}">
+                            <input type="text" class="form-control" id="title" value="{{ product.title }}" required>
                         </div>
 
                         <!-- السعر والكمية -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label">السعر</label>
-                            <input type="number" class="form-control" id="price" value="{{ product.pricing.price if product.pricing else 0 }}">
+                            <input type="number" step="0.01" class="form-control" id="price" value="{{ product.pricing.price if product.pricing else 0 }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">الكمية</label>
@@ -46,7 +45,7 @@
 
                     <div class="d-flex justify-content-end mt-4">
                         <a href="{{ url_for('admin_product_bp.manage_products') }}" class="btn btn-outline-secondary me-2">إلغاء</a>
-                        <button type="submit" class="btn btn-custom px-4">حفظ التغييرات</button>
+                        <button type="submit" id="saveBtn" class="btn btn-custom px-4">حفظ التغييرات</button>
                     </div>
                 </form>
             </div>
@@ -58,6 +57,10 @@
 async function saveProduct(event) {
     event.preventDefault();
     
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerText = "جاري الحفظ...";
+
     const data = {
         qid: document.getElementById('qid').value,
         title: document.getElementById('title').value,
@@ -66,17 +69,27 @@ async function saveProduct(event) {
         sku: document.getElementById('sku').value
     };
 
-    const response = await fetch('/admin/products/save-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
+    try {
+        const response = await fetch("{{ url_for('admin_product_bp.save_sync') }}", {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify(data)
+        });
 
-    if (response.ok) {
-        alert("تم الحفظ بنجاح!");
-        window.location.reload();
-    } else {
-        alert("حدث خطأ أثناء الحفظ.");
+        if (response.ok) {
+            alert("تم الحفظ بنجاح!");
+            window.location.href = "{{ url_for('admin_product_bp.manage_products') }}";
+        } else {
+            const error = await response.json();
+            alert("خطأ: " + (error.message || "فشلت عملية الحفظ"));
+        }
+    } catch (err) {
+        alert("تعذر الاتصال بالخادم.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "حفظ التغييرات";
     }
 }
 </script>
