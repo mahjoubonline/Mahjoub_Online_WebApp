@@ -41,7 +41,6 @@ def save_sync():
         db.session.commit()
 
         # 2. بناء الـ Mutation المحدث
-        # تأكد من أن السيرفر (قمرة) يتوقع collection_ids كقائمة من الـ IDs
         mutation = """
         mutation UpdateProductInfo($id: String!, $input: UpdateProductInfoInput!) {
             updateProductInfo(id: $id, input: $input) {
@@ -52,7 +51,6 @@ def save_sync():
         """
         
         # 3. تجهيز المدخلات الشاملة
-        # نستخدم list() للتأكد من أن collection_ids دائماً قائمة
         variables = {
             "id": str(data['qid']),
             "input": {
