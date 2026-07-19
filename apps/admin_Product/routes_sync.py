@@ -23,7 +23,7 @@ def save_sync():
         return jsonify({"status": "error", "message": "معرف المنتج مفقود"}), 400
 
     try:
-        # 1. تحديث قاعدة البيانات المحلية
+        # 1. تحديث قاعدة البيانات المحلية (المورد والملاحظات)
         mapping = ProductSupplierMapping.query.filter_by(product_qid=data['qid']).first()
         supplier_id = data.get('supplier_id') if data.get('supplier_id') != "" else None
             
@@ -40,7 +40,7 @@ def save_sync():
         
         db.session.commit()
 
-        # 2. بناء الـ Mutation المحدث (تم إضافة المتغيرات)
+        # 2. بناء الـ Mutation المحدث (يدعم تحديث المتغيرات والمجموعات)
         mutation = """
         mutation UpdateProductInfo($id: String!, $input: UpdateProductInfoInput!) {
             updateProductInfo(id: $id, input: $input) {
@@ -50,7 +50,7 @@ def save_sync():
         }
         """
         
-        # 3. تجهيز المدخلات الشاملة
+        # 3. تجهيز المدخلات الشاملة (تأكد أن بنية input تطابق schema قمرة)
         variables = {
             "id": str(data['qid']),
             "input": {
@@ -60,7 +60,7 @@ def save_sync():
                 "status": str(data.get('status', 'draft')),
                 "quantity": int(data.get('quantity', 0)),
                 "collection_ids": list(data.get('collection_ids', [])), 
-                "variants": data.get('variants', []),  # إضافة المتغيرات لـ قمرة
+                "variants": data.get('variants', []),  # إرسال قائمة المتغيرات المعدلة
                 "pricing": {
                     "price": float(data.get('price', 0)),
                     "compareAtPrice": float(data.get('compareAtPrice', 0)),
@@ -77,12 +77,12 @@ def save_sync():
             }
         }
         
-        # 4. تنفيذ التحديث اللحظي
+        # 4. تنفيذ التحديث اللحظي عبر GraphQL
         response = QomrahGraphQLClient.execute_query(mutation, variables=variables)
         
         # 5. معالجة الأخطاء
-        if response and 'errors' in response:
-            error_details = response.get('errors')
+        if not response or 'errors' in response:
+            error_details = response.get('errors') if response else "No response"
             logger.error(f"❌ فشل تحديث قمرة لـ {data['qid']}: {error_details}")
             return jsonify({"status": "error", "message": "حدث خطأ أثناء التواصل مع خادم قمرة"}), 500
         
