@@ -40,7 +40,7 @@ def save_sync():
         
         db.session.commit()
 
-        # 2. بناء الـ Mutation المحدث ليشمل وصف المنتج
+        # 2. بناء الـ Mutation المحدث ليشمل المجموعات (collections)
         mutation = """
         mutation UpdateProductInfo($id: String!, $input: UpdateProductInfoInput!) {
             updateProductInfo(id: $id, input: $input) {
@@ -50,15 +50,16 @@ def save_sync():
         }
         """
         
-        # 3. تجهيز المدخلات الشاملة (تم إضافة description)
+        # 3. تجهيز المدخلات الشاملة (تم إضافة collection_ids)
         variables = {
             "id": str(data['qid']),
             "input": {
                 "title": str(data.get('title', '')),
-                "description": str(data.get('description', '')), # إضافة الوصف هنا
+                "description": str(data.get('description', '')),
                 "slug": str(data.get('slug', '')),
                 "status": str(data.get('status', 'draft')),
                 "quantity": int(data.get('quantity', 0)),
+                "collection_ids": data.get('collection_ids', []), # إضافة المجموعات المختارة
                 "pricing": {
                     "price": float(data.get('price', 0)),
                     "compareAtPrice": float(data.get('compareAtPrice', 0)),
