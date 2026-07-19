@@ -5,6 +5,8 @@ from flask import render_template, request, flash, redirect, url_for
 from flask_login import login_required
 from .registry import admin_product_bp
 from apps.services.graphql_client import QomrahGraphQLClient
+from apps.models.supplier_db import Supplier
+from apps.models.product_supplier_map import ProductSupplierMapping
 from urllib.parse import unquote
 import logging
 
@@ -31,41 +33,48 @@ query GetProduct($qid: String!) {
 @admin_product_bp.route('/edit/<path:qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
-    """جلب بيانات المنتج من قمرة وعرضها في صفحة التعديل"""
+    """جلب بيانات المنتج من قمرة وعرضها في صفحة التعديل مع ربط المورد"""
     
-    # التأكد من وجود qid
     if not qid:
         flash("معرف المنتج مفقود.")
         return redirect(url_for('admin_product_bp.manage_products'))
 
-    # فك ترميز الـ qid (مستوى مزدوج للتعامل مع الروابط المشفرة)
     clean_qid = unquote(unquote(qid))
     
     try:
-        # إرسال الاستعلام للمصدر
+        # 1. جلب المورد المرتبط بهذا المنتج من قاعدة بياناتنا
+        mapping = ProductSupplierMapping.query.filter_by(product_qid=clean_qid).first()
+        
+        # 2. جلب جميع الموردين النشطين للقائمة المنسدلة في الواجهة
+        suppliers = Supplier.query.filter_by(status='active').all()
+
+        # 3. إرسال الاستعلام لقمرة لجلب بيانات المنتج الأساسية
         variables = {"qid": clean_qid}
         response = QomrahGraphQLClient.execute_query(FIND_PRODUCT_QUERY, variables)
         
-        # التأكد من صحة استجابة GraphQL
         if not response:
             logger.error(f"⚠️ استجابة فارغة من قمرة لـ qid: {clean_qid}")
             flash("لا يوجد اتصال بخادم البيانات.")
-            return render_template('admin/admin_edit_product.html', product={})
+            return render_template('admin/admin_edit_product.html', product={}, suppliers=suppliers)
 
-        # استخراج البيانات
         data_payload = response.get('data', {})
         result = data_payload.get('findProductByQid', {})
         
         if result.get('success'):
             product = result.get('data', {})
-            return render_template('admin/admin_edit_product.html', product=product)
+            return render_template(
+                'admin/admin_edit_product.html', 
+                product=product,
+                suppliers=suppliers,
+                selected_supplier_id=mapping.supplier_id if mapping else None
+            )
         else:
             error_msg = result.get('message', "لم يتم العثور على المنتج في قمرة.")
             logger.warning(f"⚠️ {error_msg} لـ qid: {clean_qid}")
             flash(error_msg)
-            return render_template('admin/admin_edit_product.html', product={})
+            return render_template('admin/admin_edit_product.html', product={}, suppliers=suppliers)
             
     except Exception as e:
         logger.error(f"❌ خطأ تقني أثناء جلب تفاصيل المنتج {clean_qid}: {str(e)}")
         flash("حدث خطأ تقني أثناء تحميل بيانات المنتج.")
-        return render_template('admin/admin_edit_product.html', product={})
+        return render_template('admin/admin_edit_product.html', product={}, suppliers=suppliers)
