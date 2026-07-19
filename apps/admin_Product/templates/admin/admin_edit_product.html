@@ -7,150 +7,129 @@
 
 <style>
     :root { --deep-purple: #1a0033; --royal-accent: #4b0082; }
-    .header-gradient { background: var(--deep-purple); color: white; padding: 25px; border-radius: 12px; }
-    .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .btn-custom-purple { background: var(--deep-purple); color: white; border: none; transition: 0.3s; }
-    .btn-custom-purple:hover { background: var(--royal-accent); color: white; }
-    .image-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; margin: 5px; }
+    .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 20px; padding: 20px; }
+    .section-title { color: var(--deep-purple); font-weight: 700; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+    .price-box { background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #e9ecef; }
+    .image-zone { border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; border-radius: 10px; transition: 0.3s; }
+    .image-zone:hover { border-color: var(--royal-accent); background: #fdfdff; }
+    .img-preview { width: 100px; height: 100px; object-fit: cover; margin: 5px; border-radius: 8px; border: 1px solid #ddd; }
 </style>
 
 <div class="container py-4">
-    <div class="header-gradient shadow-lg d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold mb-1">{{ product.title or 'تفاصيل المنتج' }}</h4>
-            <small>المعرف الفريد (QID): {{ product.qid }}</small>
-        </div>
-        <a href="{{ url_for('admin_product_bp.manage_products') }}" class="btn btn-outline-light">العودة للقائمة</a>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>تعديل المنتج: <span class="text-muted">{{ product.title }}</span></h3>
+        <a href="{{ url_for('admin_product_bp.manage_products') }}" class="btn btn-dark">العودة للقائمة</a>
     </div>
-    
+
     <form id="editProductForm" onsubmit="saveProduct(event)">
-        <input type="hidden" id="qid" value="{{ product.qid }}">
-
         <div class="row">
+            <!-- العمود الأيمن -->
             <div class="col-lg-8">
-                <!-- البيانات الأساسية -->
-                <div class="card p-4">
-                    <h5 class="mb-3" style="color: var(--deep-purple); font-weight: bold;">البيانات الأساسية</h5>
-                    <div class="row">
-                        <div class="col-md-6 mb-3"><label>اسم المنتج</label><input type="text" class="form-control" id="title" value="{{ product.title or '' }}"></div>
-                        <div class="col-md-6 mb-3"><label>الرابط (Slug)</label><input type="text" class="form-control" id="slug" value="{{ product.slug or '' }}"></div>
-                        <div class="col-md-12 mb-3">
-                            <label>وصف المنتج</label>
-                            <textarea id="editor">{{ product.description | safe }}</textarea>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- الصور -->
-                <div class="card p-4">
-                    <h5 class="mb-3" style="color: var(--deep-purple); font-weight: bold;">صور المنتج</h5>
-                    <div class="input-group mb-3">
-                        <input type="url" id="imgUrlInput" class="form-control" placeholder="رابط الصورة المباشر...">
-                        <button type="button" class="btn btn-dark" onclick="addImage()">إضافة</button>
+                <div class="card">
+                    <h5 class="section-title">صور المنتج</h5>
+                    <div class="image-zone" onclick="document.getElementById('imageInput').click()">
+                        <p class="mb-0">انقر هنا لرفع صور جديدة أو سحبها وإفلاتها</p>
+                        <input type="file" id="imageInput" class="d-none" multiple accept="image/*" onchange="previewImages(this)">
                     </div>
-                    <div id="imageGallery" class="d-flex flex-wrap">
+                    <div id="imageGallery" class="d-flex flex-wrap mt-3">
                         {% for img in product.images %}
-                        <img src="{{ img }}" class="image-thumb">
+                        <img src="{{ img }}" class="img-preview">
                         {% endfor %}
                     </div>
                 </div>
 
-                <!-- المتغيرات -->
-                <div class="card p-4">
+                <!-- الأساسيات والوصف -->
+                <div class="card">
+                    <h5 class="section-title">البيانات الأساسية</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label>اسم المنتج</label><input type="text" class="form-control" id="title" value="{{ product.title }}"></div>
+                        <div class="col-md-6 mb-3"><label>الرابط (Slug)</label><input type="text" class="form-control" id="slug" value="{{ product.slug }}"></div>
+                    </div>
+                    <label>وصف المنتج</label>
+                    <textarea id="editor">{{ product.description | safe }}</textarea>
+                </div>
+
+                <!-- الأسعار، المخزون، والأنواع -->
+                <div class="card">
+                    <h5 class="section-title">إدارة الأسعار والمخزون</h5>
+                    <div class="row price-box mb-3">
+                        <div class="col-md-4"><label>سعر التكلفة</label><input type="number" class="form-control" id="original_price" value="{{ product.pricing.originalPrice }}"></div>
+                        <div class="col-md-4"><label>السعر قبل الخصم</label><input type="number" class="form-control" id="compare_at_price" value="{{ product.pricing.compareAtPrice }}"></div>
+                        <div class="col-md-4"><label>السعر النهائي</label><input type="number" class="form-control" id="price" value="{{ product.pricing.price }}"></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label>SKU</label><input type="text" class="form-control" id="sku" value="{{ product.sku }}"></div>
+                        <div class="col-md-4 mb-3"><label>الكمية</label><input type="number" class="form-control" id="quantity" value="{{ product.quantity }}"></div>
+                        <div class="col-md-4 mb-3"><label>الوزن</label><input type="number" step="0.1" class="form-control" id="weight" value="{{ product.weight }}"></div>
+                    </div>
+                </div>
+
+                <div class="card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0" style="color: var(--deep-purple); font-weight: bold;">المتغيرات</h5>
-                        <button type="button" class="btn btn-sm btn-success" onclick="addVariantRow()">+ إضافة متغير</button>
+                        <h5 class="section-title mb-0">الأنواع (Variants)</h5>
+                        <button type="button" class="btn btn-sm btn-success" onclick="addVariantRow()">+ إضافة نوع</button>
                     </div>
                     <table class="table table-bordered">
-                        <thead class="table-light"><tr><th>السعر</th><th>الكمية</th><th>حذف</th></tr></thead>
-                        <tbody id="variantsTableBody">
-                            {% for v in product.variants %}
-                            <tr class="variant-row">
-                                <td><input type="number" step="0.01" class="form-control v-price" value="{{ v.pricing.price if v.pricing else 0 }}"></td>
-                                <td><input type="number" class="form-control v-quantity" value="{{ v.quantity or 0 }}"></td>
-                                <td><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">حذف</button></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
+                        <thead><tr><th>الخيارات</th><th>السعر</th><th>الكمية</th><th>SKU</th><th>حذف</th></tr></thead>
+                        <tbody id="variantsTableBody"></tbody>
                     </table>
                 </div>
             </div>
 
+            <!-- العمود الأيسر: التنظيم -->
             <div class="col-lg-4">
-                <!-- حالة المنتج -->
-                <div class="card p-4">
-                    <h5 class="mb-3" style="color: var(--deep-purple); font-weight: bold;">حالة المنتج</h5>
-                    <select class="form-select" id="status">
-                        <option value="ACTIVE" {% if product.status == 'ACTIVE' %}selected{% endif %}>نشط</option>
-                        <option value="DRAFT" {% if product.status == 'DRAFT' %}selected{% endif %}>مسودة</option>
-                        <option value="ARCHIVED" {% if product.status == 'ARCHIVED' %}selected{% endif %}>مؤرشف</option>
+                <div class="card">
+                    <h5 class="section-title">التنظيم</h5>
+                    <label>حالة المنتج</label>
+                    <select class="form-select mb-3" id="status"><option value="ACTIVE">نشط</option><option value="DRAFT">مسودة</option></select>
+                    <label>المورد المسؤول</label>
+                    <select class="form-select mb-3" id="supplier-select">
+                        {% for sup in suppliers %}<option value="{{ sup.id }}">{{ sup.trade_name }}</option>{% endfor %}
                     </select>
-                </div>
-
-                <!-- المورد والمجموعات -->
-                <div class="card p-4">
-                    <h5 class="mb-3" style="color: var(--deep-purple); font-weight: bold;">المورد المسؤول</h5>
-                    <select class="form-select" id="supplier-select">
-                        <option value="">-- اختر المورد --</option>
-                        {% for sup in suppliers %}<option value="{{ sup.id }}" {% if sup.id == mapping.selected_supplier_id %}selected{% endif %}>{{ sup.trade_name }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div class="card p-4">
-                    <h5 class="mb-3" style="color: var(--deep-purple); font-weight: bold;">المجموعات</h5>
+                    <label>المجموعات</label>
                     <select class="form-select" id="collections-select" multiple>
-                        {% for col in all_collections %}<option value="{{ col.qid }}" {% if col.qid in product.collection_ids %}selected{% endif %}>{{ col.title }}</option>{% endfor %}
+                        {% for col in all_collections %}<option value="{{ col.qid }}">{{ col.title }}</option>{% endfor %}
                     </select>
                 </div>
             </div>
         </div>
-        <button type="submit" id="saveBtn" class="btn btn-custom-purple btn-lg w-100 shadow-lg mb-5">حفظ كافة التعديلات</button>
+        <button type="submit" class="btn btn-primary btn-lg w-100 shadow">حفظ كافة التعديلات</button>
     </form>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-    let editorInstance;
-    ClassicEditor.create(document.querySelector('#editor'), {
-        toolbar: ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', '|', 'undo', 'redo']
-    }).then(editor => { editorInstance = editor; });
+    ClassicEditor.create(document.querySelector('#editor'));
+    new Choices('#supplier-select');
+    new Choices('#collections-select', { removeItemButton: true });
 
-    document.addEventListener('DOMContentLoaded', () => { 
-        new Choices(document.getElementById('supplier-select'));
-        new Choices(document.getElementById('collections-select'), { removeItemButton: true });
-    });
-
-    function addImage() {
-        const url = document.getElementById('imgUrlInput').value;
-        if(url) {
-            document.getElementById('imageGallery').innerHTML += `<img src="${url}" class="image-thumb">`;
-            document.getElementById('imgUrlInput').value = '';
+    // معاينة الصور لحظياً
+    function previewImages(input) {
+        const gallery = document.getElementById('imageGallery');
+        if (input.files) {
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'img-preview';
+                    gallery.appendChild(img);
+                }
+                reader.readAsDataURL(file);
+            });
         }
     }
 
     function addVariantRow() {
         const tbody = document.getElementById('variantsTableBody');
-        tbody.innerHTML += `<tr class="variant-row"><td><input type="number" step="0.01" class="form-control v-price" value="0"></td><td><input type="number" class="form-control v-quantity" value="0"></td><td><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">حذف</button></td></tr>`;
-    }
-
-    async function saveProduct(e) {
-        e.preventDefault();
-        const payload = {
-            qid: document.getElementById('qid').value,
-            title: document.getElementById('title').value,
-            slug: document.getElementById('slug').value,
-            description: editorInstance.getData(),
-            status: document.getElementById('status').value,
-            images: Array.from(document.querySelectorAll('.image-thumb')).map(img => img.src),
-            supplier_id: document.getElementById('supplier-select').value,
-            collection_ids: Array.from(document.getElementById('collections-select').selectedOptions).map(o => o.value),
-            variants: Array.from(document.querySelectorAll('.variant-row')).map(row => ({
-                pricing: { price: parseFloat(row.querySelector('.v-price').value || 0) },
-                quantity: parseInt(row.querySelector('.v-quantity').value || 0)
-            }))
-        };
-        // تابع عملية الـ Fetch هنا...
-        console.log(payload);
-        alert("تم تجهيز البيانات للحفظ!");
+        tbody.innerHTML += `<tr>
+            <td><input type="text" class="form-control" placeholder="حجم/لون"></td>
+            <td><input type="number" class="form-control"></td>
+            <td><input type="number" class="form-control"></td>
+            <td><input type="text" class="form-control"></td>
+            <td><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">×</button></td>
+        </tr>`;
     }
 </script>
 {% endblock %}
