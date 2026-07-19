@@ -26,13 +26,18 @@ def save_sync():
         # 1. تحديث الربط والملاحظات في قاعدة البيانات المحلية (MySQL)
         mapping = ProductSupplierMapping.query.filter_by(product_qid=data['qid']).first()
         
+        # تحويل القيمة الفارغة لـ supplier_id إلى None
+        supplier_id = data.get('supplier_id')
+        if supplier_id == "":
+            supplier_id = None
+            
         if mapping:
-            mapping.supplier_id = data.get('supplier_id')
-            mapping.internal_notes = data.get('internal_notes', '') # التشفير يتم تلقائياً عبر الـ @setter
+            mapping.supplier_id = supplier_id
+            mapping.internal_notes = data.get('internal_notes', '') 
         else:
             new_mapping = ProductSupplierMapping(
                 product_qid=data['qid'], 
-                supplier_id=data.get('supplier_id'),
+                supplier_id=supplier_id,
                 internal_notes=data.get('internal_notes', '')
             )
             db.session.add(new_mapping)
@@ -58,7 +63,6 @@ def save_sync():
                 "quantity": int(data.get('quantity', 0)),
                 "pricing": {
                     "price": float(data.get('price', 0))
-                    # ملاحظة: تم استبعاد costPrice من هنا إذا لم يكن مدعوماً في Mutation قمرة
                 },
                 "identification": {
                     "sku": str(data.get('sku', ''))
@@ -71,7 +75,8 @@ def save_sync():
         
         if not response or 'errors' in response:
             logger.error(f"❌ فشل تحديث قمرة لـ {data['qid']}: {response.get('errors')}")
-            return jsonify({"status": "error", "message": "تم تحديث البيانات المحلية بنجاح، ولكن فشل التحديث في قمرة"}), 500
+            # التحديث المحلي تم، لذا نبلغ المستخدم بالحالة الجزئية
+            return jsonify({"status": "partial_success", "message": "تم حفظ الملاحظات محلياً، لكن فشل التحديث في قمرة"}), 500
         
         return jsonify({"status": "success", "message": "تم حفظ كافة التعديلات بنجاح في النظامين"}), 200
         
