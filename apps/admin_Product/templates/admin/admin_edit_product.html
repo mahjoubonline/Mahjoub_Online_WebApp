@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold"><i class="fas fa-edit me-2"></i>تعديل المنتج: {{ product.title }}</h4>
+        <h4 class="fw-bold"><i class="fas fa-edit me-2"></i>تعديل المنتج: {{ product.title or 'منتج جديد' }}</h4>
         <a href="{{ url_for('admin_product_bp.manage_products') }}" class="btn btn-outline-secondary">العودة للمنتجات</a>
     </div>
     
@@ -18,8 +18,8 @@
                     <div class="card-body">
                         <h5>البيانات الأساسية</h5>
                         <div class="row">
-                            <div class="col-md-6 mb-3"><label>اسم المنتج</label><input type="text" class="form-control" id="title" value="{{ product.title }}"></div>
-                            <div class="col-md-6 mb-3"><label>الرابط (Slug)</label><input type="text" class="form-control" id="slug" value="{{ product.slug }}"></div>
+                            <div class="col-md-6 mb-3"><label>اسم المنتج</label><input type="text" class="form-control" id="title" value="{{ product.title or '' }}"></div>
+                            <div class="col-md-6 mb-3"><label>الرابط (Slug)</label><input type="text" class="form-control" id="slug" value="{{ product.slug or '' }}"></div>
                             <div class="col-md-6 mb-3"><label>المورد</label>
                                 <select class="form-select" id="supplier_id">
                                     <option value="">-- اختر مورد --</option>
@@ -28,7 +28,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-3 mb-3"><label>الحالة</label><input type="text" class="form-control" id="status" value="{{ product.status }}" readonly></div>
+                            <div class="col-md-3 mb-3"><label>الحالة</label><input type="text" class="form-control" id="status" value="{{ product.status or 'draft' }}" readonly></div>
                         </div>
                     </div>
                 </div>
@@ -38,24 +38,21 @@
                     <div class="card-body">
                         <h5>التسعير والمخزون</h5>
                         <div class="row">
-                            <div class="col-md-3 mb-3"><label>السعر</label><input type="number" class="form-control" id="price" value="{{ product.pricing.price }}"></div>
-                            <div class="col-md-3 mb-3"><label>السعر قبل الخصم</label><input type="number" class="form-control" id="compareAtPrice" value="{{ product.pricing.compareAtPrice }}"></div>
-                            <div class="col-md-3 mb-3"><label>سعر التكلفة</label><input type="number" class="form-control" id="costPrice" value="{{ product.pricing.costPrice }}"></div>
-                            <div class="col-md-3 mb-3"><label>الكمية</label><input type="number" class="form-control" id="quantity" value="{{ product.quantity }}"></div>
-                            <div class="col-md-6 mb-3"><label>SKU</label><input type="text" class="form-control" id="sku" value="{{ product.identification.sku }}"></div>
-                            <div class="col-md-6 mb-3"><label>الباركود</label><input type="text" class="form-control" id="barcode" value="{{ product.identification.barcode }}"></div>
+                            <div class="col-md-4 mb-3"><label>السعر</label><input type="number" class="form-control" id="price" value="{{ product.pricing.price if product.pricing else 0 }}"></div>
+                            <div class="col-md-4 mb-3"><label>الكمية</label><input type="number" class="form-control" id="quantity" value="{{ product.quantity or 0 }}"></div>
+                            <div class="col-md-4 mb-3"><label>SKU</label><input type="text" class="form-control" id="sku" value="{{ product.identification.sku if product.identification else '' }}"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 3. الصور والبيانات الجانبية -->
+            <!-- 3. الصور والأبعاد -->
             <div class="col-lg-4">
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <h5>صور المنتج</h5>
                         <div class="row g-2">
-                            {% for img in product.images %}
+                            {% for img in product.images or [] %}
                                 <div class="col-6"><img src="{{ img.fileUrl }}" class="img-thumbnail w-100"></div>
                             {% endfor %}
                         </div>
@@ -64,15 +61,8 @@
                 
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5>الأبعاد والوزن</h5>
-                        <label>الوزن ({{ product.weight.unit }})</label>
-                        <input type="number" class="form-control mb-2" id="weight" value="{{ product.weight.value }}">
-                        <label>الأبعاد (طول×عرض×ارتفاع)</label>
-                        <div class="d-flex gap-1">
-                            <input type="number" class="form-control" id="len" value="{{ product.dimensions.length }}">
-                            <input type="number" class="form-control" id="wid" value="{{ product.dimensions.width }}">
-                            <input type="number" class="form-control" id="hgt" value="{{ product.dimensions.height }}">
-                        </div>
+                        <h5>ملاحظات إدارية (خاص)</h5>
+                        <textarea class="form-control" id="internal_notes" rows="3">{{ internal_notes or '' }}</textarea>
                     </div>
                 </div>
             </div>
@@ -87,13 +77,13 @@ async function saveProduct(event) {
     event.preventDefault();
     const data = {
         qid: document.getElementById('qid').value,
-        title: document.getElementById('title').value,
-        price: document.getElementById('price').value,
-        quantity: document.getElementById('quantity').value,
-        // ... تجميع باقي الحقول
+        supplier_id: document.getElementById('supplier_id').value,
+        internal_notes: document.getElementById('internal_notes').value,
+        // يمكن إضافة بقية الحقول لاحقاً
     };
     console.log("Data to update:", data);
-    alert("تم تجميع بيانات المنتج لإرسالها للتحديث.");
+    // هنا سيتم ربط Fetch API لاحقاً
+    alert("تم تجميع البيانات (سيتم الربط مع الـ Backend في الخطوة التالية).");
 }
 </script>
 {% endblock %}
