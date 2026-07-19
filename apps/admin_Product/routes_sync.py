@@ -25,7 +25,18 @@ def save_sync():
     if not qid:
         return jsonify({"status": "error", "message": "المعرف الفريد QID مفقود"}), 400
 
-    # 1. صياغة الـ Mutation المحدثة
+    # معالجة المتغيرات لضمان سلامة البيانات (Types)
+    raw_variants = data.get('variants', [])
+    processed_variants = []
+    for v in raw_variants:
+        processed_variants.append({
+            "title": str(v.get('title', '')),
+            "price": float(v.get('price', 0)),
+            "quantity": int(v.get('quantity', 0)),
+            "sku": str(v.get('sku', ''))
+        })
+
+    # 1. صياغة الـ Mutation
     mutation = """
     mutation UpdateProduct($qid: String!, $input: UpdateProductInput!) {
         updateProduct(qid: $qid, input: $input) {
@@ -35,7 +46,7 @@ def save_sync():
     }
     """
     
-    # بناء المتغيرات لتشمل الأسعار والصور
+    # بناء المتغيرات
     variables = {
         "qid": qid,
         "input": {
@@ -43,13 +54,13 @@ def save_sync():
             "slug": data.get('slug'),
             "description": data.get('description'),
             "collectionIds": data.get('collection_ids', []),
-            "variants": data.get('variants', []),
+            "variants": processed_variants,
             "pricing": {
                 "price": float(data.get('price', 0)),
                 "compareAtPrice": float(data.get('compare_at_price', 0)),
                 "originalPrice": float(data.get('original_price', 0))
             },
-            "images": data.get('images', []) # مصفوفة الصور {fileUrl}
+            "images": data.get('images', [])
         }
     }
     
@@ -58,7 +69,7 @@ def save_sync():
         qomrah_response = QomrahGraphQLClient.execute_query(mutation, variables)
         
         if not qomrah_response or 'errors' in qomrah_response:
-            error_msg = qomrah_response.get('errors', [{}])[0].get('message', 'خطأ في التحديث')
+            error_msg = qomrah_response.get('errors', [{}])[0].get('message', 'خطأ غير معروف في التحديث')
             logger.error(f"❌ خطأ من API قمرة: {error_msg}")
             return jsonify({"status": "error", "message": f"فشل التحديث في قمرة: {error_msg}"}), 500
 
@@ -80,7 +91,7 @@ def save_sync():
             except Exception as db_err:
                 db.session.rollback()
                 logger.error(f"⚠️ فشل حفظ المورد محلياً: {str(db_err)}")
-                return jsonify({"status": "warning", "message": "تم تحديث المنتج في قمرة، لكن فشل حفظ المورد محلياً"})
+                return jsonify({"status": "warning", "message": "تم تحديث المنتج في قمرة، لكن حدث خطأ أثناء حفظ المورد محلياً"})
 
         return jsonify({"status": "success", "message": "✅ تم الحفظ بنجاح!"})
 
