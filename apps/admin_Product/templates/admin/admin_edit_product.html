@@ -1,153 +1,136 @@
-<!-- 📂 apps/admin_Product/templates/admin/admin_edit_product.html -->
+<!-- apps/admin_Product/templates/admin/admin_add_product.html -->
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
+<!-- نستخدم نسخة CKEditor 5 كاملة تحتوي على الأدوات المتقدمة -->
+<script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+
 <style>
-    :root { --deep-purple: #1a0033; --royal-accent: #4b0082; }
-    .header-gradient { background: var(--deep-purple); color: white; padding: 25px; border-radius: 12px; }
-    .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .btn-custom-purple { background: var(--deep-purple); color: white; border: none; transition: 0.3s; }
-    .btn-custom-purple:hover { background: var(--royal-accent); color: white; }
-    #editor-description { min-height: 200px; border: 1px solid #ddd; border-radius: 0 0 8px 8px; padding: 15px; background: white; }
-    .img-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 5px; }
+    :root { --dark-purple: #2d0b36; }
+    .btn-custom { background-color: var(--dark-purple); color: #fff; }
+    .text-custom { color: var(--dark-purple); }
+    .card { border-radius: 15px; }
+    .ck-editor__editable { min-height: 250px; }
+    .section-title { border-right: 4px solid var(--dark-purple); padding-right: 10px; margin-bottom: 20px; color: var(--dark-purple); }
 </style>
 
-<div class="container py-4">
-    <div class="header-gradient shadow-lg d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold mb-1">{{ product.title or 'تفاصيل المنتج' }}</h4>
-            <small>المعرف الفريد (QID): {{ product.qid }}</small>
-        </div>
-        <a href="{{ url_for('admin_product_bp.manage_products') }}" class="btn btn-outline-light">العودة للقائمة</a>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i></button>
+        <h4 class="m-0 text-custom fw-bold">{{ "تعديل المنتج" if product else "إضافة منتج جديد" }}</h4>
     </div>
-    
-    <form id="editProductForm" onsubmit="saveProduct(event)">
-        <input type="hidden" id="qid" value="{{ product.qid }}">
 
+    <form id="productForm">
         <div class="row">
-            <div class="col-lg-8">
-                <!-- البيانات الأساسية -->
-                <div class="card mb-4 p-4">
-                    <h5 class="mb-3" style="color: var(--deep-purple); font-weight: bold;">البيانات الأساسية</h5>
+            <!-- القسم الأساسي -->
+            <div class="col-md-8">
+                <div class="card shadow-sm p-4 mb-4">
+                    <h5 class="section-title">بيانات المنتج الأساسية</h5>
+                    <input type="hidden" id="qid" value="{{ product.qid if product else '' }}">
+                    <div class="mb-3">
+                        <label class="fw-bold small">اسم المنتج</label>
+                        <input type="text" id="title" class="form-control" value="{{ product.title or '' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small">الوصف الاحترافي</label>
+                        <textarea id="editor">{{ product.description | safe }}</textarea>
+                    </div>
+                </div>
+
+                <!-- قسم الأسعار -->
+                <div class="card shadow-sm p-4">
+                    <h5 class="section-title">إدارة الأسعار والمخزون</h5>
                     <div class="row">
-                        <div class="col-md-6 mb-3"><label>اسم المنتج</label><input type="text" class="form-control" id="title" value="{{ product.title or '' }}"></div>
-                        <div class="col-md-6 mb-3"><label>الرابط (Slug)</label><input type="text" class="form-control" id="slug" value="{{ product.slug or '' }}"></div>
-                        <div class="col-md-12 mb-3">
-                            <label>وصف المنتج</label>
-                            <div id="editor-description" contenteditable="true" class="form-control">{{ product.description | safe }}</div>
+                        <div class="col-md-3 mb-3">
+                            <label class="fw-bold small">سعر التكلفة</label>
+                            <input type="number" id="cost_price" class="form-control" step="0.01" value="{{ product.pricing.cost_price or '' }}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="fw-bold small">السعر قبل الخصم</label>
+                            <input type="number" id="compare_price" class="form-control" step="0.01" value="{{ product.pricing.compare_price or '' }}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="fw-bold small">السعر النهائي</label>
+                            <input type="number" id="price" class="form-control" step="0.01" value="{{ product.pricing.price or '' }}" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="fw-bold small">الكمية</label>
+                            <input type="number" id="quantity" class="form-control" value="{{ product.quantity or 0 }}">
                         </div>
                     </div>
-                </div>
-
-                <!-- الأسعار -->
-                <div class="card mb-4 p-4">
-                    <h5 class="mb-3" style="color: var(--deep-purple); font-weight: bold;">إدارة الأسعار</h5>
-                    <div class="row">
-                        <div class="col-md-4"><label>السعر الحالي</label><input type="number" step="0.01" class="form-control" id="price" value="{{ product.pricing.price or 0 }}"></div>
-                        <div class="col-md-4"><label>السعر قبل الخصم</label><input type="number" step="0.01" class="form-control" id="compare_at_price" value="{{ product.pricing.compareAtPrice or 0 }}"></div>
-                        <div class="col-md-4"><label>السعر الأصلي</label><input type="number" step="0.01" class="form-control" id="original_price" value="{{ product.pricing.originalPrice or 0 }}"></div>
+                    <div class="mb-3">
+                        <label class="fw-bold small">المتغيرات (Variants)</label>
+                        <input type="text" id="variants" class="form-control" placeholder="مثل: أحمر, أزرق | صغير, كبير" value="{{ product.variants or '' }}">
                     </div>
-                </div>
-
-                <!-- المتغيرات -->
-                <div class="card mb-4 p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0" style="color: var(--deep-purple); font-weight: bold;">المتغيرات</h5>
-                        <button type="button" class="btn btn-sm btn-success" onclick="addVariantRow()">+ إضافة متغير</button>
-                    </div>
-                    <table class="table table-bordered">
-                        <thead class="table-light"><tr><th>السعر</th><th>الكمية</th><th></th></tr></thead>
-                        <tbody id="variantsTableBody">
-                            {% for v in product.variants %}
-                            <tr class="variant-row">
-                                <td><input type="number" step="0.01" class="form-control v-price" value="{{ v.pricing.price }}"></td>
-                                <td><input type="number" class="form-control v-quantity" value="{{ v.quantity }}"></td>
-                                <td><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">حذف</button></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <!-- الصور والمورد والمجموعات (كما هي) -->
-                <div class="card mb-4 p-4">
-                    <h5 class="mb-3" style="color: var(--deep-purple); font-weight: bold;">صور المنتج</h5>
-                    <div id="imagesContainer" class="d-flex flex-wrap">
-                        {% for img in product.images %}
-                        <div class="position-relative">
-                            <img src="{{ img.fileUrl }}" class="img-thumb">
-                            <input type="hidden" class="img-url" value="{{ img.fileUrl }}">
-                        </div>
-                        {% endfor %}
+            <!-- الجانب -->
+            <div class="col-md-4">
+                <div class="card shadow-sm p-4">
+                    <h5 class="section-title">الإعدادات والتصنيف</h5>
+                    <div class="mb-3">
+                        <label class="fw-bold small">حالة المنتج</label>
+                        <select id="status" class="form-select">
+                            <option value="ACTIVE" {% if product and product.status == 'ACTIVE' %}selected{% endif %}>نشط</option>
+                            <option value="DRAFT" {% if product and product.status == 'DRAFT' %}selected{% endif %}>مسودة</option>
+                        </select>
                     </div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addImageRow()">إضافة رابط صورة</button>
-                </div>
-
-                <div class="card mb-4 p-4">
-                    <h5 class="mb-3" style="color: var(--deep-purple); font-weight: bold;">المورد المسؤول</h5>
-                    <select class="form-select" id="supplier-select">
-                        <option value="">-- اختر المورد --</option>
-                        {% for sup in suppliers %}
-                        <option value="{{ sup.id }}" {% if sup.id == mapping.selected_supplier_id %}selected{% endif %}>{{ sup.trade_name }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="mb-3">
+                        <label class="fw-bold small">المورد</label>
+                        <select id="supplier-select" class="form-select">
+                            {% for sup in suppliers %}
+                            <option value="{{ sup.id }}" {% if product and sup.id == product.supplier_id %}selected{% endif %}>{{ sup.trade_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small">المجموعات</label>
+                        <select id="collections-select" multiple>
+                            {% for col in all_collections %}
+                            <option value="{{ col.qid }}" {% if product and col.qid in product.collection_ids %}selected{% endif %}>{{ col.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-custom w-100 py-3 fw-bold">حفظ المنتج</button>
                 </div>
             </div>
         </div>
-        <button type="submit" id="saveBtn" class="btn btn-custom-purple btn-lg w-100 shadow-lg mb-5">حفظ كافة التعديلات</button>
     </form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', () => { 
-        new Choices(document.getElementById('supplier-select'));
-        new Choices(document.getElementById('collections-select'), { removeItemButton: true });
-    });
+    // تهيئة المحرر مع كافة الأدوات
+    ClassicEditor.create(document.querySelector('#editor'), {
+        toolbar: ['heading', '|', 'bold', 'italic', 'underline', 'strikethrough', '|', 'fontColor', 'fontBackgroundColor', '|', 'alignment', '|', 'numberedList', 'bulletedList', '|', 'link', 'insertTable', '|', 'undo', 'redo'],
+        shouldNotGroupWhenFull: true
+    }).then(newEditor => { editor = newEditor; });
 
-    function addVariantRow() {
-        const tbody = document.getElementById('variantsTableBody');
-        tbody.insertAdjacentHTML('beforeend', `<tr class="variant-row"><td><input type="number" step="0.01" class="form-control v-price" value="0"></td><td><input type="number" class="form-control v-quantity" value="0"></td><td><button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">حذف</button></td></tr>`);
-    }
+    new Choices(document.getElementById('supplier-select'));
+    new Choices(document.getElementById('collections-select'), { removeItemButton: true });
 
-    async function saveProduct(e) {
+    document.getElementById('productForm').addEventListener('submit', async function(e) {
         e.preventDefault();
-        const btn = document.getElementById('saveBtn');
-        btn.disabled = true;
-        btn.innerText = 'جاري الحفظ...';
-
         const payload = {
             qid: document.getElementById('qid').value,
             title: document.getElementById('title').value,
-            slug: document.getElementById('slug').value,
-            description: document.getElementById('editor-description').innerHTML,
-            price: document.getElementById('price').value,
-            compare_at_price: document.getElementById('compare_at_price').value,
-            original_price: document.getElementById('original_price').value,
-            variants: Array.from(document.querySelectorAll('.variant-row')).map(row => ({
-                price: parseFloat(row.querySelector('.v-price').value || 0),
-                quantity: parseInt(row.querySelector('.v-quantity').value || 0)
-            }))
+            status: document.getElementById('status').value,
+            supplier_id: document.getElementById('supplier-select').value,
+            collection_ids: Array.from(document.getElementById('collections-select').selectedOptions).map(o => o.value),
+            description: editor.getData(),
+            pricing: {
+                cost_price: parseFloat(document.getElementById('cost_price').value) || 0,
+                compare_price: parseFloat(document.getElementById('compare_price').value) || 0,
+                price: parseFloat(document.getElementById('price').value) || 0
+            },
+            quantity: parseInt(document.getElementById('quantity').value) || 0,
+            variants: document.getElementById('variants').value
         };
 
-        try {
-            const res = await fetch("{{ url_for('admin_product_bp.save_sync') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await res.json();
-            alert(result.message);
-            if (res.ok) location.reload();
-        } catch (err) {
-            alert("خطأ في الاتصال بالسيرفر");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = 'حفظ كافة التعديلات';
-        }
-    }
+        // إرسال البيانات...
+    });
 </script>
 {% endblock %}
