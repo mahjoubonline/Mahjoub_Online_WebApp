@@ -14,13 +14,17 @@ logger = logging.getLogger(__name__)
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync():
+    """
+    يستقبل بيانات المنتج من واجهة المستخدم، يحدث المورد في قاعدة البيانات المحلية،
+    ويرسل البيانات المحدثة إلى خادم قمرة باستخدام الـ Mutation المتوافق مع الـ Schema الجديدة.
+    """
     data = request.get_json()
     
     if not data or 'qid' not in data:
         return jsonify({"status": "error", "message": "معرف المنتج مفقود"}), 400
 
     try:
-        # 1. تحديث قاعدة البيانات المحلية
+        # 1. تحديث قاعدة البيانات المحلية (ربط المورد)
         mapping = ProductSupplierMapping.query.filter_by(product_qid=data['qid']).first()
         supplier_id = data.get('supplier_id') if str(data.get('supplier_id', '')).strip() != "" else None
             
@@ -31,7 +35,7 @@ def save_sync():
             db.session.add(new_mapping)
         db.session.commit()
 
-        # 2. بناء الـ Mutation (متوافق مع الهيكل الجديد)
+        # 2. بناء الـ Mutation المتوافق مع هيكل Schema الجديد
         mutation = """
         mutation UpdateProductInfo($id: String!, $input: UpdateProductInfoInput!) {
             updateProductInfo(id: $id, input: $input) {
@@ -40,7 +44,7 @@ def save_sync():
         }
         """
         
-        # 3. معالجة المتغيرات (Variants) لتطابق الهيكل الجديد للـ Mutation
+        # 3. معالجة المتغيرات (Variants) لتطابق هيكل الإدخال المتداخل
         processed_variants = []
         for v in data.get('variants', []):
             processed_variants.append({
@@ -50,7 +54,7 @@ def save_sync():
                 "displayTitle": {"ar": str(v.get('title', ''))}
             })
         
-        # 4. تجهيز متغيرات الطلب
+        # 4. تجهيز متغيرات الطلب (Input payload)
         variables = {
             "id": str(data['qid']),
             "input": {
@@ -62,12 +66,13 @@ def save_sync():
             }
         }
         
-        # 5. تنفيذ التحديث
+        # 5. تنفيذ التحديث عبر GraphQL
         response = QomrahGraphQLClient.execute_query(mutation, variables=variables)
         
+        # 6. التحقق من الاستجابة والتعامل مع الأخطاء
         if not response or 'errors' in response:
             error_details = response.get('errors') if response else "No response"
-            logger.error(f"❌ فشل تحديث قمرة لـ {data['qid']}: {error_details}")
+            logger.error(f"❌ فشل تحديث قمرة للـ qid {data['qid']}: {error_details}")
             return jsonify({"status": "error", "message": "خطأ في الاتصال بخادم قمرة (Validation Error)"}), 500
         
         return jsonify({"status": "success", "message": "تم الحفظ بنجاح"}), 200
