@@ -29,10 +29,10 @@ query Data($input: GetAllProductsInput) {
 @admin_product_bp.route('/', methods=['GET'])
 @login_required
 def manage_products():
-    """جلب وعرض قائمة المنتجات (متوافق مع القالب)"""
+    """جلب وعرض قائمة المنتجات (متوافق مع Registry)"""
     page = request.args.get('page', 1, type=int)
     
-    # تم تعديل المتغير ليطابق الـ name في نموذج القالب (title)
+    # البحث يعتمد الآن على معامل title كما هو محدد في القالب
     search = request.args.get('title', '').strip()
     
     input_data = {"page": page, "limit": 50}
@@ -62,5 +62,5 @@ def manage_products():
         'admin/admin_Product.html',
         products=products,
         pagination=pagination,
-        search=search # هذا المتغير سيقوم بملء حقل الإدخال في القالب تلقائياً
+        search=search
     )
