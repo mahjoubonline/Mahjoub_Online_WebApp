@@ -56,13 +56,14 @@ def save_sync():
     }
     """
     
-    # 3. بناء المتغيرات (ملاحظة: التأكد أن حقل images هو مصفوفة نصوص أو كائنات حسب توثيق قمرة)
+    # 3. بناء المتغيرات (إضافة حقل status)
     variables = {
         "qid": qid,
         "input": {
             "title": data.get('title'),
             "slug": data.get('slug'),
             "description": data.get('description'),
+            "status": data.get('status'),  # تم إضافة حالة المنتج هنا
             "collectionIds": data.get('collection_ids', []),
             "variants": processed_variants,
             "pricing": price_data,
@@ -97,7 +98,6 @@ def save_sync():
             except Exception as db_err:
                 db.session.rollback()
                 logger.error(f"⚠️ فشل حفظ المورد محلياً: {str(db_err)}")
-                # نرجع نجاح لأن التحديث في قمرة تم فعلياً
                 return jsonify({"status": "warning", "message": "تم تحديث المنتج في قمرة، لكن حدث خطأ أثناء حفظ المورد محلياً"})
 
         return jsonify({"status": "success", "message": "✅ تم الحفظ بنجاح!"})
