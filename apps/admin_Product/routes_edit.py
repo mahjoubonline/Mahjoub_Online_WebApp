@@ -7,13 +7,12 @@ from .registry import admin_product_bp
 from apps.services.graphql_client import QomrahGraphQLClient
 from apps.models.supplier_db import Supplier
 from apps.models.product_supplier_map import ProductSupplierMapping
-from apps import db # تأكد من استيراد كائن قاعدة البيانات
+from apps import db
 from urllib.parse import unquote
 import logging
 
 logger = logging.getLogger(__name__)
 
-# استعلام تحديث بيانات المنتج في قمرة
 UPDATE_PRODUCT_MUTATION = """
 mutation UpdateProduct($qid: String!, $data: ProductUpdateInput!) {
   updateProduct(qid: $qid, data: $data) {
@@ -26,8 +25,11 @@ mutation UpdateProduct($qid: String!, $data: ProductUpdateInput!) {
 @admin_product_bp.route('/edit/<path:qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
-    clean_qid = unquote(unquote(qid))
+    # فك الترميز للتأكد من وصول المعرف بشكل صحيح
+    clean_qid = unquote(qid)
+    
     try:
+        # جلب الموردين النشطين
         suppliers = Supplier.query.filter_by(status='active').all()
         
         # جلب المجموعات
@@ -43,7 +45,11 @@ def edit_product(qid):
         response = QomrahGraphQLClient.execute_query(prod_query, {"qid": clean_qid})
         
         product_data = response.get('data', {}).get('findProductByQid', {}).get('data', {})
-        # إضافة قائمة IDs المجموعات لتسهيل التحقق في HTML
+        
+        if not product_data:
+            flash("المنتج غير موجود أو لا يمكن الوصول إليه.")
+            return redirect(url_for('admin_product_bp.manage_products'))
+
         product_data['collection_ids'] = [c['qid'] for c in product_data.get('collections', [])]
 
         return render_template('admin/admin_edit_product.html', 
@@ -52,7 +58,8 @@ def edit_product(qid):
                                all_collections=all_collections, 
                                mapping=mapping_data)
     except Exception as e:
-        logger.error(f"خطأ في التحميل: {str(e)}")
+        logger.error(f"خطأ في تحميل صفحة التعديل: {str(e)}")
+        flash("حدث خطأ أثناء تحميل بيانات المنتج.")
         return redirect(url_for('admin_product_bp.manage_products'))
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
@@ -61,7 +68,10 @@ def save_sync():
     data = request.json
     qid = data.get('qid')
     
-    # 1. تحديث قاعدة البيانات المحلية (المورد)
+    if not qid:
+        return jsonify({"status": "error", "message": "معرف المنتج مفقود"}), 400
+    
+    # 1. تحديث المورد محلياً
     mapping = ProductSupplierMapping.query.filter_by(product_qid=qid).first()
     if not mapping:
         mapping = ProductSupplierMapping(product_qid=qid)
@@ -69,12 +79,12 @@ def save_sync():
     mapping.supplier_id = data.get('supplier_id')
     db.session.commit()
 
-    # 2. إرسال التحديث إلى قمرة (GraphQL)
+    # 2. إرسال التحديث لقمرة
     mutation_data = {
         "title": data.get('title'),
         "description": data.get('description'),
         "variants": data.get('variants'),
-        "collectionIds": data.get('collection_ids') # إرسال المجموعات المختارة
+        "collectionIds": data.get('collection_ids')
     }
     
     response = QomrahGraphQLClient.execute_query(UPDATE_PRODUCT_MUTATION, {"qid": qid, "data": mutation_data})
