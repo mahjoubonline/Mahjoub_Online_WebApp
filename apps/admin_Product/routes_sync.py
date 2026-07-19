@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
 def save_sync():
-    """مزامنة بيانات المنتج مع منصة قمرة وحفظ المورد محلياً"""
+    """مزامنة بيانات المنتج (بما فيها المخزون والشحن) مع منصة قمرة وحفظ المورد محلياً"""
     data = request.json or {}
     qid = data.get('qid')
     supplier_id = data.get('supplier_id')
@@ -27,22 +27,20 @@ def save_sync():
 
     # 1. معالجة البيانات القادمة من القالب
     try:
-        # تنسيق المتغيرات (Variants) كما يرسلها القالب
+        # معالجة المتغيرات
         raw_variants = data.get('variants', [])
         processed_variants = []
         for v in raw_variants:
             processed_variants.append({
-                "pricing": {"price": float(v.get('pricing', {}).get('price', 0))},
-                "quantity": int(v.get('quantity', 0))
+                "pricing": {"price": float(v.get('price', 0))},
+                "quantity": int(v.get('quantity', 0)),
+                "sku": v.get('sku', '')
             })
-
-        # ملاحظة: في القالب الأخير اعتمدنا variants، وإذا كنت تحتاج إرسال price الرئيسي،
-        # تأكد من إضافته في الـ payload في ملف الـ JS إذا لزم الأمر.
         
     except (ValueError, TypeError) as e:
         return jsonify({"status": "error", "message": f"خطأ في تنسيق البيانات: {str(e)}"}), 400
 
-    # 2. صياغة الـ Mutation (مطابقة لهيكلية قمرة)
+    # 2. صياغة الـ Mutation المحدث
     mutation = """
     mutation UpdateProduct($qid: String!, $input: UpdateProductInput!) {
         updateProduct(qid: $qid, input: $input) {
@@ -52,7 +50,7 @@ def save_sync():
     }
     """
     
-    # 3. بناء المتغيرات (تم تحديث الحقول لتطابق ما يتم إرساله من JS)
+    # 3. بناء الـ Variables مع الحقول الجديدة (الوزن، SKU، والأسعار)
     variables = {
         "qid": qid,
         "input": {
@@ -60,9 +58,17 @@ def save_sync():
             "slug": data.get('slug'),
             "description": data.get('description'),
             "status": data.get('status'),
-            "collectionIds": data.get('collection_ids', []), # تم التحديث إلى IDs
+            "sku": data.get('sku'),
+            "quantity": int(data.get('quantity', 0)),
+            "weight": float(data.get('weight', 0)),
+            "pricing": {
+                "price": float(data.get('price', 0)),
+                "compareAtPrice": float(data.get('compare_at_price', 0)),
+                "originalPrice": float(data.get('original_price', 0))
+            },
+            "collectionIds": data.get('collection_ids', []),
             "variants": processed_variants,
-            "images": [{"fileUrl": url} for url in data.get('images', [])] # تنسيق الصور
+            "images": [{"fileUrl": url} for url in data.get('images', [])]
         }
     }
     
@@ -74,7 +80,7 @@ def save_sync():
             error_msg = qomrah_response.get('errors', [{}])[0].get('message', 'خطأ غير معروف')
             return jsonify({"status": "error", "message": f"فشل التحديث في قمرة: {error_msg}"}), 500
 
-        # 4. تحديث ربط المورد في قاعدة البيانات المحلية
+        # 4. تحديث ربط المورد محلياً
         if HAS_DB:
             try:
                 mapping = ProductSupplierMapping.query.filter_by(product_qid=qid).first()
