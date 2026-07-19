@@ -28,6 +28,9 @@ class ProductSupplierMapping(db.Model):
     # المعرف الخاص بالمورد في نظامنا (الرابط)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False)
     
+    # حالة الربط (لإدارة المنتجات المعلقة أو النشطة)
+    status = db.Column(db.String(20), default='active', nullable=False)
+    
     # [تشفير سيادي]: ملاحظات إدارية خاصة بك فقط حول هذا الربط
     _internal_notes_enc = db.Column(db.Text, nullable=True)
     
@@ -58,4 +61,4 @@ class ProductSupplierMapping(db.Model):
             self._internal_notes_enc = None
 
     def __repr__(self):
-        return f"<Mapping qid={self.product_qid} supplier_id={self.supplier_id}>"
+        return f"<Mapping qid={self.product_qid} supplier_id={self.supplier_id} status={self.status}>"
