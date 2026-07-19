@@ -2,10 +2,39 @@
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
+<style>
+    /* هوية بنفجسية تميل للسواد */
+    :root {
+        --deep-purple-dark: #2d1b4e;
+        --border-dark: #1a0f2e;
+    }
+    .header-gradient {
+        background: linear-gradient(135deg, var(--deep-purple-dark), #000000);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+    }
+    .btn-custom-purple {
+        background-color: var(--deep-purple-dark);
+        color: white;
+        border: none;
+    }
+    .btn-custom-purple:hover {
+        background-color: #3d2568;
+        color: white;
+    }
+</style>
+
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold"><i class="fas fa-edit me-2"></i>تعديل المنتج: {{ product.title or 'منتج جديد' }}</h4>
-        <a href="{{ url_for('admin_product_bp.manage_products') }}" class="btn btn-outline-secondary">العودة للمنتجات</a>
+    <!-- الرأس الاحترافي -->
+    <div class="header-gradient shadow-lg d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="fw-bold mb-1">{{ product.title or 'منتج جديد' }}</h4>
+            <span class="badge bg-light text-dark">{{ product.status or 'Draft' }}</span>
+        </div>
+        <a href="{{ url_for('admin_product_bp.manage_products') }}" 
+           class="btn btn-outline-light px-4">العودة للمنتجات</a>
     </div>
     
     <form id="editProductForm" onsubmit="saveProduct(event)">
@@ -16,7 +45,7 @@
             <div class="col-lg-8">
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
-                        <h5>البيانات الأساسية</h5>
+                        <h5 class="mb-3 text-muted">البيانات الأساسية</h5>
                         <div class="row">
                             <div class="col-md-6 mb-3"><label>اسم المنتج</label><input type="text" class="form-control" id="title" value="{{ product.title or '' }}"></div>
                             <div class="col-md-6 mb-3"><label>الرابط (Slug)</label><input type="text" class="form-control" id="slug" value="{{ product.slug or '' }}"></div>
@@ -24,11 +53,10 @@
                                 <select class="form-select" id="supplier_id">
                                     <option value="">-- اختر مورد --</option>
                                     {% for s in suppliers %}
-                                    <option value="{{ s.id }}" {% if selected_supplier_id == s.id %}selected{% endif %}>{{ s.trade_name }}</option>
+                                    <option value="{{ s.id }}" {% if mapping.selected_supplier_id == s.id %}selected{% endif %}>{{ s.trade_name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-3 mb-3"><label>الحالة</label><input type="text" class="form-control" id="status" value="{{ product.status or 'draft' }}" readonly></div>
                         </div>
                     </div>
                 </div>
@@ -36,7 +64,7 @@
                 <!-- 2. التسعير والمخزون -->
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
-                        <h5>التسعير والمخزون</h5>
+                        <h5 class="mb-3 text-muted">التسعير والمخزون</h5>
                         <div class="row">
                             <div class="col-md-4 mb-3"><label>السعر</label><input type="number" class="form-control" id="price" value="{{ product.pricing.price if product.pricing else 0 }}"></div>
                             <div class="col-md-4 mb-3"><label>الكمية</label><input type="number" class="form-control" id="quantity" value="{{ product.quantity or 0 }}"></div>
@@ -46,11 +74,11 @@
                 </div>
             </div>
 
-            <!-- 3. الصور والأبعاد -->
+            <!-- 3. الصور والملاحظات -->
             <div class="col-lg-4">
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
-                        <h5>صور المنتج</h5>
+                        <h5 class="mb-3 text-muted">صور المنتج</h5>
                         <div class="row g-2">
                             {% for img in product.images or [] %}
                                 <div class="col-6"><img src="{{ img.fileUrl }}" class="img-thumbnail w-100"></div>
@@ -61,29 +89,16 @@
                 
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5>ملاحظات إدارية (خاص)</h5>
-                        <textarea class="form-control" id="internal_notes" rows="3">{{ internal_notes or '' }}</textarea>
+                        <h5 class="mb-3 text-muted">ملاحظات إدارية (خاص)</h5>
+                        <textarea class="form-control" id="internal_notes" rows="3">{{ mapping.internal_notes or '' }}</textarea>
                     </div>
                 </div>
             </div>
         </div>
 
-        <button type="submit" id="saveBtn" class="btn btn-primary btn-lg w-100">حفظ كافة التعديلات</button>
+        <button type="submit" id="saveBtn" class="btn btn-custom-purple btn-lg w-100 mt-2 shadow-sm">
+            <i class="fas fa-save me-2"></i>حفظ كافة التعديلات
+        </button>
     </form>
 </div>
-
-<script>
-async function saveProduct(event) {
-    event.preventDefault();
-    const data = {
-        qid: document.getElementById('qid').value,
-        supplier_id: document.getElementById('supplier_id').value,
-        internal_notes: document.getElementById('internal_notes').value,
-        // يمكن إضافة بقية الحقول لاحقاً
-    };
-    console.log("Data to update:", data);
-    // هنا سيتم ربط Fetch API لاحقاً
-    alert("تم تجميع البيانات (سيتم الربط مع الـ Backend في الخطوة التالية).");
-}
-</script>
 {% endblock %}
