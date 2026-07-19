@@ -12,7 +12,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# استعلام جلب تفاصيل منتج واحد بناءً على هيكل Schema قمرة الصحيح
+# استعلام جلب تفاصيل المنتج بالكامل وفق الهيكل المطلوب
 FIND_PRODUCT_QUERY = """
 query GetProduct($qid: String!) {
   findProductByQid(qid: $qid) {
@@ -21,10 +21,22 @@ query GetProduct($qid: String!) {
     data {
       qid
       title
-      pricing { price }
+      slug
+      status
+      views
+      publishedAt
+      pricing { price, compareAtPrice, costPrice, currency }
+      identification { sku, barcode }
       quantity
+      trackQuantity
+      weight { value, unit }
+      dimensions { length, width, height, unit }
       images { fileUrl }
-      identification { sku }
+      collections { name }
+      seo { title, description }
+      options { name, values }
+      reviewsCount
+      averageRating
     }
   }
 }
@@ -42,13 +54,11 @@ def edit_product(qid):
     clean_qid = unquote(unquote(qid))
     
     try:
-        # 1. جلب المورد المرتبط بهذا المنتج من قاعدة بياناتنا
+        # 1. جلب المورد المرتبط
         mapping = ProductSupplierMapping.query.filter_by(product_qid=clean_qid).first()
-        
-        # 2. جلب جميع الموردين النشطين للقائمة المنسدلة في الواجهة
         suppliers = Supplier.query.filter_by(status='active').all()
 
-        # 3. إرسال الاستعلام لقمرة لجلب بيانات المنتج الأساسية
+        # 2. إرسال الاستعلام الشامل لقمرة
         variables = {"qid": clean_qid}
         response = QomrahGraphQLClient.execute_query(FIND_PRODUCT_QUERY, variables)
         
