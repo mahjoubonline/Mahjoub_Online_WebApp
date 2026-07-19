@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 @admin_product_bp.route('/edit/<path:qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
-    """عرض صفحة تعديل المنتج مع جلب كامل بيانات الأسعار، الصور، والمجموعات"""
+    """عرض صفحة تعديل المنتج مع جلب البيانات المدعومة فقط"""
     
-    # تم تحديث الاستعلام لجلب البيانات المطلوبة في القالب بدقة
+    # تم إزالة title و sku من الـ variants لأنها غير معرفة في Schema قمرة
     product_query = """
     query GetProductDetail($qid: String!) { 
         findProductByQid(qid: $qid) { 
@@ -42,8 +42,6 @@ def edit_product(qid):
                     qid
                 }
                 variants {
-                    title
-                    sku
                     quantity
                     pricing {
                         price
