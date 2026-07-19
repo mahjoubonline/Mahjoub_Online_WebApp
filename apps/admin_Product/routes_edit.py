@@ -19,9 +19,8 @@ logger = logging.getLogger(__name__)
 @admin_product_bp.route('/edit/<path:qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
-    """عرض صفحة تعديل المنتج مع استعلام متوافق مع API قمرة"""
+    """عرض صفحة تعديل المنتج مع جلب كامل بيانات الأسعار والصور"""
     
-    # تم تنظيف الحقول بناءً على رسالة خطأ GraphQL (إزالة currency، title، price، sku من داخل variants)
     product_query = """
     query GetProductDetail($qid: String!) { 
         findProductByQid(qid: $qid) { 
@@ -32,6 +31,11 @@ def edit_product(qid):
                 description
                 pricing {
                     price
+                    compareAtPrice
+                    originalPrice
+                }
+                images {
+                    fileUrl
                 }
                 identification {
                     sku
