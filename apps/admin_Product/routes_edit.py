@@ -12,46 +12,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# استعلام شامل لجلب بيانات المنتج مع المتغيرات والمجموعات
+# استعلام لجلب بيانات المنتج
 FIND_PRODUCT_QUERY = """
 query GetProduct($qid: String!) {
   findProductByQid(qid: $qid) {
     success
     message
     data {
-      qid
-      title
-      description
-      slug
-      status
-      quantity
-      trackQuantity
-      pricing {
-        price
-        compareAtPrice
-        originalPrice
-      }
-      identification {
-        sku
-        barcode
-      }
+      qid, title, description, slug, status, quantity, trackQuantity
+      pricing { price, compareAtPrice, originalPrice }
       images { fileUrl }
-      variants {
-        qid
-        title
-        price
-        quantity
-        sku
-      }
-      collections {
-        qid
-        title
-      }
-      seo {
-        title
-        description
-      }
+      variants { qid, title, price, quantity, sku }
+      collections { qid, title }
     }
+  }
+}
+"""
+
+# استعلام لجلب كافة المجموعات المتاحة
+LIST_COLLECTIONS_QUERY = """
+query {
+  listCollections {
+    data { qid, title }
   }
 }
 """
@@ -64,33 +46,29 @@ def edit_product(qid):
         return redirect(url_for('admin_product_bp.manage_products'))
 
     clean_qid = unquote(unquote(qid))
-    
     mapping_data_empty = {"selected_supplier_id": None, "internal_notes": ""}
     
     try:
-        # 1. جلب الموردين المتاحين
+        # 1. جلب الموردين المحليين
         suppliers = Supplier.query.filter_by(status='active').all()
         
-        # 2. استحضار البيانات المحلية للمنتج
+        # 2. جلب المجموعات من قمرة
+        col_response = QomrahGraphQLClient.execute_query(LIST_COLLECTIONS_QUERY)
+        all_collections = col_response.get('data', {}).get('listCollections', {}).get('data', []) if col_response else []
+        
+        # 3. استحضار البيانات المحلية للمنتج
         mapping = ProductSupplierMapping.query.filter_by(product_qid=clean_qid).first()
         mapping_data = {
             "selected_supplier_id": mapping.supplier_id if mapping else None,
             "internal_notes": mapping.internal_notes if mapping else ""
         }
 
-        # 3. استحضار البيانات من قمرة
+        # 4. استحضار بيانات المنتج من قمرة
         response = QomrahGraphQLClient.execute_query(FIND_PRODUCT_QUERY, {"qid": clean_qid})
         
         if not response or 'data' not in response:
-            logger.error(f"⚠️ فشل الاتصال بقمرة لـ qid: {clean_qid}")
             flash("لا يوجد اتصال بخادم البيانات.")
-            return render_template(
-                'admin/admin_edit_product.html', 
-                product={}, 
-                suppliers=suppliers, 
-                all_collections=[], 
-                mapping=mapping_data_empty
-            )
+            return render_template('admin/admin_edit_product.html', product={}, suppliers=suppliers, all_collections=all_collections, mapping=mapping_data_empty)
 
         result = response.get('data', {}).get('findProductByQid', {})
         
@@ -99,8 +77,7 @@ def edit_product(qid):
                 'admin/admin_edit_product.html', 
                 product=result.get('data', {}),
                 suppliers=suppliers,
-                # نقوم بتمرير المجموعات المجلوبة مباشرة من قمرة
-                all_collections=result.get('data', {}).get('collections', []), 
+                all_collections=all_collections, 
                 mapping=mapping_data
             )
         else:
