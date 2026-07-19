@@ -25,18 +25,28 @@ def save_sync():
     if not qid:
         return jsonify({"status": "error", "message": "المعرف الفريد QID مفقود"}), 400
 
-    # معالجة المتغيرات لضمان سلامة البيانات (Types)
-    raw_variants = data.get('variants', [])
-    processed_variants = []
-    for v in raw_variants:
-        processed_variants.append({
-            "title": str(v.get('title', '')),
-            "price": float(v.get('price', 0)),
-            "quantity": int(v.get('quantity', 0)),
-            "sku": str(v.get('sku', ''))
-        })
+    # 1. معالجة البيانات بأمان (Safe Casting)
+    try:
+        raw_variants = data.get('variants', [])
+        processed_variants = []
+        for v in raw_variants:
+            processed_variants.append({
+                "title": str(v.get('title', '')),
+                "price": float(v.get('price') or 0),
+                "quantity": int(v.get('quantity') or 0),
+                "sku": str(v.get('sku', ''))
+            })
 
-    # 1. صياغة الـ Mutation
+        # معالجة الأسعار (التعامل مع القيم الفارغة)
+        price_data = {
+            "price": float(data.get('price') or 0),
+            "compareAtPrice": float(data.get('compare_at_price') or 0),
+            "originalPrice": float(data.get('original_price') or 0)
+        }
+    except (ValueError, TypeError) as e:
+        return jsonify({"status": "error", "message": f"خطأ في تنسيق البيانات الرقمية: {str(e)}"}), 400
+
+    # 2. صياغة الـ Mutation
     mutation = """
     mutation UpdateProduct($qid: String!, $input: UpdateProductInput!) {
         updateProduct(qid: $qid, input: $input) {
@@ -46,7 +56,7 @@ def save_sync():
     }
     """
     
-    # بناء المتغيرات
+    # 3. بناء المتغيرات (ملاحظة: التأكد أن حقل images هو مصفوفة نصوص أو كائنات حسب توثيق قمرة)
     variables = {
         "qid": qid,
         "input": {
@@ -55,12 +65,8 @@ def save_sync():
             "description": data.get('description'),
             "collectionIds": data.get('collection_ids', []),
             "variants": processed_variants,
-            "pricing": {
-                "price": float(data.get('price', 0)),
-                "compareAtPrice": float(data.get('compare_at_price', 0)),
-                "originalPrice": float(data.get('original_price', 0))
-            },
-            "images": data.get('images', [])
+            "pricing": price_data,
+            "images": data.get('images', []) 
         }
     }
     
@@ -73,7 +79,7 @@ def save_sync():
             logger.error(f"❌ خطأ من API قمرة: {error_msg}")
             return jsonify({"status": "error", "message": f"فشل التحديث في قمرة: {error_msg}"}), 500
 
-        # 2. تحديث ربط المورد في قاعدة البيانات المحلية
+        # 4. تحديث ربط المورد في قاعدة البيانات المحلية
         if HAS_DB:
             try:
                 mapping = ProductSupplierMapping.query.filter_by(product_qid=qid).first()
@@ -91,6 +97,7 @@ def save_sync():
             except Exception as db_err:
                 db.session.rollback()
                 logger.error(f"⚠️ فشل حفظ المورد محلياً: {str(db_err)}")
+                # نرجع نجاح لأن التحديث في قمرة تم فعلياً
                 return jsonify({"status": "warning", "message": "تم تحديث المنتج في قمرة، لكن حدث خطأ أثناء حفظ المورد محلياً"})
 
         return jsonify({"status": "success", "message": "✅ تم الحفظ بنجاح!"})
