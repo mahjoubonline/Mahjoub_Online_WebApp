@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def save_sync():
     """
-    حفظ بيانات المنتج وتحديثها في قمرة وقاعدة البيانات المحلية
+    حفظ بيانات المنتج وتحديثها في قمرة وقاعدة البيانات المحلية (تحديث متزامن)
     """
     data = request.get_json()
     
@@ -23,17 +23,23 @@ def save_sync():
         return jsonify({"status": "error", "message": "معرف المنتج مفقود"}), 400
 
     try:
-        # 1. تحديث الربط في قاعدة البيانات المحلية (MySQL)
-        if 'supplier_id' in data:
-            mapping = ProductSupplierMapping.query.filter_by(product_qid=data['qid']).first()
-            if mapping:
-                mapping.supplier_id = data['supplier_id']
-            else:
-                new_mapping = ProductSupplierMapping(product_qid=data['qid'], supplier_id=data['supplier_id'])
-                db.session.add(new_mapping)
-            db.session.commit()
+        # 1. تحديث الربط والملاحظات في قاعدة البيانات المحلية (MySQL)
+        mapping = ProductSupplierMapping.query.filter_by(product_qid=data['qid']).first()
+        
+        if mapping:
+            mapping.supplier_id = data.get('supplier_id')
+            mapping.internal_notes = data.get('internal_notes', '') # التشفير يتم تلقائياً عبر الـ @setter
+        else:
+            new_mapping = ProductSupplierMapping(
+                product_qid=data['qid'], 
+                supplier_id=data.get('supplier_id'),
+                internal_notes=data.get('internal_notes', '')
+            )
+            db.session.add(new_mapping)
+        
+        db.session.commit()
 
-        # 2. بناء الـ Mutation المحدث (شامل لكافة الحقول)
+        # 2. بناء الـ Mutation المحدث (لقمرة)
         mutation = """
         mutation UpdateProductInfo($id: String!, $input: UpdateProductInfoInput!) {
             updateProductInfo(id: $id, input: $input) {
@@ -43,7 +49,7 @@ def save_sync():
         }
         """
         
-        # 3. تجهيز المدخلات (تأكد من مطابقة Schema قمرة)
+        # 3. تجهيز المدخلات
         variables = {
             "id": str(data['qid']),
             "input": {
@@ -51,8 +57,8 @@ def save_sync():
                 "slug": str(data.get('slug', '')),
                 "quantity": int(data.get('quantity', 0)),
                 "pricing": {
-                    "price": float(data.get('price', 0)),
-                    "costPrice": float(data.get('costPrice', 0))
+                    "price": float(data.get('price', 0))
+                    # ملاحظة: تم استبعاد costPrice من هنا إذا لم يكن مدعوماً في Mutation قمرة
                 },
                 "identification": {
                     "sku": str(data.get('sku', ''))
@@ -65,11 +71,11 @@ def save_sync():
         
         if not response or 'errors' in response:
             logger.error(f"❌ فشل تحديث قمرة لـ {data['qid']}: {response.get('errors')}")
-            return jsonify({"status": "error", "message": "تم تحديث البيانات المحلية فقط، فشل التحديث في قمرة"}), 500
+            return jsonify({"status": "error", "message": "تم تحديث البيانات المحلية بنجاح، ولكن فشل التحديث في قمرة"}), 500
         
-        return jsonify({"status": "success", "message": "تم الحفظ بنجاح في النظامين"}), 200
+        return jsonify({"status": "success", "message": "تم حفظ كافة التعديلات بنجاح في النظامين"}), 200
         
     except Exception as e:
         db.session.rollback()
-        logger.error(f"❌ خطأ تقني أثناء الحفظ: {str(e)}")
-        return jsonify({"status": "error", "message": "حدث خطأ داخلي"}), 500
+        logger.error(f"❌ خطأ تقني أثناء عملية المزامنة للـ qid {data.get('qid')}: {str(e)}")
+        return jsonify({"status": "error", "message": "حدث خطأ داخلي أثناء حفظ البيانات"}), 500
