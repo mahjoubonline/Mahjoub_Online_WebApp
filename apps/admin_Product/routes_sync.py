@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def save_sync():
     """
-    حفظ بيانات المنتج وتحديثها في قمرة وقاعدة البيانات المحلية
+    حفظ بيانات المنتج، المتغيرات، والمجموعات وتحديثها لحظياً في قمرة وقاعدة البيانات المحلية
     """
     data = request.get_json()
     
@@ -40,7 +40,7 @@ def save_sync():
         
         db.session.commit()
 
-        # 2. بناء الـ Mutation المحدث
+        # 2. بناء الـ Mutation المحدث (تم إضافة المتغيرات)
         mutation = """
         mutation UpdateProductInfo($id: String!, $input: UpdateProductInfoInput!) {
             updateProductInfo(id: $id, input: $input) {
@@ -60,6 +60,7 @@ def save_sync():
                 "status": str(data.get('status', 'draft')),
                 "quantity": int(data.get('quantity', 0)),
                 "collection_ids": list(data.get('collection_ids', [])), 
+                "variants": data.get('variants', []),  # إضافة المتغيرات لـ قمرة
                 "pricing": {
                     "price": float(data.get('price', 0)),
                     "compareAtPrice": float(data.get('compareAtPrice', 0)),
@@ -76,7 +77,7 @@ def save_sync():
             }
         }
         
-        # 4. تنفيذ التحديث
+        # 4. تنفيذ التحديث اللحظي
         response = QomrahGraphQLClient.execute_query(mutation, variables=variables)
         
         # 5. معالجة الأخطاء
@@ -85,9 +86,9 @@ def save_sync():
             logger.error(f"❌ فشل تحديث قمرة لـ {data['qid']}: {error_details}")
             return jsonify({"status": "error", "message": "حدث خطأ أثناء التواصل مع خادم قمرة"}), 500
         
-        return jsonify({"status": "success", "message": "تم حفظ كافة التعديلات بنجاح"}), 200
+        return jsonify({"status": "success", "message": "تم حفظ كافة التعديلات وتحديثها في قمرة بنجاح"}), 200
         
     except Exception as e:
         db.session.rollback()
         logger.error(f"❌ خطأ تقني للـ qid {data.get('qid')}: {str(e)}")
-        return jsonify({"status": "error", "message": "حدث خطأ داخلي أثناء المعالجة"}), 500
+        return jsonify({"status": "error", "message": f"حدث خطأ داخلي: {str(e)}"}), 500
