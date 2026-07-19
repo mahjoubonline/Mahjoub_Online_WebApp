@@ -26,7 +26,6 @@ def save_sync():
         return jsonify({"status": "error", "message": "المعرف الفريد QID مفقود"}), 400
 
     # 1. صياغة الـ Mutation المحدثة
-    # نستخدم نفس الهيكلية التي تطلبها المنصة في التحديث
     mutation = """
     mutation UpdateProduct($qid: String!, $input: UpdateProductInput!) {
         updateProduct(qid: $qid, input: $input) {
@@ -36,7 +35,7 @@ def save_sync():
     }
     """
     
-    # تحضير المتغيرات - ملاحظة: نرسل نفس الهيكل الذي نجلبه في GET
+    # بناء المتغيرات لتشمل الأسعار والصور
     variables = {
         "qid": qid,
         "input": {
@@ -44,7 +43,13 @@ def save_sync():
             "slug": data.get('slug'),
             "description": data.get('description'),
             "collectionIds": data.get('collection_ids', []),
-            "variants": data.get('variants', []) # يتم إرسالها كما تم استقبالها من JS
+            "variants": data.get('variants', []),
+            "pricing": {
+                "price": float(data.get('price', 0)),
+                "compareAtPrice": float(data.get('compare_at_price', 0)),
+                "originalPrice": float(data.get('original_price', 0))
+            },
+            "images": data.get('images', []) # مصفوفة الصور {fileUrl}
         }
     }
     
@@ -52,7 +57,6 @@ def save_sync():
         # إرسال التحديث إلى منصة قمرة
         qomrah_response = QomrahGraphQLClient.execute_query(mutation, variables)
         
-        # التحقق من وجود أخطاء في الاستجابة
         if not qomrah_response or 'errors' in qomrah_response:
             error_msg = qomrah_response.get('errors', [{}])[0].get('message', 'خطأ في التحديث')
             logger.error(f"❌ خطأ من API قمرة: {error_msg}")
