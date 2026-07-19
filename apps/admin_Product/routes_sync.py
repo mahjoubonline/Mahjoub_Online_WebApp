@@ -31,7 +31,7 @@ def save_sync():
             db.session.add(new_mapping)
         db.session.commit()
 
-        # 2. بناء الـ Mutation (تم تعديله ليطابق Schema التحديث المباشر)
+        # 2. بناء الـ Mutation (مطابق للـ Schema التي طلبت التداخل)
         mutation = """
         mutation UpdateProductInfo($id: String!, $input: UpdateProductInfoInput!) {
             updateProductInfo(id: $id, input: $input) {
@@ -40,14 +40,14 @@ def save_sync():
         }
         """
         
-        # 3. معالجة المتغيرات (بدون تغليف pricing أو identification لأنها غير مطلوبة في الاستعلام الحالي)
+        # 3. معالجة المتغيرات بالتغليف الصحيح (Pricing & Identification)
         processed_variants = []
         for v in data.get('variants', []):
             processed_variants.append({
                 "title": str(v.get('title', '')),
-                "price": float(v.get('price', 0)),
+                "pricing": {"price": float(v.get('price', 0))},
                 "quantity": int(v.get('quantity', 0)),
-                "sku": str(v.get('sku', ''))
+                "identification": {"sku": str(v.get('sku', ''))}
             })
         
         # 4. تجهيز متغيرات الطلب
@@ -68,7 +68,7 @@ def save_sync():
         if not response or 'errors' in response:
             error_details = response.get('errors') if response else "No response"
             logger.error(f"❌ فشل تحديث قمرة للـ qid {data['qid']}: {error_details}")
-            return jsonify({"status": "error", "message": "خطأ في تحديث البيانات على خادم قمرة"}), 500
+            return jsonify({"status": "error", "message": "خطأ في هيكل البيانات المرسلة لخادم قمرة"}), 500
         
         return jsonify({"status": "success", "message": "تم الحفظ بنجاح"}), 200
         
