@@ -1,314 +1,369 @@
-<!-- apps/admin_Product/templates/admin/admin_add_product.html -->
+<!-- 📂 apps/admin_Product/templates/admin/admin_add_product.html -->
 {% extends "admin/admin_base.html" %}
 
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
-<!-- نستخدم نسخة CKEditor 5 كاملة تحتوي على الأدوات المتقدمة -->
 <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
 
 <style>
     :root { 
-        --dark-purple: #2d0b36; 
+        --deep-purple: #2d144d; 
         --royal-accent: #4b0082; 
+        --gold-accent: #d4af37;
+        --royal-bg: #f8f7fc;
     }
-    .btn-custom { 
-        background-color: var(--dark-purple); 
-        color: #fff; 
-        transition: 0.2s; 
+
+    body {
+        background-color: var(--royal-bg);
     }
-    .btn-custom:hover { 
-        background-color: var(--royal-accent); 
-        color: #fff; 
-    }
-    .text-custom { 
-        color: var(--dark-purple); 
-    }
+
     .card { 
-        border-radius: 15px; 
         border: none; 
-        box-shadow: 0 4px 20px rgba(45, 11, 54, 0.06); 
-        margin-bottom: 24px; 
-        background: #ffffff; 
-    }
-    .ck-editor__editable { 
-        min-height: 220px; 
-        border-radius: 0 0 10px 10px !important; 
-    }
-    .ck-toolbar { 
-        border-radius: 10px 10px 0 0 !important; 
-    }
-    .section-title { 
-        border-right: 4px solid var(--dark-purple); 
-        padding-right: 12px; 
-        margin-bottom: 20px; 
-        color: var(--dark-purple); 
-        font-weight: 700; 
-        font-size: 1.1rem; 
+        border-radius: 16px; 
+        box-shadow: 0 4px 24px rgba(45, 20, 77, 0.06); 
+        margin-bottom: 25px; 
+        padding: 25px; 
+        background: #ffffff;
+        transition: all 0.3s ease;
     }
     
-    /* تنسيق معرض الصور */
-    .image-preview-card {
-        position: relative;
-        border: 2px dashed #d1c4e9;
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-        background: #faf8fb;
-        transition: 0.3s;
+    .card:hover {
+        box-shadow: 0 6px 28px rgba(75, 0, 130, 0.09);
     }
-    .image-preview-card:hover {
-        border-color: var(--dark-purple);
-        background: #f5f0f7;
-    }
-    .thumb-container {
-        position: relative;
-        display: inline-block;
-        margin: 6px;
-    }
-    .thumb-img {
-        width: 95px;
-        height: 95px;
-        object-fit: cover;
-        border-radius: 10px;
-        border: 2px solid #e0d4ec;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-    .thumb-delete {
-        position: absolute;
-        top: -6px;
-        left: -6px;
-        background: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 26px;
-        height: 26px;
-        font-size: 13px;
-        cursor: pointer;
+
+    .section-title { 
+        color: var(--deep-purple); 
+        font-weight: 700; 
+        border-bottom: 2px solid #f0edf5; 
+        padding-bottom: 12px; 
+        margin-bottom: 20px; 
+        font-size: 1.15rem;
         display: flex;
         align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
+
+    .section-title i {
+        color: var(--royal-accent);
+        margin-left: 10px;
+    }
+
+    .price-box { 
+        background: #fdfcff; 
+        padding: 20px; 
+        border-radius: 12px; 
+        border: 1px solid #e9e4f0; 
+    }
+
+    .image-zone { 
+        border: 2px dashed #d0c5e2; 
+        padding: 25px; 
+        text-align: center; 
+        cursor: pointer; 
+        border-radius: 12px; 
+        transition: 0.3s; 
+        background: #faf8fd;
+    }
+    
+    .image-zone:hover { 
+        border-color: var(--royal-accent); 
+        background: #f5f0fc; 
+    }
+
+    .ck-editor__editable_inline {
+        min-height: 240px;
+        border-radius: 0 0 12px 12px !important;
+        border-color: #d0c5e2 !important;
+        padding: 15px !important;
+    }
+    
+    .ck.ck-toolbar {
+        border-radius: 12px 12px 0 0 !important;
+        background-color: #f8f5fc !important;
+        border-color: #d0c5e2 !important;
+    }
+
     .form-control, .form-select {
         border-radius: 10px;
+        border: 1px solid #d0c5e2;
         padding: 10px 14px;
-        border: 1px solid #dcd6e4;
+        transition: border-color 0.2s, box-shadow 0.2s;
     }
+
     .form-control:focus, .form-select:focus {
-        border-color: var(--dark-purple);
-        box-shadow: 0 0 0 0.2rem rgba(45, 11, 54, 0.15);
+        border-color: var(--royal-accent);
+        box-shadow: 0 0 0 0.2rem rgba(75, 0, 130, 0.15);
+    }
+
+    .choices__inner {
+        border-radius: 10px !important;
+        border: 1px solid #d0c5e2 !important;
+        background-color: #ffffff !important;
+        padding: 6px 10px !important;
+        min-height: 45px !important;
+    }
+    .choices.is-focused .choices__inner {
+        border-color: var(--royal-accent) !important;
+        box-shadow: 0 0 0 0.2rem rgba(75, 0, 130, 0.15);
+    }
+    .choices__list--multiple .choices__item {
+        background-color: var(--deep-purple) !important;
+        border: 1px solid var(--deep-purple) !important;
+        border-radius: 6px !important;
+    }
+
+    .btn-royal {
+        background-color: var(--deep-purple);
+        color: #ffffff;
+        border: none;
+        border-radius: 12px;
+        transition: background-color 0.2s;
+    }
+
+    .btn-royal:hover {
+        background-color: var(--royal-accent);
+        color: #ffffff;
     }
 </style>
 
-<div class="container-fluid py-4" dir="rtl">
+<div class="container py-4" dir="rtl">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <button onclick="history.back()" class="btn btn-outline-dark px-4 rounded-pill">
-            <i class="fas fa-arrow-right ms-2"></i> الرجوع
-        </button>
-        <h4 class="m-0 text-custom fw-bold">{{ "تعديل المنتج" if product and product.title else "إضافة منتج جديد" }}</h4>
+        <h3 class="fw-bold" style="color: var(--deep-purple);">
+            إضافة منتج جديد
+        </h3>
+        <a href="{{ url_for('admin_product_bp.manage_products') }}" class="btn btn-outline-secondary px-4 shadow-sm" style="border-radius: 10px;">
+            <i class="fas fa-arrow-right ms-1"></i> العودة للقائمة
+        </a>
     </div>
 
-    <form id="productForm">
+    <form id="addProductForm" onsubmit="saveNewProduct(event)">
         <div class="row">
-            <!-- الأعمدة الأساسية -->
+            <!-- العمود الأيمن: البيانات الأساسية، الصور، الأسعار، والمتغيرات -->
             <div class="col-lg-8">
-                <!-- 1. البيانات الأساسية والرابط -->
-                <div class="card p-4">
-                    <h5 class="section-title">بيانات المنتج الأساسية</h5>
-                    <input type="hidden" id="qid" value="{{ product.qid if product else '' }}">
-                    
-                    <div class="mb-3">
-                        <label class="fw-bold small text-muted mb-1">اسم المنتج</label>
-                        <input type="text" id="title" class="form-control" value="{{ product.title or '' }}" placeholder="أدخل اسم المنتج الواضح..." required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="fw-bold small text-muted mb-1">رابط المنتج (Slug)</label>
-                        <div class="input-group" dir="ltr">
-                            <input type="text" id="slug" class="form-control text-end" value="{{ product.slug or '' }}" placeholder="product-url-slug">
-                            <span class="input-group-text bg-light text-muted">/products/</span>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="fw-bold small text-muted mb-1">الوصف الاحترافي</label>
-                        <textarea id="editor">{{ product.description | safe if product and product.description else '' }}</textarea>
-                    </div>
-                </div>
-
-                <!-- 2. معرض الوسائط والصور -->
-                <div class="card p-4">
-                    <h5 class="section-title">معرض صور المنتج</h5>
-                    <div class="mb-2">
-                        <div id="existing-images-container" class="d-flex flex-wrap gap-2 mb-3">
-                            {% if product and product.images %}
-                                {% for img in product.images %}
-                                <div class="thumb-container" data-id="{{ img._id if img is mapping and img._id is defined else loop.index0 }}">
-                                    <img src="{{ img.fileUrl if img is mapping and img.fileUrl is defined else img }}" class="thumb-img" alt="Product Image">
-                                    <button type="button" class="thumb-delete" onclick="removeExistingImage(this, '{{ img._id if img is mapping and img._id is defined else loop.index0 }}')">&times;</button>
-                                </div>
-                                {% endfor %}
-                            {% endif %}
-                        </div>
-                        
-                        <label class="image-preview-card w-100 py-4" style="cursor: pointer;">
-                            <i class="fas fa-cloud-upload-alt fa-3x text-custom mb-2 opacity-75"></i>
-                            <p class="mb-1 fw-bold text-dark">انقر لرفع صور جديدة أو قم بسحبها وإفلاتها هنا</p>
-                            <span class="small text-muted">تدعم صيغ الصور المتعددة بجودة عالية</span>
-                            <input type="file" id="imageUploadInput" class="d-none" multiple accept="image/*">
-                        </label>
-                        <div id="new-uploads-preview" class="d-flex flex-wrap gap-2 mt-3"></div>
-                    </div>
-                </div>
-
-                <!-- 3. الأسعار والمخزون -->
-                <div class="card p-4">
-                    <h5 class="section-title">إدارة الأسعار والمخزون</h5>
+                
+                <!-- البيانات الأساسية والوصف الاحترافي -->
+                <div class="card">
+                    <h5 class="section-title"><i class="fas fa-info-circle"></i> البيانات الأساسية والوصف الاحترافي</h5>
                     <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <label class="fw-bold small text-muted mb-1">سعر التكلفة</label>
-                            <input type="number" id="cost_price" class="form-control" step="0.01" value="{{ product.pricing.costPrice if product and product.pricing and product.pricing.costPrice is defined else (product.pricing.originalPrice if product and product.pricing and product.pricing.originalPrice is defined else '') }}">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold text-dark">اسم المنتج</label>
+                            <input type="text" class="form-control" id="title" placeholder="أدخل اسم المنتج الواضح..." required>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="fw-bold small text-muted mb-1">السعر قبل الخصم</label>
-                            <input type="number" id="compare_price" class="form-control" step="0.01" value="{{ product.pricing.compareAtPrice if product and product.pricing and product.pricing.compareAtPrice is defined else '' }}">
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="fw-bold small text-muted mb-1">السعر النهائي</label>
-                            <input type="number" id="price" class="form-control" step="0.01" value="{{ product.pricing.price if product and product.pricing and product.pricing.price is defined else '' }}" required>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="fw-bold small text-muted mb-1">الكمية المتاحة</label>
-                            <input type="number" id="quantity" class="form-control" value="{{ product.quantity or 0 }}">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold text-dark">رابط المنتج (Slug)</label>
+                            <input type="text" class="form-control text-start" dir="ltr" id="slug" placeholder="product-url-slug">
                         </div>
                     </div>
-                    <div class="mb-0">
-                        <label class="fw-bold small text-muted mb-1">المتغيرات (Variants)</label>
-                        <input type="text" id="variants" class="form-control" placeholder="مثل: أحمر, أزرق | صغير, كبير" value="{{ product.variants or '' }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark mb-2">وصف المنتج الاحترافي</label>
+                        <textarea id="editor"></textarea>
+                    </div>
+                </div>
+
+                <!-- صور المنتج -->
+                <div class="card">
+                    <h5 class="section-title"><i class="fas fa-images"></i> معرض صور المنتج</h5>
+                    
+                    <div class="image-zone mb-3" onclick="document.getElementById('imageInput').click()">
+                        <i class="fas fa-cloud-upload-alt fa-2x mb-2" style="color: var(--royal-accent);"></i>
+                        <p class="mb-1 fw-bold text-dark">انقر هنا لرفع صور جديدة أو قم بسحبها وإفلاتها هنا</p>
+                        <span class="small text-secondary">تدعم صيغ الصور المتعددة بجودة عالية</span>
+                        <input type="file" id="imageInput" class="d-none" multiple accept="image/*" onchange="previewImages(this)">
+                    </div>
+
+                    <label class="form-label fw-bold text-dark small mb-2">الصور المرفوعة:</label>
+                    <div class="row g-2" id="imageGallery"></div>
+                </div>
+
+                <!-- الأسعار والمخزون -->
+                <div class="card">
+                    <h5 class="section-title"><i class="fas fa-tags"></i> إدارة الأسعار والمخزون</h5>
+                    <div class="row price-box mb-3">
+                        <div class="col-md-4 mb-2 mb-md-0">
+                            <label class="form-label small fw-bold">سعر التكلفة</label>
+                            <input type="number" step="0.01" class="form-control" id="original_price" value="0">
+                        </div>
+                        <div class="col-md-4 mb-2 mb-md-0">
+                            <label class="form-label small fw-bold">السعر قبل الخصم</label>
+                            <input type="number" step="0.01" class="form-control" id="compare_at_price" value="0">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">السعر النهائي</label>
+                            <input type="number" step="0.01" class="form-control" id="price" value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">رمز التخزين (SKU)</label>
+                            <input type="text" class="form-control text-start" dir="ltr" id="sku" value="">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">الكمية المتاحة</label>
+                            <input type="number" class="form-control" id="quantity" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">الوزن (كجم)</label>
+                            <input type="number" step="0.1" class="form-control" id="weight" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الأنواع المتعددة (Variants) -->
+                <div class="card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="section-title mb-0 border-0 pb-0"><i class="fas fa-list-ul"></i> متغيرات المنتج (Variants)</h5>
+                        <button type="button" class="btn btn-sm btn-royal px-3" style="border-radius: 8px;" onclick="addVariantRow()">+ إضافة نوع</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>الخيارات (حجم/لون)</th>
+                                    <th>السعر</th>
+                                    <th>الكمية</th>
+                                    <th>SKU</th>
+                                    <th class="text-center" style="width: 60px;">حذف</th>
+                                </tr>
+                            </thead>
+                            <tbody id="variantsTableBody"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <!-- العمود الجانبي (الإعدادات والتصنيفات) -->
+            <!-- العمود الأيسر: الإعدادات، التصنيف، والمورد -->
             <div class="col-lg-4">
-                <div class="card p-4 sticky-top" style="top: 20px;">
-                    <h5 class="section-title">الإعدادات والتصنيف</h5>
+                <div class="card sticky-top" style="top: 20px;">
+                    <h5 class="section-title"><i class="fas fa-sliders-h"></i> الإعدادات والتصنيف</h5>
                     
                     <div class="mb-3">
-                        <label class="fw-bold small text-muted mb-1">حالة المنتج</label>
-                        <select id="status" class="form-select">
-                            <option value="ACTIVE" {% if product and product.status == 'ACTIVE' %}selected{% endif %}>نشط (معروض)</option>
-                            <option value="DRAFT" {% if product and product.status == 'DRAFT' %}selected{% endif %}>مسودة (مخفي)</option>
+                        <label class="form-label fw-bold">حالة المنتج</label>
+                        <select class="form-select" id="status">
+                            <option value="ACTIVE" selected>نشط (معروض)</option>
+                            <option value="DRAFT">مسودة (مخفي)</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="fw-bold small text-muted mb-1">المورد المسؤول</label>
-                        <select id="supplier-select" class="form-select">
+                        <label class="form-label fw-bold">المورد المسؤول</label>
+                        <select class="form-select" id="supplier-select">
                             <option value="">اختر المورد...</option>
                             {% for sup in suppliers %}
-                            <option value="{{ sup.id }}" {% if product and (product.supplier_id == sup.id or product.supplier_id|string == sup.id|string) %}selected{% endif %}>{{ sup.trade_name }}</option>
+                            <option value="{{ sup.id }}">{{ sup.trade_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
-                    <div class="mb-4">
-                        <label class="fw-bold small text-muted mb-1">المجموعات والتصنيفات</label>
-                        <select id="collections-select" multiple>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">المجموعات والتصنيفات</label>
+                        <select class="form-select" id="collections-select" multiple>
                             {% for col in all_collections %}
-                            <option value="{{ col.qid }}" {% if product and product.collection_ids and col.qid in product.collection_ids %}selected{% endif %}>{{ col.title }}</option>
+                            <option value="{{ col.qid }}">{{ col.title }}</option>
                             {% endfor %}
                         </select>
                     </div>
-
-                    <button type="submit" class="btn btn-custom w-100 py-3 fw-bold shadow-sm rounded-pill" id="saveBtn">
-                        <i class="fas fa-save ms-2"></i> حفظ المزامنة والتحديث
-                    </button>
                 </div>
             </div>
         </div>
+
+        <button type="submit" class="btn btn-royal btn-lg w-100 shadow py-3 fw-bold fs-5" id="saveBtn">
+            حفظ وإنشاء المنتج الجديد
+        </button>
     </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-    let editor;
-    ClassicEditor.create(document.querySelector('#editor'), {
-        toolbar: ['heading', '|', 'bold', 'italic', 'underline', 'strikethrough', '|', 'fontColor', 'fontBackgroundColor', '|', 'alignment', '|', 'numberedList', 'bulletedList', '|', 'link', 'insertTable', '|', 'undo', 'redo'],
-        shouldNotGroupWhenFull: true
-    }).then(newEditor => { editor = newEditor; });
+    let editorInstance;
+    let collectionsChoices, supplierChoices;
+    let uploadedFilesList = [];
 
-    new Choices(document.getElementById('supplier-select'), { removeItemButton: true, searchEnabled: true });
-    new Choices(document.getElementById('collections-select'), { removeItemButton: true, searchEnabled: true });
-
-    // تتبع معرّفات الصور الحالية المتبقية
-    let activeImageIds = [];
-    document.querySelectorAll('#existing-images-container .thumb-container').forEach(el => {
-        activeImageIds.push(el.getAttribute('data-id'));
-    });
-
-    let selectedFiles = [];
-
-    function removeExistingImage(buttonElement, imageId) {
-        buttonElement.parentElement.remove();
-        activeImageIds = activeImageIds.filter(id => id !== imageId);
-    }
-
-    document.getElementById('imageUploadInput').addEventListener('change', function(e) {
-        const files = Array.from(e.target.files);
-        const previewContainer = document.getElementById('new-uploads-preview');
-
-        files.forEach(file => {
-            selectedFiles.push(file);
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const div = document.createElement('div');
-                div.className = 'thumb-container';
-                div.innerHTML = `
-                    <img src="${event.target.result}" class="thumb-img" alt="New Upload">
-                    <button type="button" class="thumb-delete" onclick="removeNewFile(this, '${file.name}')">&times;</button>
-                `;
-                previewContainer.appendChild(div);
-            };
-            reader.readAsDataURL(file);
+    document.addEventListener("DOMContentLoaded", function() {
+        ClassicEditor.create(document.querySelector('#editor'), {
+            language: 'ar'
+        })
+        .then(editor => { 
+            editorInstance = editor; 
+        })
+        .catch(error => { 
+            console.error("CKEditor initialization error:", error); 
         });
+
+        supplierChoices = new Choices('#supplier-select', { removeItemButton: true, searchEnabled: true });
+        collectionsChoices = new Choices('#collections-select', { removeItemButton: true, searchEnabled: true });
     });
 
-    function removeNewFile(buttonElement, fileName) {
-        buttonElement.parentElement.remove();
-        selectedFiles = selectedFiles.filter(f => f.name !== fileName);
+    function previewImages(input) {
+        const gallery = document.getElementById('imageGallery');
+        if (input.files) {
+            Array.from(input.files).forEach((file) => {
+                uploadedFilesList.push(file);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const colDiv = document.createElement('div');
+                    colDiv.className = 'col-md-3 col-6 position-relative';
+                    colDiv.innerHTML = `
+                        <div class="card border shadow-sm p-1 h-100 text-center bg-light mb-0" style="border-radius: 10px;">
+                            <div class="ratio ratio-1x1 bg-white rounded overflow-hidden mb-1">
+                                <img src="${e.target.result}" class="w-100 h-100" style="object-fit: cover;">
+                            </div>
+                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1 w-100" onclick="this.closest('.col-md-3').remove()">
+                                <i class="fas fa-trash-alt"></i> إزالة
+                            </button>
+                        </div>
+                    `;
+                    gallery.appendChild(colDiv);
+                }
+                reader.readAsDataURL(file);
+            });
+        }
     }
 
-    document.getElementById('productForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    function addVariantRow(data = {}) {
+        const tbody = document.getElementById('variantsTableBody');
+        tbody.innerHTML += `<tr>
+            <td><input type="text" class="form-control variant-name" value="${data.name || ''}" placeholder="حجم/لون"></td>
+            <td><input type="number" step="0.01" class="form-control variant-price" value="${data.price || 0}"></td>
+            <td><input type="number" class="form-control variant-qty" value="${data.quantity || 0}"></td>
+            <td><input type="text" class="form-control variant-sku" value="${data.sku || ''}"></td>
+            <td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.parentElement.remove()"><i class="fas fa-times"></i></button></td>
+        </tr>`;
+    }
+
+    async function saveNewProduct(event) {
+        event.preventDefault();
         const saveBtn = document.getElementById('saveBtn');
         saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ms-2"></i> جاري الحفظ...';
+        saveBtn.innerText = "جاري إنشاء وحفظ المنتج...";
 
         const formData = new FormData();
-        formData.append('qid', document.getElementById('qid').value);
         formData.append('title', document.getElementById('title').value);
         formData.append('slug', document.getElementById('slug').value);
+        formData.append('description', editorInstance ? editorInstance.getData() : '');
         formData.append('status', document.getElementById('status').value);
         formData.append('supplier_id', document.getElementById('supplier-select').value);
-        formData.append('description', editor ? editor.getData() : '');
-        formData.append('quantity', document.getElementById('quantity').value || 0);
-        formData.append('variants', document.getElementById('variants').value);
+        formData.append('sku', document.getElementById('sku').value);
+        formData.append('quantity', document.getElementById('quantity').value);
+        formData.append('weight', document.getElementById('weight').value);
         
-        // الأسعار
-        formData.append('cost_price', document.getElementById('cost_price').value || 0);
-        formData.append('compare_price', document.getElementById('compare_price').value || 0);
-        formData.append('price', document.getElementById('price').value || 0);
+        formData.append('original_price', document.getElementById('original_price').value);
+        formData.append('compare_at_price', document.getElementById('compare_at_price').value);
+        formData.append('price', document.getElementById('price').value);
 
-        // المجموعات ومعرفات الصور المتبقية
-        const collectionIds = Array.from(document.getElementById('collections-select').selectedOptions).map(o => o.value);
-        formData.append('collection_ids', JSON.stringify(collectionIds));
-        formData.append('image_ids', JSON.stringify(activeImageIds));
+        const selectedCols = Array.from(document.getElementById('collections-select').selectedOptions).map(opt => opt.value);
+        formData.append('collection_ids', JSON.stringify(selectedCols));
 
-        // إضافة الملفات الجديدة المراد رفعها
-        selectedFiles.forEach((file) => {
+        const variants = [];
+        document.querySelectorAll('#variantsTableBody tr').forEach(row => {
+            variants.push({
+                name: row.querySelector('.variant-name').value,
+                price: row.querySelector('.variant-price').value,
+                quantity: row.querySelector('.variant-qty').value,
+                sku: row.querySelector('.variant-sku').value
+            });
+        });
+        formData.append('variants', JSON.stringify(variants));
+
+        uploadedFilesList.forEach(file => {
             formData.append('images', file);
         });
 
@@ -320,34 +375,18 @@
             const result = await response.json();
             
             if (response.ok && result.status === 'success') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'نجاح',
-                    text: result.message,
-                    confirmButtonColor: '#2d0b36'
-                }).then(() => {
-                    window.location.href = "{{ url_for('admin_product_bp.manage_products') }}";
-                });
+                alert(result.message);
+                window.location.href = "{{ url_for('admin_product_bp.manage_products') }}";
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'تنبيه',
-                    text: result.message || 'حدث خطأ أثناء الحفظ',
-                    confirmButtonColor: '#2d0b36'
-                });
+                alert(result.message || "حدث خطأ أثناء الحفظ.");
             }
         } catch (error) {
-            console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'خطأ',
-                text: 'تعذر الاتصال بالخادم',
-                confirmButtonColor: '#2d0b36'
-            });
+            console.error("Error:", error);
+            alert("حدث خطأ في الاتصال بالخادم.");
         } finally {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fas fa-save ms-2"></i> حفظ المزامنة والتحديث';
+            saveBtn.innerText = "حفظ وإنشاء المنتج الجديد";
         }
-    });
+    }
 </script>
 {% endblock %}
