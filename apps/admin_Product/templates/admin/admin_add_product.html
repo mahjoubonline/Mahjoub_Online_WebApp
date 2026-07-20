@@ -7,17 +7,18 @@
 <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
 
 <style>
-    :root { --dark-purple: #2d0b36; }
+    :root { --dark-purple: #2d0b36; --royal-accent: #4b0082; }
     .btn-custom { background-color: var(--dark-purple); color: #fff; }
+    .btn-custom:hover { background-color: var(--royal-accent); color: #fff; }
     .text-custom { color: var(--dark-purple); }
-    .card { border-radius: 15px; }
+    .card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
     .ck-editor__editable { min-height: 250px; }
-    .section-title { border-right: 4px solid var(--dark-purple); padding-right: 10px; margin-bottom: 20px; color: var(--dark-purple); }
+    .section-title { border-right: 4px solid var(--dark-purple); padding-right: 10px; margin-bottom: 20px; color: var(--dark-purple); font-weight: 700; }
 </style>
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i></button>
+        <button onclick="history.back()" class="btn btn-outline-dark"><i class="fas fa-arrow-right"></i> الرجوع</button>
         <h4 class="m-0 text-custom fw-bold">{{ "تعديل المنتج" if product else "إضافة منتج جديد" }}</h4>
     </div>
 
@@ -25,7 +26,7 @@
         <div class="row">
             <!-- القسم الأساسي -->
             <div class="col-md-8">
-                <div class="card shadow-sm p-4 mb-4">
+                <div class="card p-4 mb-4">
                     <h5 class="section-title">بيانات المنتج الأساسية</h5>
                     <input type="hidden" id="qid" value="{{ product.qid if product else '' }}">
                     <div class="mb-3">
@@ -34,12 +35,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="fw-bold small">الوصف الاحترافي</label>
-                        <textarea id="editor">{{ product.description | safe }}</textarea>
+                        <textarea id="editor">{{ product.description | safe if product else '' }}</textarea>
                     </div>
                 </div>
 
                 <!-- قسم الأسعار -->
-                <div class="card shadow-sm p-4">
+                <div class="card p-4 mb-4">
                     <h5 class="section-title">إدارة الأسعار والمخزون</h5>
                     <div class="row">
                         <div class="col-md-3 mb-3">
@@ -68,7 +69,7 @@
 
             <!-- الجانب -->
             <div class="col-md-4">
-                <div class="card shadow-sm p-4">
+                <div class="card p-4">
                     <h5 class="section-title">الإعدادات والتصنيف</h5>
                     <div class="mb-3">
                         <label class="fw-bold small">حالة المنتج</label>
@@ -81,7 +82,7 @@
                         <label class="fw-bold small">المورد</label>
                         <select id="supplier-select" class="form-select">
                             {% for sup in suppliers %}
-                            <option value="{{ sup.id }}" {% if product and sup.id == product.supplier_id %}selected{% endif %}>{{ sup.trade_name }}</option>
+                            <option value="{{ sup.id }}" {% if product and sup.id == mapping.selected_supplier_id|int %}selected{% endif %}>{{ sup.trade_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -93,7 +94,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-custom w-100 py-3 fw-bold">حفظ المنتج</button>
+                    <button type="submit" class="btn btn-custom w-100 py-3 fw-bold shadow-sm">حفظ المنتج</button>
                 </div>
             </div>
         </div>
@@ -103,7 +104,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-    // تهيئة المحرر مع كافة الأدوات
+    let editor;
     ClassicEditor.create(document.querySelector('#editor'), {
         toolbar: ['heading', '|', 'bold', 'italic', 'underline', 'strikethrough', '|', 'fontColor', 'fontBackgroundColor', '|', 'alignment', '|', 'numberedList', 'bulletedList', '|', 'link', 'insertTable', '|', 'undo', 'redo'],
         shouldNotGroupWhenFull: true
@@ -130,7 +131,8 @@
             variants: document.getElementById('variants').value
         };
 
-        // إرسال البيانات...
+        // مسار إرسال البيانات (يمكن ربطه بمسار الحفظ أو المزامنة الخاص بك)
+        console.log("Form Payload:", payload);
     });
 </script>
 {% endblock %}
