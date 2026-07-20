@@ -4,23 +4,32 @@
 from apps.extensions import db
 from apps.models.product_db import Product
 from apps.services.graphql_client import QomrahGraphQLClient
+import logging
 
 def sync_products_from_qomra():
     """
-    جلب المنتجات من منصة قمرة باستخدام QomrahGraphQLClient وحفظها في قاعدة البيانات المحلية.
+    جلب المنتجات من منصة قمرة باستخدام QomrahGraphQLClient وحفظها في قاعدة البيانات المحلية بكل تفاصيلها.
     """
-    # استعلام GraphQL لجلب قائمة المنتجات
+    # استعلام GraphQL المتوافق مع هيكل قمرة لجلب كافة تفاصيل المنتجات
     query = """
     query GetProductsList {
-      products {
+      findAllProducts {
         data {
           qid
           title
           description
+          quantity
+          images {
+            _id
+            fileUrl
+          }
           pricing {
             price
+            currency
           }
         }
+        success
+        message
       }
     }
     """
@@ -29,37 +38,67 @@ def sync_products_from_qomra():
     result = QomrahGraphQLClient.execute_query(query)
     
     if not result or 'data' not in result or not result['data']:
+        logging.error("❌ فشل في استرجاع البيانات من خدمة قمرة GraphQL.")
         raise Exception("فشل في استرجاع البيانات من خدمة قمرة GraphQL.")
-            
-    products_data = result['data'].get('products', {}).get('data', [])
+        
+    response_data = result['data'].get('findAllProducts', {})
+    products_data = response_data.get('data', [])
     
     if not products_data:
         return "تمت المزامنة بنجاح، لكن لا توجد منتجات جديدة في المنصة."
 
     saved_count = 0
+    updated_count = 0
+
     for item in products_data:
         title = item.get('title')
         if not title:
             continue
-                
+            
+        qid = item.get('qid')
         description = item.get('description', '')
+        quantity = int(item.get('quantity', 0) or 0)
+        
+        # استخراج رابط الصورة الأولى إن وجدت
+        images = item.get('images', [])
+        image_url = images[0].get('fileUrl') if images and isinstance(images, list) else None
+        
+        # استخراج السعر والعملة
         pricing = item.get('pricing', {})
         price = float(pricing.get('price', 0) if pricing else 0)
+        currency = pricing.get('currency', 'ر.س') if pricing else 'ر.س'
 
-        # التحقق من وجود المنتج مسبقاً لتجنب التكرار وتحديثه أو إضافته
-        product = Product.query.filter_by(name=title).first()
-        
+        # التحقق من وجود المنتج مسبقاً (عبر qid أو الاسم)
+        product = None
+        if qid:
+            product = Product.query.filter_by(qid=qid).first()
+        if not product:
+            product = Product.query.filter_by(name=title).first()
+            
         if product:
+            # تحديث البيانات الموجودة
+            product.qid = qid or product.qid
+            product.name = title
             product.price = price
+            product.currency = currency
+            product.quantity = quantity
+            if image_url:
+                product.image_url = image_url
             product.description = description
+            updated_count += 1
         else:
+            # إنشاء منتج جديد بكل التفاصيل المستوردة
             new_product = Product(
+                qid=qid,
                 name=title,
                 price=price,
+                currency=currency,
+                quantity=quantity,
+                image_url=image_url,
                 description=description
             )
             db.session.add(new_product)
             saved_count += 1
                 
     db.session.commit()
-    return f"تمت المزامنة بنجاح! تم حفظ وتحديث المنتجات في قاعدة البيانات."
+    return f"تمت المزامنة بنجاح! تم إضافة {saved_count} منتج وتحديث {updated_count} منتج."
