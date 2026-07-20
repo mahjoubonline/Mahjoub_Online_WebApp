@@ -37,6 +37,12 @@ query GetProductDetail($qid: String!) {
                 qid 
                 title 
             }
+            variants {
+                name
+                price
+                quantity
+                sku
+            }
         }
     }  
 }
@@ -45,7 +51,7 @@ query GetProductDetail($qid: String!) {
 GET_ALL_COLLECTIONS_QUERY = """
 query GetAllCollections {
     findAllCollections(input: { limit: 100 }) {
-        data { qid, title }
+        data { qid title }
     }
 }
 """
@@ -66,8 +72,11 @@ query GetAllSuppliers {
 @admin_product_bp.route('/edit/<path:qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
-    """عرض صفحة تعديل منتج موجود بالاعتماد على معرفه (qid) مع جلب الموردين والتصنيفات."""
-    product = {
+    """عرض صفحة تعديل منتج موجود بالاعتماد على معرفه (qid) مع جلب الموردين والتصنيفات والمتغيرات."""
+    
+    # القيمة الافتراضية للمنتج للحماية في حال فشل الاستعلام
+    default_product = {
+        "qid": qid,
         "title": "",
         "slug": "",
         "description": "",
@@ -78,8 +87,12 @@ def edit_product(qid):
         "supplier_id": "",
         "pricing": {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "costPrice": 0},
         "images": [],
-        "collection_ids": []
+        "collections": [],
+        "collection_ids": [],
+        "variants": []
     }
+    
+    product = default_product
     all_collections = []
     suppliers = []
 
@@ -88,27 +101,39 @@ def edit_product(qid):
         col_response = QomrahGraphQLClient.execute_query(GET_ALL_COLLECTIONS_QUERY)
         sup_response = QomrahGraphQLClient.execute_query(GET_ALL_SUPPLIERS_QUERY)
 
+        # 1. استخراج ومعالجة بيانات المنتج
         if prod_response and 'data' in prod_response:
             find_res = prod_response['data'].get('findProductByQid')
             if find_res and find_res.get('data'):
                 product = find_res.get('data')
 
         if product:
-            raw_images = product.get('images', [])
+            # تنظيف ومعالجة الصور
+            raw_images = product.get('images') or []
             product['images'] = [img for img in raw_images if isinstance(img, dict) and img.get('fileUrl')]
-            product['collection_ids'] = [c['qid'] for c in product.get('collections', []) if c and c.get('qid')]
             
+            # استخراج معرفات التصنيفات (QIDs) للمطابقة في القائمة المنسدلة
+            raw_collections = product.get('collections') or []
+            product['collection_ids'] = [c['qid'] for c in raw_collections if isinstance(c, dict) and c.get('qid')]
+            
+            # حماية كائن الأسعار
             if not product.get('pricing'):
                 product['pricing'] = {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "costPrice": 0}
+            
+            # حماية قائمة المتغيرات
+            if not product.get('variants'):
+                product['variants'] = []
 
+        # 2. استخراج المجموعات
         if col_response and 'data' in col_response:
-            all_collections = col_response['data'].get('findAllCollections', {}).get('data', [])
+            all_collections = col_response['data'].get('findAllCollections', {}).get('data', []) or []
 
+        # 3. استخراج الموردين
         if sup_response and 'data' in sup_response:
-            suppliers = sup_response['data'].get('findAllSuppliers', {}).get('data', [])
+            suppliers = sup_response['data'].get('findAllSuppliers', {}).get('data', []) or []
 
     except Exception as e:
-        logger.error(f"❌ خطأ أثناء جلب تفاصيل المنتج للتعديل {qid}: {str(e)}")
+        logger.error(f"❌ خطأ أثناء جلب تفاصيل المنتج للتعديل {qid}: {str(e)}", exc_info=True)
         flash("تعذر تحميل بيانات المنتج أو القوائم المرتبطة.", "danger")
 
     return render_template(
