@@ -12,17 +12,17 @@ logger = logging.getLogger(__name__)
 
 GET_ALL_PRODUCTS_QUERY = """
 query Data($input: GetAllProductsInput) {
-  findAllProducts(input: $input) {
-    data {
-      qid
-      title
-      pricing { price }
-      quantity
-      identification { sku }
-      images { fileUrl }
+    findAllProducts(input: $input) {
+        data {
+            qid
+            title
+            pricing { price }
+            quantity
+            identification { sku }
+            images { fileUrl }
+        }
+        pagination { currentPage, totalPages }
     }
-    pagination { currentPage, totalPages }
-  }
 }
 """
 
@@ -41,7 +41,7 @@ query GetProductDetail($qid: String!) {
             variants
             pricing { 
                 price 
-                originalPrice
+                originalPrice 
                 compareAtPrice 
             }
             images { 
