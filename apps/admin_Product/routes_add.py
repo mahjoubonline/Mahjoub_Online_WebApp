@@ -18,7 +18,6 @@ query GetAllCollections {
 }
 """
 
-# استعلام جلب الموردين المرتبطين بالمنصة الموحدة
 GET_ALL_SUPPLIERS_QUERY = """
 query GetAllSuppliers {
     findAllSuppliers(input: { limit: 100 }) {
@@ -39,7 +38,7 @@ def add_product():
         "quantity": 0,
         "sku": "",
         "weight": 0,
-        "variants": "",
+        "variants": [],
         "pricing": {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "costPrice": 0},
         "images": [],
         "collection_ids": [],
@@ -81,21 +80,27 @@ def save_sync_product():
         status = request.form.get('status', 'ACTIVE').strip()
         description = request.form.get('description', '')
         quantity = int(request.form.get('quantity', 0) or 0)
+        weight = float(request.form.get('weight', 0) or 0)
+        sku = request.form.get('sku', '').strip()
         
-        cost_price = float(request.form.get('cost_price', 0) or 0)
-        compare_price = float(request.form.get('compare_price', 0) or 0)
+        # أسماء الحقول مطابقة تماماً لما ترسله الواجهة الأمامية
+        cost_price = float(request.form.get('original_price', 0) or 0)
+        compare_price = float(request.form.get('compare_at_price', 0) or 0)
         price = float(request.form.get('price', 0) or 0)
         
         supplier_id = request.form.get('supplier_id', '').strip()
         collections = json.loads(request.form.get('collection_ids', '[]'))
-        variants = request.form.get('variants', '')
+        
+        # فك تشفير مصفوفة المتغيرات (Variants) والألوان/الأحجام المضافة
+        variants_raw = request.form.get('variants', '[]')
+        variants = json.loads(variants_raw) if variants_raw else []
         
         uploaded_images = request.files.getlist('images')
 
-        # هنا يتم إضافة منطق إرسال البيانات واستعلامات الـ Mutation الخاصة بـ GraphQL لحفظ المنتج في قاعدة البيانات
+        # هنا يمكنك كتابة استعلام الـ Mutation الخاص بـ GraphQL لحفظ البيانات في قاعدة البيانات
         # ...
 
-        logger.info(f"✅ تم إنشاء المنتج الجديد بنجاح: {title} [المورد: {supplier_id}] [عدد الصور المرفوعة: {len(uploaded_images)}]")
+        logger.info(f"✅ تم إنشاء المنتج الجديد بنجاح: {title} [المورد: {supplier_id}] [عدد المتغيرات: {len(variants)}] [عدد الصور: {len(uploaded_images)}]")
 
         return jsonify({
             "status": "success",
