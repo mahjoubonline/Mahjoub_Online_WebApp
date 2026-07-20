@@ -25,18 +25,18 @@ _session.mount("http://", _adapter)
 
 class QomrahGraphQLClient:
     """
-    كلاس مُحسن لإدارة طلبات GraphQL بكفاءة عالية
+    كلاس مُحسن لإدارة طلبات GraphQL بكفاءة عالية للتواصل مع منصة Mahjoub Online
     """
     
     BASE_URL = "https://mahjoub.online/admin/graphql"
     
     @staticmethod
     def execute_query(query, variables=None):
-        """تنفيذ استعلام GraphQL باستخدام الجلسة الثابتة"""
+        """تنفيذ استعلام أو Mutation لـ GraphQL باستخدام الجلسة الثابتة"""
         api_key = os.environ.get('QUMRA_API_KEY')
         
         if not api_key:
-            logging.error("❌ مفتاح API (QUMRA_API_KEY) مفقود")
+            logging.error("❌ مفتاح API (QUMRA_API_KEY) مفقود في متغيرات البيئة.")
             return None
 
         headers = {
@@ -56,7 +56,7 @@ class QomrahGraphQLClient:
                 timeout=15 
             )
             
-            # التحقق من الحالة
+            # التحقق من حالة استجابة HTTP
             if response.status_code != 200:
                 logging.error(f"❌ GraphQL Status {response.status_code}: {response.text}")
                 return None
@@ -68,7 +68,7 @@ class QomrahGraphQLClient:
                 logging.error(f"❌ GraphQL Logic Error: {result['errors']}")
                 return None
             
-            # إرجاع البيانات (Data فقط)
+            # إرجاع الاستجابة كاملة (تتضمن 'data' وغالباً ما يتم التعامل معها في المسارات)
             return result
             
         except requests.exceptions.RequestException as req_err:
