@@ -1,14 +1,17 @@
 # coding: utf-8
-# 📂 apps/admin_Product/registry.py
-
-from flask import Blueprint
 import logging
+from flask import Blueprint
 
-# 1. تعريف الـ Blueprint
-admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
 logger = logging.getLogger(__name__)
 
-# --- إعدادات التسجيل والظهور في القائمة الجانبية ---
+# 1. إنشاء الـ Blueprint
+admin_product_bp = Blueprint(
+    'admin_product_bp',
+    __name__,
+    template_folder='templates'
+)
+
+# --- إعدادات الموديول والقائمة الجانبية ---
 MODULE_NAME = "إدارة المنتجات"
 MODULE_ICON = "fas fa-box-open"
 SHOW_IN_SUPPLIER = False 
@@ -41,9 +44,9 @@ def register_module(app):
     """دالة تسجيل الـ Blueprint وتعيين المسار الموحد للمنتجات"""
     try:
         app.register_blueprint(admin_product_bp, url_prefix='/admin/products')
-        print("✅ [Registry]: تم تسجيل موديول 'إدارة المنتجات' بنجاح.")
+        logger.info("✅ [Registry]: تم تسجيل موديول 'إدارة المنتجات' بنجاح.")
     except Exception as e:
-        print(f"❌ [Registry Error]: فشل تسجيل موديول 'إدارة المنتجات': {e}")
+        logger.error(f"❌ [Registry Error]: فشل تسجيل موديول 'إدارة المنتجات': {e}")
 
-# 2. الاستيراد في النهاية لضمان ربط المسارات
-from . import routes
+# 2. استيراد كافة المسارات في النهاية لربطها بالـ Blueprint بعد تعريفه
+from . import routes, routes_add, routes_edit
