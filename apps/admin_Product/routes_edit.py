@@ -20,10 +20,13 @@ query GetProductDetail($qid: String!) {
             description
             status
             quantity
+            sku
+            weight
             pricing { 
                 price 
                 originalPrice 
                 compareAtPrice 
+                costPrice
             }
             images { 
                 _id 
@@ -57,7 +60,9 @@ def edit_product(qid):
         "description": "",
         "status": "ACTIVE",
         "quantity": 0,
-        "pricing": {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "cost_price": 0},
+        "sku": "",
+        "weight": 0,
+        "pricing": {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "costPrice": 0},
         "images": [],
         "collection_ids": []
     }
@@ -73,13 +78,14 @@ def edit_product(qid):
                 product = find_res.get('data')
 
         if product:
+            # الاحتفاظ بهيكل الصورة كاملاً (بما في ذلك fileUrl) لكي يعمل الحذف والمعاينة بشكل صحيح
             raw_images = product.get('images', [])
-            product['images'] = [img.get('fileUrl') for img in raw_images if isinstance(img, dict) and img.get('fileUrl')]
+            product['images'] = [img for img in raw_images if isinstance(img, dict) and img.get('fileUrl')]
             product['collection_ids'] = [c['qid'] for c in product.get('collections', []) if c and c.get('qid')]
             
             # التأكد من وجود كائن pricing لتجنب أي أخطاء في القالب
             if not product.get('pricing'):
-                product['pricing'] = {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "cost_price": 0}
+                product['pricing'] = {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "costPrice": 0}
 
         if col_response and 'data' in col_response:
             all_collections = col_response['data'].get('findAllCollections', {}).get('data', [])
@@ -89,7 +95,7 @@ def edit_product(qid):
         flash("تعذر تحميل بيانات المنتج.", "danger")
 
     return render_template(
-        'admin/admin_add_product.html',
+        'admin/admin_edit_product.html',
         product=product,
         suppliers=[],
         all_collections=all_collections
