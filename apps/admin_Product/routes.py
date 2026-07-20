@@ -10,6 +10,7 @@ from apps.services.graphql_client import QomrahGraphQLClient
 
 logger = logging.getLogger(__name__)
 
+# استعلام خفيف ومخصص لواجهة العرض فقط لجلب الحقول الأساسية
 GET_ALL_PRODUCTS_QUERY = """
 query Data($input: GetAllProductsInput) {
     findAllProducts(input: $input) {
@@ -18,7 +19,6 @@ query Data($input: GetAllProductsInput) {
             title
             pricing { price }
             quantity
-            identification { sku }
             images { fileUrl }
         }
         pagination { currentPage, totalPages }
@@ -29,26 +29,28 @@ query Data($input: GetAllProductsInput) {
 GET_PRODUCT_DETAIL_QUERY = """
 query GetProductDetail($qid: String!) {  
     findProductByQid(qid: $qid) {  
-        qid
-        title
-        slug
-        description
-        status
-        quantity
-        sku
-        weight
-        pricing { 
-            price 
-            originalPrice 
-            compareAtPrice 
-        }
-        images { 
-            _id 
-            fileUrl 
-        }
-        collections { 
-            qid 
-            title 
+        data {
+            qid
+            title
+            slug
+            description
+            status
+            quantity
+            sku
+            weight
+            pricing { 
+                price 
+                originalPrice 
+                compareAtPrice 
+            }
+            images { 
+                _id 
+                fileUrl 
+            }
+            collections { 
+                qid 
+                title 
+            }
         }
     }  
 }
@@ -125,7 +127,7 @@ def add_product():
 @admin_product_bp.route('/edit/<path:qid>', methods=['GET'])
 @login_required
 def edit_product(qid):
-    """عرض صفحة تعديل منتج موجود بالاعتماد على معرفه (qid)."""
+    """عرض صفحة تعديل منتج موجود بالاعتماد على معرفه (qid) فقط."""
     product = {}
     all_collections = []
 
@@ -136,7 +138,6 @@ def edit_product(qid):
         if prod_response and 'data' in prod_response:
             find_res = prod_response['data'].get('findProductByQid')
             if find_res:
-                # معالجة ما إذا كانت البيانات قادمة مباشرة أو مغلفة في مفتاح data
                 product = find_res.get('data') if isinstance(find_res, dict) and 'data' in find_res else find_res
 
         if product:
