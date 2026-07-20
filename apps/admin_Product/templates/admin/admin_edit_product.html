@@ -7,8 +7,9 @@
 
 <style>
     :root { 
-        --deep-purple: #1a0033; 
+        --deep-purple: #2d144d; 
         --royal-accent: #4b0082; 
+        --gold-accent: #d4af37;
         --royal-bg: #f8f7fc;
     }
 
@@ -19,7 +20,7 @@
     .card { 
         border: none; 
         border-radius: 16px; 
-        box-shadow: 0 4px 24px rgba(26, 0, 51, 0.06); 
+        box-shadow: 0 4px 24px rgba(45, 20, 77, 0.06); 
         margin-bottom: 25px; 
         padding: 25px; 
         background: #ffffff;
@@ -43,7 +44,7 @@
 
     .section-title i {
         color: var(--royal-accent);
-        margin-left: 8px;
+        margin-left: 10px;
     }
 
     .price-box { 
@@ -94,16 +95,34 @@
         box-shadow: 0 0 0 0.2rem rgba(75, 0, 130, 0.15);
     }
 
+    /* تخصيص مكتبة Choices.js لتتطابق مع الألوان */
+    .choices__inner {
+        border-radius: 10px !important;
+        border: 1px solid #d0c5e2 !important;
+        background-color: #ffffff !important;
+        padding: 6px 10px !important;
+        min-height: 45px !important;
+    }
+    .choices.is-focused .choices__inner {
+        border-color: var(--royal-accent) !important;
+        box-shadow: 0 0 0 0.2rem rgba(75, 0, 130, 0.15);
+    }
+    .choices__list--multiple .choices__item {
+        background-color: var(--deep-purple) !important;
+        border: 1px solid var(--deep-purple) !important;
+        border-radius: 6px !important;
+    }
+
     .btn-royal {
-        background-color: var(--royal-accent);
+        background-color: var(--deep-purple);
         color: #ffffff;
         border: none;
         border-radius: 12px;
-        transition: opacity 0.2s;
+        transition: background-color 0.2s;
     }
 
     .btn-royal:hover {
-        background-color: var(--deep-purple);
+        background-color: var(--royal-accent);
         color: #ffffff;
     }
 </style>
@@ -113,8 +132,8 @@
         <h3 class="fw-bold" style="color: var(--deep-purple);">
             تعديل المنتج: <span class="text-muted fs-5" id="productTitleHeader">{{ product.title if product else 'جلب البيانات...' }}</span>
         </h3>
-        <a href="{{ url_for('admin_product_bp.manage_products') }}" class="btn btn-dark px-4 shadow-sm" style="border-radius: 10px;">
-            <i class="fas fa-arrow-right me-1"></i> العودة للقائمة
+        <a href="{{ url_for('admin_product_bp.manage_products') }}" class="btn btn-outline-secondary px-4 shadow-sm" style="border-radius: 10px;">
+            <i class="fas fa-arrow-right ms-1"></i> العودة للقائمة
         </a>
     </div>
 
@@ -149,7 +168,7 @@
                     <h5 class="section-title"><i class="fas fa-images"></i> معرض صور المنتج</h5>
                     
                     <div class="image-zone mb-3" onclick="document.getElementById('imageInput').click()">
-                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2" style="color: var(--royal-accent);"></i>
+                        <i class="fas fa-cloud-upload-alt fa-2x mb-2" style="color: var(--royal-accent);"></i>
                         <p class="mb-1 fw-bold text-dark">انقر هنا لرفع صور جديدة أو قم بسحبها وإفلاتها هنا</p>
                         <span class="small text-secondary">تدعم صيغ الصور المتعددة بجودة عالية</span>
                         <input type="file" id="imageInput" class="d-none" multiple accept="image/*" onchange="previewImages(this)">
@@ -211,7 +230,7 @@
                 <div class="card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="section-title mb-0 border-0 pb-0"><i class="fas fa-list-ul"></i> متغيرات المنتج (Variants)</h5>
-                        <button type="button" class="btn btn-sm btn-success px-3" style="border-radius: 8px;" onclick="addVariantRow()">+ إضافة نوع</button>
+                        <button type="button" class="btn btn-sm btn-royal px-3" style="border-radius: 8px;" onclick="addVariantRow()">+ إضافة نوع</button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-bordered align-middle">
