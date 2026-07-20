@@ -43,8 +43,8 @@
             const metaTag = document.querySelector('meta[name="csrf-token"]');
             const csrfToken = metaTag ? metaTag.getAttribute('content') : '';
             
-            // تم تصحيح الـ endpoint هنا إلى 'save_sync' كما اقترح النظام
-            const response = await fetch("{{ url_for('admin_product_bp.save_sync') }}", { 
+            // استخدام safe_url_for لتجنب BuildError في حال لم يكن المسار مسجلاً
+            const response = await fetch("{{ safe_url_for('admin_product_bp.save_sync') }}", { 
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
