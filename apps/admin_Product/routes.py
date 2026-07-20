@@ -29,29 +29,26 @@ query Data($input: GetAllProductsInput) {
 GET_PRODUCT_DETAIL_QUERY = """
 query GetProductDetail($qid: String!) {  
     findProductByQid(qid: $qid) {  
-        data {
-            qid
-            title
-            slug
-            description
-            status
-            quantity
-            sku
-            weight
-            variants
-            pricing { 
-                price 
-                originalPrice 
-                compareAtPrice 
-            }
-            images { 
-                _id 
-                fileUrl 
-            }
-            collections { 
-                qid 
-                title 
-            }
+        qid
+        title
+        slug
+        description
+        status
+        quantity
+        sku
+        weight
+        pricing { 
+            price 
+            originalPrice 
+            compareAtPrice 
+        }
+        images { 
+            _id 
+            fileUrl 
+        }
+        collections { 
+            qid 
+            title 
         }
     }  
 }
@@ -129,7 +126,7 @@ def add_product():
 @login_required
 def edit_product(qid):
     """عرض صفحة تعديل منتج موجود بالاعتماد على معرفه (qid)."""
-    product = None
+    product = {}
     all_collections = []
 
     try:
@@ -139,7 +136,8 @@ def edit_product(qid):
         if prod_response and 'data' in prod_response:
             find_res = prod_response['data'].get('findProductByQid')
             if find_res:
-                product = find_res.get('data')
+                # معالجة ما إذا كانت البيانات قادمة مباشرة أو مغلفة في مفتاح data
+                product = find_res.get('data') if isinstance(find_res, dict) and 'data' in find_res else find_res
 
         if product:
             raw_images = product.get('images', [])
@@ -155,15 +153,15 @@ def edit_product(qid):
 
     return render_template(
         'admin/admin_edit_product.html',
-        product=product,
+        product=product or {},
         suppliers=[],
         all_collections=all_collections
     )
 
 
-@admin_product_bp.route('/save-sync', methods=['POST'])
+@admin_product_bp.route('/update-sync', methods=['POST'])
 @login_required
-def save_sync():
+def update_sync_product():
     try:
         qid = request.form.get('qid', '').strip()
         title = request.form.get('title', '').strip()
@@ -179,11 +177,11 @@ def save_sync():
         price = float(request.form.get('price') or 0)
         
         action_type = "تحديث" if qid else "إنشاء"
-        logger.info(f"✅ تم {action_type} المنتج: {title}")
+        logger.info(f"✅ تم {action_type} المنتج: {title} [QID: {qid}]")
 
         return jsonify({
             "status": "success", 
-            "message": f"تم {action_type} المنتج بنجاح"
+            "message": f"تم {action_type} المنتج بنجاح."
         }), 200
         
     except Exception as e:
