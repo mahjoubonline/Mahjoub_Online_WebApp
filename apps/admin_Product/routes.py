@@ -109,22 +109,21 @@ def edit_product(qid):
 @login_required
 def save_sync():
     """
-    مسار معالجة طلب المزامنة (AJAX) القادم من المودال لجلب المنتجات وحفظها، وإرجاع استجابة JSON صحيحة.
+    مسار معالجة طلب المزامنة (AJAX) لجلب المنتجات وحفظها في قاعدة البيانات المحلية.
     """
     try:
-        # -------------------------------------------------------------
-        # يمكنك هنا استدعاء خدمة جلب وتخزين المنتجات عبر GraphQL من مجلد services
-        # مثال:
-        # from apps.services.fetch_product_data import sync_products_from_qomra
-        # sync_products_from_qomra()
-        # -------------------------------------------------------------
+        from apps.services.product_sync_service import sync_products_from_qomra
+        
+        # تنفيذ خدمة الجلب والحفظ الفعلي للمنتجات
+        success_message = sync_products_from_qomra()
 
         return jsonify({
             'status': 'success',
-            'message': 'تمت مزامنة المنتجات وتحديث قاعدة البيانات بنجاح!'
+            'message': success_message
         }), 200
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({
             'status': 'error',
             'message': f'فشل مزامنة المنتجات: {str(e)}'
