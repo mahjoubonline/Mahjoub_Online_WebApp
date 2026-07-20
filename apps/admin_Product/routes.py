@@ -35,9 +35,6 @@ query GetProductDetail($qid: String!) {
             description
             status
             quantity
-            sku
-            weight
-            variants
             pricing { 
                 price 
                 originalPrice 
@@ -104,7 +101,7 @@ def add_product():
         "sku": "",
         "weight": 0,
         "variants": [],
-        "pricing": {"price": 0, "originalPrice": 0, "compareAtPrice": 0},
+        "pricing": {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "cost_price": 0},
         "images": [],
         "collection_ids": []
     }
@@ -129,7 +126,19 @@ def add_product():
 @login_required
 def edit_product(qid):
     """عرض صفحة تعديل منتج موجود بالاعتماد على معرفه (qid)."""
-    product = None
+    product = {
+        "title": "",
+        "slug": "",
+        "description": "",
+        "status": "ACTIVE",
+        "quantity": 0,
+        "sku": "",
+        "weight": 0,
+        "variants": [],
+        "pricing": {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "cost_price": 0},
+        "images": [],
+        "collection_ids": []
+    }
     all_collections = []
 
     try:
@@ -138,13 +147,17 @@ def edit_product(qid):
 
         if prod_response and 'data' in prod_response:
             find_res = prod_response['data'].get('findProductByQid')
-            if find_res:
+            if find_res and find_res.get('data'):
                 product = find_res.get('data')
 
         if product:
             raw_images = product.get('images', [])
             product['images'] = [img.get('fileUrl') for img in raw_images if isinstance(img, dict) and img.get('fileUrl')]
             product['collection_ids'] = [c['qid'] for c in product.get('collections', []) if c and c.get('qid')]
+            
+            # التأكد من وجود كائن pricing لتجنب أي أخطاء في القالب
+            if not product.get('pricing'):
+                product['pricing'] = {"price": 0, "originalPrice": 0, "compareAtPrice": 0, "cost_price": 0}
 
         if col_response and 'data' in col_response:
             all_collections = col_response['data'].get('findAllCollections', {}).get('data', [])
@@ -164,7 +177,7 @@ def edit_product(qid):
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync():
-    """معالجة حفظ وإنشاء أو تحديث المنتج واستلام البيانات والوسائط (مطابق لاسم الراوتر في القالب)."""
+    """معالجة حفظ وإنشاء أو تحديث المنتج واستلام البيانات والوسائط."""
     try:
         qid = request.form.get('qid', '').strip()
         title = request.form.get('title', '').strip()
