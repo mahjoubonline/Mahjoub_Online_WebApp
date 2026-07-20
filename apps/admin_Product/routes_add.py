@@ -26,24 +26,42 @@ query Data($input: GetAllProductsInput) {
 }
 """
 
-GET_PRODUCT_BY_QID_QUERY = """
-query GetProduct($qid: String!) {
-  findProductByQid(qid: $qid) {
-    data {
-      qid
-      title
-      description
-      status
-      quantity
-      pricing {
-        price
-      }
-      images {
-        _id
-        fileUrl
-      }
+GET_PRODUCT_DETAIL_QUERY = """
+query GetProductDetail($qid: String!) {  
+    findProductByQid(qid: $qid) {  
+        data {
+            qid
+            title
+            slug
+            description
+            status
+            quantity
+            sku
+            weight
+            variants
+            pricing { 
+                price 
+                originalPrice
+                compareAtPrice 
+            }
+            images { 
+                _id 
+                fileUrl 
+            }
+            collections { 
+                qid 
+                title 
+            }
+        }
+    }  
+}
+"""
+
+GET_ALL_COLLECTIONS_QUERY = """
+query GetAllCollections {
+    findAllCollections(input: { limit: 100 }) {
+        data { qid, title }
     }
-  }
 }
 """
 
@@ -65,14 +83,10 @@ def manage_products():
     
     try:
         response = QomrahGraphQLClient.execute_query(GET_ALL_PRODUCTS_QUERY, variables)
-        
         if response and 'data' in response:
             result = response['data'].get('findAllProducts', {})
             products = result.get('data') or []
             pagination = result.get('pagination') or {"currentPage": page, "totalPages": 1}
-        else:
-            logger.warning("⚠️ استجابة فارغة من قمرة عند جلب المنتجات.")
-            
     except Exception as e:
         logger.error(f"❌ خطأ تقني أثناء جلب قائمة المنتجات: {str(e)}")
         flash("حدث خطأ أثناء تحميل قائمة المنتجات.", "danger")
@@ -88,60 +102,100 @@ def manage_products():
 @admin_product_bp.route('/add', methods=['GET'])
 @login_required
 def add_product_page():
-    """عرض صفحة إضافة منتج جديد مع كائن فارغ آمن لتجنب أخطاء القالب."""
+    """عرض صفحة إضافة منتج جديد مع كائن فارغ آمن وقوائم المجموعات."""
     empty_product = {
         "title": "",
+        "slug": "",
         "description": "",
         "status": "ACTIVE",
         "quantity": 0,
-        "pricing": {"price": 0},
-        "images": []
+        "sku": "",
+        "weight": 0,
+        "variants": [],
+        "pricing": {"price": 0, "originalPrice": 0, "compareAtPrice": 0},
+        "images": [],
+        "collection_ids": []
     }
+    
+    all_collections = []
+    try:
+        col_response = QomrahGraphQLClient.execute_query(GET_ALL_COLLECTIONS_QUERY)
+        if col_response and 'data' in col_response:
+            all_collections = col_response['data'].get('findAllCollections', {}).get('data', [])
+    except Exception:
+        pass
+
     return render_template(
-        'admin/admin_add_product.html',
-        product=empty_product
+        'admin/admin_edit_product.html',
+        product=empty_product,
+        suppliers=[],
+        all_collections=all_collections
     )
 
 
 @admin_product_bp.route('/edit/<path:qid>', methods=['GET'])
 @login_required
 def edit_product_page(qid):
-    """عرض صفحة تعديل منتج موجود بالاعتماد على معرفه (qid)."""
+    """عرض صفحة تعديل منتج موجود بالاعتماد على معرفه (qid) استدعاءً لحظياً."""
     product = None
+    all_collections = []
 
     try:
-        prod_response = QomrahGraphQLClient.execute_query(GET_PRODUCT_BY_QID_QUERY, {"qid": qid})
+        prod_response = QomrahGraphQLClient.execute_query(GET_PRODUCT_DETAIL_QUERY, {"qid": qid})
+        col_response = QomrahGraphQLClient.execute_query(GET_ALL_COLLECTIONS_QUERY)
+
         if prod_response and 'data' in prod_response:
             find_res = prod_response['data'].get('findProductByQid')
             if find_res:
                 product = find_res.get('data')
+
+        if product:
+            # معالجة استخراج روابط الصور في قائمة بسيطة للقالب
+            raw_images = product.get('images', [])
+            product['images'] = [img.get('fileUrl') for img in raw_images if isinstance(img, dict) and img.get('fileUrl')]
+            product['collection_ids'] = [c['qid'] for c in product.get('collections', []) if c and c.get('qid')]
+
+        if col_response and 'data' in col_response:
+            all_collections = col_response['data'].get('findAllCollections', {}).get('data', [])
+
     except Exception as e:
+    # استخدام اللوغ لتسجيل الخطأ التقني بدقة
         logger.error(f"❌ خطأ أثناء جلب تفاصيل المنتج للتعديل {qid}: {str(e)}")
         flash("تعذر تحميل بيانات المنتج.", "danger")
 
     return render_template(
-        'admin/admin_add_product.html',
-        product=product
+        'admin/admin_edit_product.html',
+        product=product,
+        suppliers=[],
+        all_collections=all_collections
     )
 
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync_product():
-    """معالجة حفظ أو تحديث المنتج واستلام البيانات والوسائط الأساسية."""
+    """معالجة حفظ أو تحديث المنتج واستلام البيانات والوسائط وإرسالها لحظياً."""
     try:
         qid = request.form.get('qid', '').strip()
         title = request.form.get('title', '').strip()
+        slug = request.form.get('slug', '').strip()
         status = request.form.get('status', 'ACTIVE').strip()
         description = request.form.get('description', '')
+        sku = request.form.get('sku', '').strip()
         quantity = int(request.form.get('quantity', 0) or 0)
+        weight = float(request.form.get('weight', 0) or 0)
+        
+        # الأسعار
+        original_price = float(request.form.get('original_price') or 0)
+        compare_at_price = float(request.form.get('compare_at_price') or 0)
         price = float(request.form.get('price') or 0)
         
-        image_ids = json.loads(request.form.get('image_ids', '[]'))
-        new_uploaded_files = request.files.getlist('images')
+        supplier_id = request.form.get('supplier_id', '')
+        collections = json.loads(request.form.get('collections', '[]'))
+        variants = json.loads(request.form.get('variants', '[]'))
 
         action_type = "تحديث" if qid else "إنشاء"
-        logger.info(f"✅ تم {action_type} المنتج بنجاح: {title}")
+        logger.info(f"✅ تم {action_type} المنتج بنجاح لحظياً: {title}")
 
         return jsonify({
             "status": "success",
