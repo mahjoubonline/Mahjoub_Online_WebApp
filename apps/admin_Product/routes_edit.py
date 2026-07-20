@@ -1,5 +1,5 @@
 # coding: utf-8
-# 📂 apps/admin_Product/routes_edit.py
+# 📂 apps/admin_Product/routes.py (أو جزء مسار التعديل)
 
 from flask import render_template, redirect, url_for, flash
 from flask_login import login_required
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @admin_product_bp.route('/edit/<path:qid>', methods=['GET'])
 @login_required
-def edit_product(qid):
+def edit_product_page(qid):
     """عرض صفحة تعديل المنتج مع كافة البيانات المحدثة والمخزون والشحن"""
     
     # 1. الاستعلام لجلب تفاصيل المنتج الشاملة
@@ -57,7 +57,7 @@ def edit_product(qid):
         col_response = QomrahGraphQLClient.execute_query(collections_query)
         
         if not prod_response or not prod_response.get('data', {}).get('findProductByQid', {}).get('data'):
-            flash("❌ تعذر جلب بيانات المنتج.")
+            flash("❌ تعذر جلب بيانات المنتج.", "danger")
             return redirect(url_for('admin_product_bp.manage_products'))
             
         product = prod_response['data']['findProductByQid']['data']
@@ -93,5 +93,5 @@ def edit_product(qid):
 
     except Exception as e:
         logger.error(f"❌ خطأ تقني في موديول التعديل: {str(e)}")
-        flash("حدث خطأ تقني أثناء تحميل الصفحة.")
+        flash("حدث خطأ تقني أثناء تحميل الصفحة.", "danger")
         return redirect(url_for('admin_product_bp.manage_products'))
