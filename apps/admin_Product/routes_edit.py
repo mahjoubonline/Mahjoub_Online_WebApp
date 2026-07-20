@@ -2,7 +2,8 @@ from flask import render_template, request, redirect, url_for, flash
 from .routes import admin_product_bp
 
 
-@admin_product_bp.route('/edit/<qid>', methods=['GET', 'POST'])
+# ✅ تم التعديل إلى <path:qid> للتعامل مع الشرطات المائلة / داخل qid
+@admin_product_bp.route('/edit/<path:qid>', methods=['GET', 'POST'])
 def edit_product(qid):
     """
     مسار تعديل بيانات منتج موجود بناءً على المعرّف (qid).
@@ -42,8 +43,7 @@ def edit_product(qid):
             }
 
             # -------------------------------------------------------------
-            # 4. تنفيذ استعلام التحديث (سواء GraphQL Mutation أو SQL Update)
-            # example: response = update_product_in_db(qid, update_payload)
+            # 4. تنفيذ استعلام التحديث (GraphQL Mutation / Service Update)
             # -------------------------------------------------------------
 
             flash('تم تحديث بيانات المنتج بنجاح!', 'success')
