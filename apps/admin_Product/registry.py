@@ -28,5 +28,5 @@ def register_module(app):
         print(f"❌ [Registry Error]: فشل تسجيل موديول 'إدارة المنتجات': {e}")
 
 # 2. الاستيرادات في نهاية الملف (لضمان ربط جميع المسارات بالـ Blueprint)
-# تم إضافة routes هنا لضمان أن دالة manage_products تعمل عند التشغيل
-from . import routes, routes_add, routes_edit, routes_sync
+# تم تعديل السطر ليكون مقتصراً على ملف routes الأساسي فقط لتجنب أي أخطاء تكرار
+from . import routes
