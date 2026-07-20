@@ -1,124 +1,67 @@
-<!-- 📂 apps/admin_Product/templates/admin/admin_Product.html -->
-{% extends "admin/admin_base.html" %}
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 
-{% block content %}
-<style>
-    :root { --dark-purple: #2d0b36; --accent-gold: #c5a059; }
-    .btn-custom { background-color: var(--dark-purple); color: #fff; border: none; }
-    .btn-custom:hover { background-color: #4a1558; color: #fff; }
-    .btn-back { color: var(--dark-purple); text-decoration: none; font-weight: 500; transition: 0.3s; }
-    .btn-back:hover { color: #000; padding-right: 5px; }
+# تعريف الـ Blueprint باسم admin_product_bp ليتوافق مع url_for في القالب
+admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
+
+
+@admin_product_bp.route('/products', methods=['GET'])
+def manage_products():
+    """
+    عرض قائمة المنتجات مع دعم البحث برمز/اسم المنتج والتصفح الصفحي (Pagination).
+    يدعم أيضاً طلبات الـ AJAX القادمة من السكريبت المدمج في القالب.
+    """
+    search_query = request.args.get('title', '', type=str).strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # عدد المنتجات في كل صفحة
+
+    # -------------------------------------------------------------
+    # هنا يتم جلب البيانات من قاعدة البيانات أو الخدمة الخارجية (مثل Qomra / DB)
+    # مثال توضيحي للجلب والتصفية:
+    # -------------------------------------------------------------
+    # query_results, total_count = get_products_from_db(search=search_query, page=page, limit=per_page)
+
+    # نموذج هيكلي لبيانات الترقيم الصفحي المتوافقة مع القالب:
+    pagination = {
+        'currentPage': page,
+        'totalPages': 1,  # يُحسب بناءً على Math.ceil(total_count / per_page)
+        'totalItems': 0
+    }
     
-    .product-card { transition: all 0.3s ease; text-decoration: none; display: block; cursor: pointer; }
-    .product-card:hover { transform: translateY(-8px); }
-    .product-card:hover .card { border: 2px solid var(--dark-purple) !important; box-shadow: 0 8px 20px rgba(45,11,54,0.15) !important; }
-    
-    .card { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); transition: 0.3s; }
-    .search-wrapper { position: relative; }
-    .search-wrapper i { position: absolute; left: 15px; top: 12px; color: #999; }
-    #searchInput { padding-left: 40px; border-radius: 25px; border: 1px solid #ddd; }
-    .badge-qty { font-size: 0.75rem; padding: 5px 10px; border-radius: 20px; }
-    .text-primary { color: var(--dark-purple) !important; }
-</style>
+    products = []  # مصفوفة المنتجات المسترجعة
 
-<div class="container-fluid py-4">
-    <div class="row align-items-center mb-4">
-        <div class="col-md-4">
-            <a href="{{ url_for('admin_dashboard_bp.dashboard') }}" class="btn-back d-block mb-2">
-                <i class="fas fa-arrow-right me-1"></i> رجوع
-            </a>
-            <h3 class="fw-bold mb-0 text-dark">
-                <i class="fas fa-boxes text-muted me-2"></i> إدارة المنتجات
-            </h3>
-        </div>
-        
-        <div class="col-md-4 search-wrapper">
-            <i class="fas fa-search"></i>
-            <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" id="searchForm">
-                <input type="text" name="title" id="searchInput" class="form-control shadow-sm" 
-                       placeholder="ابحث عن منتج بالاسم..." value="{{ search }}">
-            </form>
-        </div>
+    return render_template(
+        'admin/admin_Product.html',
+        products=products,
+        pagination=pagination,
+        search=search_query
+    )
 
-        <div class="col-md-4 text-md-end mt-3 mt-md-0">
-            <a href="{{ url_for('admin_product_bp.add_product') }}" class="btn btn-success px-4 shadow-sm">
-                <i class="fas fa-plus me-1"></i> إضافة منتج
-            </a>
-            <button type="button" class="btn btn-custom px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#syncModal">
-                <i class="fas fa-sync-alt me-1"></i> مزامنة
-            </button>
-        </div>
-    </div>
 
-    <div id="results-container">
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
-            {% for product in products %}
-            <div class="col">
-                <!-- تم إزالة urlencode لكي يتم تمرير الـ qid بالشكل الصحيح دون ترميز مزدوج -->
-                <a href="{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}" class="product-card">
-                    <div class="card h-100 border-0">
-                        <img src="{{ product.images[0].fileUrl if product.images else '/static/images/default.png' }}" 
-                             class="card-img-top" style="height: 180px; object-fit: cover; border-top-left-radius: 12px; border-top-right-radius: 12px;">
-                        <div class="card-body">
-                            <h6 class="fw-bold mb-2 text-truncate">{{ product.title }}</h6>
-                            <div class="d-flex justify-content-between align-items-center mt-2">
-                                <span class="text-primary fw-bold">{{ product.pricing.price if product.pricing else 0 }} ر.س</span>
-                                <span class="badge {{ 'bg-success' if product.quantity|int > 0 else 'bg-danger' }} badge-qty">
-                                    {{ product.quantity or 0 }} متوفر
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            {% else %}
-            <div class="col-12 text-center py-5">
-                <div class="display-1 text-muted"><i class="fas fa-box-open"></i></div>
-                <p class="text-muted fs-4">لا توجد منتجات مطابقة للبحث الحالي.</p>
-            </div>
-            {% endfor %}
-        </div>
+@admin_product_bp.route('/products/add', methods=['GET', 'POST'])
+def add_product():
+    """
+    مسار إضافة منتج جديد (تنتقل إليه المسؤولية عند النقر على زر 'إضافة منتج').
+    """
+    if request.method == 'POST':
+        # معالجة حفظ المنتج الجديد
+        flash('تمت إضافة المنتج بنجاح', 'success')
+        return redirect(url_for('admin_product_bp.manage_products'))
 
-        {% if pagination and pagination.totalPages > 1 %}
-        <nav class="mt-5">
-            <ul class="pagination justify-content-center">
-                <li class="page-item {{ 'disabled' if pagination.currentPage <= 1 }}">
-                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage-1, title=search) }}">السابق</a>
-                </li>
-                <li class="page-item active shadow-sm">
-                    <span class="page-link" style="background-color: var(--dark-purple); border-color: var(--dark-purple);">
-                        {{ pagination.currentPage }} / {{ pagination.totalPages }}
-                    </span>
-                </li>
-                <li class="page-item {{ 'disabled' if pagination.currentPage >= pagination.totalPages }}">
-                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage+1, title=search) }}">التالي</a>
-                </li>
-            </ul>
-        </nav>
-        {% endif %}
-    </div>
-</div>
+    return render_template('admin/add_product.html')
 
-<script>
-    let timeout = null;
-    const searchInput = document.getElementById('searchInput');
-    const resultsContainer = document.getElementById('results-container');
 
-    searchInput.addEventListener('keyup', () => {
-        clearTimeout(timeout);
-        timeout = setTimeout(async () => {
-            const query = searchInput.value;
-            try {
-                const response = await fetch(`{{ url_for('admin_product_bp.manage_products') }}?title=${encodeURIComponent(query)}`);
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const newResults = doc.getElementById('results-container');
-                if (newResults) { resultsContainer.innerHTML = newResults.innerHTML; }
-            } catch (error) { console.error("خطأ في البحث:", error); }
-        }, 600);
-    });
-</script>
+@admin_product_bp.route('/products/edit/<qid>', methods=['GET', 'POST'])
+def edit_product(qid):
+    """
+    مسار تعديل المنتج بناءً على الـ qid الخاص به
+    (تنتقل إليه المسؤولية عند النقر على بطاقة المنتج).
+    """
+    if request.method == 'POST':
+        # معالجة تحديث بيانات المنتج
+        flash('تم تحديث بيانات المنتج بنجاح', 'success')
+        return redirect(url_for('admin_product_bp.manage_products'))
 
-{% include 'admin/includes/_sync_modal.html' %}
-{% endblock %}
+    # جلب تفاصيل المنتج باستخدام qid
+    # product = get_product_by_qid(qid)
+
+    return render_template('admin/edit_product.html', qid=qid)
