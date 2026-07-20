@@ -163,8 +163,8 @@ def edit_product(qid):
 
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
-def save_sync_product():
-    """معالجة حفظ وإنشاء أو تحديث المنتج واستلام البيانات والوسائط."""
+def save_sync():
+    """معالجة حفظ وإنشاء أو تحديث المنتج واستلام البيانات والوسائط (مطابق لاسم الراوتر في القالب)."""
     try:
         qid = request.form.get('qid', '').strip()
         title = request.form.get('title', '').strip()
