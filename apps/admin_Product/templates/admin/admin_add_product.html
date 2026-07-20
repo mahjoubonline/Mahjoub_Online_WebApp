@@ -15,6 +15,10 @@
         background-color: var(--royal-bg);
     }
 
+    .text-purple {
+        color: var(--royal-accent) !important;
+    }
+
     .card { 
         border: none; 
         border-radius: 16px; 
@@ -92,7 +96,7 @@
         background: #faf8fd;
     }
     
-    .image-zone:hover { 
+    .image-zone:hover, .image-zone.dragover { 
         border-color: var(--royal-accent); 
         background: #f5f0fc; 
         transform: scale(1.005);
@@ -212,11 +216,11 @@
                 <div class="card">
                     <h5 class="section-title"><i class="fas fa-images"></i> 2. معرض صور المنتج</h5>
                     
-                    <div class="image-zone mb-3" onclick="document.getElementById('imageInput').click()">
+                    <div class="image-zone mb-3" id="dropZone" onclick="document.getElementById('imageInput').click()">
                         <i class="fas fa-cloud-upload-alt fa-3x mb-2" style="color: var(--royal-accent);"></i>
                         <p class="mb-1 fw-bold text-dark fs-5">انقر هنا لرفع الصور أو قم بسحبها وإفلاتها</p>
                         <span class="small text-secondary">يمكنك اختيار أكثر من صورة بوضوح وسرعة عالية</span>
-                        <input type="file" id="imageInput" class="d-none" multiple accept="image/*" onchange="previewImages(this)">
+                        <input type="file" id="imageInput" class="d-none" multiple accept="image/*" onchange="handleFileSelect(this.files)">
                     </div>
 
                     <div class="field-paragraph mb-0">
@@ -343,15 +347,9 @@
         // 1. Classic CKEditor Initialization
         const editorElement = document.querySelector('#editor');
         if (editorElement) {
-            ClassicEditor.create(editorElement, {
-                language: 'ar'
-            })
-            .then(editor => { 
-                editorInstance = editor; 
-            })
-            .catch(error => { 
-                console.error("CKEditor initialization error:", error); 
-            });
+            ClassicEditor.create(editorElement, { language: 'ar' })
+                .then(editor => { editorInstance = editor; })
+                .catch(error => console.error("CKEditor initialization error:", error));
         }
 
         // 2. Choices.js Dropdowns Initialization
@@ -364,47 +362,92 @@
         if (collectionsSelect) {
             collectionsChoices = new Choices(collectionsSelect, { removeItemButton: true, searchEnabled: true, placeholderValue: 'اختر المجموعات...' });
         }
-    });
 
-    function autoGenerateSlug(text) {
+        // 3. Track manual input for slug
         const slugInput = document.getElementById('slug');
-        if (slugInput && !slugInput.value.trim()) {
-            const formattedSlug = text.trim()
-                .toLowerCase()
-                .replace(/[\s\W-]+/g, '-');
-            slugInput.value = formattedSlug;
-        }
-    }
-
-    function previewImages(input) {
-        const gallery = document.getElementById('imageGallery');
-        if (input.files) {
-            Array.from(input.files).forEach((file) => {
-                uploadedFilesList.push(file);
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const colDiv = document.createElement('div');
-                    colDiv.className = 'col-md-4 col-6 position-relative';
-                    colDiv.innerHTML = `
-                        <div class="card img-preview-card border shadow-sm p-2 h-100 text-center bg-light mb-0" style="border-radius: 10px;">
-                            <div class="ratio ratio-1x1 bg-white rounded overflow-hidden mb-2">
-                                <img src="${e.target.result}" class="w-100 h-100" style="object-fit: cover;">
-                            </div>
-                            <button type="button" class="btn btn-outline-danger btn-sm py-1 px-2 w-100" onclick="removeImageFile(this, '${file.name}')">
-                                <i class="fas fa-trash-alt me-1"></i> إزالة
-                            </button>
-                        </div>
-                    `;
-                    gallery.appendChild(colDiv);
-                }
-                reader.readAsDataURL(file);
+        if (slugInput) {
+            slugInput.addEventListener('input', function() {
+                this.dataset.manual = "true";
             });
         }
+
+        // 4. Drag and Drop events for Image Zone
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files) {
+                    handleFileSelect(dt.files);
+                }
+            }, false);
+        }
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
     }
 
-    function removeImageFile(button, fileName) {
-        uploadedFilesList = uploadedFilesList.filter(f => f.name !== fileName);
-        button.closest('.col-md-4').remove();
+    // Auto generate slug unless user typed manually
+    function autoGenerateSlug(text) {
+        const slugInput = document.getElementById('slug');
+        if (slugInput && slugInput.dataset.manual !== "true") {
+            slugInput.value = text.trim()
+                .toLowerCase()
+                .replace(/[\s\W-]+/g, '-');
+        }
+    }
+
+    // Process uploaded files with unique references
+    function handleFileSelect(files) {
+        const gallery = document.getElementById('imageGallery');
+        if (!files) return;
+
+        Array.from(files).forEach((file) => {
+            uploadedFilesList.push(file);
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'col-md-4 col-6 position-relative';
+                
+                colDiv.innerHTML = `
+                    <div class="card img-preview-card border shadow-sm p-2 h-100 text-center bg-light mb-0" style="border-radius: 10px;">
+                        <div class="ratio ratio-1x1 bg-white rounded overflow-hidden mb-2">
+                            <img src="${e.target.result}" class="w-100 h-100" style="object-fit: cover;">
+                        </div>
+                        <button type="button" class="btn btn-outline-danger btn-sm py-1 px-2 w-100 remove-btn">
+                            <i class="fas fa-trash-alt me-1"></i> إزالة
+                        </button>
+                    </div>
+                `;
+
+                // Bind remove action directly to file reference
+                colDiv.querySelector('.remove-btn').onclick = function() {
+                    uploadedFilesList = uploadedFilesList.filter(f => f !== file);
+                    colDiv.remove();
+                };
+
+                gallery.appendChild(colDiv);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Reset file input element
+        const imageInput = document.getElementById('imageInput');
+        if (imageInput) imageInput.value = '';
     }
 
     function addVariantRow(data = {}) {
@@ -433,7 +476,7 @@
         formData.append('slug', document.getElementById('slug').value);
         formData.append('description', editorInstance ? editorInstance.getData() : '');
         formData.append('status', document.getElementById('status').value);
-        formData.append('supplier_id', document.getElementById('supplier-select').value);
+        formData.append('supplier_id', supplierChoices ? supplierChoices.getValue(true) : document.getElementById('supplier-select').value);
         formData.append('sku', document.getElementById('sku').value);
         formData.append('quantity', document.getElementById('quantity').value);
         formData.append('weight', document.getElementById('weight').value);
@@ -442,7 +485,11 @@
         formData.append('compare_at_price', document.getElementById('compare_at_price').value);
         formData.append('price', document.getElementById('price').value);
 
-        const selectedCols = Array.from(document.getElementById('collections-select').selectedOptions).map(opt => opt.value);
+        // Fetch selected collection values safely via Choices.js or native select
+        const selectedCols = collectionsChoices 
+            ? collectionsChoices.getValue(true) 
+            : Array.from(document.getElementById('collections-select').selectedOptions).map(opt => opt.value);
+            
         formData.append('collection_ids', JSON.stringify(selectedCols));
 
         const variants = [];
@@ -456,6 +503,7 @@
         });
         formData.append('variants', JSON.stringify(variants));
 
+        // Append all images from memory array
         uploadedFilesList.forEach(file => {
             formData.append('images', file);
         });
