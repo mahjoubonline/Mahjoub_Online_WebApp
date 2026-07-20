@@ -266,7 +266,7 @@
                             <option value="">اختر المورد...</option>
                             {% for sup in suppliers %}
                             <option value="{{ sup.id }}" {% if product and product.supplier_id == sup.id %}selected{% endif %}>
-                                {{ sup.trade_name }} (كود: {{ sup.supplier_code or sup.code or sup.id[:6] }})
+                                {{ sup.trade_name }}
                             </option>
                             {% endfor %}
                         </select>
@@ -311,7 +311,6 @@
         supplierChoices = new Choices('#supplier-select', { removeItemButton: true, searchEnabled: true });
         collectionsChoices = new Choices('#collections-select', { removeItemButton: true, searchEnabled: true });
 
-        // تعبئة المتغيرات القادمة من الباك اند إن وجدت
         const existingVariants = {{ product.variants | tojson if product and product.variants else '[]' }};
         if (Array.isArray(existingVariants)) {
             existingVariants.forEach(v => addVariantRow(v));
