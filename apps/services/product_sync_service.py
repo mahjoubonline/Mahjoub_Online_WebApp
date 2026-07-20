@@ -10,7 +10,7 @@ def sync_products_from_qomra():
     """
     جلب المنتجات من منصة قمرة باستخدام QomrahGraphQLClient وحفظها في قاعدة البيانات المحلية بكل تفاصيلها.
     """
-    # استعلام GraphQL المتوافق مع هيكل قمرة لجلب كافة تفاصيل المنتجات
+    # استعلام GraphQL المتوافق تماماً مع مخطط قمرة (بدون حقل currency غير الموجود في Pricing)
     query = """
     query GetProductsList {
       findAllProducts {
@@ -25,7 +25,6 @@ def sync_products_from_qomra():
           }
           pricing {
             price
-            currency
           }
         }
         success
@@ -63,10 +62,10 @@ def sync_products_from_qomra():
         images = item.get('images', [])
         image_url = images[0].get('fileUrl') if images and isinstance(images, list) else None
         
-        # استخراج السعر والعملة
+        # استخراج السعر
         pricing = item.get('pricing', {})
         price = float(pricing.get('price', 0) if pricing else 0)
-        currency = pricing.get('currency', 'ر.س') if pricing else 'ر.س'
+        currency = 'ر.س'  # تعيين العملة الافتراضية
 
         # التحقق من وجود المنتج مسبقاً (عبر qid أو الاسم)
         product = None
@@ -76,7 +75,6 @@ def sync_products_from_qomra():
             product = Product.query.filter_by(name=title).first()
             
         if product:
-            # تحديث البيانات الموجودة
             product.qid = qid or product.qid
             product.name = title
             product.price = price
@@ -87,7 +85,6 @@ def sync_products_from_qomra():
             product.description = description
             updated_count += 1
         else:
-            # إنشاء منتج جديد بكل التفاصيل المستوردة
             new_product = Product(
                 qid=qid,
                 name=title,
