@@ -7,7 +7,6 @@ MODULE_ICON = "fas fa-boxes"
 SHOW_IN_SUPPLIER = False  # لكي يظهر في لوحة القيادة المركزية للآدمن وليس للموردين
 
 # 2. قائمة الروابط الفرعية داخل الموديول
-# المفتاح هو Endpoint الـ Blueprint، والقيمة هي الاسم الظاهر في القائمة
 LINKS = {
     "admin_product_bp.manage_products": "قائمة المنتجات",
     "admin_product_bp.add_product": "إضافة منتج",
