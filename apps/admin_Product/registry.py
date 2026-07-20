@@ -1,52 +1,22 @@
-# coding: utf-8
-import logging
-from flask import Blueprint
+# apps/admin_Product/registry.py
 
-logger = logging.getLogger(__name__)
+MODULE_NAME = "admin_product"
 
-# 1. إنشاء الـ Blueprint
-admin_product_bp = Blueprint(
-    'admin_product_bp',
-    __name__,
-    template_folder='templates'
-)
-
-# --- إعدادات الموديول والقائمة الجانبية ---
-MODULE_NAME = "إدارة المنتجات"
-MODULE_ICON = "fas fa-box-open"
-SHOW_IN_SUPPLIER = False 
-
-LINKS = {
-    "admin_product_bp.manage_products": "قائمة المنتجات",
-    "admin_product_bp.add_product": "إضافة منتج"
+# تعريف موديول إدارة المنتجات للقيادة المركزية
+MODULE_CONFIG = {
+    "display_name": "إدارة المنتجات",
+    "icon": "fas fa-boxes",
+    "links": {
+        # المفتاح هو اسم الـ Endpoint كاملاً (اسم الـ Blueprint + اسم الدالة)
+        # والقيمة هي النص الذي يظهر في القائمة المنسدلة
+        "admin_product_bp.manage_products": "قائمة المنتجات",
+        "admin_product_bp.add_product": "إضافة منتج",
+    }
 }
 
-# --- 🎨 ثيم الألوان الموحد للموديول ---
-MODULE_THEME = {
-    "deep_purple": "#2d144d",
-    "royal_accent": "#4b0082",
-    "gold_accent": "#d4af37",
-    "royal_bg": "#f8f7fc"
-}
-
-# --- 💡 دالة التمرير التلقائي للألوان والإعدادات للقوالب ---
-@admin_product_bp.context_processor
-def inject_module_defaults():
-    return dict(
-        module_name=MODULE_NAME,
-        module_icon=MODULE_ICON,
-        show_in_supplier=SHOW_IN_SUPPLIER,
-        module_links=LINKS,
-        theme=MODULE_THEME
-    )
-
-def register_module(app):
-    """دالة تسجيل الـ Blueprint وتعيين المسار الموحد للمنتجات"""
-    try:
-        app.register_blueprint(admin_product_bp, url_prefix='/admin/products')
-        logger.info("✅ [Registry]: تم تسجيل موديول 'إدارة المنتجات' بنجاح.")
-    except Exception as e:
-        logger.error(f"❌ [Registry Error]: فشل تسجيل موديول 'إدارة المنتجات': {e}")
-
-# 2. استيراد كافة المسارات في النهاية لربطها بالـ Blueprint بعد تعريفه
-from . import routes, routes_add, routes_edit
+def register(registry_dict):
+    """
+    دالة تسجيل الموديول داخل قاموس الموديولات المسجلة (registered_modules)
+    """
+    registry_dict[MODULE_NAME] = MODULE_CONFIG
+    return registry_dict
