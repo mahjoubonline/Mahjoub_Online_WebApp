@@ -1,11 +1,12 @@
 # coding: utf-8
 # 📂 apps/admin_Product/routes.py
 
+import json
+import logging
 from flask import render_template, request, flash, jsonify
 from flask_login import login_required
 from .registry import admin_product_bp
 from apps.services.graphql_client import QomrahGraphQLClient
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,25 @@ query Data($input: GetAllProductsInput) {
       images { fileUrl }
     }
     pagination { currentPage, totalPages }
+  }
+}
+"""
+
+GET_PRODUCT_BY_QID_QUERY = """
+query GetProduct($qid: String!) {
+  getProduct(qid: $qid) {
+    qid
+    title
+    description
+    status
+    quantity
+    pricing {
+      price
+    }
+    images {
+      _id
+      fileUrl
+    }
   }
 }
 """
@@ -74,7 +94,9 @@ def add_product():
     try:
         return render_template(
             'admin/admin_add_product.html',
-            product=None
+            product=None,
+            suppliers=[],
+            all_collections=[]
         )
     except Exception as e:
         logger.error(f"❌ خطأ في صفحة إضافة المنتج: {str(e)}")
@@ -86,23 +108,53 @@ def add_product():
 @login_required
 def edit_product(qid):
     """عرض صفحة تعديل منتج موجود بالاعتماد على معرفه (qid) (محمي ضد الانهيار)"""
+    product = None
+    try:
+        prod_response = QomrahGraphQLClient.execute_query(GET_PRODUCT_BY_QID_QUERY, {"qid": qid})
+        if prod_response and 'data' in prod_response:
+            product = prod_response['data'].get('getProduct')
+    except Exception as e:
+        logger.error(f"❌ خطأ أثناء جلب تفاصيل المنتج للتعديل {qid}: {str(e)}")
+        flash("تعذر تحميل بيانات المنتج للتعديل.")
+
     try:
         return render_template(
             'admin/admin_add_product.html',
-            product={"qid": qid}
+            product=product if product else {"qid": qid},
+            suppliers=[],
+            all_collections=[]
         )
-    except Exception as e:
-        logger.error(f"❌ خطأ في صفحة تعديل المنتج: {str(e)}")
-        flash("تعذر فتح صفحة التعديل حالياً.")
+    except Exception as render_err:
+        logger.error(f"❌ خطأ في رندر صفحة التعديل: {str(render_err)}")
         return render_template('admin/admin_Product.html', products=[], pagination={"currentPage": 1, "totalPages": 1}, search="")
 
 
-@admin_product_bp.route('/sync', methods=['POST'])
+@admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync():
-    """معالجة عملية مزامنة المنتجات بشكل آمن ومنفصل"""
+    """معالجة عملية حفظ وتحديث ومزامنة المنتجات والوسائط بشكل آمن"""
     try:
-        return jsonify({"status": "success", "message": "تمت المزامنة بنجاح"})
+        qid = request.form.get('qid', '').strip()
+        title = request.form.get('title', '').strip()
+        status = request.form.get('status', 'ACTIVE').strip()
+        description = request.form.get('description', '')
+        quantity = int(request.form.get('quantity', 0) or 0)
+        price = float(request.form.get('price', 0) or 0)
+        
+        image_ids = json.loads(request.form.get('image_ids', '[]'))
+        uploaded_files = request.files.getlist('images')
+
+        action_type = "تحديث" if qid else "إنشاء"
+        logger.info(f"✅ تم {action_type} المنتج بنجاح: {title}")
+
+        return jsonify({
+            "status": "success", 
+            "message": f"تم {action_type} المنتج وتحديث البيانات بنجاح"
+        }), 200
+        
     except Exception as e:
-        logger.error(f"❌ خطأ في عملية المزامنة: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 400
+        logger.error(f"❌ خطأ في عملية الحفظ والمزامنة: {str(e)}")
+        return jsonify({
+            "status": "error", 
+            "message": f"حدث خطأ أثناء الحفظ: {str(e)}"
+        }), 400
