@@ -29,6 +29,9 @@
         .top-navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         @media (max-width: 992px) { .sidebar { right: -280px; } .sidebar.active { right: 0; } .main-wrapper { margin-right: 0; } }
     </style>
+
+    <!-- بلوك مرن لإضافة ملفات CSS خاصة بالصفحات عند الحاجة -->
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <aside class="sidebar" id="sidebar">
@@ -91,5 +94,8 @@
         }
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
     </script>
+
+    <!-- بلوك مرن لإضافة سكربتات JS خاصة بالصفحات عند الحاجة -->
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
