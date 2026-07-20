@@ -7,14 +7,44 @@
 <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
 
 <style>
-    :root { --dark-purple: #2d0b36; --royal-accent: #4b0082; }
-    .btn-custom { background-color: var(--dark-purple); color: #fff; transition: 0.2s; }
-    .btn-custom:hover { background-color: var(--royal-accent); color: #fff; }
-    .text-custom { color: var(--dark-purple); }
-    .card { border-radius: 15px; border: none; box-shadow: 0 4px 20px rgba(45, 11, 54, 0.06); margin-bottom: 24px; background: #ffffff; }
-    .ck-editor__editable { min-height: 220px; border-radius: 0 0 10px 10px !important; }
-    .ck-toolbar { border-radius: 10px 10px 0 0 !important; }
-    .section-title { border-right: 4px solid var(--dark-purple); padding-right: 12px; margin-bottom: 20px; color: var(--dark-purple); font-weight: 700; font-size: 1.1rem; }
+    :root { 
+        --dark-purple: #2d0b36; 
+        --royal-accent: #4b0082; 
+    }
+    .btn-custom { 
+        background-color: var(--dark-purple); 
+        color: #fff; 
+        transition: 0.2s; 
+    }
+    .btn-custom:hover { 
+        background-color: var(--royal-accent); 
+        color: #fff; 
+    }
+    .text-custom { 
+        color: var(--dark-purple); 
+    }
+    .card { 
+        border-radius: 15px; 
+        border: none; 
+        box-shadow: 0 4px 20px rgba(45, 11, 54, 0.06); 
+        margin-bottom: 24px; 
+        background: #ffffff; 
+    }
+    .ck-editor__editable { 
+        min-height: 220px; 
+        border-radius: 0 0 10px 10px !important; 
+    }
+    .ck-toolbar { 
+        border-radius: 10px 10px 0 0 !important; 
+    }
+    .section-title { 
+        border-right: 4px solid var(--dark-purple); 
+        padding-right: 12px; 
+        margin-bottom: 20px; 
+        color: var(--dark-purple); 
+        font-weight: 700; 
+        font-size: 1.1rem; 
+    }
     
     /* تنسيق معرض الصور */
     .image-preview-card {
@@ -71,15 +101,17 @@
     }
 </style>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4" dir="rtl">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <button onclick="history.back()" class="btn btn-outline-dark px-4 rounded-pill"><i class="fas fa-arrow-right me-2"></i> الرجوع</button>
-        <h4 class="m-0 text-custom fw-bold">{{ "تعديل المنتج" if product else "إضافة منتج جديد" }}</h4>
+        <button onclick="history.back()" class="btn btn-outline-dark px-4 rounded-pill">
+            <i class="fas fa-arrow-right ms-2"></i> الرجوع
+        </button>
+        <h4 class="m-0 text-custom fw-bold">{{ "تعديل المنتج" if product and product.title else "إضافة منتج جديد" }}</h4>
     </div>
 
     <form id="productForm">
         <div class="row">
-            <!-- الأعمدة الأساسية (اليسار/اليمين حسب الواجهة) -->
+            <!-- الأعمدة الأساسية -->
             <div class="col-lg-8">
                 <!-- 1. البيانات الأساسية والرابط -->
                 <div class="card p-4">
@@ -93,15 +125,15 @@
 
                     <div class="mb-3">
                         <label class="fw-bold small text-muted mb-1">رابط المنتج (Slug)</label>
-                        <div class="input-group">
+                        <div class="input-group" dir="ltr">
+                            <input type="text" id="slug" class="form-control text-end" value="{{ product.slug or '' }}" placeholder="product-url-slug">
                             <span class="input-group-text bg-light text-muted">/products/</span>
-                            <input type="text" id="slug" class="form-control" value="{{ product.slug or '' }}" placeholder="product-url-slug">
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="fw-bold small text-muted mb-1">الوصف الاحترافي</label>
-                        <textarea id="editor">{{ product.description | safe if product else '' }}</textarea>
+                        <textarea id="editor">{{ product.description | safe if product and product.description else '' }}</textarea>
                     </div>
                 </div>
 
@@ -112,9 +144,9 @@
                         <div id="existing-images-container" class="d-flex flex-wrap gap-2 mb-3">
                             {% if product and product.images %}
                                 {% for img in product.images %}
-                                <div class="thumb-container" data-id="{{ img._id }}">
-                                    <img src="{{ img.fileUrl }}" class="thumb-img" alt="Product Image">
-                                    <button type="button" class="thumb-delete" onclick="removeExistingImage(this, '{{ img._id }}')">&times;</button>
+                                <div class="thumb-container" data-id="{{ img._id if img is mapping and img._id is defined else loop.index0 }}">
+                                    <img src="{{ img.fileUrl if img is mapping and img.fileUrl is defined else img }}" class="thumb-img" alt="Product Image">
+                                    <button type="button" class="thumb-delete" onclick="removeExistingImage(this, '{{ img._id if img is mapping and img._id is defined else loop.index0 }}')">&times;</button>
                                 </div>
                                 {% endfor %}
                             {% endif %}
@@ -136,15 +168,15 @@
                     <div class="row">
                         <div class="col-md-3 mb-3">
                             <label class="fw-bold small text-muted mb-1">سعر التكلفة</label>
-                            <input type="number" id="cost_price" class="form-control" step="0.01" value="{{ product.pricing.cost_price or '' }}">
+                            <input type="number" id="cost_price" class="form-control" step="0.01" value="{{ product.pricing.costPrice if product and product.pricing and product.pricing.costPrice is defined else (product.pricing.originalPrice if product and product.pricing and product.pricing.originalPrice is defined else '') }}">
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="fw-bold small text-muted mb-1">السعر قبل الخصم</label>
-                            <input type="number" id="compare_price" class="form-control" step="0.01" value="{{ product.pricing.compare_price or '' }}">
+                            <input type="number" id="compare_price" class="form-control" step="0.01" value="{{ product.pricing.compareAtPrice if product and product.pricing and product.pricing.compareAtPrice is defined else '' }}">
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="fw-bold small text-muted mb-1">السعر النهائي</label>
-                            <input type="number" id="price" class="form-control" step="0.01" value="{{ product.pricing.price or '' }}" required>
+                            <input type="number" id="price" class="form-control" step="0.01" value="{{ product.pricing.price if product and product.pricing and product.pricing.price is defined else '' }}" required>
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="fw-bold small text-muted mb-1">الكمية المتاحة</label>
@@ -174,8 +206,9 @@
                     <div class="mb-3">
                         <label class="fw-bold small text-muted mb-1">المورد المسؤول</label>
                         <select id="supplier-select" class="form-select">
+                            <option value="">اختر المورد...</option>
                             {% for sup in suppliers %}
-                            <option value="{{ sup.id }}" {% if product and sup.id == mapping.selected_supplier_id|int %}selected{% endif %}>{{ sup.trade_name }}</option>
+                            <option value="{{ sup.id }}" {% if product and (product.supplier_id == sup.id or product.supplier_id|string == sup.id|string) %}selected{% endif %}>{{ sup.trade_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -184,13 +217,13 @@
                         <label class="fw-bold small text-muted mb-1">المجموعات والتصنيفات</label>
                         <select id="collections-select" multiple>
                             {% for col in all_collections %}
-                            <option value="{{ col.qid }}" {% if product and col.qid in product.collection_ids %}selected{% endif %}>{{ col.title }}</option>
+                            <option value="{{ col.qid }}" {% if product and product.collection_ids and col.qid in product.collection_ids %}selected{% endif %}>{{ col.title }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
-                    <button type="submit" class="btn btn-custom w-100 py-3 fw-bold shadow-sm rounded-pill">
-                        <i class="fas fa-save me-2"></i> حفظ المزامنة والتحديث
+                    <button type="submit" class="btn btn-custom w-100 py-3 fw-bold shadow-sm rounded-pill" id="saveBtn">
+                        <i class="fas fa-save ms-2"></i> حفظ المزامنة والتحديث
                     </button>
                 </div>
             </div>
@@ -207,8 +240,8 @@
         shouldNotGroupWhenFull: true
     }).then(newEditor => { editor = newEditor; });
 
-    new Choices(document.getElementById('supplier-select'));
-    new Choices(document.getElementById('collections-select'), { removeItemButton: true });
+    new Choices(document.getElementById('supplier-select'), { removeItemButton: true, searchEnabled: true });
+    new Choices(document.getElementById('collections-select'), { removeItemButton: true, searchEnabled: true });
 
     // تتبع معرّفات الصور الحالية المتبقية
     let activeImageIds = [];
@@ -250,6 +283,9 @@
 
     document.getElementById('productForm').addEventListener('submit', async function(e) {
         e.preventDefault();
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ms-2"></i> جاري الحفظ...';
 
         const formData = new FormData();
         formData.append('qid', document.getElementById('qid').value);
@@ -257,7 +293,7 @@
         formData.append('slug', document.getElementById('slug').value);
         formData.append('status', document.getElementById('status').value);
         formData.append('supplier_id', document.getElementById('supplier-select').value);
-        formData.append('description', editor.getData());
+        formData.append('description', editor ? editor.getData() : '');
         formData.append('quantity', document.getElementById('quantity').value || 0);
         formData.append('variants', document.getElementById('variants').value);
         
@@ -290,7 +326,7 @@
                     text: result.message,
                     confirmButtonColor: '#2d0b36'
                 }).then(() => {
-                    window.location.href = '/admin/products/';
+                    window.location.href = "{{ url_for('admin_product_bp.manage_products') }}";
                 });
             } else {
                 Swal.fire({
@@ -308,6 +344,9 @@
                 text: 'تعذر الاتصال بالخادم',
                 confirmButtonColor: '#2d0b36'
             });
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save ms-2"></i> حفظ المزامنة والتحديث';
         }
     });
 </script>
