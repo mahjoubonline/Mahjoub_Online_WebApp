@@ -9,7 +9,7 @@ from apps.services.graphql_client import QomrahGraphQLClient
 
 logger = logging.getLogger(__name__)
 
-# استعلام خفيف ومخصص لواجهة العرض فقط
+# استعلام خفيف ومخصص لواجهة العرض بناءً على الحقول المستخدمة في القالب
 GET_ALL_PRODUCTS_QUERY = """
 query Data($input: GetAllProductsInput) {
     findAllProducts(input: $input) {
@@ -28,7 +28,7 @@ query Data($input: GetAllProductsInput) {
 @admin_product_bp.route('/', methods=['GET'])
 @login_required
 def manage_products():
-    """راوتر واجهة العرض: يجلب فقط الحقول البسيطة والأساسية الظاهرة في شبكة المنتجات."""
+    """راوتر واجهة عرض المنتجات والبحث والتنقل بين الصفحات."""
     page = request.args.get('page', 1, type=int)
     search = request.args.get('title', '').strip()
     
