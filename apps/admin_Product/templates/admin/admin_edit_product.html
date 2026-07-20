@@ -69,7 +69,6 @@
         background: #f5f0fc; 
     }
 
-    /* إصلاح مظهر محرر النصوص ليطابق الهوية البصرية */
     .ck-editor__editable_inline {
         min-height: 240px;
         border-radius: 0 0 12px 12px !important;
@@ -95,7 +94,6 @@
         box-shadow: 0 0 0 0.2rem rgba(75, 0, 130, 0.15);
     }
 
-    /* تخصيص مكتبة Choices.js لتتطابق مع الألوان */
     .choices__inner {
         border-radius: 10px !important;
         border: 1px solid #d0c5e2 !important;
@@ -163,7 +161,7 @@
                     </div>
                 </div>
 
-                <!-- صور المنتج (عرض شبكي متناسق) -->
+                <!-- صور المنتج -->
                 <div class="card">
                     <h5 class="section-title"><i class="fas fa-images"></i> معرض صور المنتج</h5>
                     
@@ -181,9 +179,9 @@
                             <div class="col-md-3 col-6 position-relative" id="img-card-{{ loop.index0 }}">
                                 <div class="card border shadow-sm p-1 h-100 text-center bg-light mb-0" style="border-radius: 10px;">
                                     <div class="ratio ratio-1x1 bg-white rounded overflow-hidden mb-1">
-                                        <img src="{{ img.fileUrl if img.fileUrl is mapping else img }}" class="w-100 h-100" style="object-fit: cover;">
+                                        <img src="{{ img.fileUrl if img is mapping and img.fileUrl is defined else img }}" class="w-100 h-100" style="object-fit: cover;">
                                     </div>
-                                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1 w-100" onclick="removeExistingImage(this, '{{ img.fileUrl if img.fileUrl is mapping else img }}')">
+                                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1 w-100" onclick="removeExistingImage(this, '{{ img.fileUrl if img is mapping and img.fileUrl is defined else img }}')">
                                         <i class="fas fa-trash-alt"></i> حذف
                                     </button>
                                 </div>
@@ -199,21 +197,21 @@
                     <div class="row price-box mb-3">
                         <div class="col-md-4 mb-2 mb-md-0">
                             <label class="form-label small fw-bold">سعر التكلفة</label>
-                            <input type="number" step="0.01" class="form-control" id="original_price" value="{{ product.pricing.costPrice if product and product.pricing else 0 }}">
+                            <input type="number" step="0.01" class="form-control" id="original_price" value="{{ product.pricing.costPrice if product and product.pricing and product.pricing.costPrice is defined else (product.pricing.originalPrice if product and product.pricing and product.pricing.originalPrice is defined else 0) }}">
                         </div>
                         <div class="col-md-4 mb-2 mb-md-0">
                             <label class="form-label small fw-bold">السعر قبل الخصم</label>
-                            <input type="number" step="0.01" class="form-control" id="compare_at_price" value="{{ product.pricing.compareAtPrice if product and product.pricing else 0 }}">
+                            <input type="number" step="0.01" class="form-control" id="compare_at_price" value="{{ product.pricing.compareAtPrice if product and product.pricing and product.pricing.compareAtPrice is defined else 0 }}">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">السعر النهائي</label>
-                            <input type="number" step="0.01" class="form-control" id="price" value="{{ product.pricing.price if product and product.pricing else 0 }}">
+                            <input type="number" step="0.01" class="form-control" id="price" value="{{ product.pricing.price if product and product.pricing and product.pricing.price is defined else 0 }}">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">رمز التخزين (SKU)</label>
-                            <input type="text" class="form-control text-start" dir="ltr" id="sku" value="{{ product.sku if product else '' }}">
+                            <input type="text" class="form-control text-start" dir="ltr" id="sku" value="{{ product.sku if product and product.sku is defined else '' }}">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">الكمية المتاحة</label>
@@ -221,7 +219,7 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">الوزن (كجم)</label>
-                            <input type="number" step="0.1" class="form-control" id="weight" value="{{ product.weight if product else 0 }}">
+                            <input type="number" step="0.1" class="form-control" id="weight" value="{{ product.weight if product and product.weight is defined else 0 }}">
                         </div>
                     </div>
                 </div>
@@ -300,7 +298,6 @@
     let removedImagesList = [];
 
     document.addEventListener("DOMContentLoaded", function() {
-        // تهيئة محرر النصوص بشكل دقيق مع دعم اللغة العربية
         ClassicEditor.create(document.querySelector('#editor'), {
             language: 'ar'
         })
@@ -313,6 +310,12 @@
 
         supplierChoices = new Choices('#supplier-select', { removeItemButton: true, searchEnabled: true });
         collectionsChoices = new Choices('#collections-select', { removeItemButton: true, searchEnabled: true });
+
+        // تعبئة المتغيرات القادمة من الباك اند إن وجدت
+        const existingVariants = {{ product.variants | tojson if product and product.variants else '[]' }};
+        if (Array.isArray(existingVariants)) {
+            existingVariants.forEach(v => addVariantRow(v));
+        }
     });
 
     function previewImages(input) {
@@ -382,7 +385,7 @@
         formData.append('price', document.getElementById('price').value);
 
         const selectedCols = Array.from(document.getElementById('collections-select').selectedOptions).map(opt => opt.value);
-        formData.append('collections', JSON.stringify(selectedCols));
+        formData.append('collection_ids', JSON.stringify(selectedCols));
 
         const variants = [];
         document.querySelectorAll('#variantsTableBody tr').forEach(row => {
@@ -394,7 +397,6 @@
             });
         });
         formData.append('variants', JSON.stringify(variants));
-
         formData.append('removed_images', JSON.stringify(removedImagesList));
 
         uploadedFilesList.forEach(file => {
@@ -402,7 +404,7 @@
         });
 
         try {
-            const response = await fetch('/admin/products/update-sync', {
+            const response = await fetch('/admin/products/save-sync', {
                 method: 'POST',
                 body: formData
             });
