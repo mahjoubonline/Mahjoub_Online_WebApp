@@ -1,10 +1,13 @@
 # coding: utf-8
 # 📂 apps/admin_Product/routes.py
 
+import uuid
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from apps.extensions import db
 from apps.models.product_db import Product
+from apps.models.product_supplier_map import ProductSupplierMapping
+from apps.models.supplier import Supplier
 
 # تعريف الـ Blueprint باسم admin_product_bp ليتوافق مع url_for في القالب والـ Registry
 admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
@@ -48,7 +51,7 @@ def manage_products():
 @login_required
 def add_product():
     """
-    مسار إضافة وحفظ منتج جديد مباشرة في قاعدة البيانات مع دعم الحقول الإضافية.
+    مسار إضافة وحفظ منتج جديد مباشرة في قاعدة البيانات مع توليد qid وربطه بالمورد الافتراضي.
     """
     if request.method == 'POST':
         name = request.form.get('name')
@@ -63,7 +66,11 @@ def add_product():
             return render_template('admin/add_product.html')
 
         try:
+            # توليد qid فريد محلياً للمنتج الجديد لضمان عمل مسار التعديل بدقة
+            local_qid = f"local_{uuid.uuid4().hex[:12]}"
+
             new_product = Product(
+                qid=local_qid,
                 name=name,
                 price=float(price),
                 description=description,
@@ -72,9 +79,22 @@ def add_product():
                 image_url=image_url
             )
             db.session.add(new_product)
+
+            # جلب المورد الافتراضي لربط المنتج به سيادياً
+            default_supplier = Supplier.query.first()
+            supplier_id = default_supplier.id if default_supplier else 1
+
+            # إنشاء سجل الربط السيادي للمنتج اليدوي
+            new_mapping = ProductSupplierMapping(
+                product_qid=local_qid,
+                supplier_id=supplier_id,
+                status='active'
+            )
+            db.session.add(new_mapping)
+
             db.session.commit()
 
-            flash('تمت إضافة وحفظ المنتج في القاعدة بنجاح!', 'success')
+            flash('تمت إضافة وحفظ المنتج وربطه بنجاح!', 'success')
             return redirect(url_for('admin_product_bp.manage_products'))
         
         except Exception as e:
