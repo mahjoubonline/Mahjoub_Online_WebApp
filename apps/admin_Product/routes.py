@@ -1,76 +1,81 @@
 # coding: utf-8
 # 📂 apps/admin_Product/routes.py
 
+import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from apps.services.product_sync_service import ProductSyncService
 
-# إنشاء Blueprint خاص بالمنتجات مع تحديد مجلد القوالب الصحيح
+# تعريف الـ Blueprint للمنتجات
 admin_product_bp = Blueprint(
-    "admin_product_bp",
+    'admin_product_bp',
     __name__,
-    url_prefix="/admin/products",
-    template_folder="templates"  # هذا يضمن أن Flask يبحث داخل apps/admin_Product/templates
+    template_folder='templates',
+    static_folder='static'
 )
 
-# 🟣 صفحة إدارة المنتجات (عرض مباشر من الـ API)
-@admin_product_bp.route("/", methods=["GET"])
+@admin_product_bp.route('/products', methods=['GET'])
 def manage_products():
-    search = request.args.get("title", "")
-    page = int(request.args.get("page", 1))
-
-    service = ProductSyncService(token="YOUR_API_TOKEN")
-    products_response = service.fetch_products(page=page, limit=20)
-
-    # 🛡️ تحقق من الاستجابة
-    products = products_response.get("data", [])
-    pagination = products_response.get("pagination", None)
-
-    if not products:
-        flash("⚠️ لم يتم جلب أي منتجات من المتجر الخارجي أو حدث خطأ في الاتصال.", "warning")
+    """عرض قائمة المنتجات مع دعم الترقيم والبحث"""
+    page = request.args.get('page', 1, type=int)
+    search_query = request.args.get('title', '', type=str)
+    
+    token = os.environ.get('QUMRA_API_KEY') or os.environ.get('GRAPHQL_ENDPOINT')
+    client = ProductSyncService(token=token)
+    
+    # جلب المنتجات من الخادم الخارجي عبر GraphQL
+    response_data = client.fetch_products(page=page, limit=20)
+    
+    products = response_data.get("data", [])
+    pagination = response_data.get("pagination", {"currentPage": page, "totalPages": 1, "limit": 20})
+    
+    # تصفية محلية للبحث بالاسم إذا لزم الأمر أو تمريرها للـ API
+    if search_query:
+        products = [p for p in products if search_query.lower() in p.get('title', '').lower()]
 
     return render_template(
-        "admin/admin_Product.html",
+        'admin/admin_Product.html',
         products=products,
-        pagination=pagination,
-        search=search
+        search=search_query,
+        pagination=pagination
     )
 
-# 🟣 صفحة إضافة منتج يدوي (عرض فقط، بدون حفظ داخلي)
-@admin_product_bp.route("/add", methods=["GET", "POST"])
-def add_product():
-    if request.method == "POST":
-        flash("تمت إضافة المنتج بنجاح ✅ (عرض فقط، لا حفظ داخلي)", "success")
-        return redirect(url_for("admin_product_bp.manage_products"))
-    return render_template("admin/add_product.html")
-
-# 🟣 صفحة تعديل منتج (عرض مباشر من الـ API)
-@admin_product_bp.route("/edit/<string:qid>", methods=["GET", "POST"])
-def edit_product(qid):
-    service = ProductSyncService(token="YOUR_API_TOKEN")
-    product_response = service.fetch_product_by_qid(qid)
-
-    product = None
-    if product_response:
-        product = product_response.get("data", None)
-    else:
-        flash("⚠️ لم يتم العثور على المنتج أو حدث خطأ في الاتصال.", "warning")
-
-    if request.method == "POST":
-        flash("تم تعديل المنتج بنجاح ✅ (عرض فقط، لا حفظ داخلي)", "success")
-        return redirect(url_for("admin_product_bp.manage_products"))
-
-    return render_template("admin/edit_product.html", product=product)
-
-# 🟣 زر المزامنة (من الـ Modal) - مزامنة لحظية
-@admin_product_bp.route("/sync", methods=["POST"])
+@admin_product_bp.route('/sync-products', methods=['POST'])
 def sync_products():
-    service = ProductSyncService(token="YOUR_API_TOKEN")
-    products_response = service.fetch_products(page=1, limit=100)  # جلب مباشر من الـ API
+    """مسار تنفيذ المزامنة عند النقر على الزر في نافذة الـ Modal"""
+    try:
+        token = os.environ.get('QUMRA_API_KEY') or os.environ.get('GRAPHQL_ENDPOINT')
+        client = ProductSyncService(token=token)
+        
+        raw_data = client.fetch_products(page=1, limit=50)
+        
+        if not raw_data or "data" not in raw_data:
+            flash("تعذر جلب المنتجات من الخادم الخارجي أثناء المزامنة.", "danger")
+            return redirect(url_for('admin_product_bp.manage_products'))
 
-    products = products_response.get("data", [])
-    if not products:
-        flash("⚠️ فشلت المزامنة اللحظية مع المتجر الخارجي.", "danger")
-    else:
-        flash(f"✅ تمت المزامنة بنجاح - تم جلب {len(products)} منتج.", "success")
+        count = len(raw_data.get("data", []))
+        flash(f"تمت مزامنة البيانات بنجاح وجلب {count} منتجاً.", "success")
+        
+    except Exception as e:
+        flash(f"حدث خطأ أثناء الاتصال بالمزامنة: {str(e)}", "danger")
 
-    return redirect(url_for("admin_product_bp.manage_products"))
+    return redirect(url_for('admin_product_bp.manage_products'))
+
+@admin_product_bp.route('/products/add', methods=['GET', 'POST'])
+def add_product():
+    """مسار إضافة منتج جديد"""
+    # منطق إضافة المنتج هنا
+    return render_template('admin/add_product.html')
+
+@admin_product_bp.route('/products/edit/<qid>', methods=['GET', 'POST'])
+def edit_product(qid):
+    """مسار تعديل المنتج باستخدام الـ qid الخاص به"""
+    token = os.environ.get('QUMRA_API_KEY') or os.environ.get('GRAPHQL_ENDPOINT')
+    client = ProductSyncService(token=token)
+    
+    product = client.fetch_product_by_qid(qid)
+    
+    if not product:
+        flash("المنتج المطلوب غير موجود.", "danger")
+        return redirect(url_for('admin_product_bp.manage_products'))
+        
+    return render_template('admin/edit_product.html', product=product)
