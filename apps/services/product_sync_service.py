@@ -8,31 +8,42 @@ from apps.services.graphql_client import QomrahGraphQLClient
 
 def sync_products_from_qomra():
     """
-    خدمة مزامنة المنتجات باستخدام الكلاينت المركزي الموحد QomrahGraphQLClient
+    خدمة مزامنة المنتجات مع استعلام GraphQL المصحح طبقاً لمخطط السيرفر
     """
+    # استعلام مصحح يراعي وجود الغلاف ProductsResponse وتفريغ حقل العملة
     query = """
     query {
         findAllProducts {
-            id
-            title
-            price
-            currency
-            quantity
-            sku
-            image_url
-            description
+            data {
+                id
+                title
+                price
+                currency {
+                    code
+                }
+                quantity
+                sku
+                image_url
+                description
+            }
         }
     }
     """
 
-    # استخدام الكلاينت المركزي المنظم لتنفيذ الاستعلام بأمان
     result = QomrahGraphQLClient.execute_query(query)
     
     if not result:
         raise Exception("فشل الاتصال بخادم قمرة أو تعذر جلب البيانات عبر GraphQL.")
 
     data = result.get('data', {})
-    products_data = data.get('findAllProducts', [])
+    products_response = data.get('findAllProducts', {})
+    
+    # جلب قائمة المنتجات من داخل الغلاف (دعم data أو products أو المصفوفة المباشرة)
+    products_data = []
+    if isinstance(products_response, dict):
+        products_data = products_response.get('data') or products_response.get('products') or []
+    elif isinstance(products_response, list):
+        products_data = products_response
 
     if not products_data:
         return "تمت المزامنة بنجاح، لكن لم يتم العثور على منتجات لجلبها."
@@ -45,7 +56,14 @@ def sync_products_from_qomra():
 
         title = item.get('title') or item.get('name') or 'منتج بدون اسم'
         price = float(item.get('price') or 0)
-        currency = item.get('currency') or 'SAR'
+        
+        # استخراج رمز العملة سواء كانت كائناً أو نصاً
+        currency_raw = item.get('currency')
+        if isinstance(currency_raw, dict):
+            currency = currency_raw.get('code') or currency_raw.get('symbol') or 'SAR'
+        else:
+            currency = currency_raw or 'SAR'
+
         quantity = int(item.get('quantity') or 0)
         sku = item.get('sku') or ''
         image_url = item.get('image_url') or item.get('image') or ''
