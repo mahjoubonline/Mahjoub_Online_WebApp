@@ -16,10 +16,17 @@ def edit_product(qid):
     """عرض صفحة تعديل المنتج مع جلب بياناته الأساسية والموردين والمجموعات"""
     sync_service = ProductSyncService(token=GRAPHQL_TOKEN)
     
+    print(f"==================================================")
+    print(f"DEBUG: Trying to fetch product with QID: {qid}")
+    
     # جلب بيانات المنتج المحدد بالـ qid باستخدام الاستعلام الشامل
     product = sync_service.fetch_product_by_qid(qid)
+    
+    print(f"DEBUG: Fetched product result: {product}")
+    print(f"==================================================")
+
     if not product:
-        flash("المنتج المطلوب غير موجود أو حدث خطأ في جلب بياناته.", "danger")
+        flash(f"المنتج المطلوب غير موجود أو فشل جلب بياناته للـ QID: {qid}", "danger")
         return redirect(url_for('admin_product_bp.manage_products'))
 
     # جلب قائمة المجموعات والموردين (يمكن ربطها بقاعدتك المحلية أو خدمات الـ API)
