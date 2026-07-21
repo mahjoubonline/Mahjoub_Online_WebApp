@@ -8,15 +8,13 @@ from apps.services.product_sync_service import ProductSyncService
 
 admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
 
-# مفتاح أو توكن الاتصال بالخادم المركزي (يُفضل جذبه من متغيرات البيئة)
 GRAPHQL_TOKEN = os.environ.get('QUMRA_API_KEY', 'YOUR_ADMIN_API_TOKEN') 
 
 @admin_product_bp.route('/products/edit', methods=['GET'])
 def edit_product():
-    """عرض صفحة تعديل المنتج مع جلب بياناته الأساسية والموردين والمجموعات وتنصيب معالجة الـ QID المزدوج"""
+    """عرض صفحة تعديل المنتج وتصحيح معرّف الـ QID المزدوج تلقائياً"""
     raw_qid = request.args.get('qid')
     
-    # تنظيف الـ QID في حال تم تكرار بادئة qid= أو qid://
     if raw_qid:
         if raw_qid.startswith('qid=qid='):
             qid = raw_qid.replace('qid=qid=', 'qid://')
@@ -26,36 +24,25 @@ def edit_product():
             qid = raw_qid
     else:
         qid = None
-
-    print(f"==================================================")
-    print(f"DEBUG RAW QID: {raw_qid} | CLEANED QID: {qid}")
-    print(f"==================================================")
     
     if not qid:
         flash("معرف المنتج (qid) مفقود.", "danger")
         return redirect(url_for('admin_product_bp.manage_products'))
     
     sync_service = ProductSyncService(token=GRAPHQL_TOKEN)
-    
-    # جلب بيانات المنتج المحدد بالـ qid باستخدام الاستعلام الشامل
     product = sync_service.fetch_product_by_qid(qid)
-    
-    print(f"DEBUG: Fetched product result: {product}")
-    print(f"==================================================")
 
     if not product:
-        # إظهار رسالة واضحة على الشاشة لتشخيص سبب فشل الجلب بدلاً من التوجيه الصامت
         return f"""
         <div style="direction: rtl; font-family: Tahoma; padding: 30px; text-align: center;">
             <h2 style="color: #d9534f;">فشل جلب بيانات المنتج!</h2>
             <p>الـ QID المعالج هو: <b>{qid}</b></p>
-            <p style="color: #666;">الرجاء مراجعة سجلات الـ Logs في سيرفر Render لمعرفة استجابة الـ GraphQL وتصحيحها.</p>
+            <p style="color: #666;">الرجاء مراجعة سجلات الـ Logs في سيرفر Render لمعرفة استجابة الـ GraphQL.</p>
             <br>
             <a href="{url_for('admin_product_bp.manage_products')}" style="background: #2d0b36; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">الرجوع لقائمة المنتجات</a>
         </div>
         """, 400
 
-    # جلب قائمة المجموعات والموردين (يمكن ربطها بقاعدتك المحلية أو خدمات الـ API)
     all_collections = [
         {"qid": "col_1", "title": "المجموعة العامة"},
         {"qid": "col_2", "title": "عروض العيد"},
@@ -77,7 +64,7 @@ def edit_product():
 
 @admin_product_bp.route('/products/save-sync', methods=['POST'])
 def save_sync_product():
-    """معالجة وحفظ بيانات التعديل والمزامنة (AJAX Endpoint) عبر الـ Mutation"""
+    """معالجة وحفظ البيانات وتحديث الصور والمتغيرات عبر الـ API"""
     try:
         qid = request.form.get('qid')
         if not qid:
@@ -88,8 +75,8 @@ def save_sync_product():
         description = request.form.get('description', '')
         status = request.form.get('status', 'DRAFT')
         sku = request.form.get('sku', '')
+        supplier_id = request.form.get('supplier_id')
         
-        # الأسعار
         try:
             price = float(request.form.get('price', 0))
             compare_at_price = float(request.form.get('compare_at_price', 0))
@@ -97,48 +84,26 @@ def save_sync_product():
         except ValueError:
             price, compare_at_price, cost_price = 0.0, 0.0, 0.0
 
-        # الأبعاد والوزن
         try:
+            quantity = int(request.form.get('quantity', 0))
             weight_val = float(request.form.get('weight', 0))
         except ValueError:
-            weight_val = 0.0
+            quantity, weight_val = 0, 0.0
 
-        # تجهيز الهياكل المطلوبة للـ Mutation بدقة
-        info = {
-            "title": title,
-            "slug": slug,
-            "status": status
-        }
-        
-        pricing = {
-            "price": price,
-            "compareAtPrice": compare_at_price,
-            "costPrice": cost_price,
-            "currency": "YER" # العملة المعتمدة
-        }
-        
-        dims = {
-            "length": 0,
-            "width": 0,
-            "height": 0,
-            "unit": "cm"
-        }
-        
-        weight = {
-            "value": weight_val,
-            "unit": "kg"
-        }
-        
-        ident = {
-            "sku": sku
-        }
+        info = {"title": title, "slug": slug, "status": status}
+        pricing = {"price": price, "compareAtPrice": compare_at_price, "costPrice": cost_price, "currency": "YER"}
+        dims = {"length": 0, "width": 0, "height": 0, "unit": "cm"}
+        weight = {"value": weight_val, "unit": "kg"}
+        ident = {"sku": sku}
 
-        # فك تشفير المجموعات والمتغيرات المختارة
         collection_ids = json.loads(request.form.get('collection_ids', '[]') or '[]')
         variants = json.loads(request.form.get('variants', '[]') or '[]')
+        removed_images = json.loads(request.form.get('removed_images', '[]') or '[]')
+        new_images = request.files.getlist('images')
 
-        # استدعاء خدمة المزامنة لتنفيذ الـ Mutation المعتمد
         sync_service = ProductSyncService(token=GRAPHQL_TOKEN)
+        
+        # تنفيذ عملية التحديث الشاملة للمنتج
         success = sync_service.update_product_data(
             qid=qid,
             info=info,
@@ -146,26 +111,23 @@ def save_sync_product():
             dims=dims,
             weight=weight,
             ident=ident,
-            desc=description
+            desc=description,
+            supplier_id=supplier_id,
+            collection_ids=collection_ids,
+            variants=variants,
+            removed_images=removed_images,
+            new_images=new_images,
+            quantity=quantity
         )
 
         if not success:
-            return jsonify({
-                "status": "error",
-                "message": "فشل حفظ التعديلات على الخادم المركزي."
-            }), 500
+            return jsonify({"status": "error", "message": "فشل حفظ وتحديث التعديلات على الخادم المركزي."}), 500
 
-        return jsonify({
-            "status": "success",
-            "message": "تم حفظ وتحديث المنتج ومزامنة بياناته بنجاح!"
-        })
+        return jsonify({"status": "success", "message": "تم حفظ وتحديث المنتج ومزامنة بياناته بنجاح!"})
 
     except Exception as e:
         print(f"Error saving product sync: {e}")
-        return jsonify({
-            "status": "error",
-            "message": f"حدث خطأ أثناء معالجة الطلب: {str(e)}"
-        }), 500
+        return jsonify({"status": "error", "message": f"حدث خطأ أثناء معالجة الطلب: {str(e)}"}), 500
 
 
 @admin_product_bp.route('/products/manage', methods=['GET'])
@@ -175,7 +137,6 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     title_query = request.args.get('title', '', type=str)
     
-    # جلب المنتجات مع دعم البحث المباشر بالعنوان
     result = sync_service.fetch_products(page=page, limit=20, title=title_query)
     
     return render_template(
