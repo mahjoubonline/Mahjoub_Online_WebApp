@@ -14,7 +14,7 @@
                     <p id="sync-status" class="text-center small">جاري التحديث...</p>
                 </div>
                 <div id="sync-info">
-                    <p>سيتم جلب أحدث المنتجات مباشرة من "قمرة". هل تريد تحديث القائمة الآن؟</p>
+                    <p>سيتم جلب أحدث المنتجات ديناميكياً مباشرة من "قمرة". هل تريد تحديث القائمة الآن؟</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -36,7 +36,7 @@
         document.getElementById('sync-progress-area').classList.remove('d-none');
         
         progressBar.style.width = '30%';
-        statusText.innerText = "جاري الاتصال بالسيرفر لبدء المزامنة...";
+        statusText.innerText = "جاري الاتصال بالسيرفر وجلب الدفعات ديناميكياً...";
 
         try {
             // جلب الـ CSRF Token من الميتا تاغ
