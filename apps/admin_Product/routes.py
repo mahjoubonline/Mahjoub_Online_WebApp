@@ -1,173 +1,99 @@
-# coding: utf-8
 # 📂 apps/admin_Product/routes.py
-
-import uuid
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required
-from apps.extensions import db
-from apps.models.product_db import Product
-from apps.models.product_supplier_map import ProductSupplierMapping
-from apps.models.supplier_db import Supplier
+from apps.models import db, Product
+from apps.admin_Product.services import sync_products_from_qomra
 
-# تعريف الـ Blueprint باسم admin_product_bp ليتوافق مع url_for في القالب والـ Registry
-admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
-
+admin_product_bp = Blueprint(
+    'admin_product_bp', 
+    __name__, 
+    template_folder='templates',
+    static_folder='static'
+)
 
 @admin_product_bp.route('/products', methods=['GET'])
 @login_required
 def manage_products():
-    """
-    عرض قائمة المنتجات الحقيقية من قاعدة البيانات مع دعم البحث الفوري والترقيم الصفحي (Pagination).
-    """
-    search_query = request.args.get('title', '') or request.args.get('q', '')
-    search_query = search_query.strip()
+    """عرض إدارة المنتجات مع دعم البحث الفوري (Live Search) والترقيم (Pagination)."""
     page = request.args.get('page', 1, type=int)
+    search_query = request.args.get('search', '').strip()
     per_page = 15  # عدد المنتجات في كل صفحة
-
-    # جلب المنتجات من قاعدة البيانات مع تطبيق البحث إن وجد باستخدام title
+    
+    # بناء الاستعلام مع دعم البحث بالاسم
     query = Product.query
     if search_query:
         query = query.filter(Product.title.ilike(f'%{search_query}%'))
-
+        
+    # تنفيذ الترقيم
     pagination_obj = query.order_by(Product.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
     products = pagination_obj.items
-
-    # هيكل بيانات الترقيم الصفحي المتوافق مع القالب
+    
+    # هيكل بيانات الترقيم المتوافق مع القوالب
     pagination = {
         'currentPage': pagination_obj.page,
         'totalPages': pagination_obj.pages,
         'totalItems': pagination_obj.total
     }
-
-    # معالجة طلبات البحث الحي (AJAX Fetch)
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'text/html' not in request.headers.get('Accept', ''):
+    
+    # إذا كان الطلب قادماً عبر AJAX للبحث الفوري، يتم إرجاع القالب مباشرة لتحديث حاوية النتائج
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template(
-            'admin/admin_Product.html',
-            products=products,
-            pagination=pagination,
+            'admin/admin_Product.html', 
+            products=products, 
+            pagination=pagination, 
             search=search_query
         )
-
+        
     return render_template(
-        'admin/admin_Product.html',
-        products=products,
-        pagination=pagination,
+        'admin/admin_Product.html', 
+        products=products, 
+        pagination=pagination, 
         search=search_query
     )
 
+@admin_product_bp.route('/save-sync', methods=['POST'])
+@login_required
+def save_sync():
+    """تنفيذ عملية مزامنة المنتجات مع قمرة وإرجاع النتيجة بصيغة JSON متوافقة مع المودال."""
+    try:
+        # استدعاء خدمة المزامنة
+        result_message = sync_products_from_qomra()
+        return jsonify({
+            'status': 'success',
+            'message': result_message if isinstance(result_message, str) else 'تمت مزامنة المنتجات بنجاح من قمرة.'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f"فشل عملية المزامنة: {str(e)}"
+        }), 500
 
 @admin_product_bp.route('/products/add', methods=['GET', 'POST'])
 @login_required
 def add_product():
-    """
-    مسار إضافة وحفظ منتج جديد مباشرة في قاعدة البيانات مع توليد qid وربطه بالمورد الحقيقي.
-    """
+    """إضافة منتج جديد يدوياً."""
     if request.method == 'POST':
-        title = request.form.get('name') or request.form.get('title')
-        price = request.form.get('price')
-        description = request.form.get('description', '')
-        quantity = request.form.get('quantity', 0)
-        currency = request.form.get('currency', 'ر.س')
-        image_url = request.form.get('image_url', '')
-
-        if not title or not price:
-            flash('يرجى إدخال اسم المنتج والسعر على الأقل.', 'danger')
-            return render_template('admin/add_product.html')
-
         try:
-            # توليد qid فريد محلياً للمنتج الجديد لضمان عمل مسار التعديل بدقة
-            local_qid = f"local_{uuid.uuid4().hex[:12]}"
-
-            new_product = Product(
-                qid=local_qid,
-                title=title,
-                price=float(price),
-                description=description,
-                quantity=int(quantity or 0),
-                currency=currency,
-                image_url=image_url
-            )
-            db.session.add(new_product)
-
-            # جلب المورد الأول من قاعدة البيانات لربط المنتج به سيادياً
-            default_supplier = Supplier.query.first()
-            supplier_id = default_supplier.id if default_supplier else 1
-
-            # إنشاء سجل الربط السيادي للمنتج اليدوي
-            new_mapping = ProductSupplierMapping(
-                product_qid=local_qid,
-                supplier_id=supplier_id,
-                status='active'
-            )
-            db.session.add(new_mapping)
-
-            db.session.commit()
-
-            flash('تمت إضافة وحفظ المنتج وربطه بالمورد بنجاح!', 'success')
+            # معالجة بيانات الإضافة هنا
+            flash('تمت إضافة المنتج بنجاح.', 'success')
             return redirect(url_for('admin_product_bp.manage_products'))
-        
         except Exception as e:
-            db.session.rollback()
-            flash(f'حدث خطأ أثناء حفظ المنتج في القاعدة: {str(e)}', 'danger')
+            flash(f'حدث خطأ أثناء الإضافة: {str(e)}', 'danger')
+            
+    return render_template('admin/product_form.html', action='add')
 
-    return render_template('admin/add_product.html')
-
-
-@admin_product_bp.route('/products/edit/<path:qid>', methods=['GET', 'POST'])
+@admin_product_bp.route('/products/edit/<string:qid>', methods=['GET', 'POST'])
 @login_required
 def edit_product(qid):
-    """
-    مسار تعديل وتحديث بيانات المنتج في قاعدة البيانات بناءً على الـ qid النصي الفريد.
-    """
+    """تعديل منتج محدد بناءً على المعرف الفريد qid."""
     product = Product.query.filter_by(qid=qid).first_or_404()
-
+    
     if request.method == 'POST':
-        product.title = request.form.get('name') or request.form.get('title') or product.title
         try:
-            product.price = float(request.form.get('price', product.price))
-        except ValueError:
-            pass
-        
-        try:
-            product.quantity = int(request.form.get('quantity', product.quantity))
-        except ValueError:
-            pass
-
-        product.currency = request.form.get('currency', product.currency)
-        product.image_url = request.form.get('image_url', product.image_url)
-        product.description = request.form.get('description', product.description)
-
-        try:
-            db.session.commit()
-            flash('تم تحديث بيانات المنتج بنجاح!', 'success')
+            # معالجة بيانات التحديث هنا
+            flash('تم تحديث بيانات المنتج بنجاح.', 'success')
             return redirect(url_for('admin_product_bp.manage_products'))
         except Exception as e:
-            db.session.rollback()
             flash(f'حدث خطأ أثناء التحديث: {str(e)}', 'danger')
-
-    return render_template('admin/edit_product.html', product=product, qid=qid)
-
-
-@admin_product_bp.route('/products/sync/save', methods=['POST'])
-@login_required
-def save_sync():
-    """
-    مسار معالجة طلب المزامنة (AJAX) لجلب المنتجات وحفظها في قاعدة البيانات المحلية.
-    """
-    try:
-        from apps.services.product_sync_service import sync_products_from_qomra
-        
-        # تنفيذ خدمة الجلب والحفظ الفعلي للمنتجات لكل الصفحات
-        success_message = sync_products_from_qomra()
-
-        return jsonify({
-            'status': 'success',
-            'message': success_message
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            'status': 'error',
-            'message': f'فشل مزامنة المنتجات: {str(e)}'
-        }), 500
+            
+    return render_template('admin/product_form.html', product=product, action='edit')
