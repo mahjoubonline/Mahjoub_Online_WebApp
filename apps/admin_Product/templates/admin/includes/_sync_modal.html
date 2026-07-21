@@ -35,6 +35,10 @@
     #syncModal .progress-bar-custom {
         background: linear-gradient(90deg, var(--royal-purple, #1a0b2e), var(--mahjoub-gold, #D4AF37));
     }
+    #syncCurrency:focus {
+        border-color: var(--mahjoub-gold, #D4AF37);
+        box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.25);
+    }
 </style>
 
 <div class="modal fade" id="syncModal" tabindex="-1" aria-labelledby="syncModalLabel" aria-hidden="true">
@@ -53,11 +57,26 @@
                     </div>
                     <p id="sync-status" class="text-center fw-bold text-muted small mb-0">جاري التحديث...</p>
                 </div>
+
                 <div id="sync-info" class="text-center py-2">
                     <div class="mb-3">
                         <i class="fas fa-cloud-download-alt fa-3x" style="color: var(--royal-purple, #1a0b2e);"></i>
                     </div>
-                    <p class="fs-6 text-dark mb-1">سيتم جلب أحدث المنتجات والأسعار والمخزون ديناميكياً مباشرة من <strong>قمرة</strong>.</p>
+                    <p class="fs-6 text-dark mb-2">سيتم جلب أحدث المنتجات والأسعار والمخزون ديناميكياً مباشرة من <strong>قمرة</strong>.</p>
+                    
+                    <!-- حقل اختيار العملة -->
+                    <div class="text-start bg-light p-3 rounded-3 my-3 border">
+                        <label for="syncCurrency" class="form-label fw-bold text-dark small mb-1">
+                            <i class="fas fa-coins me-1 text-warning"></i> العملة المعتمدة للمزامنة:
+                        </label>
+                        <select id="syncCurrency" class="form-select form-select-sm shadow-sm fw-bold">
+                            <option value="ر.س" selected>ريال سعودي (ر.س)</option>
+                            <option value="ر.ي">ريال يمني (ر.ي)</option>
+                            <option value="USD">دولار أمريكي ($)</option>
+                        </select>
+                        <small class="text-muted fs-7 d-block mt-1">ستُسجل الأسعار المجلوبة بهذه العملة في قاعدة البيانات.</small>
+                    </div>
+
                     <small class="text-muted">هل تريد بدء المزامنة وتحديث قاعدة البيانات الآن؟</small>
                 </div>
             </div>
@@ -76,7 +95,11 @@
         const btn = document.getElementById('startSyncBtn');
         const progressBar = document.getElementById('sync-bar');
         const statusText = document.getElementById('sync-status');
+        const currencySelect = document.getElementById('syncCurrency');
         
+        // جلب العملة المحددة من القائمة
+        const selectedCurrency = currencySelect ? currencySelect.value : 'ر.س';
+
         btn.disabled = true;
         document.getElementById('sync-info').classList.add('d-none');
         document.getElementById('sync-progress-area').classList.remove('d-none');
@@ -98,7 +121,11 @@
                     'X-CSRFToken': csrfToken,
                     'X-CSRF-TOKEN': csrfToken,
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                // إرسال حقل العملة ضمن جسم الطلب
+                body: JSON.stringify({ 
+                    currency: selectedCurrency 
+                })
             });
 
             const contentType = response.headers.get("content-type");
