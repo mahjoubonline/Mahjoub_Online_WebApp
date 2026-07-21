@@ -7,7 +7,7 @@ from flask_login import login_required
 from apps.extensions import db
 from apps.models.product_db import Product
 from apps.models.product_supplier_map import ProductSupplierMapping
-from apps.models.supplier_db import Supplier  # الاستيراد من الملف الصحيح supplier_db
+from apps.models.supplier_db import Supplier
 
 # تعريف الـ Blueprint باسم admin_product_bp ليتوافق مع url_for في القالب والـ Registry
 admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
@@ -24,10 +24,10 @@ def manage_products():
     page = request.args.get('page', 1, type=int)
     per_page = 15  # عدد المنتجات في كل صفحة
 
-    # جلب المنتجات من قاعدة البيانات مع تطبيق البحث إن وجد
+    # جلب المنتجات من قاعدة البيانات مع تطبيق البحث إن وجد باستخدام title
     query = Product.query
     if search_query:
-        query = query.filter(Product.name.ilike(f'%{search_query}%'))
+        query = query.filter(Product.title.ilike(f'%{search_query}%'))
 
     pagination_obj = query.order_by(Product.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
     products = pagination_obj.items
@@ -63,14 +63,14 @@ def add_product():
     مسار إضافة وحفظ منتج جديد مباشرة في قاعدة البيانات مع توليد qid وربطه بالمورد الحقيقي.
     """
     if request.method == 'POST':
-        name = request.form.get('name')
+        title = request.form.get('name') or request.form.get('title')
         price = request.form.get('price')
         description = request.form.get('description', '')
         quantity = request.form.get('quantity', 0)
         currency = request.form.get('currency', 'ر.س')
         image_url = request.form.get('image_url', '')
 
-        if not name or not price:
+        if not title or not price:
             flash('يرجى إدخال اسم المنتج والسعر على الأقل.', 'danger')
             return render_template('admin/add_product.html')
 
@@ -80,7 +80,7 @@ def add_product():
 
             new_product = Product(
                 qid=local_qid,
-                name=name,
+                title=title,
                 price=float(price),
                 description=description,
                 quantity=int(quantity or 0),
@@ -122,7 +122,7 @@ def edit_product(qid):
     product = Product.query.filter_by(qid=qid).first_or_404()
 
     if request.method == 'POST':
-        product.name = request.form.get('name', product.name)
+        product.title = request.form.get('name') or request.form.get('title') or product.title
         try:
             product.price = float(request.form.get('price', product.price))
         except ValueError:
