@@ -35,8 +35,8 @@
         <div class="col-md-4 search-wrapper">
             <i class="fas fa-search"></i>
             <form action="{{ url_for('admin_product_bp.manage_products') }}" method="GET" id="searchForm">
-                <input type="text" name="title" id="searchInput" class="form-control shadow-sm" 
-                       placeholder="ابحث عن منتج بالاسم..." value="{{ search }}">
+                <input type="text" name="search" id="searchInput" class="form-control shadow-sm" 
+                       placeholder="ابحث عن منتج بالاسم..." value="{{ search|default('') }}">
             </form>
         </div>
 
@@ -55,8 +55,7 @@
         <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
             {% if products %}
                 {% for product in products %}
-                {% set p_name = product.name if product.name else (product.title if product.title else '') %}
-                {% if product and p_name %}
+                {% set p_name = product.title if product.title else (product.name if product.name else 'منتج بدون اسم') %}
                 <div class="col">
                     <a href="{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}" class="product-card">
                         <div class="card h-100 border-0">
@@ -71,7 +70,7 @@
                                 
                                 <div class="d-flex justify-content-between align-items-center mt-2">
                                     <!-- السعر مع معالجة احتياطية لضمان ظهوره دائماً -->
-                                    {% set final_price = product.price if product.price and product.price > 0 else (product.sale_price if product.sale_price else (product.regular_price if product.regular_price else 0)) %}
+                                    {% set final_price = product.price if product.price and product.price > 0 else 0 %}
                                     <span class="text-primary fw-bold">
                                         {{ final_price }} {{ product.currency if product.currency else 'ر.س' }}
                                     </span>
@@ -85,7 +84,6 @@
                         </div>
                     </a>
                 </div>
-                {% endif %}
                 {% endfor %}
             {% else %}
             <div class="col-12 text-center py-5">
@@ -101,7 +99,7 @@
             <ul class="pagination justify-content-center">
                 <!-- زر السابق -->
                 <li class="page-item {{ 'disabled' if pagination.currentPage <= 1 }}">
-                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage-1, title=search) }}">السابق</a>
+                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage-1, search=search|default('')) }}">السابق</a>
                 </li>
                 
                 <!-- عرض رقم الصفحة الحالية وإجمالي الصفحات -->
@@ -113,7 +111,7 @@
                 
                 <!-- زر التالي -->
                 <li class="page-item {{ 'disabled' if pagination.currentPage >= pagination.totalPages }}">
-                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage+1, title=search) }}">التالي</a>
+                    <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage+1, search=search|default('')) }}">التالي</a>
                 </li>
             </ul>
         </nav>
@@ -132,7 +130,7 @@
         timeout = setTimeout(async () => {
             const query = searchInput.value;
             try {
-                const response = await fetch(`{{ url_for('admin_product_bp.manage_products') }}?title=${encodeURIComponent(query)}`, {
+                const response = await fetch(`{{ url_for('admin_product_bp.manage_products') }}?search=${encodeURIComponent(query)}`, {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
