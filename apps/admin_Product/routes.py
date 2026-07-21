@@ -16,8 +16,12 @@ def manage_products():
     service = ProductSyncService(token="YOUR_API_TOKEN")
     products_response = service.fetch_products(page=page, limit=20)
 
+    # 🛡️ تحقق من الاستجابة
     products = products_response.get("data", [])
     pagination = products_response.get("pagination", None)
+
+    if not products:
+        flash("⚠️ لم يتم جلب أي منتجات من المتجر الخارجي أو حدث خطأ في الاتصال.", "warning")
 
     return render_template(
         "admin/admin_Product.html",
@@ -40,7 +44,11 @@ def edit_product(qid):
     service = ProductSyncService(token="YOUR_API_TOKEN")
     product_response = service.fetch_product_by_qid(qid)
 
-    product = product_response.get("data", None)
+    product = None
+    if product_response:
+        product = product_response.get("data", None)
+    else:
+        flash("⚠️ لم يتم العثور على المنتج أو حدث خطأ في الاتصال.", "warning")
 
     if request.method == "POST":
         flash("تم تعديل المنتج بنجاح ✅ (عرض فقط، لا حفظ داخلي)", "success")
@@ -53,5 +61,10 @@ def edit_product(qid):
 def sync_products():
     service = ProductSyncService(token="YOUR_API_TOKEN")
     products_response = service.fetch_products(page=1, limit=100)  # جلب مباشر من الـ API
-    flash("✅ تمت المزامنة اللحظية مع المتجر الخارجي", "success")
+
+    if not products_response.get("data"):
+        flash("⚠️ فشلت المزامنة اللحظية مع المتجر الخارجي.", "danger")
+    else:
+        flash("✅ تمت المزامنة اللحظية مع المتجر الخارجي", "success")
+
     return redirect(url_for("admin_product_bp.manage_products"))
