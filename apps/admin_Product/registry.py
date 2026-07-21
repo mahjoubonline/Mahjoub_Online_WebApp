@@ -8,10 +8,11 @@ MODULE_NAME = "إدارة المنتجات"
 MODULE_ICON = "fa-boxes"
 SHOW_IN_SUPPLIER = False
 
-# الروابط التي ستظهر في القائمة الجانبية
+# هنا المفتاح هو الـ endpoint (اسم المسار)، والقيمة هي النص العربي الذي سيظهر في القائمة
 LINKS = {
-    "المنتجات": "/admin/products/",
-    "إضافة منتج": "/admin/products/add"
+    "admin_product_bp.manage_products": "المنتجات",
+    "admin_product_bp.add_product": "إضافة منتج"
+    # زر المزامنة سيبقى داخل نافذة إدارة المنتجات (Modal) ولا يظهر هنا
 }
 
 def register_module(app):
