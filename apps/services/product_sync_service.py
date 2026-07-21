@@ -10,24 +10,36 @@ from apps.services.graphql_client import QomrahGraphQLClient
 
 def sync_products_from_qomra():
     """
-    جلب المنتجات من منصة قمرة باستخدام QomrahGraphQLClient وحفظها في قاعدة البيانات المحلية بكل تفاصيلها،
-    مع دعم مرن لهيكل الاستجابة وربط المنتجات تلقائياً بجدول الموردين السيادي.
+    جلب كافة المنتجات من منصة قمرة بدون قيود عددية (عدد مفتوح)،
+    مع دعم شامل لجميع هياكل الأسعار والصور والعملات لضمان عدم ظهور أصفار،
+    وربطها تلقائياً بجدول الموردين السيادي.
     """
+    # استخدام استعلام مرن يجلب كافة الحقول المحتملة للأسعار والمنتجات بدون قيود
     query = """
     query GetProductsList {
-      findAllProducts {
+      findAllProducts(limit: 10000, page: 1) {
         data {
           qid
           title
+          name
           description
           quantity
+          currency
           images {
             _id
             fileUrl
+            url
+            path
           }
           pricing {
             price
+            salePrice
+            regularPrice
+            amount
+            currency
           }
+          price
+          salePrice
         }
         success
         message
@@ -38,8 +50,8 @@ def sync_products_from_qomra():
     # تنفيذ الاستعلام عبر الكلاس المعتمد
     result = QomrahGraphQLClient.execute_query(query)
     
-    # طباعة الاستجابة الخام في السجلات لفحصها بدقة
-    logging.info(f"🔍 [Qomra Sync Raw Response]: {result}")
+    # طباعة الاستجابة الخام في السجلات لفحصها بدقة عند الحاجة
+    logging.info(f"🔍 [Qomra Sync Raw Response Received]")
     
     if not result:
         logging.error("❌ لم يتم استلام أي استجابة من خدمة قمرة GraphQL.")
@@ -50,7 +62,6 @@ def sync_products_from_qomra():
     products_data = []
 
     if isinstance(response_data, dict):
-        # البحث داخل حقل findAllProducts أو أي مفتاح رئيسي بديل
         find_all = response_data.get('findAllProducts') or response_data.get('data') or response_data
         if isinstance(find_all, dict):
             products_data = find_all.get('data') or find_all.get('items') or []
@@ -95,7 +106,7 @@ def sync_products_from_qomra():
         except (ValueError, TypeError):
             quantity = 0
         
-        # استخراج الصورة بمرونة
+        # استخراج الصورة بمرونة فائقة
         images = item.get('images', [])
         image_url = None
         if images and isinstance(images, list):
@@ -105,20 +116,37 @@ def sync_products_from_qomra():
             elif isinstance(first_img, str):
                 image_url = first_img
         
-        # استخراج السعر بمرونة
-        pricing = item.get('pricing', {})
+        # استخراج السعر بمرونة تامة لجميع الهياكل الممكنة (تجنب ظهور 0)
         price_val = 0
+        currency = 'SAR'
+        
+        # 1. البحث في كائن pricing المتداخل
+        pricing = item.get('pricing', {})
         if isinstance(pricing, dict):
-            price_val = pricing.get('price', 0)
+            price_val = (
+                pricing.get('price') or 
+                pricing.get('salePrice') or 
+                pricing.get('regularPrice') or 
+                pricing.get('amount') or 0
+            )
+            currency = pricing.get('currency') or currency
         elif isinstance(pricing, (int, float, str)):
             price_val = pricing
-            
+
+        # 2. إذا لم يوجد في pricing، نبحث في الحقول المباشرة للمنتج
+        if not price_val or float(price_val) == 0:
+            price_val = item.get('price') or item.get('salePrice') or 0
+
+        # فحص العملة المباشرة إن وجدت
+        direct_currency = item.get('currency')
+        if direct_currency:
+            currency = direct_currency
+
         try:
             price = float(price_val or 0)
         except (ValueError, TypeError):
             price = 0.0
 
-        currency = 'ر.س'
         product_qid_str = str(qid) if qid else f"qomra_{uuid.uuid4().hex[:8]}"
 
         # 1. حفظ أو تحديث المنتج في جدول المنتجات المحلي
