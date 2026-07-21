@@ -13,28 +13,31 @@ logger = logging.getLogger(__name__)
 QOMRA_GRAPHQL_URL = os.getenv("QOMRA_GRAPHQL_URL", "https://api.qumra.cloud/graphql")
 QOMRA_API_TOKEN = os.getenv("QOMRA_API_TOKEN", "")
 
-# ✅ الاستعلام المصحح المتوافق تماماً مع Schema قمرة
+# ✅ الاستعلام المصحح المعتمد على findAllProducts في Schema قمرة
 PRODUCTS_QUERY = """
-query GetProducts {
-    products {
-        id
-        title
-        description
-        sku
-        quantity
-        pricing {
-            price
-        }
-        images {
-            url
+query FetchAllProducts {
+    findAllProducts {
+        products {
+            id
+            title
+            description
+            sku
+            quantity
+            pricing {
+                price
+            }
+            images {
+                url
+            }
         }
     }
 }
 """
 
-def sync_products_from_qomra():
+def sync_products_from_qomra(currency: str = "ر.س"):
     """
     جلب المنتجات من قمرة وتحديثها أو إضافتها في قاعدة البيانات المحلية.
+    :param currency: العملة المعتمدة للمزامنة (افتراضياً ر.س)
     """
     headers = {
         "Content-Type": "application/json",
@@ -61,7 +64,17 @@ def sync_products_from_qomra():
             logger.error(f"❌ GraphQL Validation Error: {payload['errors']}")
             raise Exception("حدث خطأ في استعلام قمرة (GraphQL Validation Error)")
 
-        products_data = payload.get("data", {}).get("products", [])
+        # ✅ استخراج قائمة المنتجات عبر المسار الصحيح للـ Schema
+        find_all_res = payload.get("data", {}).get("findAllProducts") or {}
+        
+        # التعامل مع حالة ما إذا كان القادم قائمة مباشرة أو كائن يحتوي على products
+        if isinstance(find_all_res, dict):
+            products_data = find_all_res.get("products", [])
+        elif isinstance(find_all_res, list):
+            products_data = find_all_res
+        else:
+            products_data = []
+
         synced_count = 0
 
         for item in products_data:
@@ -90,7 +103,7 @@ def sync_products_from_qomra():
             product.sku = item.get("sku", "")
             product.quantity = int(item.get("quantity") or 0)
             product.price = price
-            product.currency = "SAR"  # تعيين العملة افتراضياً للريال السعودي
+            product.currency = currency  # حفظ العملة المحددة
             product.image_url = image_url
 
             synced_count += 1
