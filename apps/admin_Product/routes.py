@@ -19,17 +19,19 @@ admin_product_bp = Blueprint(
 @admin_product_bp.route('/products', methods=['GET'])
 @login_required
 def manage_products():
-    """عرض إدارة المنتجات مع دعم البحث الفوري (Live Search) والترقيم (Pagination)."""
+    """عرض إدارة المنتجات مع دعم البحث الفوري (Live Search) وترقيم ديناميكي (15 منتجاً في كل صفحة)."""
     page = request.args.get('page', 1, type=int)
     search_query = request.args.get('search', '').strip()
-    per_page = 15  # عدد المنتجات في كل صفحة
+    
+    # تثبيت عدد المنتجات في كل صفحة على 15 منتجاً مع حساب الصفحات ديناميكياً حسب النمو اللحظي
+    per_page = 15 
     
     # بناء الاستعلام مع دعم البحث بالاسم
     query = Product.query
     if search_query:
         query = query.filter(Product.title.ilike(f'%{search_query}%'))
         
-    # تنفيذ الترقيم
+    # تنفيذ الترقيم الديناميكي لحظياً بناءً على إجمالي المنتجات في قاعدة البيانات
     pagination_obj = query.order_by(Product.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
     products = pagination_obj.items
     
@@ -59,9 +61,9 @@ def manage_products():
 @admin_product_bp.route('/save-sync', methods=['POST'])
 @login_required
 def save_sync():
-    """تنفيذ عملية مزامنة المنتجات مع قمرة وإرجاع النتيجة بصيغة JSON متوافقة مع المودال."""
+    """تنفيذ عملية مزامنة المنتجات ديناميكياً مع قمرة وإرجاع النتيجة بصيغة JSON متوافقة مع المودال."""
     try:
-        # استدعاء خدمة المزامنة
+        # استدعاء خدمة المزامنة المحدثة ديناميكياً
         result_message = sync_products_from_qomra()
         return jsonify({
             'status': 'success',
