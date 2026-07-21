@@ -13,7 +13,7 @@ class ProductSyncService:
         }
 
     def fetch_products(self, page: int = 1, limit: int = 20, title: str = ""):
-        # ✅ تحديث الاستعلام ليشمل معامل الـ title الداعم للبحث المباشر حسب السكيما
+        # استعلام GraphQL المدعوم بالكامل مع متغير البحث title ومعاملات التصفح
         query = """
         query($page: Int!, $limit: Int!, $title: String) {
           findAllProducts(input: { page: $page, limit: $limit, title: $title }) {
