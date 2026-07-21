@@ -70,9 +70,10 @@
                                 <h6 class="fw-bold mb-2 text-truncate" title="{{ p_name }}">{{ p_name }}</h6>
                                 
                                 <div class="d-flex justify-content-between align-items-center mt-2">
-                                    <!-- السعر مع رمز العملة المستورد حصرياً من قاعدة البيانات -->
+                                    <!-- السعر مع معالجة احتياطية لضمان ظهوره دائماً -->
+                                    {% set final_price = product.price if product.price and product.price > 0 else (product.sale_price if product.sale_price else (product.regular_price if product.regular_price else 0)) %}
                                     <span class="text-primary fw-bold">
-                                        {{ product.price or 0 }} {{ product.currency if product.currency else '' }}
+                                        {{ final_price }} {{ product.currency if product.currency else 'ر.س' }}
                                     </span>
                                     
                                     <!-- الكمية المتوفرة -->
