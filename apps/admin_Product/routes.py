@@ -67,9 +67,10 @@ def sync_products():
     service = ProductSyncService(token="YOUR_API_TOKEN")
     products_response = service.fetch_products(page=1, limit=100)  # جلب مباشر من الـ API
 
-    if not products_response.get("data"):
+    products = products_response.get("data", [])
+    if not products:
         flash("⚠️ فشلت المزامنة اللحظية مع المتجر الخارجي.", "danger")
     else:
-        flash("✅ تمت المزامنة اللحظية مع المتجر الخارجي", "success")
+        flash(f"✅ تمت المزامنة بنجاح - تم جلب {len(products)} منتج.", "success")
 
     return redirect(url_for("admin_product_bp.manage_products"))
