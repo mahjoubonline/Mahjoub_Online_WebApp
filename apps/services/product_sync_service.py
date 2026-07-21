@@ -10,55 +10,111 @@ from apps.services.graphql_client import QomrahGraphQLClient
 
 def sync_products_from_qomra():
     """
-    جلب كافة المنتجات دفعة واحدة من منصة قمرة وتخزينها وتحديثها محلياً 
-    مع ربطها بجدول الموردين السيادي وتجاوز قيود العدد المحدود.
+    جلب كافة المنتجات تدريجياً عبر نظام الترقيم الصفحي (Pagination) من منصة قمرة 
+    وتخزينها وتحديثها محلياً مع ربطها بجدول الموردين السيادي وضمان استخراج الأسعار بدقة تامة.
     """
-    # استعلام شامل لجلب كافة المنتجات بدون معاملات مقيدة للصفحات
-    query = """
-    query GetAllProductsUnified {
-      findAllProducts {
-        qid
-        title
-        description
-        quantity
-        images {
-          _id
-          fileUrl
-        }
-        pricing {
-          price
-          originalPrice
-        }
-      }
-    }
-    """
+    page = 1
+    limit = 100
+    all_products_data = []
     
-    try:
-        result = QomrahGraphQLClient.execute_query(query)
-    except Exception as e:
-        logging.error(f"❌ خطأ أثناء تنفيذ استعلام المزامنة الشامل: {e}")
-        raise Exception(f"فشل الاتصال بخدمة قمرة: {str(e)}")
+    # حلقة تكرارية لجلب كافة الصفحات من واجهة قمرة حتى استنفاد جميع المنتجات (~46 صفحة فأكثر)
+    while True:
+        query = """
+        query GetAllProductsUnified($page: Int, $limit: Int) {
+          findAllProducts(page: $page, limit: $limit) {
+            qid
+            title
+            name
+            description
+            quantity
+            price
+            salePrice
+            images {
+              _id
+              fileUrl
+              url
+              path
+            }
+            pricing {
+              price
+              originalPrice
+              salePrice
+              amount
+            }
+          }
+        }
+        """
+        
+        variables = {'page': page, 'limit': limit}
+        
+        try:
+            result = QomrahGraphQLClient.execute_query(query, variables=variables)
+        except Exception as e:
+            # طريقة بديلة في حال لم يدعم العميل تمرير الـ variables بشكل مباشر
+            try:
+                raw_query = f"""
+                query GetAllProductsUnified {{
+                  findAllProducts(page: {page}, limit: {limit}) {{
+                    qid
+                    title
+                    name
+                    description
+                    quantity
+                    price
+                    salePrice
+                    images {{
+                      _id
+                      fileUrl
+                      url
+                      path
+                    }}
+                    pricing {{
+                      price
+                      originalPrice
+                      salePrice
+                      amount
+                    }}
+                  }}
+                }}
+                """
+                result = QomrahGraphQLClient.execute_query(raw_query)
+            except Exception as inner_e:
+                logging.error(f"❌ خطأ أثناء تنفيذ استعلام المزامنة للصفحة {page}: {inner_e}")
+                raise Exception(f"فشل الاتصال بخدمة قمرة في الصفحة {page}: {str(inner_e)}")
 
-    if not result:
-        logging.error("❌ لم يتم استلام أي استجابة من خدمة قمرة GraphQL.")
-        raise Exception("فشل في استرجاع البيانات من خدمة قمرة GraphQL (استجابة فارغة).")
+        if not result:
+            break
 
-    # استخراج البيانات بمرونة تامة لجميع الاحتمالات الهيكلية للاستجابة
-    response_data = result.get('data', result)
-    products_data = []
+        # استخراج البيانات بمرونة لجميع الهياكل المحتملة للاستجابة
+        response_data = result.get('data', result)
+        products_data = []
 
-    if isinstance(response_data, dict):
-        find_all = response_data.get('findAllProducts') or response_data.get('data') or response_data
-        if isinstance(find_all, dict):
-            products_data = find_all.get('data') or find_all.get('items') or []
-        elif isinstance(find_all, list):
-            products_data = find_all
-    elif isinstance(response_data, list):
-        products_data = response_data
+        if isinstance(response_data, dict):
+            find_all = response_data.get('findAllProducts') or response_data.get('data') or response_data
+            if isinstance(find_all, dict):
+                products_data = find_all.get('data') or find_all.get('items') or find_all.get('results') or []
+            elif isinstance(find_all, list):
+                products_data = find_all
+        elif isinstance(response_data, list):
+            products_data = response_data
 
-    logging.info(f"📦 [Total Parsed Products from Qomra]: {len(products_data)}")
+        if not products_data:
+            break
 
-    if not products_data:
+        all_products_data.extend(products_data)
+        
+        # إذا كان عدد المنتجات المسترجعة أقل من الحد الأقصى للصفحة، فهذا يعني وصولنا لآخر صفحة
+        if len(products_data) < limit:
+            break
+            
+        page += 1
+        # حماية أمان ضد الحلقات اللانهائية
+        if page > 200:
+            break
+
+    logging.info(f"📦 [Total Parsed Products from Qomra Across All Pages]: {len(all_products_data)}")
+
+    if not all_products_data:
         return "تمت المزامنة بنجاح، لكن منصة قمرة لم تقم بإرجاع أي منتجات."
 
     saved_count = 0
@@ -75,7 +131,7 @@ def sync_products_from_qomra():
     except Exception:
         pass
 
-    for item in products_data:
+    for item in all_products_data:
         if not isinstance(item, dict):
             continue
             
@@ -91,7 +147,7 @@ def sync_products_from_qomra():
         except (ValueError, TypeError):
             quantity = 0
         
-        # استخراج الصورة من الهيكل الصحيح
+        # استخراج الصورة مع دعم كافة المفاتيح المحتملة
         images = item.get('images', [])
         image_url = None
         if images and isinstance(images, list):
@@ -101,15 +157,27 @@ def sync_products_from_qomra():
             elif isinstance(first_img, str):
                 image_url = first_img
         
-        # استخراج السعر والعملة من كائن pricing المعتمد
+        # استخراج السعر والعملة بدقة من كائن pricing أو الحقول المباشرة لمنع ظهور القيمة صفر
         price_val = 0
         currency = 'SAR'
         
-        pricing = item.get('pricing', {})
+        pricing = item.get('pricing')
         if isinstance(pricing, dict):
-            price_val = pricing.get('price') or pricing.get('originalPrice') or 0
+            price_val = (
+                pricing.get('price') or 
+                pricing.get('salePrice') or 
+                pricing.get('originalPrice') or 
+                pricing.get('amount') or 0
+            )
         elif isinstance(pricing, (int, float, str)):
             price_val = pricing
+
+        if not price_val or float(price_val or 0) == 0:
+            price_val = (
+                item.get('price') or 
+                item.get('salePrice') or 
+                item.get('originalPrice') or 0
+            )
 
         try:
             price = float(price_val or 0)
@@ -118,7 +186,7 @@ def sync_products_from_qomra():
 
         product_qid_str = str(qid) if qid else f"qomra_{uuid.uuid4().hex[:8]}"
 
-        # 1. حفظ أو تحديث المنتج في جدول المنتجات المحلي باستخدام حقل title حصراً
+        # 1. حفظ أو تحديث المنتج في جدول المنتجات المحلي
         product = None
         if qid:
             product = Product.query.filter_by(qid=str(qid)).first()
@@ -162,4 +230,4 @@ def sync_products_from_qomra():
                 
     db.session.commit()
     
-    return f"تمت المزامنة بنجاح! تم جلب ومعالجة {len(products_data)} منتج: إضافة {saved_count}، تحديث {updated_count}، وربط {mappings_count} منتج."
+    return f"تمت المزامنة بنجاح! تم جلب ومعالجة {len(all_products_data)} منتج عبر جميع الصفحات: إضافة {saved_count}، تحديث {updated_count}، وربط {mappings_count} منتج."
