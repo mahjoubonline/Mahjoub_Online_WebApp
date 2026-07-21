@@ -4,16 +4,12 @@
 import os
 import requests
 import logging
-from apps.extensions import db
-from apps.models.product_db import Product
 
 logger = logging.getLogger(__name__)
 
-# رابط وبوابة API الخاصة بقمرة
 QOMRA_GRAPHQL_URL = os.getenv("QOMRA_GRAPHQL_URL", "https://api.qumra.cloud/graphql")
 QOMRA_API_TOKEN = os.getenv("QOMRA_API_TOKEN", "")
 
-# ✅ الاستعلام بعد استبعاد حقل الصورة مؤقتاً لمنع خطأ الـ Validation
 PRODUCTS_QUERY = """
 query FetchAllProducts {
     findAllProducts {
@@ -38,10 +34,9 @@ query FetchAllProducts {
 }
 """
 
-def sync_products_from_qomra(currency: str = "ر.س"):
+def fetch_products_from_qomra(search: str = ""):
     """
-    جلب المنتجات من قمرة وتحديثها أو إضافتها في قاعدة البيانات المحلية.
-    :param currency: العملة المعتمدة للمزامنة (افتراضياً ر.س)
+    جلب المنتجات مباشرة من قمرة دون حفظها محلياً.
     """
     headers = {
         "Content-Type": "application/json",
@@ -56,59 +51,45 @@ def sync_products_from_qomra(currency: str = "ر.س"):
             timeout=15
         )
         
-        # التأكد من وصول الاستجابة بنجاح
         if response.status_code != 200:
-            logger.error(f"❌ Qomra Sync Failed [Status {response.status_code}]: {response.text}")
+            logger.error(f"❌ Qomra Fetch Failed [Status {response.status_code}]: {response.text}")
             raise Exception(f"فشل الاتصال بقمرة (رمز الاستجابة: {response.status_code})")
 
         payload = response.json()
 
-        # معالجة أخطاء GraphQL في حال وجودها
         if "errors" in payload:
             logger.error(f"❌ GraphQL Validation Error: {payload['errors']}")
-            raise Exception("حدث خطأ في استعلام قمرة (GraphQL Validation Error)")
+            raise Exception("حدث خطأ في استعلام قمرة")
 
-        # ✅ استخراج قائمة المنتجات من هيكل ProductsResponse عبر حقل data المستهدف
         find_all_res = payload.get("data", {}).get("findAllProducts") or {}
-        
-        if isinstance(find_all_res, dict):
-            products_data = find_all_res.get("data") or []
-        elif isinstance(find_all_res, list):
-            products_data = find_all_res
-        else:
-            products_data = []
+        products_data = find_all_res.get("data") or []
+        pagination_data = find_all_res.get("pagination") or {"currentPage": 1, "totalPages": 1, "totalItems": len(products_data)}
 
-        synced_count = 0
+        # تصفية محلية سريعة بناءً على حقل البحث إذا وجد
+        if search:
+            products_data = [p for p in products_data if search.lower() in (p.get("title") or "").lower()]
 
+        # إعادة تنسيق البيانات لتتطابق مع القالب العرضي
+        formatted_products = []
         for item in products_data:
-            qid = str(item.get("id"))
-            if not qid:
-                continue
+            formatted_products.append({
+                "qid": str(item.get("id")),
+                "title": item.get("title") or "منتج بدون اسم",
+                "description": item.get("description", ""),
+                "sku": item.get("sku", ""),
+                "quantity": int(item.get("quantity") or 0),
+                "pricing": item.get("pricing") or {"price": 0.0},
+                "images": []  # مؤقتاً لحين ربط حقل الصور الصحيح من قمرة
+            })
 
-            # 1. استخراج السعر بأمان من كائن pricing
-            pricing_data = item.get("pricing") or {}
-            price = float(pricing_data.get("price") or 0.0)
+        pagination = {
+            'currentPage': pagination_data.get("currentPage", 1),
+            'totalPages': pagination_data.get("totalPages", 1),
+            'totalItems': pagination_data.get("totalItems", len(formatted_products))
+        }
 
-            # 2. تحديث المنتج إذا كان موجوداً أو إنشاء منتج جديد
-            product = Product.query.filter_by(qid=qid).first()
-            if not product:
-                product = Product(qid=qid)
-                db.session.add(product)
-
-            product.title = item.get("title") or "منتج بدون اسم"
-            product.description = item.get("description", "")
-            product.sku = item.get("sku", "")
-            product.quantity = int(item.get("quantity") or 0)
-            product.price = price
-            product.currency = currency  # حفظ العملة المحددة
-
-            synced_count += 1
-
-        db.session.commit()
-        logger.info(f"✅ Successfully synced {synced_count} products from Qomra.")
-        return f"تمت مزامنة {synced_count} منتج بنجاح من قمرة."
+        return formatted_products, pagination
 
     except Exception as e:
-        db.session.rollback()
-        logger.error(f"❌ Error during Qomra sync: {str(e)}", exc_info=True)
+        logger.error(f"❌ Error fetching from Qomra: {str(e)}", exc_info=True)
         raise e
