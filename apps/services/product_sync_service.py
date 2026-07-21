@@ -22,10 +22,12 @@ class ProductSyncService:
             message
             data {
               id
+              qid
               title
               description
-              price
-              sku
+              pricing { price }
+              quantity
+              images { fileUrl }
             }
             currency {
               code
@@ -35,6 +37,8 @@ class ProductSyncService:
               total
               page
               limit
+              totalPages
+              currentPage
             }
           }
         }
@@ -58,10 +62,12 @@ class ProductSyncService:
             message
             data {
               id
+              qid
               title
               description
-              price
-              sku
+              pricing { price }
+              quantity
+              images { fileUrl }
             }
           }
         }
