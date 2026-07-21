@@ -14,10 +14,11 @@ class ProductSyncService:
             "Content-Type": "application/json"
         }
 
-    def fetch_products(self, page: int = 1, limit: int = 20):
+    def fetch_products(self, page: int = 1, limit: int = 20, search: str = ""):
+        # ✅ تحديث الاستعلام ليشمل معامل البحث (search) في input الخاص بـ findAllProducts
         query = """
-        query($page: Int!, $limit: Int!) {
-          findAllProducts(input: { page: $page, limit: $limit }) {
+        query($page: Int!, $limit: Int!, $search: String) {
+          findAllProducts(input: { page: $page, limit: $limit, search: $search }) {
             success
             message
             data {
@@ -37,7 +38,7 @@ class ProductSyncService:
         }
         """
 
-        variables = {"page": page, "limit": limit}
+        variables = {"page": page, "limit": limit, "search": search}
         
         try:
             response = requests.post(
