@@ -73,7 +73,7 @@ class ProductSyncService:
         variables = {"page": page, "limit": limit}
         if title:
             variables["title"] = title
-        
+         
         try:
             response = requests.post(
                 GRAPHQL_ENDPOINT,
@@ -83,14 +83,17 @@ class ProductSyncService:
             )
 
             if response.status_code != 200:
+                print(f"findAllProducts HTTP Error {response.status_code}: {response.text}")
                 return {"data": [], "pagination": None}
 
             result = response.json()
             if "errors" in result or "data" not in result or "findAllProducts" not in result["data"]:
+                print(f"findAllProducts GraphQL Errors/Missing Data: {result}")
                 return {"data": [], "pagination": None}
 
             return result["data"]["findAllProducts"]
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            print(f"Request Exception in fetch_products: {str(e)}")
             return {"data": [], "pagination": None}
 
     def fetch_product_by_qid(self, qid: str):
@@ -105,11 +108,12 @@ class ProductSyncService:
 
             if response.status_code != 200:
                 print(f"GraphQL HTTP Error: {response.status_code}")
+                print(f"Response Body: {response.text}")  # 🔍 هذا السطر سيكشف السبب الجذري للخطأ 400
                 return None
 
             result = response.json()
-            
-            # ✅ طباعة الأخطاء البرمجية للـ GraphQL إن وجدت لتشخيص السبب فوراً
+             
+            # طباعة الأخطاء البرمجية للـ GraphQL إن وجدت لتشخيص السبب فوراً
             if "errors" in result:
                 print("GraphQL Errors in fetch_product_by_qid:", result["errors"])
                 return None
@@ -121,7 +125,7 @@ class ProductSyncService:
             res_data = result["data"]["findProductByQid"]
             if res_data and res_data.get("success"):
                 return res_data.get("data")
-            
+             
             print("GraphQL findProductByQid returned success=False:", res_data)
             return None
         except requests.exceptions.RequestException as e:
@@ -138,7 +142,7 @@ class ProductSyncService:
             "ident": ident,
             "desc": desc
         }
-        
+         
         try:
             response = requests.post(
                 GRAPHQL_ENDPOINT,
@@ -148,6 +152,7 @@ class ProductSyncService:
             )
 
             if response.status_code != 200:
+                print(f"Update HTTP Error {response.status_code}: {response.text}")
                 return False
 
             result = response.json()
@@ -156,7 +161,8 @@ class ProductSyncService:
                 return False
 
             return True
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            print(f"Request Exception in update_product_data: {str(e)}")
             return False
 
     def sync_to_local_db(self, products_data):
