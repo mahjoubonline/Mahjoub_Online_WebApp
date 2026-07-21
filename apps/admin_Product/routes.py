@@ -72,6 +72,7 @@ def add_product():
 def edit_product():
     """مسار عرض صفحة تعديل المنتج مع جلب البيانات والملحقات المطلوبة للقالب"""
     qid = request.args.get('qid')
+    print(f"DEBUG QID RECEIVED: {qid}")
     
     if not qid:
         flash("معرف المنتج (qid) مفقود.", "danger")
@@ -79,6 +80,7 @@ def edit_product():
     
     client = ProductSyncService(token=GRAPHQL_TOKEN)
     product = client.fetch_product_by_qid(qid)
+    print(f"DEBUG FETCHED PRODUCT: {product}")
     
     if not product:
         flash("المنتج المطلوب غير موجود أو فشل جلب بياناته.", "danger")
