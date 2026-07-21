@@ -61,9 +61,9 @@ def add_product():
     """مسار إضافة منتج جديد"""
     return render_template('admin/add_product.html')
 
-@admin_product_bp.route('/products/edit/<qid>', methods=['GET', 'POST'])
+@admin_product_bp.route('/products/edit/<path:qid>', methods=['GET', 'POST'])
 def edit_product(qid):
-    """مسار تعديل المنتج باستخدام الـ qid الخاص به"""
+    """مسار تعديل المنتج باستخدام الـ qid الخاص به مع دعم المسارات الطويلة والرموز الخاصة"""
     token = os.environ.get('QUMRA_API_KEY') or os.environ.get('GRAPHQL_ENDPOINT')
     client = ProductSyncService(token=token)
     
