@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 QOMRA_GRAPHQL_URL = os.getenv("QOMRA_GRAPHQL_URL", "https://api.qumra.cloud/graphql")
 QOMRA_API_TOKEN = os.getenv("QOMRA_API_TOKEN", "")
 
+# ✅ الاستعلام المحدث المتوافق مع هيكل الصور الصحيح images { _id fileUrl }
 PRODUCTS_QUERY = """
 query FetchAllProducts {
     findAllProducts {
@@ -24,6 +25,10 @@ query FetchAllProducts {
             pricing {
                 price
             }
+            images {
+                _id
+                fileUrl
+            }
         }
         pagination {
             currentPage
@@ -36,7 +41,7 @@ query FetchAllProducts {
 
 def fetch_products_from_qomra(search: str = ""):
     """
-    جلب المنتجات مباشرة من قمرة دون حفظها محلياً.
+    جلب المنتجات مباشرة من قمرة وتنسيقها لتتوافق مع القالب اللحظي دون حفظ محلي.
     """
     headers = {
         "Content-Type": "application/json",
@@ -69,9 +74,15 @@ def fetch_products_from_qomra(search: str = ""):
         if search:
             products_data = [p for p in products_data if search.lower() in (p.get("title") or "").lower()]
 
-        # إعادة تنسيق البيانات لتتطابق مع القالب العرضي
         formatted_products = []
         for item in products_data:
+            # معالجة الصور واستخراج fileUrl بأمان
+            images_list = item.get("images") or []
+            formatted_images = []
+            for img in images_list:
+                if isinstance(img, dict) and img.get("fileUrl"):
+                    formatted_images.append({"fileUrl": img.get("fileUrl")})
+
             formatted_products.append({
                 "qid": str(item.get("id")),
                 "title": item.get("title") or "منتج بدون اسم",
@@ -79,7 +90,7 @@ def fetch_products_from_qomra(search: str = ""):
                 "sku": item.get("sku", ""),
                 "quantity": int(item.get("quantity") or 0),
                 "pricing": item.get("pricing") or {"price": 0.0},
-                "images": []  # مؤقتاً لحين ربط حقل الصور الصحيح من قمرة
+                "images": formatted_images
             })
 
         pagination = {
