@@ -1,8 +1,13 @@
+# coding: utf-8
 # 📂 apps/admin_Product/routes.py
+
+import uuid
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required
-from apps.models import db, Product
-from apps.admin_Product.services import sync_products_from_qomra
+from apps.extensions import db
+from apps.models.product_db import Product
+from apps.models.product_supplier_map import ProductSupplierMapping
+from apps.services.product_sync_service import sync_products_from_qomra
 
 admin_product_bp = Blueprint(
     'admin_product_bp', 
@@ -35,7 +40,7 @@ def manage_products():
         'totalItems': pagination_obj.total
     }
     
-    # إذا كان الطلب قادماً عبر AJAX للبحث الفوري، يتم إرجاع القالب مباشرة لتحديث حاوية النتائج
+    # إذا كان الطلب قادماً عبر AJAX للبحث الفوري، يتم إرجاع القالب لتحديث حاوية النتائج
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render_template(
             'admin/admin_Product.html', 
@@ -71,13 +76,42 @@ def save_sync():
 @admin_product_bp.route('/products/add', methods=['GET', 'POST'])
 @login_required
 def add_product():
-    """إضافة منتج جديد يدوياً."""
+    """إضافة منتج جديد يدوياً وإنشاء رابط سيادي للمورد."""
     if request.method == 'POST':
         try:
-            # معالجة بيانات الإضافة هنا
+            title = request.form.get('title')
+            price = float(request.form.get('price', 0))
+            quantity = int(request.form.get('quantity', 0))
+            description = request.form.get('description', '')
+            image_url = request.form.get('image_url', '')
+
+            # توليد qid فريد يدوياً للمنتج المحلي
+            product_qid = f"custom_{uuid.uuid4().hex[:10]}"
+
+            new_product = Product(
+                qid=product_qid,
+                title=title,
+                price=price,
+                currency='SAR',
+                quantity=quantity,
+                image_url=image_url,
+                description=description
+            )
+            db.session.add(new_product)
+
+            # إضافة سجل ربط افتراضي في جدول ProductSupplierMapping
+            mapping = ProductSupplierMapping(
+                product_qid=product_qid,
+                supplier_id=1,
+                status='active'
+            )
+            db.session.add(mapping)
+
+            db.session.commit()
             flash('تمت إضافة المنتج بنجاح.', 'success')
             return redirect(url_for('admin_product_bp.manage_products'))
         except Exception as e:
+            db.session.rollback()
             flash(f'حدث خطأ أثناء الإضافة: {str(e)}', 'danger')
             
     return render_template('admin/product_form.html', action='add')
@@ -90,10 +124,17 @@ def edit_product(qid):
     
     if request.method == 'POST':
         try:
-            # معالجة بيانات التحديث هنا
+            product.title = request.form.get('title', product.title)
+            product.price = float(request.form.get('price', product.price or 0))
+            product.quantity = int(request.form.get('quantity', product.quantity or 0))
+            product.description = request.form.get('description', product.description)
+            product.image_url = request.form.get('image_url', product.image_url)
+
+            db.session.commit()
             flash('تم تحديث بيانات المنتج بنجاح.', 'success')
             return redirect(url_for('admin_product_bp.manage_products'))
         except Exception as e:
+            db.session.rollback()
             flash(f'حدث خطأ أثناء التحديث: {str(e)}', 'danger')
             
     return render_template('admin/product_form.html', product=product, action='edit')
