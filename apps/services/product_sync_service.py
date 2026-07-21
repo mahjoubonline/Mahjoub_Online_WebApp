@@ -1,5 +1,5 @@
-# apps/services/product_sync_service.py
 # coding: utf-8
+# 📂 apps/services/product_sync_service.py
 
 import uuid
 import logging
@@ -10,112 +10,70 @@ from apps.services.graphql_client import QomrahGraphQLClient
 
 def sync_products_from_qomra():
     """
-    جلب كافة المنتجات تدريجياً عبر نظام الترقيم الصفحي (Pagination) من منصة قمرة 
-    وتخزينها وتحديثها محلياً مع ربطها بجدول الموردين السيادي وضمان استخراج الأسعار بدقة تامة.
+    جلب المنتجات مباشرة من منصة قمرة وتخزينها وتحديثها محلياً 
+    مع تصحيح بنية استعلام GraphQL لتتوافق مع الـ Schema الخاصة بقمرة.
     """
-    page = 1
-    limit = 100
-    all_products_data = []
-    
-    # حلقة تكرارية لجلب كافة الصفحات من واجهة قمرة حتى استنفاد جميع المنتجات (~46 صفحة فأكثر)
-    while True:
-        query = """
-        query GetAllProductsUnified($page: Int, $limit: Int) {
-          findAllProducts(page: $page, limit: $limit) {
-            qid
-            title
-            name
-            description
-            quantity
-            price
-            salePrice
-            images {
-              _id
-              fileUrl
-              url
-              path
-            }
-            pricing {
-              price
-              originalPrice
-              salePrice
-              amount
-            }
-          }
-        }
-        """
-        
-        variables = {'page': page, 'limit': limit}
-        
-        try:
-            result = QomrahGraphQLClient.execute_query(query, variables=variables)
-        except Exception as e:
-            # طريقة بديلة في حال لم يدعم العميل تمرير الـ variables بشكل مباشر
-            try:
-                raw_query = f"""
-                query GetAllProductsUnified {{
-                  findAllProducts(page: {page}, limit: {limit}) {{
-                    qid
-                    title
-                    name
-                    description
-                    quantity
+    # تصحيح الاستعلام: إزالة المعاملات غير المدعومة، ووضع الحقول داخل مصفوفة items التابعة لـ ProductsResponse
+    query = """
+    query GetAllProductsUnified {
+        findAllProducts {
+            items {
+                qid
+                id
+                title
+                name
+                description
+                quantity
+                price
+                salePrice
+                images {
+                    _id
+                    fileUrl
+                    url
+                    path
+                }
+                pricing {
                     price
+                    originalPrice
                     salePrice
-                    images {{
-                      _id
-                      fileUrl
-                      url
-                      path
-                    }}
-                    pricing {{
-                      price
-                      originalPrice
-                      salePrice
-                      amount
-                    }}
-                  }}
-                }}
-                """
-                result = QomrahGraphQLClient.execute_query(raw_query)
-            except Exception as inner_e:
-                logging.error(f"❌ خطأ أثناء تنفيذ استعلام المزامنة للصفحة {page}: {inner_e}")
-                raise Exception(f"فشل الاتصال بخدمة قمرة في الصفحة {page}: {str(inner_e)}")
+                    amount
+                }
+            }
+        }
+    }
+    """
+    
+    try:
+        result = QomrahGraphQLClient.execute_query(query)
+    except Exception as e:
+        logging.error(f"❌ خطأ أثناء تنفيذ استعلام المزامنة: {e}")
+        raise Exception(f"فشل الاتصال بخدمة قمرة: {str(e)}")
 
-        if not result:
-            break
+    if not result:
+        return "تمت المزامنة بنجاح، لكن منصة قمرة لم تقم بإرجاع أي استجابة."
 
-        # استخراج البيانات بمرونة لجميع الهياكل المحتملة للاستجابة
-        response_data = result.get('data', result)
-        products_data = []
+    # استخراج البيانات بمرونة لتتوافق مع هيكل الاستجابة
+    response_data = result.get('data', result)
+    products_data = []
 
-        if isinstance(response_data, dict):
-            find_all = response_data.get('findAllProducts') or response_data.get('data') or response_data
-            if isinstance(find_all, dict):
-                products_data = find_all.get('data') or find_all.get('items') or find_all.get('results') or []
-            elif isinstance(find_all, list):
-                products_data = find_all
-        elif isinstance(response_data, list):
-            products_data = response_data
+    if isinstance(response_data, dict):
+        find_all = response_data.get('findAllProducts') or response_data.get('data') or response_data
+        if isinstance(find_all, dict):
+            products_data = (
+                find_all.get('items') or 
+                find_all.get('data') or 
+                find_all.get('results') or 
+                find_all.get('products') or []
+            )
+        elif isinstance(find_all, list):
+            products_data = find_all
+    elif isinstance(response_data, list):
+        products_data = response_data
 
-        if not products_data:
-            break
-
-        all_products_data.extend(products_data)
-        
-        # إذا كان عدد المنتجات المسترجعة أقل من الحد الأقصى للصفحة، فهذا يعني وصولنا لآخر صفحة
-        if len(products_data) < limit:
-            break
-            
-        page += 1
-        # حماية أمان ضد الحلقات اللانهائية
-        if page > 200:
-            break
-
-    logging.info(f"📦 [Total Parsed Products from Qomra Across All Pages]: {len(all_products_data)}")
-
-    if not all_products_data:
+    if not products_data:
         return "تمت المزامنة بنجاح، لكن منصة قمرة لم تقم بإرجاع أي منتجات."
+
+    logging.info(f"📦 [Total Parsed Products from Qomra]: {len(products_data)}")
 
     saved_count = 0
     updated_count = 0
@@ -131,7 +89,7 @@ def sync_products_from_qomra():
     except Exception:
         pass
 
-    for item in all_products_data:
+    for item in products_data:
         if not isinstance(item, dict):
             continue
             
@@ -230,4 +188,4 @@ def sync_products_from_qomra():
                 
     db.session.commit()
     
-    return f"تمت المزامنة بنجاح! تم جلب ومعالجة {len(all_products_data)} منتج عبر جميع الصفحات: إضافة {saved_count}، تحديث {updated_count}، وربط {mappings_count} منتج."
+    return f"تمت المزامنة بنجاح! تم جلب ومعالجة {len(products_data)} منتج: إضافة {saved_count}، تحديث {updated_count}، وربط {mappings_count} منتج."
