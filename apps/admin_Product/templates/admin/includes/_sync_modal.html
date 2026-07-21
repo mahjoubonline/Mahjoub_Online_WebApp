@@ -43,7 +43,6 @@
             const metaTag = document.querySelector('meta[name="csrf-token"]');
             const csrfToken = metaTag ? metaTag.getAttribute('content') : '';
             
-            // استخدام safe_url_for لتجنب BuildError في حال لم يكن المسار مسجلاً
             const response = await fetch("{{ safe_url_for('admin_product_bp.save_sync') }}", { 
                 method: 'POST',
                 headers: { 
@@ -52,15 +51,26 @@
                 }
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({message: 'خطأ غير معروف أثناء المزامنة'}));
-                throw new Error(errorData.message);
+            // قراءة الاستجابة مع دعم الاحتياط في حال لم تكن JSON
+            const contentType = response.headers.get("content-type");
+            let responseMessage = "تمت المزامنة بنجاح";
+
+            if (contentType && contentType.includes("application/json")) {
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'خطأ غير معروف أثناء المزامنة');
+                }
+                responseMessage = data.message || responseMessage;
+            } else {
+                const textData = await response.text();
+                if (!response.ok) {
+                    throw new Error(textData || 'خطأ غير معروف أثناء المزامنة');
+                }
+                responseMessage = textData || responseMessage;
             }
             
-            const data = await response.json();
-            
             progressBar.style.width = '100%';
-            statusText.innerHTML = `<span class="text-success">${data.message}</span>`;
+            statusText.innerHTML = `<span class="text-success">${responseMessage}</span>`;
             
             // إخفاء المودال وإعادة تحميل الصفحة بعد النجاح
             setTimeout(() => {
