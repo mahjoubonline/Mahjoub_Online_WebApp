@@ -157,7 +157,7 @@ def save_sync():
     try:
         from apps.services.product_sync_service import sync_products_from_qomra
         
-        # تنفيذ خدمة الجلب والحفظ الفعلي للمنتجات بكل تفاصيلها
+        # تنفيذ خدمة الجلب والحفظ الفعلي للمنتجات لكل الصفحات
         success_message = sync_products_from_qomra()
 
         return jsonify({
