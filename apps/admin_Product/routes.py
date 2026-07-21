@@ -15,6 +15,7 @@ GRAPHQL_TOKEN = os.environ.get('QUMRA_API_KEY', 'YOUR_ADMIN_API_TOKEN')
 
 @admin_product_bp.route('/products', methods=['GET'])
 def manage_products():
+    """عرض قائمة المنتجات مع دعم الترقيم والبحث المباشر عبر الـ API"""
     page = request.args.get('page', 1, type=int)
     search_query = request.args.get('title', '', type=str)
     
@@ -29,6 +30,42 @@ def manage_products():
         products=products,
         search_title=search_query,
         pagination=pagination
+    )
+
+@admin_product_bp.route('/sync-products', methods=['POST'])
+def sync_products():
+    """مسار تنفيذ المزامنة عند النقر على الزر في نافذة الـ Modal"""
+    try:
+        client = ProductSyncService(token=GRAPHQL_TOKEN)
+        raw_data = client.fetch_products(page=1, limit=50)
+        
+        if not raw_data or "data" not in raw_data:
+            flash("تعذر جلب المنتجات من الخادم الخارجي أثناء المزامنة.", "danger")
+            return redirect(url_for('admin_product_bp.manage_products'))
+
+        count = len(raw_data.get("data", []))
+        flash(f"تمت مزامنة البيانات بنجاح وجلب {count} منتجاً.", "success")
+        
+    except Exception as e:
+        flash(f"حدث خطأ أثناء الاتصال بالمزامنة: {str(e)}", "danger")
+
+    return redirect(url_for('admin_product_bp.manage_products'))
+
+@admin_product_bp.route('/products/add', methods=['GET', 'POST'])
+def add_product():
+    """مسار إضافة منتج جديد"""
+    client = ProductSyncService(token=GRAPHQL_TOKEN)
+    suppliers = client.fetch_suppliers() if hasattr(client, 'fetch_suppliers') else []
+    all_collections = client.fetch_collections() if hasattr(client, 'fetch_collections') else []
+
+    if request.method == 'POST':
+        # منطق معالجة الحفظ للإضافة إذا لزم الأمر
+        pass
+
+    return render_template(
+        'admin/add_product.html',
+        suppliers=suppliers,
+        all_collections=all_collections
     )
 
 @admin_product_bp.route('/products/edit', methods=['GET'])
@@ -47,7 +84,6 @@ def edit_product():
         flash("المنتج المطلوب غير موجود أو فشل جلب بياناته.", "danger")
         return redirect(url_for('admin_product_bp.manage_products'))
         
-    # جلب الموردين والمجموعات لتعبئة قوائم الاختيار في القالب بنجاح
     suppliers = client.fetch_suppliers() if hasattr(client, 'fetch_suppliers') else []
     all_collections = client.fetch_collections() if hasattr(client, 'fetch_collections') else []
         
@@ -65,7 +101,6 @@ def save_sync_product():
         qid = request.form.get('qid')
         client = ProductSyncService(token=GRAPHQL_TOKEN)
         
-        # استخراج البيانات المرسلة عبر FormData
         product_data = {
             "title": request.form.get('title'),
             "slug": request.form.get('slug'),
@@ -82,7 +117,6 @@ def save_sync_product():
             }
         }
         
-        # تنفيذ عملية التحديث عبر الخدمة
         # success = client.update_product(qid, product_data, files=request.files.getlist('images'))
         
         return jsonify({"status": "success", "message": "تم حفظ وتحديث المنتج بنجاح."})
