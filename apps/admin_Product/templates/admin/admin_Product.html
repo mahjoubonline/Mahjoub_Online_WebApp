@@ -125,20 +125,28 @@
     const searchInput = document.getElementById('searchInput');
     const resultsContainer = document.getElementById('results-container');
 
-    // نظام البحث الفوري الحي (Live Search)
+    // نظام البحث الفوري الحي (Live Search) مع ترويسة AJAX المتوافقة مع الباك إند
     searchInput.addEventListener('keyup', () => {
         clearTimeout(timeout);
         timeout = setTimeout(async () => {
             const query = searchInput.value;
             try {
-                const response = await fetch(`{{ url_for('admin_product_bp.manage_products') }}?title=${encodeURIComponent(query)}`);
+                const response = await fetch(`{{ url_for('admin_product_bp.manage_products') }}?title=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
                 const html = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 const newResults = doc.getElementById('results-container');
-                if (newResults) { resultsContainer.innerHTML = newResults.innerHTML; }
-            } catch (error) { console.error("خطأ في البحث:", error); }
-        }, 600);
+                if (newResults) { 
+                    resultsContainer.innerHTML = newResults.innerHTML; 
+                }
+            } catch (error) { 
+                console.error("خطأ في البحث:", error); 
+            }
+        }, 400);
     });
 
     // دالة عامة لتحديث الصفحة تلقائياً فور نجاح عملية المزامنة
