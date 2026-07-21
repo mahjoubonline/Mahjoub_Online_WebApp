@@ -15,22 +15,18 @@ admin_product_bp = Blueprint(
 
 @admin_product_bp.route('/products', methods=['GET'])
 def manage_products():
-    """عرض قائمة المنتجات مع دعم الترقيم والبحث المستقر محلياً"""
+    """عرض قائمة المنتجات مع دعم الترقيم والبحث المباشر عبر الـ API في جميع الصفحات"""
     page = request.args.get('page', 1, type=int)
     search_query = request.args.get('title', '', type=str)
     
     token = os.environ.get('QUMRA_API_KEY') or os.environ.get('GRAPHQL_ENDPOINT')
     client = ProductSyncService(token=token)
     
-    # جلب المنتجات بالهيكل الأساسي الصحيح لتفادي أخطاء الـ API
-    response_data = client.fetch_products(page=page, limit=20)
+    # تمرير قيمة الـ search_query إلى الـ Service لتنفيذ البحث مباشرة في الخادم
+    response_data = client.fetch_products(page=page, limit=20, title=search_query)
     
     products = response_data.get("data", [])
     pagination = response_data.get("pagination", {"currentPage": page, "totalPages": 1, "limit": 20})
-    
-    # تصفية محلية آمنة للبحث بالاسم
-    if search_query:
-        products = [p for p in products if search_query.lower() in p.get('title', '').lower()]
 
     return render_template(
         'admin/admin_Product.html',
