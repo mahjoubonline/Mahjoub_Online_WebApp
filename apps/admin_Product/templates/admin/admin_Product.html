@@ -172,8 +172,12 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 const newResults = doc.getElementById('results-container');
+                
                 if (newResults) { 
                     resultsContainer.innerHTML = newResults.innerHTML; 
+                } else {
+                    // معالجة مرنة في حال تم إرجاع القالب الجزئي مباشرة بدون عنصر results-container
+                    resultsContainer.innerHTML = html;
                 }
             } catch (error) { 
                 console.error("خطأ في البحث:", error); 
