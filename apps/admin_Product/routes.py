@@ -17,12 +17,12 @@ admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='temp
 @login_required
 def manage_products():
     """
-    عرض قائمة المنتجات الحقيقية من قاعدة البيانات مع دعم البحث والتصفح الصفحي (Pagination).
+    عرض قائمة المنتجات الحقيقية من قاعدة البيانات مع دعم البحث الفوري والترقيم الصفحي (Pagination).
     """
     search_query = request.args.get('title', '') or request.args.get('q', '')
     search_query = search_query.strip()
     page = request.args.get('page', 1, type=int)
-    per_page = 10  # عدد المنتجات في كل صفحة
+    per_page = 15  # عدد المنتجات في كل صفحة
 
     # جلب المنتجات من قاعدة البيانات مع تطبيق البحث إن وجد
     query = Product.query
@@ -38,6 +38,15 @@ def manage_products():
         'totalPages': pagination_obj.pages,
         'totalItems': pagination_obj.total
     }
+
+    # معالجة طلبات البحث الحي (AJAX Fetch)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'text/html' not in request.headers.get('Accept', ''):
+        return render_template(
+            'admin/admin_Product.html',
+            products=products,
+            pagination=pagination,
+            search=search_query
+        )
 
     return render_template(
         'admin/admin_Product.html',
