@@ -55,7 +55,8 @@
         <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
             {% if products %}
                 {% for product in products %}
-                {% if product and product.name %}
+                {% set p_name = product.name if product.name else (product.title if product.title else '') %}
+                {% if product and p_name %}
                 <div class="col">
                     <a href="{{ url_for('admin_product_bp.edit_product', qid=product.qid) }}" class="product-card">
                         <div class="card h-100 border-0">
@@ -66,7 +67,7 @@
                             
                             <div class="card-body">
                                 <!-- عنوان المنتج -->
-                                <h6 class="fw-bold mb-2 text-truncate" title="{{ product.name }}">{{ product.name }}</h6>
+                                <h6 class="fw-bold mb-2 text-truncate" title="{{ p_name }}">{{ p_name }}</h6>
                                 
                                 <div class="d-flex justify-content-between align-items-center mt-2">
                                     <!-- السعر مع رمز العملة المستورد حصرياً من قاعدة البيانات -->
@@ -110,9 +111,6 @@
                 </li>
                 
                 <!-- زر التالي -->
-                <script>
-                    // ملاحظة: تأكد أن كود الباك إند (routes.py) يمرر كائن pagination بالشكل الصحيح (currentPage و totalPages)
-                </script>
                 <li class="page-item {{ 'disabled' if pagination.currentPage >= pagination.totalPages }}">
                     <a class="page-link" href="{{ url_for('admin_product_bp.manage_products', page=pagination.currentPage+1, title=search) }}">التالي</a>
                 </li>
