@@ -126,6 +126,7 @@ def create_app():
                     except Exception as e:
                         print(f"❌ [Registry]: خطأ في تسجيل موديول {item}: {e}")
 
+    # ✅ إضافة فلتر Jinja لتوليد CSRF token داخل القوالب
     @app.context_processor
     def inject_vars():
         def safe_url_for(endpoint, **values):
@@ -134,6 +135,11 @@ def create_app():
                 alt_endpoint = f"{endpoint}_bp" if not endpoint.endswith('_bp') else endpoint.replace('_bp', '')
                 try: return url_for(alt_endpoint, **values)
                 except BuildError: return '#'
-        return dict(csrf_token=generate_csrf, registered_modules=ADMIN_MODULES, supplier_modules=SUPPLIER_MODULES, safe_url_for=safe_url_for)
+        return dict(
+            csrf_token=generate_csrf,
+            registered_modules=ADMIN_MODULES,
+            supplier_modules=SUPPLIER_MODULES,
+            safe_url_for=safe_url_for
+        )
 
     return app
