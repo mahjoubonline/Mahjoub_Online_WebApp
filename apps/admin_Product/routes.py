@@ -78,7 +78,17 @@ def save_sync():
     تنفيذ عملية مزامنة المنتجات ديناميكياً مع قمرة وإرجاع النتيجة بصيغة JSON.
     """
     try:
-        result_message = sync_products_from_qomra()
+        # قراءة قيمة العملة المعتمدة المُمَرّرة من الواجهة
+        currency = 'ر.س'
+        if request.is_json:
+            data = request.get_json() or {}
+            currency = data.get('currency', 'ر.س')
+        else:
+            currency = request.form.get('currency', 'ر.س')
+
+        # استدعاء دالة المزامنة مع تمرير العملة
+        result_message = sync_products_from_qomra(currency=currency)
+        
         return jsonify({
             'status': 'success',
             'message': result_message if isinstance(result_message, str) else 'تمت مزامنة المنتجات بنجاح من قمرة.'
