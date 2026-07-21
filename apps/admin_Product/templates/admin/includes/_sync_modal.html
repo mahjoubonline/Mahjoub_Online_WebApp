@@ -1,35 +1,26 @@
 <!-- 📂 apps/admin_Product/templates/admin/includes/_sync_modal.html -->
 <div class="modal fade" id="syncModal" tabindex="-1" aria-labelledby="syncModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content rounded-3 shadow-lg">
-      <div class="modal-header" style="background-color: var(--dark-purple); color: #fff;">
-        <h5 class="modal-title fw-bold" id="syncModalLabel">
-          <i class="fas fa-sync-alt me-2"></i> مزامنة المنتجات
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-      </div>
-      <div class="modal-body">
-        <p class="mb-3 text-muted">
-          ستقوم هذه العملية بجلب المنتجات من المتجر الخارجي وتحديث قاعدة البيانات الداخلية.
-        </p>
-        <ul class="list-unstyled small text-secondary">
-          <li><i class="fas fa-check-circle text-success me-2"></i> تحديث الأسعار والكميات</li>
-          <li><i class="fas fa-check-circle text-success me-2"></i> إضافة المنتجات الجديدة</li>
-          <li><i class="fas fa-check-circle text-success me-2"></i> مزامنة الصور والعناوين</li>
-        </ul>
-      </div>
-      <div class="modal-footer">
-        <form action="{{ url_for('admin_product_bp.sync_products') }}" method="POST">
-          <!-- 🛡️ إضافة رمز CSRF -->
-          {{ csrf_token() }}
-          <button type="submit" class="btn btn-custom px-4 shadow-sm">
-            <i class="fas fa-sync-alt me-1"></i> بدء المزامنة
-          </button>
-        </form>
-        <button type="button" class="btn btn-secondary px-4 shadow-sm" data-bs-dismiss="modal">
-          إلغاء
-        </button>
-      </div>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="syncModalLabel">
+                    <i class="fas fa-sync-alt me-2 text-primary"></i> مزامنة المنتجات
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">
+                    سيتم الآن جلب أحدث المنتجات وتحديث المخزون والبيانات عبر الاتصال السحابي. هل تريد متابعة المزامنة؟
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form action="{{ url_for('admin_product_bp.sync_products') }}" method="POST">
+                    <button type="submit" class="btn btn-custom">
+                        <i class="fas fa-cloud-download-alt me-1"></i> بدء المزامنة الآن
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
