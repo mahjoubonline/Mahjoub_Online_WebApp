@@ -21,7 +21,6 @@ class ProductSyncService:
             success
             message
             data {
-              id
               qid
               title
               description
@@ -29,16 +28,10 @@ class ProductSyncService:
               quantity
               images { fileUrl }
             }
-            currency {
-              code
-              symbol
-            }
             pagination {
-              total
-              page
-              limit
               totalPages
               currentPage
+              limit
             }
           }
         }
@@ -70,7 +63,6 @@ class ProductSyncService:
             success
             message
             data {
-              id
               qid
               title
               description
@@ -103,5 +95,5 @@ class ProductSyncService:
     def sync_to_local_db(self, products_data):
         # لا نقوم بأي حفظ داخلي، فقط نطبع للتأكيد
         for product in products_data.get("data", []):
-            print(f"Fetched product {product.get('id')} - {product.get('title')}")
+            print(f"Fetched product {product.get('qid')} - {product.get('title')}")
         print("Sync completed (no local save).")
