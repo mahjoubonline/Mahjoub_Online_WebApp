@@ -58,57 +58,8 @@
         <!-- حقل مخفي لمعرف المنتج الأساسي QID -->
         <input type="hidden" name="qid" value="{{ product.qid }}">
 
-        <!-- 1. القسم الأول: البيانات الأساسية والوصف -->
-        <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-[var(--royal-purple-light)]">
-            <h2 class="text-lg font-bold text-[var(--royal-midnight-900)] mb-4 flex items-center gap-2 border-b pb-3 border-[var(--royal-purple-light)]">
-                <i class="fa-solid fa-circle-info text-[var(--royal-purple-accent)]"></i> البيانات الأساسية والوصف
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">اسم المنتج الرئيسي (title)</label>
-                    <input type="text" name="title" value="{{ product.info.title if product.info and product.info.title else '' }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition" placeholder="أدخل اسم المنتج...">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">رابط المنتج (slug)</label>
-                    <input type="text" name="slug" value="{{ product.info.slug if product.info and product.info.slug else '' }}" dir="ltr" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none text-right transition" placeholder="product-slug-url">
-                </div>
-                
-                <!-- شريط أدوات الوصف المتقدم -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">وصف المنتج الاحترافي (مع شريط الأدوات والمعاينة)</label>
-                    <div class="border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[var(--royal-purple-accent)] transition">
-                        <!-- شريط الأدوات المحدث والشامل -->
-                        <div class="bg-[var(--royal-midnight-800)]/5 border-b border-[var(--royal-purple-light)] p-2 flex flex-wrap gap-1 items-center">
-                            <button type="button" onclick="formatText('bold')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm font-bold text-gray-700 shadow-xs" title="عريض"><i class="fa-solid fa-bold"></i></button>
-                            <button type="button" onclick="formatText('italic')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm italic text-gray-700 shadow-xs" title="مائل"><i class="fa-solid fa-italic"></i></button>
-                            <button type="button" onclick="formatText('underline')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm underline text-gray-700 shadow-xs" title="خط تحت النص"><i class="fa-solid fa-underline"></i></button>
-                            <button type="button" onclick="formatText('strikeThrough')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm line-through text-gray-700 shadow-xs" title="خط متوسط"><i class="fa-solid fa-strikethrough"></i></button>
-                            
-                            <span class="w-px h-5 bg-gray-300 mx-1"></span>
-                            
-                            <!-- أدوات المحاذاة -->
-                            <button type="button" onclick="formatText('justifyRight')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm text-gray-700 shadow-xs" title="محاذاة لليمين"><i class="fa-solid fa-align-right"></i></button>
-                            <button type="button" onclick="formatText('justifyCenter')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm text-gray-700 shadow-xs" title="محاذاة للوسط"><i class="fa-solid fa-align-center"></i></button>
-                            <button type="button" onclick="formatText('justifyLeft')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm text-gray-700 shadow-xs" title="محاذاة لليسار"><i class="fa-solid fa-align-left"></i></button>
-                            
-                            <span class="w-px h-5 bg-gray-300 mx-1"></span>
-                            
-                            <button type="button" onclick="formatText('insertUnorderedList')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm text-gray-700 shadow-xs" title="قائمة نقطية"><i class="fa-solid fa-list-ul"></i></button>
-                            <button type="button" onclick="formatText('insertOrderedList')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm text-gray-700 shadow-xs" title="قائمة رقمية"><i class="fa-solid fa-list-ol"></i></button>
-                            <button type="button" onclick="openLinkModal()" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-purple-50 text-sm text-gray-700 shadow-xs" title="إضافة رابط"><i class="fa-solid fa-link"></i></button>
-                            
-                            <span class="w-px h-5 bg-gray-300 mx-1"></span>
-                            
-                            <input type="color" onchange="formatTextColor(this.value)" class="w-8 h-8 p-0 border rounded-lg cursor-pointer" title="لون النص">
-                            <button type="button" onclick="formatText('removeFormat')" class="p-1.5 px-2.5 bg-white border rounded-lg hover:bg-red-50 text-sm text-red-600 shadow-xs" title="إزالة التنسيق"><i class="fa-solid fa-text-slash"></i></button>
-                        </div>
-                        <!-- محرر النصوص (ContentEditable) مدمج مع قيمة المنتج الحالية -->
-                        <div id="productDescriptionEditor" contenteditable="true" class="w-full p-4 min-h-[140px] outline-none bg-white text-gray-800" placeholder="اكتب تفاصيل ووصف المنتج هنا...">{{ product.desc | safe if product.desc else '' }}</div>
-                        <textarea name="description" id="hiddenDescription" class="hidden"></textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- 1. القسم الأول: البيانات الأساسية والوصف (مستدعى من الملف الجزئي) -->
+        {% include "admin/partials/_product_main_info.html" %}
 
         <!-- 2. القسم الثاني: معرض صور المنتج -->
         <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-[var(--royal-purple-light)]">
@@ -171,55 +122,8 @@
             </div>
         </div>
 
-        <!-- 4. القسم الرابع: متغيرات المنتج (Variants) -->
-        <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-[var(--royal-purple-light)]">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 border-b pb-3 border-[var(--royal-purple-light)]">
-                <h2 class="text-lg font-bold text-[var(--royal-midnight-900)] flex items-center gap-2">
-                    <i class="fa-solid fa-boxes-stacked text-[var(--royal-purple-accent)]"></i> متغيرات المنتج (Variants)
-                </h2>
-                <button type="button" id="addVariantBtn" class="bg-[var(--royal-midnight-800)] hover:bg-[var(--royal-midnight-900)] text-white text-sm px-4 py-2 rounded-xl font-semibold transition flex items-center gap-1 cursor-pointer shadow-xs">
-                    <i class="fa-solid fa-plus"></i> إضافة متغير جديد
-                </button>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-right border-collapse min-w-[600px]">
-                    <thead>
-                        <tr class="bg-[var(--royal-midnight-800)]/5 text-gray-700 text-sm">
-                            <th class="p-3 border-b">اسم المتغير (مثل: لون أحمر، أخضر، L)</th>
-                            <th class="p-3 border-b">السعر</th>
-                            <th class="p-3 border-b">الكمية</th>
-                            <th class="p-3 border-b">SKU</th>
-                            <th class="p-3 border-b text-center">حذف</th>
-                        </tr>
-                    </thead>
-                    <tbody id="variantsTableBody" class="text-sm">
-                        {% if product.variants %}
-                            {% for var in product.variants %}
-                            <tr>
-                                <td class="p-2 border-b"><input type="text" name="variant_name[]" value="{{ var.name if var.name else '' }}" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="مثال: أحمر / أخضر / أزرق / أسود"></td>
-                                <td class="p-2 border-b"><input type="number" step="0.01" name="variant_price[]" value="{{ var.price if var.price is defined else 0 }}" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="0.00"></td>
-                                <td class="p-2 border-b"><input type="number" name="variant_qty[]" value="{{ var.quantity if var.quantity is defined else 0 }}" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="0"></td>
-                                <td class="p-2 border-b"><input type="text" name="variant_sku[]" value="{{ var.sku if var.sku else '' }}" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="SKU-VAR"></td>
-                                <td class="p-2 border-b text-center">
-                                    <button type="button" class="text-red-500 hover:text-red-700 remove-variant p-2 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td class="p-2 border-b"><input type="text" name="variant_name[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="مثال: أحمر / أخضر / أزرق / أسود"></td>
-                                <td class="p-2 border-b"><input type="number" step="0.01" name="variant_price[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="0.00"></td>
-                                <td class="p-2 border-b"><input type="number" name="variant_qty[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="0"></td>
-                                <td class="p-2 border-b"><input type="text" name="variant_sku[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="SKU-VAR"></td>
-                                <td class="p-2 border-b text-center">
-                                    <button type="button" class="text-red-500 hover:text-red-700 remove-variant p-2 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <!-- 4. القسم الرابع: متغيرات المنتج (Variants) (مستدعى من الملف الجزئي) -->
+        {% include "admin/partials/_product_meta_variants.html" %}
 
         <!-- 5. القسم الخامس: الإعدادات والربط والتصنيف -->
         <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-[var(--royal-purple-light)]">
