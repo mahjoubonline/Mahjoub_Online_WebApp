@@ -97,7 +97,8 @@ def save_sync_product():
 
         collection_ids = json.loads(request.form.get('collection_ids', '[]') or '[]')
         
-        # ✅ تعديل المتغيرات لتتوافق تماماً مع الـ Schema المسموحة للـ Variant (sku, quantity, pricing { price }) بدون حقل name
+        # ✅ إزالة حقل sku من المتغيرات لأن API لا يدعمه
+        # ✅ المتغيرات الآن تحتوي فقط على quantity و pricing.price
         variants_raw = request.form.get('variants', '')
         variants = []
         if variants_raw:
@@ -105,7 +106,7 @@ def save_sync_product():
                 parsed_variants = json.loads(variants_raw)
                 for v in parsed_variants:
                     variants.append({
-                        "sku": v.get("sku", ""),
+                        # ❌ تم إزالة "sku": v.get("sku", ""),
                         "quantity": int(v.get("quantity", 0)),
                         "pricing": {"price": float(v.get("price", 0.0))}
                     })
@@ -114,9 +115,9 @@ def save_sync_product():
         else:
             var_prices = request.form.getlist('variant_price[]')
             var_qtys = request.form.getlist('variant_qty[]')
-            var_skus = request.form.getlist('variant_sku[]')
+            # var_skus = request.form.getlist('variant_sku[]')  # ❌ تم إيقاف استخدامه
             
-            for i in range(max(len(var_qtys), len(var_prices), len(var_skus))):
+            for i in range(max(len(var_qtys), len(var_prices))):
                 try:
                     v_price = float(var_prices[i]) if i < len(var_prices) and var_prices[i] else 0.0
                 except ValueError:
@@ -125,10 +126,9 @@ def save_sync_product():
                     v_qty = int(var_qtys[i]) if i < len(var_qtys) and var_qtys[i] else 0
                 except ValueError:
                     v_qty = 0
-                v_sku = var_skus[i] if i < len(var_skus) else ""
 
                 variants.append({
-                    "sku": v_sku,
+                    # ❌ تم إزالة "sku": v_sku,
                     "quantity": v_qty,
                     "pricing": {"price": v_price}
                 })
@@ -138,6 +138,7 @@ def save_sync_product():
 
         sync_service = ProductSyncService(token=GRAPHQL_TOKEN)
         
+        # ✅ تحديث البيانات بدون حقل sku في المتغيرات
         success = sync_service.update_product_data(
             qid=qid,
             info=info,
@@ -148,7 +149,7 @@ def save_sync_product():
             desc=description,
             supplier_id=supplier_id,
             collection_ids=collection_ids,
-            variants=variants,
+            variants=variants,  # ✅ الآن بدون sku
             removed_images=removed_images,
             new_images=new_images,
             quantity=quantity
