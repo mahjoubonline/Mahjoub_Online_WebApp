@@ -22,7 +22,7 @@ def register_module(app):
     """
     تسجيل موديول لوحة التحكم (Dashboard) في التطبيق الرئيسي
     """
-    # ✅ استيراد مباشر من الملفات في المجلد الرئيسي (بدون routes)
+    # ✅ استيراد مباشر من الملفات في المجلد الرئيسي
     from apps.suppliers_dashboard.dashboard_routes import suppliers_dashboard_bp
     from apps.suppliers_dashboard.settings_routes import settings_bp
     from apps.suppliers_dashboard.wallet_routes import wallet_bp
