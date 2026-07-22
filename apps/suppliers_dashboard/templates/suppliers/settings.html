@@ -68,7 +68,6 @@
         color: var(--royal-purple);
     }
     
-    /* ✅ رسالة الترحيب للموردين الجدد */
     .welcome-banner {
         background: linear-gradient(135deg, #1a0b2e 0%, #2d1b4e 100%);
         border-radius: 20px;
@@ -99,7 +98,6 @@
         font-weight: 700;
     }
     
-    /* ✅ حالة اكتمال الملف الشخصي */
     .completion-bar {
         height: 6px;
         border-radius: 10px;
@@ -112,6 +110,20 @@
         border-radius: 10px;
         background: linear-gradient(90deg, var(--mahjoub-gold), #f0d060);
         transition: width 0.6s ease;
+    }
+    
+    select.form-control {
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: left 15px center;
+        padding-left: 40px;
+        cursor: pointer;
+    }
+    
+    select.form-control option {
+        padding: 8px;
     }
 </style>
 
@@ -182,7 +194,6 @@
                 </div>
                 <div class="card-body p-4">
 
-                    <!-- ✅ تم تعديل action إلى suppliers_settings.settings -->
                     <form method="POST" action="{{ url_for('suppliers_settings.settings') }}" id="settingsForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
 
@@ -199,16 +210,18 @@
                             <small class="text-muted">هذا الاسم سيظهر للعملاء في المتجر</small>
                         </div>
 
-                        <!-- ✅ اسم المالك -->
+                        <!-- ✅ اسم المالك (للقراءة فقط) -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
-                                <i class="fas fa-user text-muted me-1"></i> اسم المالك <span class="required-star">*</span>
+                                <i class="fas fa-user text-muted me-1"></i> اسم المالك
                             </label>
                             <input type="text" name="owner_name" 
                                    value="{{ supplier.owner_name if supplier.owner_name else '' }}"
-                                   class="form-control {% if not supplier.owner_name %}border-warning{% endif %}" 
+                                   class="form-control" 
                                    placeholder="الاسم الكامل للمالك"
-                                   required>
+                                   readonly
+                                   style="background-color: #e9ecef; cursor: not-allowed;">
+                            <small class="text-muted">لا يمكن تعديل اسم المالك</small>
                         </div>
 
                         <!-- ✅ البريد الإلكتروني -->
@@ -222,20 +235,30 @@
                                    placeholder="example@domain.com">
                         </div>
 
-                        <!-- ✅ رقم الهاتف -->
+                        <!-- ✅ رقم الهاتف (مع تحقق لحظي) -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-phone text-muted me-1"></i> رقم الهاتف <span class="required-star">*</span>
                             </label>
-                            <input type="text" name="phone" 
-                                   value="{{ supplier.phone if supplier.phone else '' }}"
-                                   class="form-control {% if not supplier.phone %}border-warning{% endif %}" 
-                                   placeholder="05XXXXXXXX" dir="ltr"
-                                   required>
+                            <div class="position-relative">
+                                <input type="text" name="phone" 
+                                       id="phoneInput"
+                                       value="{{ supplier.phone if supplier.phone else '' }}"
+                                       class="form-control {% if not supplier.phone %}is-invalid{% endif %}" 
+                                       placeholder="05XXXXXXXX" dir="ltr"
+                                       required
+                                       oninput="validatePhone(this)">
+                                <div id="phoneFeedback" class="invalid-feedback">
+                                    <i class="fas fa-times-circle me-1"></i> رقم الهاتف مطلوب
+                                </div>
+                                <div id="phoneSuccess" class="valid-feedback" style="display: none;">
+                                    <i class="fas fa-check-circle me-1"></i> رقم هاتف صحيح
+                                </div>
+                            </div>
                             <small class="text-muted">أدخل رقم الهاتف بدون فواصل</small>
                         </div>
 
-                        <!-- ✅ وصف المتجر (جديد) -->
+                        <!-- ✅ وصف المتجر -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-align-right text-muted me-1"></i> وصف المتجر
@@ -245,18 +268,47 @@
                             <small class="text-muted">وصف يظهر في صفحة المتجر (اختياري)</small>
                         </div>
 
-                        <!-- ✅ العنوان -->
+                        <!-- ✅ المحافظة -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark">
+                                <i class="fas fa-map-pin text-muted me-1"></i> المحافظة
+                            </label>
+                            <select name="governorate" id="governorateSelect" class="form-control" onchange="updateCities()">
+                                <option value="">اختر المحافظة...</option>
+                                {% for gov in governorates.keys() %}
+                                <option value="{{ gov }}" {% if supplier.supplier_profile and supplier.supplier_profile.governorate == gov %}selected{% endif %}>
+                                    {{ gov }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- ✅ المدينة / المديرية -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark">
+                                <i class="fas fa-city text-muted me-1"></i> المدينة / المديرية
+                            </label>
+                            <select name="city" id="citySelect" class="form-control">
+                                <option value="">اختر المدينة...</option>
+                                {% if supplier.supplier_profile and supplier.supplier_profile.city %}
+                                <option value="{{ supplier.supplier_profile.city }}" selected>{{ supplier.supplier_profile.city }}</option>
+                                {% endif %}
+                            </select>
+                            <small class="text-muted">سيتم تحديث المدن بناءً على المحافظة المختارة</small>
+                        </div>
+
+                        <!-- ✅ العنوان التفصيلي -->
                         <div class="mb-4">
                             <label class="form-label fw-bold text-dark">
-                                <i class="fas fa-map-marker-alt text-muted me-1"></i> العنوان
+                                <i class="fas fa-map-marker-alt text-muted me-1"></i> العنوان التفصيلي
                             </label>
                             <textarea name="address" class="form-control" rows="2" 
-                                      placeholder="العنوان الكامل للمتجر">{{ supplier.supplier_profile.address if supplier.supplier_profile and supplier.supplier_profile.address else '' }}</textarea>
+                                      placeholder="العنوان التفصيلي (الشارع، الحي، المبنى)">{{ supplier.supplier_profile.address if supplier.supplier_profile and supplier.supplier_profile.address else '' }}</textarea>
                         </div>
 
                         <!-- ✅ أزرار الإجراء -->
                         <div class="d-flex flex-wrap gap-2">
-                            <button type="submit" class="btn btn-gold">
+                            <button type="submit" class="btn btn-gold" id="submitBtn">
                                 <i class="fas fa-save me-2"></i> 
                                 {% if is_new %}إكمال التسجيل{% else %}حفظ التغييرات{% endif %}
                             </button>
@@ -274,7 +326,6 @@
         <!-- ✅ معلومات إضافية -->
         <div class="col-lg-4">
             
-            <!-- ✅ بطاقة معلومات الحساب -->
             <div class="card settings-card">
                 <div class="settings-header">
                     <h5><i class="fas fa-info-circle"></i> معلومات الحساب</h5>
@@ -328,8 +379,10 @@
                     
                     {% set fields = [
                         (supplier.trade_name, 'اسم المتجر'),
-                        (supplier.owner_name, 'اسم المالك'),
-                        (supplier.phone, 'رقم الهاتف')
+                        (supplier.phone, 'رقم الهاتف'),
+                        (supplier.supplier_profile.governorate if supplier.supplier_profile else None, 'المحافظة'),
+                        (supplier.supplier_profile.city if supplier.supplier_profile else None, 'المدينة'),
+                        (supplier.supplier_profile.address if supplier.supplier_profile else None, 'العنوان')
                     ] %}
                     {% set completed = fields|selectattr(0)|list|length %}
                     {% set total = fields|length %}
@@ -393,14 +446,79 @@
     </div>
 </div>
 
-<!-- ✅ JavaScript للتحقق من صحة النموذج -->
+<!-- ✅ JavaScript -->
 <script>
+    // ============================================================
+    // ✅ التحقق من رقم الهاتف لحظياً
+    // ============================================================
+    function validatePhone(input) {
+        const feedback = document.getElementById('phoneFeedback');
+        const success = document.getElementById('phoneSuccess');
+        const value = input.value.trim();
+        
+        if (value.length === 0) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            feedback.style.display = 'block';
+            success.style.display = 'none';
+            return;
+        }
+        
+        // التحقق من أن الرقم مكون من 9 أرقام
+        if (/^\d{9}$/.test(value)) {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            feedback.style.display = 'none';
+            success.style.display = 'block';
+        } else {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            feedback.textContent = '⚠️ رقم الهاتف يجب أن يكون 9 أرقام';
+            feedback.style.display = 'block';
+            success.style.display = 'none';
+        }
+    }
+
+    // ============================================================
+    // ✅ قائمة المدن الديناميكية بناءً على المحافظة
+    // ============================================================
+    const citiesByGovernorate = {{ governorates|tojson }};
+
+    function updateCities() {
+        const governorateSelect = document.getElementById('governorateSelect');
+        const citySelect = document.getElementById('citySelect');
+        const selectedGovernorate = governorateSelect.value;
+        
+        citySelect.innerHTML = '<option value="">اختر المدينة...</option>';
+        
+        if (selectedGovernorate && citiesByGovernorate[selectedGovernorate]) {
+            const cities = citiesByGovernorate[selectedGovernorate];
+            cities.forEach(function(city) {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                citySelect.appendChild(option);
+            });
+        }
+    }
+
+    // ============================================================
+    // ✅ التحقق من صحة النموذج قبل الإرسال
+    // ============================================================
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('settingsForm');
+        const phoneInput = document.getElementById('phoneInput');
+        
+        // ✅ تفعيل التحقق لحظياً عند الكتابة
+        if (phoneInput) {
+            phoneInput.addEventListener('input', function() {
+                validatePhone(this);
+            });
+        }
+        
         if (form) {
             form.addEventListener('submit', function(e) {
                 const tradeName = form.querySelector('[name="trade_name"]');
-                const ownerName = form.querySelector('[name="owner_name"]');
                 const phone = form.querySelector('[name="phone"]');
                 
                 let hasError = false;
@@ -413,14 +531,6 @@
                     tradeName.classList.remove('is-invalid');
                 }
                 
-                // التحقق من اسم المالك
-                if (!ownerName.value.trim()) {
-                    ownerName.classList.add('is-invalid');
-                    hasError = true;
-                } else {
-                    ownerName.classList.remove('is-invalid');
-                }
-                
                 // التحقق من رقم الهاتف
                 if (!phone.value.trim() || phone.value.length < 9) {
                     phone.classList.add('is-invalid');
@@ -431,7 +541,6 @@
                 
                 if (hasError) {
                     e.preventDefault();
-                    // عرض رسالة خطأ
                     const errorDiv = document.createElement('div');
                     errorDiv.className = 'alert alert-danger mt-3';
                     errorDiv.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i> يرجى تعبئة جميع الحقول المطلوبة';
@@ -440,6 +549,25 @@
                     form.prepend(errorDiv);
                 }
             });
+        }
+        
+        // ✅ تحديث المدن عند تحميل الصفحة إذا كانت هناك محافظة محددة
+        const govSelect = document.getElementById('governorateSelect');
+        if (govSelect && govSelect.value) {
+            updateCities();
+            // تحديد المدينة المحفوظة
+            {% if supplier.supplier_profile and supplier.supplier_profile.city %}
+            const savedCity = "{{ supplier.supplier_profile.city }}";
+            const citySelect = document.getElementById('citySelect');
+            if (citySelect) {
+                for (let i = 0; i < citySelect.options.length; i++) {
+                    if (citySelect.options[i].value === savedCity) {
+                        citySelect.options[i].selected = true;
+                        break;
+                    }
+                }
+            }
+            {% endif %}
         }
     });
 </script>
