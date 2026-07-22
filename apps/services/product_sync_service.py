@@ -6,7 +6,7 @@ from apps.services.update_product_data import UPDATE_PRODUCT_MUTATION
 
 GRAPHQL_ENDPOINT = "https://mahjoub.online/admin/graphql"
 
-# الاستعلام الشامل المحدث لجلب كافة تفاصيل المنتج (التكلفة، المجموعات، الصور، المتغيرات)
+# الاستعلام الشامل المحدث لجلب كافة تفاصيل المنتج المتوافقة مع المخطط الفعلي
 GET_PRODUCT_DETAIL_QUERY = """
 query($qid: String!) {
   findProductByQid(qid: $qid) {
@@ -22,8 +22,6 @@ query($qid: String!) {
       pricing {
         price
         compareAtPrice
-        costPrice
-        currency
       }
       images {
         _id
@@ -35,12 +33,10 @@ query($qid: String!) {
         slug
       }
       variants {
-        name
+        quantity
         pricing {
           price
         }
-        quantity
-        sku
       }
     }
   }
