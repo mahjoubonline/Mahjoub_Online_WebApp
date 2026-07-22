@@ -828,4 +828,7 @@
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('[name="csrf_token"]')?.value || ''
             },
-            body: JSON.stringify({ name
+            body: JSON.stringify({ name: value })
+        })
+        .then(res => res.json())
+       
