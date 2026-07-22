@@ -157,7 +157,7 @@
                 </div>
                 <div class="card-body p-4">
 
-                    <form method="POST" action="{{ url_for('suppliers_dashboard.withdraw') }}" id="withdrawForm">
+                    <form method="POST" action="{{ url_for('suppliers_wallet.withdraw') }}" id="withdrawForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
 
                         <!-- ✅ المبلغ -->
@@ -325,7 +325,6 @@
         // ✅ تحديث المبلغ عند النقر على الأزرار السريعة
         quickBtns.forEach(btn => {
             btn.addEventListener('click', function() {
-                // إزالة التحديد من جميع الأزرار
                 quickBtns.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
                 
@@ -336,7 +335,6 @@
                     amountInput.value = parseFloat(amount).toFixed(2);
                 }
                 
-                // التحقق من المبلغ
                 validateAmount();
             });
         });
@@ -385,14 +383,12 @@
                 return;
             }
             
-            // تأكيد السحب
             const amount = parseFloat(amountInput.value);
             if (!confirm(`⚠️ هل أنت متأكد من رغبتك في سحب مبلغ ${amount.toFixed(2)} ريال سعودي؟`)) {
                 e.preventDefault();
                 return;
             }
             
-            // تعطيل الزر أثناء المعالجة
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> جاري المعالجة...';
         });
