@@ -43,16 +43,8 @@ def edit_product():
         </div>
         """, 400
 
-    all_collections = [
-        {"qid": "col_1", "title": "المجموعة العامة"},
-        {"qid": "col_2", "title": "عروض العيد"},
-        {"qid": "col_3", "title": "الإلكترونيات والتقنية"}
-    ]
-    
-    suppliers = [
-        {"id": 1, "trade_name": "متجر التقنية السريعة", "supplier_code": "SUP-001"},
-        {"id": 2, "trade_name": "مؤسسة النور التجارية", "supplier_code": "SUP-002"}
-    ]
+    suppliers = sync_service.fetch_suppliers() if hasattr(sync_service, 'fetch_suppliers') else []
+    all_collections = sync_service.fetch_collections() if hasattr(sync_service, 'fetch_collections') else []
 
     return render_template(
         'admin/admin_edit_product.html',
@@ -103,7 +95,6 @@ def save_sync_product():
 
         sync_service = ProductSyncService(token=GRAPHQL_TOKEN)
         
-        # تنفيذ عملية التحديث الشاملة للمنتج
         success = sync_service.update_product_data(
             qid=qid,
             info=info,
