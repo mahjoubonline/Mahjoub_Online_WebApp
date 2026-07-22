@@ -75,24 +75,159 @@
       <input type="hidden" name="description" id="hiddenDescription">
     </div>
 
-    <!-- فقرة SKU والسعر والكمية -->
+    <!-- ✅ فقرة SKU والسعر والكمية (معدلة) -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
       <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">SKU</label>
-        <input type="text" name="sku" value="{{ product.ident.sku if product.ident }}" 
-               class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition">
+        <label class="block text-sm font-semibold text-gray-700 mb-1">الرقم التسلسلي (SKU)</label>
+        <input type="text" name="sku" 
+               value="{{ product.ident.sku if product.ident and product.ident.sku else '' }}" 
+               class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition"
+               placeholder="أدخل SKU إن وجد">
+        <small class="text-xs text-gray-500">SKU اختياري للمنتج الرئيسي</small>
       </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">السعر</label>
-        <input type="number" step="0.01" name="price" value="{{ product.pricing.price }}" 
-               class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition">
+        <input type="number" step="0.01" name="price" 
+               value="{{ product.pricing.price if product.pricing and product.pricing.price else 0 }}" 
+               class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition"
+               required>
       </div>
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-1">الكمية</label>
-        <input type="number" name="quantity" value="{{ product.quantity }}" 
-               class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition">
+        <input type="number" name="quantity" 
+               value="{{ product.quantity if product.quantity else 0 }}" 
+               class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition"
+               required>
       </div>
+    </div>
+
+    <!-- ✅ سعر قبل الخصم (مضافة) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">سعر قبل الخصم (Compare At Price)</label>
+        <input type="number" step="0.01" name="compare_at_price" 
+               value="{{ product.pricing.compareAtPrice if product.pricing and product.pricing.compareAtPrice else 0 }}" 
+               class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition"
+               placeholder="السعر الأصلي قبل الخصم">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">الوزن (كجم)</label>
+        <input type="number" step="0.01" name="weight" 
+               value="{{ product.weight.value if product.weight and product.weight.value else 0 }}" 
+               class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition"
+               placeholder="وزن المنتج بالكيلوجرام">
+      </div>
+    </div>
+
+    <!-- ✅ حالة المنتج -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">حالة المنتج</label>
+      <select name="status" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition">
+        <option value="DRAFT" {% if product.status == 'DRAFT' or not product.status %}selected{% endif %}>مسودة</option>
+        <option value="PUBLISHED" {% if product.status == 'PUBLISHED' %}selected{% endif %}>منشور</option>
+        <option value="ARCHIVED" {% if product.status == 'ARCHIVED' %}selected{% endif %}>مؤرشف</option>
+      </select>
     </div>
 
   </div>
 </div>
+
+<!-- ✅ JavaScript للتعامل مع المحرر -->
+<script>
+  // تحديث حقل الوصف المخفي قبل إرسال النموذج
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('editProductForm');
+    if (form) {
+      form.addEventListener('submit', function() {
+        const editor = document.getElementById('productDescriptionEditor');
+        const hidden = document.getElementById('hiddenDescription');
+        if (editor && hidden) {
+          hidden.value = editor.innerHTML;
+        }
+      });
+    }
+  });
+
+  // دوال تنسيق النص
+  function formatText(command) {
+    document.execCommand(command, false, null);
+    document.getElementById('productDescriptionEditor').focus();
+  }
+
+  function formatTextColor(color) {
+    document.execCommand('foreColor', false, color);
+    document.getElementById('productDescriptionEditor').focus();
+  }
+
+  // إدراج رابط
+  function openLinkModal() {
+    const url = prompt('أدخل رابط URL:', 'https://');
+    if (url) {
+      document.execCommand('createLink', false, url);
+      document.getElementById('productDescriptionEditor').focus();
+    }
+  }
+
+  // معالجة اختصارات لوحة المفاتيح
+  document.addEventListener('keydown', function(e) {
+    const editor = document.getElementById('productDescriptionEditor');
+    if (document.activeElement === editor) {
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        formatText('bold');
+      } else if (e.ctrlKey && e.key === 'i') {
+        e.preventDefault();
+        formatText('italic');
+      } else if (e.ctrlKey && e.key === 'u') {
+        e.preventDefault();
+        formatText('underline');
+      }
+    }
+  });
+</script>
+
+<!-- ✅ CSS إضافي -->
+<style>
+  .royal-focus {
+    border-color: #d1d5db;
+    transition: all 0.2s ease;
+  }
+  
+  .royal-focus:focus {
+    border-color: #6b21a8;
+    box-shadow: 0 0 0 3px rgba(107, 33, 168, 0.1);
+  }
+  
+  #productDescriptionEditor {
+    min-height: 180px;
+    max-height: 350px;
+    overflow-y: auto;
+    line-height: 1.8;
+  }
+  
+  #productDescriptionEditor:focus {
+    border-color: #6b21a8;
+    box-shadow: 0 0 0 3px rgba(107, 33, 168, 0.1);
+  }
+  
+  #productDescriptionEditor ul,
+  #productDescriptionEditor ol {
+    padding-right: 1.5rem;
+    margin: 0.5rem 0;
+  }
+  
+  #productDescriptionEditor ul {
+    list-style-type: disc;
+  }
+  
+  #productDescriptionEditor ol {
+    list-style-type: decimal;
+  }
+  
+  #productDescriptionEditor blockquote {
+    border-right: 3px solid #6b21a8;
+    padding-right: 1rem;
+    margin: 0.5rem 0;
+    color: #4b5563;
+  }
+</style>
