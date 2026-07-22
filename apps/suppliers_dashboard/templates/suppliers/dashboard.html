@@ -15,25 +15,82 @@
     .btn-withdraw { background-color: var(--mahjoub-gold); color: var(--royal-purple); border: none; padding: 5px 15px; border-radius: 50px; font-weight: bold; font-size: 0.85rem; transition: var(--transition); }
     .btn-withdraw:hover { background-color: #fff; color: var(--royal-purple); }
     
-    /* ✅ مساعد DeepSeek */
+    /* ✅ مساعد DeepSeek - تصميم احترافي مع زر */
     .ai-chat-container {
         border-radius: 20px;
         border: 1px solid rgba(212, 175, 55, 0.15);
         overflow: hidden;
-        transition: var(--transition);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         background: #fff;
+        position: relative;
     }
     .ai-chat-container:hover {
         box-shadow: 0 8px 30px rgba(0,0,0,0.08);
     }
+    
+    /* ✅ زر فتح وإغلاق المساعد */
+    .ai-toggle-btn {
+        background: linear-gradient(135deg, var(--royal-purple) 0%, #36175e 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(26, 11, 46, 0.25);
+        margin-bottom: 16px;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+    }
+    .ai-toggle-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(26, 11, 46, 0.35);
+    }
+    .ai-toggle-btn .badge-ai {
+        background: var(--mahjoub-gold);
+        color: var(--royal-purple);
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.6rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    .ai-toggle-btn .icon-arrow {
+        transition: transform 0.4s ease;
+        font-size: 0.8rem;
+    }
+    .ai-toggle-btn .icon-arrow.open {
+        transform: rotate(180deg);
+    }
+    
+    /* ✅ محتوى المساعد (يظهر ويختفي) */
+    .ai-content {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        visibility: hidden;
+    }
+    .ai-content.open {
+        max-height: 600px;
+        opacity: 1;
+        visibility: visible;
+        padding: 0 0 4px 0;
+    }
+    
     .ai-header {
         background: linear-gradient(135deg, var(--royal-purple) 0%, #36175e 100%);
         color: white;
-        padding: 15px 20px;
+        padding: 12px 20px;
         border-bottom: 3px solid var(--mahjoub-gold);
         display: flex;
         align-items: center;
         justify-content: space-between;
+        border-radius: 0;
     }
     .ai-header h5 {
         margin: 0;
@@ -41,16 +98,37 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        font-size: 0.95rem;
     }
     .ai-header .ai-badge {
         background: rgba(212, 175, 55, 0.25);
         padding: 2px 12px;
         border-radius: 20px;
-        font-size: 0.65rem;
+        font-size: 0.6rem;
         font-weight: 600;
         color: var(--mahjoub-gold);
         letter-spacing: 0.5px;
     }
+    .ai-header .ai-status {
+        font-size: 0.65rem;
+        opacity: 0.7;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .ai-header .ai-status .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #28a745;
+        display: inline-block;
+        animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    
     .ai-messages {
         max-height: 250px;
         overflow-y: auto;
@@ -58,6 +136,9 @@
         background: #faf8fc;
         min-height: 100px;
     }
+    .ai-messages::-webkit-scrollbar { width: 4px; }
+    .ai-messages::-webkit-scrollbar-thumb { background: var(--mahjoub-gold); border-radius: 10px; }
+    
     .ai-messages .message-user {
         text-align: left;
         margin-bottom: 10px;
@@ -91,10 +172,11 @@
     .ai-messages .message-ai .bubble .ai-name {
         font-weight: 700;
         color: var(--mahjoub-gold);
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         display: block;
         margin-bottom: 4px;
     }
+    
     .ai-messages .typing-indicator {
         display: none;
         text-align: right;
@@ -115,6 +197,7 @@
         0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
         40% { transform: scale(1); opacity: 1; }
     }
+    
     .ai-input-group {
         padding: 12px 20px;
         background: white;
@@ -131,21 +214,27 @@
         font-size: 0.9rem;
         transition: var(--transition);
         outline: none;
+        background: #faf8fc;
     }
     .ai-input-group input:focus {
         border-color: var(--mahjoub-gold);
         box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        background: white;
+    }
+    .ai-input-group input::placeholder {
+        color: #b0a8b8;
     }
     .ai-input-group .btn-ai-send {
         background: var(--mahjoub-gold);
         color: var(--royal-purple);
         border: none;
         border-radius: 12px;
-        padding: 10px 18px;
+        padding: 10px 20px;
         font-weight: 700;
         transition: var(--transition);
         cursor: pointer;
         white-space: nowrap;
+        font-size: 0.85rem;
     }
     .ai-input-group .btn-ai-send:hover {
         background: #c4a035;
@@ -157,26 +246,30 @@
         cursor: not-allowed;
         transform: none;
     }
+    
     .ai-suggestions {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
         padding: 0 20px 12px;
+        background: white;
     }
     .ai-suggestions .suggestion-btn {
         background: #f8f5fa;
         border: 1px solid #f0ecf3;
         border-radius: 20px;
         padding: 4px 14px;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: var(--royal-purple);
         cursor: pointer;
         transition: var(--transition);
+        font-family: 'Cairo', sans-serif;
     }
     .ai-suggestions .suggestion-btn:hover {
         background: var(--royal-purple);
         color: white;
         border-color: var(--royal-purple);
+        transform: translateY(-1px);
     }
 </style>
 
@@ -194,7 +287,7 @@
     </div>
 
     <div class="row g-4 mb-5">
-        <!-- ✅ بطاقة المحفظة - عملة واحدة SAR -->
+        <!-- ✅ بطاقة المحفظة -->
         <div class="col-12 col-xl-6">
             <div class="card dynamic-card gradient-wallet p-4 h-100 shadow">
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -249,43 +342,55 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- ✅ مساعد DeepSeek الذكي -->
+    <!-- ✅ مساعد DeepSeek الذكي - مع زر فتح وإغلاق -->
     <!-- ============================================================ -->
     <div class="ai-chat-container mb-4">
-        <div class="ai-header">
-            <h5>
-                <i class="fas fa-robot" style="color: var(--mahjoub-gold);"></i>
-                مساعدك الذكي
-                <span class="ai-badge">DeepSeek AI</span>
-            </h5>
-            <span style="font-size: 0.7rem; opacity: 0.7;">
-                <i class="fas fa-circle text-success me-1" style="font-size: 0.5rem;"></i> نشط
-            </span>
-        </div>
         
-        <div class="ai-messages" id="aiMessages">
-            <div class="message-ai">
-                <div class="bubble">
-                    <span class="ai-name">🤖 DeepSeek</span>
-                    👋 مرحباً! أنا مساعدك الذكي. اسألني عن أي شيء يتعلق بمتجرك، المنتجات، أو المبيعات.
+        <!-- ✅ زر فتح وإغلاق المساعد -->
+        <button class="ai-toggle-btn" onclick="toggleAI()" id="aiToggleBtn">
+            <i class="fas fa-robot"></i>
+            مساعدك الذكي
+            <span class="badge-ai">DeepSeek AI</span>
+            <span class="icon-arrow" id="aiArrowIcon">▼</span>
+        </button>
+        
+        <!-- ✅ محتوى المساعد (يظهر ويختفي) -->
+        <div class="ai-content" id="aiContent">
+            <div class="ai-header">
+                <h5>
+                    <i class="fas fa-robot" style="color: var(--mahjoub-gold);"></i>
+                    <span>المساعد الذكي</span>
+                    <span class="ai-badge">AI</span>
+                </h5>
+                <span class="ai-status">
+                    <span class="dot"></span> نشط
+                </span>
+            </div>
+            
+            <div class="ai-messages" id="aiMessages">
+                <div class="message-ai">
+                    <div class="bubble">
+                        <span class="ai-name">🤖 DeepSeek</span>
+                        👋 مرحباً! أنا مساعدك الذكي. اسألني عن أي شيء يتعلق بمتجرك، المنتجات، أو المبيعات.
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- ✅ اقتراحات سريعة -->
-        <div class="ai-suggestions">
-            <button class="suggestion-btn" onclick="askSuggestion('كيف أحسن مبيعاتي؟')">📈 تحسين المبيعات</button>
-            <button class="suggestion-btn" onclick="askSuggestion('نصائح لتسويق منتجاتي')">📢 التسويق</button>
-            <button class="suggestion-btn" onclick="askSuggestion('كيف أزيد أرباحي؟')">💰 زيادة الأرباح</button>
-            <button class="suggestion-btn" onclick="askSuggestion('تحليل أداء متجري')">📊 تحليل الأداء</button>
-        </div>
-        
-        <div class="ai-input-group">
-            <input type="text" id="aiQuestion" placeholder="اكتب سؤالك هنا..." 
-                   onkeypress="if(event.key==='Enter') askAI()">
-            <button class="btn-ai-send" onclick="askAI()" id="aiSendBtn">
-                <i class="fas fa-paper-plane me-1"></i> إرسال
-            </button>
+            
+            <!-- ✅ اقتراحات سريعة -->
+            <div class="ai-suggestions">
+                <button class="suggestion-btn" onclick="askSuggestion('كيف أحسن مبيعاتي؟')">📈 تحسين المبيعات</button>
+                <button class="suggestion-btn" onclick="askSuggestion('نصائح لتسويق منتجاتي')">📢 التسويق</button>
+                <button class="suggestion-btn" onclick="askSuggestion('كيف أزيد أرباحي؟')">💰 زيادة الأرباح</button>
+                <button class="suggestion-btn" onclick="askSuggestion('تحليل أداء متجري')">📊 تحليل الأداء</button>
+            </div>
+            
+            <div class="ai-input-group">
+                <input type="text" id="aiQuestion" placeholder="اكتب سؤالك هنا..." 
+                       onkeypress="if(event.key==='Enter') askAI()">
+                <button class="btn-ai-send" onclick="askAI()" id="aiSendBtn">
+                    <i class="fas fa-paper-plane me-1"></i> إرسال
+                </button>
+            </div>
         </div>
     </div>
 
@@ -302,6 +407,27 @@
 
 <!-- ✅ JavaScript للمساعد الذكي -->
 <script>
+    // ============================================================
+    // ✅ فتح وإغلاق المساعد
+    // ============================================================
+    let aiOpen = false;
+    
+    function toggleAI() {
+        aiOpen = !aiOpen;
+        const content = document.getElementById('aiContent');
+        const arrow = document.getElementById('aiArrowIcon');
+        
+        if (aiOpen) {
+            content.classList.add('open');
+            arrow.classList.add('open');
+            arrow.textContent = '▲';
+        } else {
+            content.classList.remove('open');
+            arrow.classList.remove('open');
+            arrow.textContent = '▼';
+        }
+    }
+    
     // ============================================================
     // ✅ مساعد DeepSeek الذكي
     // ============================================================
@@ -334,7 +460,6 @@
         if (isUser) {
             div.innerHTML = `<div class="bubble">${text}</div>`;
         } else {
-            // عرض النص مع تنسيق Markdown بسيط
             const formattedText = text
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -363,16 +488,18 @@
         
         if (!question) return;
         
-        // عرض سؤال المستخدم
+        // ✅ فتح المساعد تلقائياً إذا كان مغلقاً
+        if (!aiOpen) {
+            toggleAI();
+        }
+        
         addMessage(question, true);
         input.value = '';
         sendBtn.disabled = true;
         sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> جاري...';
         
-        // عرض مؤشر الكتابة
         showTypingIndicator();
         
-        // إرسال الطلب إلى الخادم
         fetch('/api/ask-ai', {
             method: 'POST',
             headers: {
@@ -381,10 +508,7 @@
             },
             body: JSON.stringify({ question: question })
         })
-        .then(res => {
-            if (!res.ok) throw new Error('فشل الاتصال');
-            return res.json();
-        })
+        .then(res => res.json())
         .then(data => {
             hideTypingIndicator();
             if (data.success) {
