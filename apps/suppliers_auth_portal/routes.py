@@ -15,6 +15,86 @@ def get_wait_time(attempts):
     if attempts <= 5: return 0
     return 2 ** (attempts - 6)
 
+
+# ============================================================
+# 🔍 مسار اختبار الدخول (للتشخيص)
+# ============================================================
+@suppliers_bp.route('/test-login', methods=['GET', 'POST'])
+def test_login():
+    if request.method == 'GET':
+        return '''
+        <h2>🔍 اختبار الدخول</h2>
+        <form method="POST" style="direction: rtl; font-family: Tahoma; padding: 20px;">
+            <div style="margin-bottom: 10px;">
+                <label>اسم المستخدم:</label><br>
+                <input type="text" name="username" placeholder="أدخل اسم المستخدم" style="padding: 8px; width: 250px;">
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label>كلمة المرور:</label><br>
+                <input type="password" name="password" placeholder="أدخل كلمة المرور" style="padding: 8px; width: 250px;">
+            </div>
+            <button type="submit" style="padding: 8px 20px; background: #2d0b36; color: #fff; border: none; border-radius: 5px;">دخول</button>
+        </form>
+        <hr>
+        <p><strong>المستخدم الافتراضي:</strong> test_supplier / 123</p>
+        '''
+    
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    # البحث عن المستخدم
+    user = Supplier.query.filter_by(username=username).first()
+    
+    if not user:
+        return f"""
+        <div style="direction: rtl; font-family: Tahoma; padding: 20px;">
+            <h2 style="color: #d9534f;">❌ المستخدم غير موجود</h2>
+            <p>المستخدم <strong>'{username}'</strong> غير موجود في قاعدة البيانات.</p>
+            <p>المستخدمون المسجلون:</p>
+            <ul>
+            {''.join([f"<li>{u.username}</li>" for u in Supplier.query.all()])}
+            </ul>
+            <a href="/supplier/test-login">محاولة مرة أخرى</a>
+        </div>
+        """
+    
+    # التحقق من كلمة المرور
+    try:
+        if user.check_password(password):
+            return f"""
+            <div style="direction: rtl; font-family: Tahoma; padding: 20px;">
+                <h2 style="color: #28a745;">✅ كلمة المرور صحيحة!</h2>
+                <p>المستخدم: <strong>{user.username}</strong></p>
+                <p>المتجر: <strong>{user.trade_name or 'غير محدد'}</strong></p>
+                <p>المعرف: <strong>{user.id}</strong></p>
+                <br>
+                <a href="/supplier/dashboard" style="background: #2d0b36; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">اذهب للداشبورد</a>
+                <br><br>
+                <a href="/supplier/test-login">رجوع</a>
+            </div>
+            """
+        else:
+            return f"""
+            <div style="direction: rtl; font-family: Tahoma; padding: 20px;">
+                <h2 style="color: #d9534f;">❌ كلمة المرور غير صحيحة</h2>
+                <p>المستخدم: <strong>{user.username}</strong></p>
+                <p>كلمة المرور المدخلة غير صحيحة.</p>
+                <a href="/supplier/test-login">محاولة مرة أخرى</a>
+            </div>
+            """
+    except Exception as e:
+        return f"""
+        <div style="direction: rtl; font-family: Tahoma; padding: 20px;">
+            <h2 style="color: #d9534f;">❌ خطأ في التحقق</h2>
+            <p><strong>{str(e)}</strong></p>
+            <a href="/supplier/test-login">محاولة مرة أخرى</a>
+        </div>
+        """
+
+
+# ============================================================
+# 🟣 مسار تسجيل الدخول الأساسي
+# ============================================================
 @suppliers_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
@@ -76,6 +156,10 @@ def login():
         msg = "حدث خطأ تقني في النظام"
         return jsonify({"status": "error", "message": msg}), 500 if request.is_json else render_template('suppliers_auth_portal/login.html', error=msg)
 
+
+# ============================================================
+# 🟣 مسار تسجيل الخروج
+# ============================================================
 @suppliers_bp.route('/logout')
 @login_required
 def logout():
