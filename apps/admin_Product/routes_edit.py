@@ -5,6 +5,9 @@ import json
 import os
 from flask import Blueprint, render_template, request, jsonify, url_for, redirect, flash
 from apps.services.product_sync_service import ProductSyncService
+from apps.models.product_supplier_map import ProductSupplierMapping
+from apps.models.supplier_db import Supplier
+from apps.extensions import db
 
 admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='templates')
 
@@ -12,7 +15,7 @@ GRAPHQL_TOKEN = os.environ.get('QUMRA_API_KEY', 'YOUR_ADMIN_API_TOKEN')
 
 @admin_product_bp.route('/products/edit', methods=['GET'])
 def edit_product():
-    """عرض صفحة تعديل المنتج وتصحيح معرّف الـ QID المزدوج تلقائياً"""
+    """عرض صفحة تعديل المنتج وتصحيح معرّف الـ QID المزدوج تلقائياً، مع ربط المورد المحلي والمجموعات"""
     raw_qid = request.args.get('qid')
     
     if raw_qid:
@@ -43,20 +46,28 @@ def edit_product():
         </div>
         """, 400
 
-    suppliers = sync_service.fetch_suppliers() if hasattr(sync_service, 'fetch_suppliers') else []
+    # جلب الموردين المتاحين من قاعدة البيانات المحلية
+    suppliers = Supplier.query.filter_by(status='active').all()
+    
+    # جلب المورد المرتبط حالياً بهذا المنتج محلياً
+    mapping = ProductSupplierMapping.query.filter_by(product_qid=qid).first()
+    assigned_supplier_id = mapping.supplier_id if mapping else None
+
+    # جلب المجموعات من خدمة الـ GraphQL
     all_collections = sync_service.fetch_collections() if hasattr(sync_service, 'fetch_collections') else []
 
     return render_template(
         'admin/admin_edit_product.html',
         product=product,
         all_collections=all_collections,
-        suppliers=suppliers
+        suppliers=suppliers,
+        assigned_supplier_id=assigned_supplier_id
     )
 
 
 @admin_product_bp.route('/products/save-sync', methods=['POST'])
 def save_sync_product():
-    """معالجة وحفظ البيانات وتحديث الصور والمتغيرات عبر الـ API"""
+    """معالجة وحفظ البيانات وتحديث الصور، المتغيرات، المجموعات، وربط المورد المحلي"""
     try:
         qid = request.form.get('qid')
         if not qid:
@@ -90,7 +101,7 @@ def save_sync_product():
 
         collection_ids = json.loads(request.form.get('collection_ids', '[]') or '[]')
         
-        # معالجة قراءة المتغيرات سواء تم إرسالها كـ JSON string أو كحقول مصفوفات منفصلة (variant_name[])
+        # معالجة قراءة المتغيرات
         variants_raw = request.form.get('variants', '')
         if variants_raw:
             try:
@@ -98,7 +109,6 @@ def save_sync_product():
             except Exception:
                 variants = []
         else:
-            # تجميع المتغيرات من الحقول التقليدية في حال أُرسلت عبر الـ Form Data المباشرة
             var_names = request.form.getlist('variant_name[]')
             var_prices = request.form.getlist('variant_price[]')
             var_qtys = request.form.getlist('variant_qty[]')
@@ -147,6 +157,24 @@ def save_sync_product():
 
         if not success:
             return jsonify({"status": "error", "message": "فشل حفظ وتحديث التعديلات على الخادم المركزي."}), 500
+
+        # حفظ أو تحديث ربط المورد المحلي في جدول product_supplier_mapping
+        if supplier_id:
+            try:
+                mapping = ProductSupplierMapping.query.filter_by(product_qid=qid).first()
+                if mapping:
+                    mapping.supplier_id = int(supplier_id)
+                    mapping.status = 'active'
+                else:
+                    mapping = ProductSupplierMapping(
+                        product_qid=qid,
+                        supplier_id=int(supplier_id),
+                        status='active'
+                    )
+                    db.session.add(mapping)
+                db.session.commit()
+            except Exception as db_err:
+                print(f"Error saving local supplier mapping: {db_err}")
 
         return jsonify({"status": "success", "message": "تم حفظ وتحديث المنتج ومزامنة بياناته بنجاح!"})
 
