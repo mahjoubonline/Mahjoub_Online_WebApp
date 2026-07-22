@@ -22,6 +22,14 @@ mutation UpdateProductEverything(
   updateProductIdentification(id: $id, data: $ident) { success message }
   updateProductDescription(id: $id, data: $desc) { success message }
   updateProductCollections(id: $id, collectionIds: $collection_ids) { success message }
-  updateProductVariants(id: $id, variants: $variants) { success message }
+  updateProductVariants(
+    id: $id, 
+    variants: $variants
+  ) { success message }
+  updateProductImages(
+    id: $id, 
+    removedImages: $removed_images, 
+    newImages: $new_images
+  ) { success message }
 }
 """
