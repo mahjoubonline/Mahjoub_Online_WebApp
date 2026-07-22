@@ -583,7 +583,7 @@
             }
             
             // ============================================================
-            // ✅ جرس الإشعارات
+            // ✅ جرس الإشعارات (معطل مؤقتاً)
             // ============================================================
             const notifBell = document.getElementById('notifBell');
             const notifCount = document.getElementById('notifCount');
@@ -605,11 +605,10 @@
                 }
             }
             
-            // ✅ إضافة إشعار جديد
+            // ✅ إضافة إشعار جديد (يدوي)
             function addNotification(title, icon, time, type) {
                 if (!notifList) return;
                 
-                // إزالة الرسالة الفارغة
                 const emptyMsg = notifList.querySelector('.notif-empty');
                 if (emptyMsg) emptyMsg.remove();
                 
@@ -628,15 +627,13 @@
                 `;
                 notifList.prepend(item);
                 
-                // رنين الجرس
                 if (notifBell) {
                     notifBell.classList.remove('bell-ring');
-                    void notifBell.offsetWidth; // إعادة تعيين الأنيميشن
+                    void notifBell.offsetWidth;
                     notifBell.classList.add('bell-ring');
                     setTimeout(() => notifBell.classList.remove('bell-ring'), 600);
                 }
                 
-                // تحديث العدد
                 const unread = document.querySelectorAll('#notifList .notif-item.unread').length;
                 updateNotifCount(unread);
             }
@@ -654,15 +651,19 @@
                 }
             }
             
-            // ✅ ربط زر تحديد الكل كمقروء
             if (markAllBtn) {
                 markAllBtn.addEventListener('click', markAllRead);
             }
             
             // ============================================================
-            // ✅ تحميل الإشعارات من الخادم (حقيقي)
+            // ✅ تحميل الإشعارات من الخادم - معطل مؤقتاً
             // ============================================================
             function loadNotifications() {
+                // ⏸️ معطل مؤقتاً لحين إنشاء المسار
+                console.log('⏸️ الإشعارات معطلة مؤقتاً');
+                
+                // ❌ غير مفعل
+                /*
                 fetch('/supplier/notifications', {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
@@ -672,7 +673,6 @@
                 })
                 .then(data => {
                     if (data && data.notifications) {
-                        // مسح الإشعارات الحالية
                         const items = notifList.querySelectorAll('.notif-item');
                         items.forEach(item => item.remove());
                         
@@ -691,7 +691,6 @@
                             addNotification(notif.title, notif.icon || 'bell', notif.time, notif.type || 'info');
                         });
                         
-                        // تحديث العدد النهائي
                         const unread = document.querySelectorAll('#notifList .notif-item.unread').length;
                         updateNotifCount(unread);
                     }
@@ -699,17 +698,17 @@
                 .catch(err => {
                     console.warn('⚠️ فشل تحميل الإشعارات:', err);
                 });
+                */
             }
             
-            // ✅ تحميل الإشعارات عند تحميل الصفحة
+            // ✅ تحميل الإشعارات عند تحميل الصفحة (معطل)
             document.addEventListener('DOMContentLoaded', function() {
-                // تحديث العدد المبدئي
                 const initialUnread = document.querySelectorAll('#notifList .notif-item.unread').length;
                 updateNotifCount(initialUnread);
                 
-                // تحميل الإشعارات من الخادم (كل 30 ثانية)
-                loadNotifications();
-                setInterval(loadNotifications, 30000);
+                // ⏸️ معطل مؤقتاً
+                // loadNotifications();
+                // setInterval(loadNotifications, 30000);
             });
             
             // ✅ تصدير الدوال للاستخدام في القوالب
