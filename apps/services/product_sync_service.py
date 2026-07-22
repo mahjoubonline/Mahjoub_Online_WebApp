@@ -6,7 +6,6 @@ from apps.services.update_product_data import UPDATE_PRODUCT_MUTATION
 
 GRAPHQL_ENDPOINT = "https://mahjoub.online/admin/graphql"
 
-# الاستعلام الشامل المحدث لجلب كافة تفاصيل المنتج المتوافقة مع المخطط الفعلي
 GET_PRODUCT_DETAIL_QUERY = """
 query($qid: String!) {
   findProductByQid(qid: $qid) {
@@ -50,7 +49,7 @@ class ProductSyncService:
             "Content-Type": "application/json"
         }
 
-    def fetch_products(self, page: int = 1, limit: int = 20, title: str = ""):
+    def fetch_products(self, page: int = 1, limit: int = 50, title: str = ""):
         query = """
         query($page: Int!, $limit: Int!, $title: String) {
           findAllProducts(input: { page: $page, limit: $limit, title: $title }) {
@@ -60,9 +59,15 @@ class ProductSyncService:
               qid
               title
               description
-              pricing { price }
+              pricing {
+                price
+                compareAtPrice
+              }
               quantity
-              images { fileUrl }
+              images {
+                _id
+                fileUrl
+              }
             }
             pagination {
               totalPages
@@ -135,10 +140,10 @@ class ProductSyncService:
             return None
 
     def fetch_collections(self):
-        """جلب قائمة المجموعات المتاحة من الخادم المركزي لعرضها في لوحة التحكم"""
+        """جلب قائمة المجموعات الكاملة من الخادم المركزي بدون حدود للاكتمال"""
         query = """
         query {
-          findAllCollections {
+          findAllCollections(input: { page: 1, limit: 100 }) {
             success
             message
             data {
@@ -160,17 +165,17 @@ class ProductSyncService:
                 return []
             
             result = response.json()
-            if "data" in result and "findAllCollections" in result["data"]:
-                col_res = result["data"]["findAllCollections"]
-                if col_res.get("success"):
-                    return col_res.get("data", [])
+            col_res = result.get("data", {}).get("findAllCollections")
+            if isinstance(col_res, dict) and col_res.get("success"):
+                return col_res.get("data", [])
+            elif isinstance(col_res, list):
+                return col_res
             return []
         except Exception as e:
             print(f"Error fetching collections: {e}")
             return []
 
     def update_product_data(self, qid: str, info: dict, pricing: dict, dims: dict, weight: dict, ident: dict, desc: str, **kwargs):
-        # بناء هيكل المتغيرات الأساسية المطلوبة للعملية
         variables = {
             "id": qid,
             "info": info,
@@ -181,7 +186,6 @@ class ProductSyncService:
             "desc": desc
         }
         
-        # دمج أي متغيرات إضافية مرسلة (مثل collection_ids, variants, removed_images, new_images) مباشرة
         if kwargs:
             variables.update(kwargs)
          
