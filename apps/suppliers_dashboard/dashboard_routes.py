@@ -17,9 +17,24 @@ suppliers_dashboard_bp = Blueprint(
 @login_required
 def dashboard():
     try:
-        # ✅ جلب المورد
+        # ✅ جلب نوع المستخدم
         user_type = session.get('user_type')
-        supplier_id = current_user.supplier_id if user_type == 'staff' else current_user.id
+        
+        # ✅ التحقق من وجود user_type
+        if user_type not in ['supplier', 'staff']:
+            return "❌ نوع المستخدم غير معروف", 400
+        
+        # ✅ جلب supplier_id بأمان
+        if user_type == 'staff':
+            supplier_id = getattr(current_user, 'supplier_id', None)
+        else:
+            supplier_id = current_user.id
+        
+        # ✅ التحقق من وجود supplier_id
+        if not supplier_id:
+            return "❌ لا يوجد مورد مرتبط بهذا الحساب", 404
+        
+        # ✅ جلب المورد
         supplier = db.session.get(Supplier, supplier_id)
         
         if not supplier:
@@ -45,8 +60,8 @@ def dashboard():
     except Exception as e:
         return f"""
         <div style="direction: rtl; font-family: Tahoma; padding: 30px; text-align: center;">
-            <h2 style="color: #d9534f;">❌ خطأ</h2>
-            <p>{str(e)}</p>
+            <h2 style="color: #d9534f;">❌ خطأ في لوحة التحكم</h2>
+            <p><strong>{str(e)}</strong></p>
             <a href="/supplier/dashboard" style="background: #2d0b36; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">محاولة مرة أخرى</a>
         </div>
         """, 500
