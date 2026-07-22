@@ -13,6 +13,7 @@ admin_product_bp = Blueprint('admin_product_bp', __name__, template_folder='temp
 
 GRAPHQL_TOKEN = os.environ.get('QUMRA_API_KEY', 'YOUR_ADMIN_API_TOKEN') 
 
+# 🟣 صفحة تعديل المنتج
 @admin_product_bp.route('/products/edit', methods=['GET'])
 def edit_product():
     """عرض صفحة تعديل المنتج وتصحيح معرّف الـ QID المزدوج تلقائياً، مع ربط المورد المحلي والمجموعات"""
@@ -46,14 +47,10 @@ def edit_product():
         </div>
         """, 400
 
-    # جلب الموردين المتاحين من قاعدة البيانات المحلية
     suppliers = Supplier.query.filter_by(status='active').all()
-    
-    # جلب المورد المرتبط حالياً بهذا المنتج محلياً
     mapping = ProductSupplierMapping.query.filter_by(product_qid=qid).first()
     assigned_supplier_id = mapping.supplier_id if mapping else None
 
-    # جلب المجموعات من خدمة الـ GraphQL
     all_collections = sync_service.fetch_collections() if hasattr(sync_service, 'fetch_collections') else []
 
     return render_template(
@@ -64,7 +61,7 @@ def edit_product():
         assigned_supplier_id=assigned_supplier_id
     )
 
-
+# 🟣 حفظ ومزامنة المنتج
 @admin_product_bp.route('/products/save-sync', methods=['POST'])
 def save_sync_product():
     """معالجة وحفظ البيانات وتحديث الصور، المتغيرات، المجموعات، وربط المورد المحلي"""
@@ -93,7 +90,6 @@ def save_sync_product():
             quantity, weight_val = 0, 0.0
 
         info = {"title": title, "slug": slug, "status": status}
-        # مطابقة بنية التسعير مع الـ Schema المحدثة (price و compareAtPrice فقط)
         pricing = {"price": price, "compareAtPrice": compare_at_price}
         dims = {"length": 0, "width": 0, "height": 0, "unit": "cm"}
         weight = {"value": weight_val, "unit": "kg"}
@@ -101,31 +97,27 @@ def save_sync_product():
 
         collection_ids = json.loads(request.form.get('collection_ids', '[]') or '[]')
         
-        # معالجة قراءة المتغيرات بالشكل المتوافق مع الـ Schema
+        # ✅ تعديل المتغيرات لتتوافق مع الـ Schema الجديد (استخدام sku و pricing فقط)
         variants_raw = request.form.get('variants', '')
+        variants = []
         if variants_raw:
             try:
                 parsed_variants = json.loads(variants_raw)
-                variants = []
                 for v in parsed_variants:
                     variants.append({
-                        "name": v.get("name", ""),
+                        "sku": v.get("sku", ""),
                         "quantity": int(v.get("quantity", 0)),
-                        "pricing": {"price": float(v.get("price", 0.0))},
-                        "sku": v.get("sku", "")
+                        "pricing": {"price": float(v.get("price", 0.0))}
                     })
             except Exception:
                 variants = []
         else:
-            var_names = request.form.getlist('variant_name[]')
             var_prices = request.form.getlist('variant_price[]')
             var_qtys = request.form.getlist('variant_qty[]')
             var_skus = request.form.getlist('variant_sku[]')
             
-            variants = []
-            for i in range(max(len(var_names), len(var_qtys), len(var_prices))):
+            for i in range(max(len(var_qtys), len(var_prices), len(var_skus))):
                 try:
-                    v_name = var_names[i] if i < len(var_names) else ""
                     v_price = float(var_prices[i]) if i < len(var_prices) and var_prices[i] else 0.0
                 except ValueError:
                     v_price = 0.0
@@ -133,14 +125,12 @@ def save_sync_product():
                     v_qty = int(var_qtys[i]) if i < len(var_qtys) and var_qtys[i] else 0
                 except ValueError:
                     v_qty = 0
-                
                 v_sku = var_skus[i] if i < len(var_skus) else ""
 
                 variants.append({
-                    "name": v_name,
+                    "sku": v_sku,
                     "quantity": v_qty,
-                    "pricing": {"price": v_price},
-                    "sku": v_sku
+                    "pricing": {"price": v_price}
                 })
 
         removed_images = json.loads(request.form.get('removed_images', '[]') or '[]')
@@ -167,7 +157,6 @@ def save_sync_product():
         if not success:
             return jsonify({"status": "error", "message": "فشل حفظ وتحديث التعديلات على الخادم المركزي."}), 500
 
-        # حفظ أو تحديث ربط المورد المحلي في جدول product_supplier_mapping
         if supplier_id:
             try:
                 mapping = ProductSupplierMapping.query.filter_by(product_qid=qid).first()
@@ -190,20 +179,3 @@ def save_sync_product():
     except Exception as e:
         print(f"Error saving product sync: {e}")
         return jsonify({"status": "error", "message": f"حدث خطأ أثناء معالجة الطلب: {str(e)}"}), 500
-
-
-@admin_product_bp.route('/products/manage', methods=['GET'])
-def manage_products():
-    """عرض قائمة إدارة المنتجات"""
-    sync_service = ProductSyncService(token=GRAPHQL_TOKEN)
-    page = request.args.get('page', 1, type=int)
-    title_query = request.args.get('title', '', type=str)
-    
-    result = sync_service.fetch_products(page=page, limit=20, title=title_query)
-    
-    return render_template(
-        'admin/admin_manage_products.html',
-        products=result.get("data", []),
-        pagination=result.get("pagination", None),
-        search_title=title_query
-    )
