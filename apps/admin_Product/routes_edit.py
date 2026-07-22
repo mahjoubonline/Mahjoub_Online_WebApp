@@ -97,7 +97,7 @@ def save_sync_product():
 
         collection_ids = json.loads(request.form.get('collection_ids', '[]') or '[]')
         
-        # ✅ تعديل المتغيرات لتتوافق مع الـ Schema الجديد (استخدام sku و pricing فقط)
+        # ✅ تعديل المتغيرات لتتوافق تماماً مع الـ Schema المسموحة للـ Variant (sku, quantity, pricing { price }) بدون حقل name
         variants_raw = request.form.get('variants', '')
         variants = []
         if variants_raw:
