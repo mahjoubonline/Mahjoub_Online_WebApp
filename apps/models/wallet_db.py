@@ -26,9 +26,7 @@ class SupplierWallet(db.Model):
     # الربط الرقمي مع المورد
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, unique=True)
     
-    # أرصدة العملات (بدون تشفير لسرعة الحسابات)
-    balance_yer = db.Column(db.Numeric(18, 2), default=0.00) 
-    balance_usd = db.Column(db.Numeric(18, 2), default=0.00) 
+    # ✅ أرصدة العملات - تم إزالة balance_yer و balance_usd، فقط الريال السعودي
     balance_sar = db.Column(db.Numeric(18, 2), default=0.00) 
     balance_pending = db.Column(db.Numeric(18, 2), default=0.00)    
     total_withdrawn = db.Column(db.Numeric(18, 2), default=0.00)    
@@ -60,6 +58,16 @@ class SupplierWallet(db.Model):
         else: 
             self._bank_details_enc = None
 
+    # ✅ دالة مساعدة لإرجاع العملة (ثابتة)
+    @property
+    def currency(self):
+        """العملة ثابتة: ريال سعودي (SAR)"""
+        return "SAR"
+
+    def __repr__(self):
+        return f'<SupplierWallet {self.wallet_code} | SAR: {self.balance_sar} | Pending: {self.balance_pending}>'
+
+
 class WalletTransaction(db.Model):
     """سجل الحركات المالية الموحد."""
     __tablename__ = 'wallet_transactions'
@@ -70,6 +78,7 @@ class WalletTransaction(db.Model):
         db.Index('idx_trans_type', 'trans_type'),
         db.Index('idx_trans_owner', 'owner_type', 'owner_id'),
         db.Index('idx_trans_voucher', 'voucher_number'),
+        # ✅ تم إزالة idx_trans_currency
         {'extend_existing': True}
     )
 
@@ -81,7 +90,10 @@ class WalletTransaction(db.Model):
     trans_type = db.Column(db.String(20), nullable=False) 
     source_type = db.Column(db.String(20), default='manual')
     amount = db.Column(db.Numeric(18, 2), nullable=False)
-    currency = db.Column(db.String(5), nullable=False)
+    
+    # ✅ تم إزالة حقل currency نهائياً - العملة ثابتة SAR
+    # currency = db.Column(db.String(5), nullable=False)  # ❌ تم الحذف
+    
     balance_before = db.Column(db.Numeric(18, 2), nullable=False)
     balance_after = db.Column(db.Numeric(18, 2), nullable=False)
     description = db.Column(db.String(255))
@@ -93,6 +105,16 @@ class WalletTransaction(db.Model):
 
     # [التحميل المتصل]: لضمان عرض تفاصيل المحفظة مع المعاملة فوراً
     wallet = db.relationship('SupplierWallet', back_populates='transactions', lazy='joined')
+
+    # ✅ دالة مساعدة لإرجاع العملة (ثابتة)
+    @property
+    def currency(self):
+        """العملة ثابتة: ريال سعودي (SAR)"""
+        return "SAR"
+
+    def __repr__(self):
+        return f'<WalletTransaction {self.voucher_number} | {self.trans_type} | SAR {self.amount} | Balance: {self.balance_after}>'
+
 
 # --- مشغل الأحداث للتسوية التلقائية ---
 @event.listens_for(WalletTransaction, 'before_insert')
@@ -109,8 +131,8 @@ def set_voucher_number(mapper, connection, target):
         wallet_query = connection.execute(select(SupplierWallet).filter_by(id=target.wallet_id)).scalar_one_or_none()
         if wallet_query:
             amount_dec = Decimal(str(target.amount or 0))
-            attr = f'balance_{target.currency.lower()}'
-            current = Decimal(str(getattr(wallet_query, attr, 0) or 0))
+            # ✅ العملة ثابتة SAR - تم إزالة التحقق من العملة
+            current = Decimal(str(getattr(wallet_query, 'balance_sar', 0) or 0))
             target.balance_before = current
             
             if target.trans_type in ['credit', 'adjustment_credit', 'sale_revenue']:
@@ -119,5 +141,7 @@ def set_voucher_number(mapper, connection, target):
                 target.balance_after = current - amount_dec
             
             connection.execute(
-                db.update(SupplierWallet).where(SupplierWallet.id == target.wallet_id).values({attr: target.balance_after})
+                db.update(SupplierWallet).where(SupplierWallet.id == target.wallet_id).values(
+                    {'balance_sar': target.balance_after}
+                )
             )
