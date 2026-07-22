@@ -21,7 +21,7 @@ class SupplierWallet(db.Model):
     )
     
     id = db.Column(db.Integer, primary_key=True)
-    wallet_code = db.Column(db.String(50), unique=True, nullable=False)
+    wallet_code = db.Column(db.String(50), unique=True, nullable=False)  # ✅ يبقى كما هو
     
     # الربط الرقمي مع المورد
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=False, unique=True)
@@ -60,10 +60,9 @@ class SupplierWallet(db.Model):
         else: 
             self._bank_details_enc = None
 
-    # ✅ دالة مساعدة لإرجاع العملة الافتراضية (SAR)
+    # ✅ العملة الافتراضية
     @property
     def default_currency(self):
-        """العملة الافتراضية للمحفظة: ريال سعودي (SAR)"""
         return "SAR"
 
     def __repr__(self):
@@ -91,7 +90,7 @@ class WalletTransaction(db.Model):
     trans_type = db.Column(db.String(20), nullable=False) 
     source_type = db.Column(db.String(20), default='manual')
     amount = db.Column(db.Numeric(18, 2), nullable=False)
-    currency = db.Column(db.String(5), nullable=False, default='SAR')  # ✅ القيمة الافتراضية SAR
+    currency = db.Column(db.String(5), nullable=False, default='SAR')  # ✅ default SAR
     balance_before = db.Column(db.Numeric(18, 2), nullable=False)
     balance_after = db.Column(db.Numeric(18, 2), nullable=False)
     description = db.Column(db.String(255))
@@ -104,10 +103,9 @@ class WalletTransaction(db.Model):
     # [التحميل المتصل]: لضمان عرض تفاصيل المحفظة مع المعاملة فوراً
     wallet = db.relationship('SupplierWallet', back_populates='transactions', lazy='joined')
 
-    # ✅ دالة مساعدة لإرجاع العملة الافتراضية
+    # ✅ العملة الافتراضية
     @property
     def default_currency(self):
-        """العملة الافتراضية للمعاملة: ريال سعودي (SAR)"""
         return "SAR"
 
     def __repr__(self):
