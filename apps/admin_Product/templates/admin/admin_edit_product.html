@@ -72,11 +72,11 @@
                 <p class="text-sm font-semibold text-gray-700">اسحب وأفلت الصور الجديدة هنا، أو <span class="text-[var(--royal-purple-accent)] underline">انقر للتحميل</span></p>
                 <input type="file" id="imageInput" name="images" multiple class="hidden" accept="image/*">
             </div>
-            <!-- المعرض المصغر -->
+            <!-- المعرض المصغر (مربعات متناسقة تماماً باستخدام aspect-square) -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4" id="imageGallery">
                 {% if product.images %}
                     {% for img in product.images %}
-                    <div class="relative group border rounded-xl overflow-hidden bg-gray-100 h-28 shadow-xs existing-image-card" data-url="{{ img.url if img.url is defined else img }}">
+                    <div class="relative group border rounded-xl overflow-hidden bg-gray-100 aspect-square shadow-xs existing-image-card" data-url="{{ img.url if img.url is defined else img }}">
                         <img src="{{ img.url if img.url is defined else img }}" class="w-full h-full object-cover">
                         <button type="button" onclick="removeExistingImage(this, '{{ img.url if img.url is defined else img }}')" class="absolute top-2 left-2 bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow cursor-pointer">
                             <i class="fa-solid fa-trash text-xs"></i>
@@ -476,7 +476,8 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const card = document.createElement('div');
-                card.className = 'relative group border-2 border-dashed border-[var(--royal-purple-accent)] rounded-xl overflow-hidden bg-purple-50/50 h-28 shadow-xs new-preview-card';
+                // تحديث المعاينة الجديدة لتصبح مربعة كذلك بأبعاد aspect-square
+                card.className = 'relative group border-2 border-dashed border-[var(--royal-purple-accent)] rounded-xl overflow-hidden bg-purple-50/55 aspect-square shadow-xs new-preview-card';
                 card.innerHTML = `
                     <img src="${e.target.result}" class="w-full h-full object-cover">
                     <div class="absolute bottom-0 inset-x-0 bg-[var(--royal-midnight-900)]/70 text-white text-[10px] text-center py-0.5 font-semibold">جديد للاستبدال</div>
