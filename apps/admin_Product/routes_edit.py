@@ -89,7 +89,41 @@ def save_sync_product():
         ident = {"sku": sku}
 
         collection_ids = json.loads(request.form.get('collection_ids', '[]') or '[]')
-        variants = json.loads(request.form.get('variants', '[]') or '[]')
+        
+        # معالجة قراءة المتغيرات سواء تم إرسالها كـ JSON string أو كحقول مصفوفات منفصلة (variant_name[])
+        variants_raw = request.form.get('variants', '')
+        if variants_raw:
+            try:
+                variants = json.loads(variants_raw)
+            except Exception:
+                variants = []
+        else:
+            # تجميع المتغيرات من الحقول التقليدية في حال أُرسلت عبر الـ Form Data المباشرة
+            var_names = request.form.getlist('variant_name[]')
+            var_prices = request.form.getlist('variant_price[]')
+            var_qtys = request.form.getlist('variant_qty[]')
+            var_skus = request.form.getlist('variant_sku[]')
+            
+            variants = []
+            for i in range(len(var_names)):
+                if var_names[i].strip():
+                    try:
+                        v_price = float(var_prices[i]) if i < len(var_prices) and var_prices[i] else 0.0
+                    except ValueError:
+                        v_price = 0.0
+                    try:
+                        v_qty = int(var_qtys[i]) if i < len(var_qtys) and var_qtys[i] else 0
+                    except ValueError:
+                        v_qty = 0
+                    v_sku = var_skus[i] if i < len(var_skus) else ''
+                    
+                    variants.append({
+                        "name": var_names[i],
+                        "price": v_price,
+                        "quantity": v_qty,
+                        "sku": v_sku
+                    })
+
         removed_images = json.loads(request.form.get('removed_images', '[]') or '[]')
         new_images = request.files.getlist('images')
 
