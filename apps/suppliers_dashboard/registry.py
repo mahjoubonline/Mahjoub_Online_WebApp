@@ -22,10 +22,11 @@ def register_module(app):
     """
     تسجيل موديول لوحة التحكم (Dashboard) في التطبيق الرئيسي
     """
-    # ✅ استيراد مباشر من الملفات في المجلد الرئيسي (بدون routes)
+    # ✅ استيراد مباشر من الملفات في المجلد الرئيسي
     from apps.suppliers_dashboard.dashboard_routes import suppliers_dashboard_bp
     from apps.suppliers_dashboard.settings_routes import settings_bp
     from apps.suppliers_dashboard.wallet_routes import wallet_bp
+    from apps.suppliers_dashboard.ai_routes import ai_bp  # ✅ إضافة مساعد AI
     
     # ✅ تسجيل Blueprint لوحة التحكم
     if 'suppliers_dashboard' not in app.blueprints:
@@ -41,5 +42,10 @@ def register_module(app):
     if 'suppliers_wallet' not in app.blueprints:
         app.register_blueprint(wallet_bp, url_prefix='/supplier')
         print("✅ [Registry]: تم تسجيل 'suppliers_wallet' بنجاح.")
+    
+    # ✅ تسجيل Blueprint مساعد الذكاء الاصطناعي
+    if 'ai_bp' not in app.blueprints:
+        app.register_blueprint(ai_bp, url_prefix='/supplier')
+        print("✅ [Registry]: تم تسجيل 'ai_bp' بنجاح.")
     
     return app
