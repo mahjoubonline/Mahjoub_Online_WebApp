@@ -22,7 +22,12 @@ query GetAllProductData($qid: String!) {
       tags
       images { _id fileUrl }
       pricing { price compareAtPrice costPrice currency }
-      variants { _id sku price quantity }
+      variants { 
+        _id 
+        sku 
+        quantity 
+        pricing { price compareAtPrice } 
+      }
       options { name values }
       dimensions { length width height unit }
       weight { value unit }
