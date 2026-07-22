@@ -25,6 +25,21 @@
         border-color: var(--royal-purple-accent) !important;
         box-shadow: 0 0 0 2px rgba(107, 33, 168, 0.2) !important;
     }
+    /* فرض ظهور الأرقام باللغة الإنجليزية في حقول المدخلات والواجهة */
+    input, select, textarea, .tabular-nums {
+        font-variant-numeric: tabular-nums;
+        direction: ltr;
+        text-align: right;
+    }
+    /* إعادة ضبط اتجاه النصوص العادية والرموز داخل الحقول الموجهة */
+    input[type="text"], input[type="url"], input[type="search"] {
+        direction: rtl;
+        text-align: right;
+    }
+    input[type="number"] {
+        direction: ltr;
+        text-align: left;
+    }
 </style>
 {% endblock %}
 
@@ -97,27 +112,27 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">سعر التكلفة (original_price)</label>
-                    <input type="number" step="0.01" name="original_price" value="{{ product.pricing.costPrice if product.pricing and product.pricing.costPrice else 0.0 }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition" placeholder="0.00">
+                    <input type="text" inputmode="decimal" name="original_price" value="{{ product.pricing.costPrice if product.pricing and product.pricing.costPrice else '0.00' }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition text-left" placeholder="0.00">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">السعر قبل الخصم (compare_at_price)</label>
-                    <input type="number" step="0.01" name="compare_at_price" value="{{ product.pricing.compareAtPrice if product.pricing and product.pricing.compareAtPrice else 0.0 }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition" placeholder="0.00">
+                    <input type="text" inputmode="decimal" name="compare_at_price" value="{{ product.pricing.compareAtPrice if product.pricing and product.pricing.compareAtPrice else '0.00' }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition text-left" placeholder="0.00">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">السعر النهائي (price)</label>
-                    <input type="number" step="0.01" name="price" value="{{ product.pricing.price if product.pricing and product.pricing.price else 0.0 }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition" placeholder="0.00">
+                    <input type="text" inputmode="decimal" name="price" value="{{ product.pricing.price if product.pricing and product.pricing.price else '0.00' }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition text-left" placeholder="0.00">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">رمز التخزين (SKU)</label>
-                    <input type="text" name="sku" value="{{ product.ident.sku if product.ident and product.ident.sku else '' }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition" placeholder="SKU-12345">
+                    <input type="text" name="sku" value="{{ product.ident.sku if product.ident and product.ident.sku else '' }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition text-left" placeholder="SKU-12345" style="direction: ltr; text-align: left;">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">الكمية المتاحة (quantity)</label>
-                    <input type="number" name="quantity" value="{{ product.quantity if product.quantity is defined else 0 }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition" placeholder="0">
+                    <input type="text" inputmode="numeric" name="quantity" value="{{ product.quantity if product.quantity is defined else '0' }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition text-left" placeholder="0">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">الوزن (كجم) (weight)</label>
-                    <input type="number" step="0.1" name="weight" value="{{ product.weight.value if product.weight and product.weight.value else 0.0 }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition" placeholder="0.0">
+                    <input type="text" inputmode="decimal" name="weight" value="{{ product.weight.value if product.weight and product.weight.value else '0.0' }}" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none transition text-left" placeholder="0.0">
                 </div>
             </div>
         </div>
@@ -150,7 +165,7 @@
                         {% for sup in suppliers %}
                         <div class="supplier-option p-3 hover:bg-[var(--royal-midnight-800)]/5 cursor-pointer border-b text-sm transition" data-id="{{ sup.id }}" data-name="{{ sup.trade_name }} ({{ sup.supplier_code }})">
                             <div class="font-bold text-gray-800">{{ sup.trade_name }}</div>
-                            <div class="text-xs text-[var(--royal-purple-accent)]">الكود: {{ sup.supplier_code }}</div>
+                            <div class="text-xs text-[var(--royal-purple-accent)]" style="direction: ltr; text-align: right;">الكود: {{ sup.supplier_code }}</div>
                         </div>
                         {% endfor %}
                     </div>
@@ -196,7 +211,7 @@
         <div class="space-y-4">
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">رابط URL</label>
-                <input type="url" id="linkModalUrlInput" dir="ltr" placeholder="https://example.com" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none text-right transition">
+                <input type="url" id="linkModalUrlInput" dir="ltr" placeholder="https://example.com" class="w-full px-4 py-2 border rounded-xl royal-focus outline-none text-left transition">
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button type="button" onclick="closeLinkModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition cursor-pointer">إلغاء</button>
@@ -209,6 +224,22 @@
 
 {% block extra_js %}
 <script>
+    // دالة مساعدة لتعويض الأرقام العربية إلى إنجليزية عند الإدخال لضمان التوافق السيادي
+    function enforceEnglishNumbers(inputElement) {
+        if (!inputElement) return;
+        inputElement.addEventListener('input', function() {
+            let val = this.value;
+            // تحويل الأرقام المشرية/العربية (٠-٩) إلى إنجليزية (0-9)
+            val = val.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+            if (this.value !== val) {
+                this.value = val;
+            }
+        });
+    }
+
+    // تطبيق الدالة على جميع الحقول الرقمية الحالية والمستقبلية
+    document.querySelectorAll('input[type="number"], input[inputmode="decimal"], input[inputmode="numeric"]').forEach(enforceEnglishNumbers);
+
     // إشعار نجاح الحفظ ونشر التعديلات عبر AJAX POST
     document.getElementById('saveBtn').addEventListener('click', async function() {
         if(document.getElementById('hiddenDescription')) {
@@ -312,14 +343,16 @@
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
                 <td class="p-2 border-b"><input type="text" name="variant_name[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="أحمر / أخضر / أزرق / اسود"></td>
-                <td class="p-2 border-b"><input type="number" step="0.01" name="variant_price[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="0.00"></td>
-                <td class="p-2 border-b"><input type="number" name="variant_qty[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="0"></td>
-                <td class="p-2 border-b"><input type="text" name="variant_sku[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition" placeholder="SKU-VAR"></td>
+                <td class="p-2 border-b"><input type="text" inputmode="decimal" name="variant_price[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition text-left" placeholder="0.00"></td>
+                <td class="p-2 border-b"><input type="text" inputmode="numeric" name="variant_qty[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition text-left" placeholder="0"></td>
+                <td class="p-2 border-b"><input type="text" name="variant_sku[]" class="w-full px-3 py-1.5 border rounded-xl royal-focus outline-none transition text-left" placeholder="SKU-VAR" style="direction: ltr; text-align: left;"></td>
                 <td class="p-2 border-b text-center">
                     <button type="button" class="text-red-500 hover:text-red-700 remove-variant p-2 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
                 </td>
             `;
             tbody.appendChild(newRow);
+            // تطبيق حماية الأرقام الإنجليزية على الحقول المضافة ديناميكياً
+            newRow.querySelectorAll('input[inputmode]').forEach(enforceEnglishNumbers);
         });
     }
 
