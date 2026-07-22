@@ -1,16 +1,18 @@
 # coding: utf-8
 # 📂 apps/suppliers_dashboard/settings_routes.py
 
-from flask import Blueprint, render_template, abort, session, request, flash, redirect, url_for
+from flask import Blueprint, render_template, abort, session, request, flash, redirect, url_for, jsonify
 from flask_login import login_required, current_user
 import traceback
+import os
+import json
 
 from apps.models import db, Supplier, SupplierWallet
 from apps.models.supplier_profile_db import SupplierProfile
 from apps.data.yemen_governorates import YEMEN_GOVERNORATES
-from apps.data.store_categories import STORE_CATEGORIES
-from apps.data.yemen_banks import YEMEN_BANKS
-from apps.data.financial_companies import FINANCIAL_COMPANIES
+from apps.data.store_categories import STORE_CATEGORIES, CATEGORIES_LIST
+from apps.data.yemen_banks import YEMEN_BANKS, BANKS_LIST
+from apps.data.financial_companies import FINANCIAL_COMPANIES, FINANCIAL_COMPANIES_LIST
 
 settings_bp = Blueprint(
     'suppliers_settings',
@@ -57,8 +59,175 @@ def get_supplier_context():
         return None
 
 
+# ============================================================
+# ✅ إضافة عناصر جديدة إلى القوائم
+# ============================================================
+
+@settings_bp.route('/add-category', methods=['POST'])
+@login_required
+def add_category():
+    """إضافة فئة جديدة"""
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        
+        if not name:
+            return jsonify({'success': False, 'message': 'الاسم مطلوب'})
+        
+        # التحقق من عدم التكرار
+        if name in CATEGORIES_LIST:
+            return jsonify({'success': False, 'message': 'هذه الفئة موجودة بالفعل'})
+        
+        # ✅ إضافة إلى ملف البيانات
+        file_path = os.path.join('apps', 'data', 'store_categories.py')
+        
+        # قراءة الملف الحالي
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # إنشاء معرف جديد
+        import re
+        existing_ids = re.findall(r"'id': '([^']+)'", content)
+        new_id = f"cat_{len(existing_ids) + 1:03d}"
+        
+        # إضافة الفئة الجديدة
+        new_entry = f"\n    {{'id': '{new_id}', 'name': '{name}', 'icon': 'fa-tag'}}," 
+        
+        # إدراج قبل آخر قوس
+        lines = content.split('\n')
+        insert_index = -1
+        for i in range(len(lines) - 1, -1, -1):
+            if ']' in lines[i]:
+                insert_index = i
+                break
+        
+        if insert_index > 0:
+            lines.insert(insert_index, new_entry)
+            new_content = '\n'.join(lines)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            
+            # ✅ تحديث القائمة في الذاكرة
+            STORE_CATEGORIES.append({'id': new_id, 'name': name, 'icon': 'fa-tag'})
+            CATEGORIES_LIST.append(name)
+            
+            return jsonify({'success': True, 'name': name, 'id': new_id})
+        
+        return jsonify({'success': False, 'message': 'خطأ في إضافة الفئة'})
+        
+    except Exception as e:
+        print(f"❌ خطأ في add_category: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@settings_bp.route('/add-bank', methods=['POST'])
+@login_required
+def add_bank():
+    """إضافة بنك جديد"""
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        
+        if not name:
+            return jsonify({'success': False, 'message': 'الاسم مطلوب'})
+        
+        if name in BANKS_LIST:
+            return jsonify({'success': False, 'message': 'هذا البنك موجود بالفعل'})
+        
+        # ✅ إضافة إلى ملف البيانات
+        file_path = os.path.join('apps', 'data', 'yemen_banks.py')
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        import re
+        existing_ids = re.findall(r"'id': '([^']+)'", content)
+        new_id = f"bank_{len(existing_ids) + 1:03d}"
+        
+        new_entry = f"\n    {{'id': '{new_id}', 'name': '{name}', 'icon': 'fa-building'}},"
+        
+        lines = content.split('\n')
+        insert_index = -1
+        for i in range(len(lines) - 1, -1, -1):
+            if ']' in lines[i]:
+                insert_index = i
+                break
+        
+        if insert_index > 0:
+            lines.insert(insert_index, new_entry)
+            new_content = '\n'.join(lines)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            
+            YEMEN_BANKS.append({'id': new_id, 'name': name, 'icon': 'fa-building'})
+            BANKS_LIST.append(name)
+            
+            return jsonify({'success': True, 'name': name, 'id': new_id})
+        
+        return jsonify({'success': False, 'message': 'خطأ في إضافة البنك'})
+        
+    except Exception as e:
+        print(f"❌ خطأ في add_bank: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@settings_bp.route('/add-financial-company', methods=['POST'])
+@login_required
+def add_financial_company():
+    """إضافة شركة مالية جديدة"""
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        
+        if not name:
+            return jsonify({'success': False, 'message': 'الاسم مطلوب'})
+        
+        if name in FINANCIAL_COMPANIES_LIST:
+            return jsonify({'success': False, 'message': 'هذه الشركة موجودة بالفعل'})
+        
+        # ✅ إضافة إلى ملف البيانات
+        file_path = os.path.join('apps', 'data', 'financial_companies.py')
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        import re
+        existing_ids = re.findall(r"'id': '([^']+)'", content)
+        new_id = f"comp_{len(existing_ids) + 1:03d}"
+        
+        new_entry = f"\n    {{'id': '{new_id}', 'name': '{name}', 'icon': 'fa-building', 'type': 'أخرى'}},"
+        
+        lines = content.split('\n')
+        insert_index = -1
+        for i in range(len(lines) - 1, -1, -1):
+            if ']' in lines[i]:
+                insert_index = i
+                break
+        
+        if insert_index > 0:
+            lines.insert(insert_index, new_entry)
+            new_content = '\n'.join(lines)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            
+            FINANCIAL_COMPANIES.append({'id': new_id, 'name': name, 'icon': 'fa-building', 'type': 'أخرى'})
+            FINANCIAL_COMPANIES_LIST.append(name)
+            
+            return jsonify({'success': True, 'name': name, 'id': new_id})
+        
+        return jsonify({'success': False, 'message': 'خطأ في إضافة الشركة'})
+        
+    except Exception as e:
+        print(f"❌ خطأ في add_financial_company: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+
+# ============================================================
+# ✅ صفحة الإعدادات الرئيسية
+# ============================================================
+
 @settings_bp.route('/settings', methods=['GET', 'POST'])
-@login_required  # ✅ يمنع الوصول غير المسجل
+@login_required
 def settings():
     """
     صفحة إعدادات المتجر - فقط للموردين المسجلين
@@ -68,7 +237,7 @@ def settings():
         supplier = get_supplier_context()
         if not supplier:
             flash('❌ يرجى تسجيل الدخول أولاً', 'danger')
-            return redirect(url_for('suppliers_auth.login'))  # ✅ إعادة التوجيه لبوابة الدخول
+            return redirect(url_for('suppliers_auth.login'))
         
         # ✅ معالجة POST (حفظ البيانات)
         if request.method == 'POST':
@@ -76,8 +245,7 @@ def settings():
                 # ✅ تحديث اسم المتجر
                 supplier.trade_name = request.form.get('trade_name', supplier.trade_name)
                 
-                # ❌ owner_name لا يتم تحديثه (للقراءة فقط - أمان)
-                # supplier.owner_name = request.form.get('owner_name', supplier.owner_name)
+                # ❌ owner_name لا يتم تحديثه (للقراءة فقط)
                 
                 # ✅ تحديث رقم الهاتف مع التحقق
                 new_phone = request.form.get('phone', '').strip()
@@ -128,10 +296,7 @@ def settings():
         )
         
     except Exception as e:
-        # ✅ عرض تفاصيل الخطأ للمطور
         error_details = traceback.format_exc()
         print(f"❌ خطأ في settings: {error_details}")
-        
-        # ✅ للمستخدم العادي: رسالة مبسطة
         flash('❌ حدث خطأ تقني، يرجى المحاولة لاحقاً', 'danger')
         return redirect(url_for('suppliers_dashboard.dashboard'))
