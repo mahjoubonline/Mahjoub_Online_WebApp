@@ -72,6 +72,10 @@ class Config:
     
     # ✅ تمكين الذكاء الاصطناعي
     AI_ENABLED = os.environ.get('AI_ENABLED', 'true').lower() == 'true'
+    
+    # ✅ طباعة للتأكد من وجود المفتاح (في السجلات)
+    print(f"🔑 DEEPSEEK_API_KEY: {DEEPSEEK_API_KEY[:10] if DEEPSEEK_API_KEY else '❌ غير موجود'}...")
+    print(f"🤖 AI_ENABLED: {AI_ENABLED}")
 
     @classmethod
     def validate_config(cls):
@@ -85,5 +89,7 @@ class Config:
         # ✅ التحقق من مفتاح DeepSeek إذا كان مفعلاً
         if cls.AI_ENABLED and not cls.DEEPSEEK_API_KEY:
             print("⚠️ [AI]: DEEPSEEK_API_KEY غير موجود. سيتم تعطيل الذكاء الاصطناعي.")
+        elif cls.AI_ENABLED and cls.DEEPSEEK_API_KEY:
+            print(f"✅ [AI]: DEEPSEEK_API_KEY موجود ومفعل.")
         
         return True
