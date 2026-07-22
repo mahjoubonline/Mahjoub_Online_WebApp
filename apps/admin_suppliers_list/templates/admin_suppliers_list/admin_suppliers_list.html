@@ -4,75 +4,632 @@
 {% block title %}إدارة الشركاء | محجوب أونلاين{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h3 class="fw-bold" style="color: var(--royal-purple);">قائمة الشركاء</h3>
-            <p class="text-muted mb-0">إدارة الموردين والشركاء المعتمدين في المنصة</p>
+<style>
+    :root {
+        --royal-purple: #2d0b36;
+        --royal-gold: #c5a059;
+        --card-shadow: 0 4px 20px rgba(45, 11, 54, 0.08);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--card-shadow);
+        border-right: 4px solid var(--royal-purple);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(45, 11, 54, 0.12);
+    }
+    
+    .stat-card .stat-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--royal-purple);
+        line-height: 1.2;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.85rem;
+        color: #9ca3af;
+        font-weight: 500;
+    }
+    
+    .stat-card .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.12;
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .stat-card.active { border-right-color: #28a745; }
+    .stat-card.inactive { border-right-color: #dc3545; }
+    .stat-card.pending { border-right-color: #ffc107; }
+    
+    .table thead th {
+        background: var(--royal-purple);
+        color: var(--royal-gold);
+        padding: 16px 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-align: center;
+        border: none;
+    }
+    
+    .table thead th:first-child { border-radius: 15px 0 0 0; }
+    .table thead th:last-child { border-radius: 0 15px 0 0; }
+    
+    .table tbody td {
+        padding: 14px 12px;
+        vertical-align: middle;
+        text-align: center;
+        border-bottom: 1px solid #f3f0f5;
+    }
+    
+    .table tbody tr {
+        transition: all 0.2s ease;
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(45, 11, 54, 0.03);
+    }
+    
+    .supplier-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1rem;
+        color: white;
+        background: var(--royal-purple);
+        flex-shrink: 0;
+    }
+    
+    .badge-status {
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .badge-status.active {
+        background: rgba(40, 167, 69, 0.12);
+        color: #28a745;
+    }
+    
+    .badge-status.inactive {
+        background: rgba(220, 53, 69, 0.12);
+        color: #dc3545;
+    }
+    
+    .badge-status.pending {
+        background: rgba(255, 193, 7, 0.12);
+        color: #856404;
+    }
+    
+    .badge-rank {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .badge-rank.gold {
+        background: #ffd700;
+        color: #856404;
+    }
+    
+    .badge-rank.silver {
+        background: #c0c0c0;
+        color: #495057;
+    }
+    
+    .badge-rank.bronze {
+        background: #cd7f32;
+        color: white;
+    }
+    
+    .btn-action {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        background: #f5f0f8;
+        color: var(--royal-purple);
+        cursor: pointer;
+        margin: 0 2px;
+    }
+    
+    .btn-action:hover {
+        background: var(--royal-purple);
+        color: white;
+        transform: scale(1.1);
+    }
+    
+    .btn-action.edit:hover { background: #0d6efd; }
+    .btn-action.delete:hover { background: #dc3545; }
+    .btn-action.view:hover { background: #28a745; }
+    
+    .search-wrapper {
+        position: relative;
+    }
+    
+    .search-wrapper .search-icon {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        z-index: 5;
+    }
+    
+    .search-wrapper .form-control {
+        padding-right: 44px;
+        border-radius: 12px;
+        border: 2px solid #f0ecf3;
+        transition: all 0.3s ease;
+        height: 48px;
+    }
+    
+    .search-wrapper .form-control:focus {
+        border-color: var(--royal-purple);
+        box-shadow: 0 0 0 4px rgba(45, 11, 54, 0.08);
+    }
+    
+    .btn-custom {
+        background: var(--royal-purple);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 10px 24px;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+    
+    .btn-custom:hover {
+        background: #4a1558;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(45, 11, 54, 0.3);
+    }
+    
+    .btn-custom-outline {
+        background: transparent;
+        color: var(--royal-purple);
+        border: 2px solid var(--royal-purple);
+        border-radius: 12px;
+        padding: 8px 20px;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+    
+    .btn-custom-outline:hover {
+        background: var(--royal-purple);
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .phone-code {
+        font-family: monospace;
+        font-size: 0.85rem;
+        color: #6c757d;
+        direction: ltr;
+    }
+    
+    .supplier-code {
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: #9ca3af;
+        background: #f5f0f8;
+        padding: 2px 10px;
+        border-radius: 8px;
+        display: inline-block;
+    }
+</style>
+
+<div class="container-fluid py-4" dir="rtl">
+    
+    <!-- ============================================================ -->
+    <!-- 🟣 رأس الصفحة -->
+    <!-- ============================================================ -->
+    <div class="row align-items-center mb-4">
+        <div class="col-md-4">
+            <a href="{{ url_for('admin_dashboard_bp.dashboard') }}" class="text-decoration-none" style="color: var(--royal-purple); font-weight: 500;">
+                <i class="fas fa-arrow-right me-1"></i> رجوع للوحة التحكم
+            </a>
+            <h3 class="fw-bold mb-0 mt-2" style="color: var(--royal-purple);">
+                <i class="fas fa-handshake me-2"></i> إدارة الشركاء
+            </h3>
+            <p class="text-muted small mt-1">إدارة الموردين والشركاء المعتمدين في المنصة</p>
         </div>
-        <a href="{{ url_for('suppliers_bp.add_supplier') }}" class="btn text-white px-4 py-2" style="background: var(--royal-purple); border-radius: 10px;">
-            <i class="fas fa-plus me-2"></i> إضافة شريك جديد
-        </a>
+        
+        <!-- ✅ البحث -->
+        <div class="col-md-4 search-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="searchSupplier" class="form-control shadow-sm" 
+                   placeholder="🔍 ابحث عن شريك بالاسم أو الكود أو رقم الهاتف..." 
+                   autocomplete="off">
+        </div>
+
+        <!-- ✅ أزرار الإضافة -->
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <a href="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" class="btn btn-custom px-4 shadow-sm">
+                <i class="fas fa-plus me-1"></i> إضافة شريك جديد
+            </a>
+        </div>
     </div>
 
-    <!-- Table Card -->
-    <div class="card shadow-sm border-0" style="border-radius: 15px;">
+    <!-- ============================================================ -->
+    <!-- 🟣 الإحصائيات -->
+    <!-- ============================================================ -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card position-relative">
+                <i class="fas fa-users stat-icon"></i>
+                <div class="stat-number">{{ suppliers|length if suppliers else 0 }}</div>
+                <div class="stat-label">👥 إجمالي الشركاء</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 stat-card active">
+            <div class="stat-card position-relative">
+                <i class="fas fa-check-circle stat-icon"></i>
+                <div class="stat-number" style="color: #28a745;">
+                    {{ suppliers|selectattr('status', 'equalto', 'active')|list|length if suppliers else 0 }}
+                </div>
+                <div class="stat-label">✅ نشط</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 stat-card inactive">
+            <div class="stat-card position-relative">
+                <i class="fas fa-times-circle stat-icon"></i>
+                <div class="stat-number" style="color: #dc3545;">
+                    {{ suppliers|selectattr('status', 'equalto', 'inactive')|list|length if suppliers else 0 }}
+                </div>
+                <div class="stat-label">❌ غير نشط</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 stat-card pending">
+            <div class="stat-card position-relative">
+                <i class="fas fa-clock stat-icon"></i>
+                <div class="stat-number" style="color: #ffc107;">
+                    {{ suppliers|selectattr('status', 'equalto', 'pending')|list|length if suppliers else 0 }}
+                </div>
+                <div class="stat-label">⏳ قيد الانتظار</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 🟣 جدول الشركاء -->
+    <!-- ============================================================ -->
+    <div class="card border-0 shadow-sm" style="border-radius: 15px;">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table align-middle table-hover mb-0">
-                    <thead style="background: var(--royal-purple); color: var(--mahjoub-gold);">
+                <table class="table align-middle mb-0" id="suppliersTable">
+                    <thead>
                         <tr>
-                            <th class="ps-4">المعرف</th>
-                            <th>اسم الشريك</th>
-                            <th>النشاط</th>
+                            <th style="width: 60px;">#</th>
+                            <th>المتجر / الشريك</th>
+                            <th>كود المورد</th>
+                            <th>📞 الهاتف</th>
+                            <th>الرتبة</th>
                             <th>الحالة</th>
-                            <th>تاريخ الانضمام</th>
-                            <th class="text-center">الإجراءات</th>
+                            <th>📅 تاريخ الانضمام</th>
+                            <th style="width: 140px;" class="text-center">⚙️ الإجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for supplier in suppliers %}
-                        <tr>
-                            <td class="ps-4 fw-bold">#{{ supplier.id }}</td>
-                            <td>{{ supplier.name }}</td>
-                            <td>{{ supplier.business_type | default('غير محدد') }}</td>
-                            <td>
-                                {% if supplier.is_active %}
-                                    <span class="badge bg-success-subtle text-success">نشط</span>
-                                {% else %}
-                                    <span class="badge bg-danger-subtle text-danger">معلق</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ supplier.created_at.strftime('%Y-%m-%d') if supplier.created_at else '---' }}</td>
-                            <td class="text-center">
-                                <a href="{{ url_for('suppliers_bp.supplier_details', supplier_id=supplier.id) }}" class="btn btn-sm" style="color: var(--royal-purple);">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <button class="btn btn-sm" style="color: var(--royal-purple);"><i class="fas fa-edit"></i></button>
-                                <button class="btn btn-sm text-danger"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>
+                    <tbody id="suppliersTableBody">
+                        {% if suppliers and suppliers|length > 0 %}
+                            {% for supplier in suppliers %}
+                            <tr class="supplier-row" 
+                                data-name="{{ (supplier.trade_name or supplier.username or '').lower() }}"
+                                data-code="{{ supplier.supplier_code or '' | lower }}"
+                                data-phone="{{ supplier.phone or '' }}">
+                                
+                                <td class="fw-bold text-muted">#{{ supplier.id }}</td>
+                                
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="supplier-avatar">
+                                            {{ (supplier.trade_name or supplier.username or '?')[0] }}
+                                        </div>
+                                        <div class="text-start">
+                                            <div class="fw-bold" style="color: var(--royal-purple);">
+                                                {{ supplier.trade_name or supplier.username }}
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-user me-1"></i> {{ supplier.owner_name or 'غير محدد' }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    <span class="supplier-code">{{ supplier.supplier_code or '---' }}</span>
+                                </td>
+                                
+                                <td>
+                                    <span class="phone-code" dir="ltr">
+                                        {% if supplier.phone %}
+                                            {{ supplier.phone }}
+                                        {% else %}
+                                            <span class="text-muted">---</span>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                
+                                <td>
+                                    {% if supplier.rank == 'gold' %}
+                                        <span class="badge-rank gold">🏆 ذهبي</span>
+                                    {% elif supplier.rank == 'silver' %}
+                                        <span class="badge-rank silver">🥈 فضي</span>
+                                    {% elif supplier.rank == 'bronze' %}
+                                        <span class="badge-rank bronze">🥉 برونزي</span>
+                                    {% else %}
+                                        <span class="badge-rank" style="background: #e9ecef; color: #6c757d;">{{ supplier.rank or 'عادي' }}</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    {% if supplier.status == 'active' %}
+                                        <span class="badge-status active">
+                                            <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> نشط
+                                        </span>
+                                    {% elif supplier.status == 'inactive' %}
+                                        <span class="badge-status inactive">
+                                            <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> غير نشط
+                                        </span>
+                                    {% elif supplier.status == 'pending' %}
+                                        <span class="badge-status pending">
+                                            <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i> قيد الانتظار
+                                        </span>
+                                    {% else %}
+                                        <span class="badge-status" style="background: #e9ecef; color: #6c757d;">
+                                            {{ supplier.status }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    <span class="text-muted small">
+                                        {{ supplier.created_at.strftime('%Y-%m-%d') if supplier.created_at else '---' }}
+                                    </span>
+                                </td>
+                                
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <button class="btn-action view" title="عرض التفاصيل" 
+                                                onclick="viewSupplier({{ supplier.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn-action edit" title="تعديل" 
+                                                onclick="editSupplier({{ supplier.id }})">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                        <button class="btn-action delete" title="حذف" 
+                                                onclick="deleteSupplier({{ supplier.id }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
                         {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
-                                <i class="fas fa-users-slash fa-3x mb-3 opacity-50"></i>
-                                <p>لا يوجد شركاء مسجلون في النظام حالياً</p>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="fas fa-users-slash fa-3x mb-3 d-block text-muted" style="opacity: 0.3;"></i>
+                                    <p class="fs-5">لا يوجد شركاء مسجلون في النظام حالياً</p>
+                                    <a href="{{ url_for('admin_suppliers_add_bp.add_supplier_or_staff') }}" class="btn btn-custom mt-2">
+                                        <i class="fas fa-plus me-1"></i> إضافة شريك جديد
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+        
+        <!-- ✅ عدد النتائج -->
+        <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center py-3 px-4">
+            <span class="text-muted small result-count">
+                عرض <span id="visibleCount">{{ suppliers|length if suppliers else 0 }}</span> من {{ suppliers|length if suppliers else 0 }} شريك
+            </span>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-custom-outline" onclick="exportData()">
+                    <i class="fas fa-file-export me-1"></i> تصدير
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    /* تنسيق خاص للبادجات والجداول */
-    .badge { padding: 0.5em 1em; border-radius: 8px; font-weight: 600; font-size: 0.85rem; }
-    .table thead th { padding: 20px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
-    .table tbody td { padding: 20px; }
-    .btn:hover { opacity: 0.8; transition: 0.3s; }
-</style>
+<!-- ============================================================ -->
+<!-- 🟣 Modal عرض التفاصيل -->
+<!-- ============================================================ -->
+<div class="modal fade" id="supplierDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 20px;">
+            <div class="modal-header" style="background: var(--royal-purple); color: var(--royal-gold); border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title"><i class="fas fa-store me-2"></i> <span id="modalSupplierName">تفاصيل الشريك</span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalSupplierContent">
+                <!-- سيتم ملؤها بواسطة JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-custom" onclick="editSupplier(currentSupplierId)">
+                    <i class="fas fa-edit me-1"></i> تعديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 🟣 JavaScript -->
+<!-- ============================================================ -->
+<script>
+    let currentSupplierId = null;
+    
+    // ============================================
+    // ✅ البحث المباشر
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchSupplier');
+        const rows = document.querySelectorAll('.supplier-row');
+        const visibleCount = document.getElementById('visibleCount');
+        
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            let visible = 0;
+            
+            rows.forEach(row => {
+                const name = row.dataset.name || '';
+                const code = row.dataset.code || '';
+                const phone = row.dataset.phone || '';
+                
+                const match = name.includes(query) || code.includes(query) || phone.includes(query);
+                row.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            
+            if (visibleCount) {
+                visibleCount.textContent = visible;
+            }
+        });
+    });
+
+    // ============================================
+    // ✅ عرض تفاصيل الشريك
+    // ============================================
+    function viewSupplier(supplierId) {
+        currentSupplierId = supplierId;
+        
+        // جلب البيانات من الخادم
+        fetch(`/admin/suppliers/${supplierId}/details`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const s = data.supplier;
+                    document.getElementById('modalSupplierName').textContent = s.trade_name || s.username;
+                    
+                    document.getElementById('modalSupplierContent').innerHTML = `
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded">
+                                    <label class="text-muted small">اسم المتجر</label>
+                                    <h5 class="fw-bold">${s.trade_name || s.username}</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded">
+                                    <label class="text-muted small">كود المورد</label>
+                                    <h5 class="fw-bold font-monospace">${s.supplier_code || '---'}</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded">
+                                    <label class="text-muted small">اسم المالك</label>
+                                    <h5>${s.owner_name || 'غير محدد'}</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded">
+                                    <label class="text-muted small">رقم الهاتف</label>
+                                    <h5 class="font-monospace" dir="ltr">${s.phone || '---'}</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded">
+                                    <label class="text-muted small">الرتبة</label>
+                                    <h5>${s.rank || 'عادي'}</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded">
+                                    <label class="text-muted small">الحالة</label>
+                                    <h5>
+                                        <span class="badge-status ${s.status === 'active' ? 'active' : s.status === 'inactive' ? 'inactive' : 'pending'}">
+                                            ${s.status === 'active' ? '✅ نشط' : s.status === 'inactive' ? '❌ غير نشط' : '⏳ قيد الانتظار'}
+                                        </span>
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded">
+                                    <label class="text-muted small">تاريخ الانضمام</label>
+                                    <h5>${s.created_at || '---'}</h5>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded">
+                                    <label class="text-muted small">كود المحفظة</label>
+                                    <h5 class="font-monospace">${s.wallet_code || '---'}</h5>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    new bootstrap.Modal(document.getElementById('supplierDetailsModal')).show();
+                }
+            })
+            .catch(err => console.error('Error:', err));
+    }
+
+    // ============================================
+    // ✅ تعديل الشريك
+    // ============================================
+    function editSupplier(supplierId) {
+        // يمكن توجيه المستخدم إلى صفحة التعديل
+        window.location.href = `/admin/suppliers/${supplierId}/edit`;
+    }
+
+    // ============================================
+    // ✅ حذف الشريك
+    // ============================================
+    function deleteSupplier(supplierId) {
+        if (confirm('⚠️ هل أنت متأكد من حذف هذا الشريك؟ لا يمكن التراجع عن هذا الإجراء.')) {
+            fetch(`/admin/suppliers/${supplierId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('حدث خطأ أثناء الحذف: ' + data.message);
+                }
+            })
+            .catch(err => alert('حدث خطأ: ' + err));
+        }
+    }
+
+    // ============================================
+    // ✅ تصدير البيانات
+    // ============================================
+    function exportData() {
+        window.location.href = '/admin/suppliers/export';
+    }
+</script>
+
 {% endblock %}
