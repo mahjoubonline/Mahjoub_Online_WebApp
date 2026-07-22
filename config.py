@@ -78,12 +78,24 @@ class Config:
     # ============================================================
     OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
     OPENROUTER_API_URL = os.environ.get('OPENROUTER_API_URL', 'https://openrouter.ai/api/v1/chat/completions')
-    # ✅ نموذج مجاني مؤكد
-    OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'google/gemma-2-9b-it:free')
+    
+    # ✅ نماذج مجانية متعددة (جرب واحداً تلو الآخر)
+    OPENROUTER_MODELS = {
+        'mistral': 'mistralai/mistral-7b-instruct-v0.1',
+        'llama': 'meta-llama/llama-3-8b-instruct',
+        'gemma': 'google/gemma-2-9b-it',
+        'phi': 'microsoft/phi-3-mini-128k-instruct',
+        'qwen': 'qwen/qwen-2.5-7b-instruct'
+    }
+    
+    # ✅ النموذج النشط (غيّر المفتاح لتبديل النموذج)
+    OPENROUTER_MODEL_KEY = os.environ.get('OPENROUTER_MODEL_KEY', 'mistral')
+    OPENROUTER_MODEL = OPENROUTER_MODELS.get(OPENROUTER_MODEL_KEY, OPENROUTER_MODELS['mistral'])
     
     # ✅ طباعة للتأكد من وجود المفتاح (في السجلات)
     print(f"🔑 DEEPSEEK_API_KEY: {DEEPSEEK_API_KEY[:10] if DEEPSEEK_API_KEY else '❌ غير موجود'}...")
     print(f"🌐 OPENROUTER_API_KEY: {OPENROUTER_API_KEY[:15] if OPENROUTER_API_KEY else '❌ غير موجود'}...")
+    print(f"🤖 OPENROUTER_MODEL: {OPENROUTER_MODEL}")
     print(f"🤖 AI_ENABLED: {AI_ENABLED}")
 
     @classmethod
@@ -106,5 +118,6 @@ class Config:
             print("⚠️ [OpenRouter]: OPENROUTER_API_KEY غير موجود.")
         elif cls.AI_ENABLED and cls.OPENROUTER_API_KEY:
             print(f"✅ [OpenRouter]: OPENROUTER_API_KEY موجود ومفعل.")
+            print(f"✅ [OpenRouter]: النموذج المستخدم: {cls.OPENROUTER_MODEL}")
         
         return True
