@@ -33,10 +33,11 @@ query($qid: String!) {
             }
             variants {
                 _id
-                name
+                sku
                 quantity
                 pricing {
                     price
+                    compareAtPrice
                 }
             }
         }
@@ -80,7 +81,6 @@ class ProductSyncService:
             }
         }
         """
-
         variables = {"page": page, "limit": limit}
         if title:
             variables["title"] = title
@@ -92,7 +92,6 @@ class ProductSyncService:
                 json={"query": query, "variables": variables},
                 timeout=30
             )
-
             if response.status_code != 200:
                 print(f"findAllProducts HTTP Error {response.status_code}: {response.text}")
                 return {"data": [], "pagination": None}
@@ -116,14 +115,12 @@ class ProductSyncService:
                 json={"query": GET_PRODUCT_DETAIL_QUERY, "variables": variables},
                 timeout=30
             )
-
             if response.status_code != 200:
                 print(f"GraphQL HTTP Error: {response.status_code}")
                 print(f"Response Body: {response.text}")
                 return None
 
             result = response.json()
-             
             if "errors" in result:
                 print("GraphQL Errors in fetch_product_by_qid:", result["errors"])
                 return None
@@ -143,7 +140,6 @@ class ProductSyncService:
             return None
 
     def fetch_collections(self):
-        """جلب قائمة المجموعات الكاملة من الخادم المركزي بدون حدود للاكتمال"""
         query = """
         query {
             findAllCollections(input: { page: 1, limit: 100 }) {
@@ -188,7 +184,6 @@ class ProductSyncService:
             "ident": ident,
             "desc": desc
         }
-         
         if kwargs:
             variables.update(kwargs)
          
@@ -199,7 +194,6 @@ class ProductSyncService:
                 json={"query": UPDATE_PRODUCT_MUTATION, "variables": variables},
                 timeout=30
             )
-
             if response.status_code != 200:
                 print(f"Update HTTP Error {response.status_code}: {response.text}")
                 return False
