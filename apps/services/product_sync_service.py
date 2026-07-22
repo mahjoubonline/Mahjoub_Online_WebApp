@@ -6,7 +6,7 @@ from apps.services.update_product_data import UPDATE_PRODUCT_MUTATION
 
 GRAPHQL_ENDPOINT = "https://mahjoub.online/admin/graphql"
 
-# الاستعلام الشامل لتفاصيل المنتج مصححاً حسب مخطط الـ GraphQL الفعلي
+# الاستعلام الشامل المحدث لجلب كافة تفاصيل المنتج (التكلفة، المجموعات، الصور، المتغيرات)
 GET_PRODUCT_DETAIL_QUERY = """
 query($qid: String!) {
   findProductByQid(qid: $qid) {
@@ -22,15 +22,25 @@ query($qid: String!) {
       pricing {
         price
         compareAtPrice
+        costPrice
+        currency
       }
       images {
+        _id
         fileUrl
       }
+      collections {
+        qid
+        title
+        slug
+      }
       variants {
+        name
         pricing {
           price
         }
         quantity
+        sku
       }
     }
   }
@@ -110,7 +120,6 @@ class ProductSyncService:
 
             result = response.json()
              
-            # طباعة الأخطاء البرمجية للـ GraphQL إن وجدت
             if "errors" in result:
                 print("GraphQL Errors in fetch_product_by_qid:", result["errors"])
                 return None
@@ -129,7 +138,42 @@ class ProductSyncService:
             print(f"Request Exception in fetch_product_by_qid: {str(e)}")
             return None
 
-    def update_product_data(self, qid: str, info: dict, pricing: dict, dims: dict, weight: dict, ident: dict, desc: str):
+    def fetch_collections(self):
+        """جلب قائمة المجموعات المتاحة من الخادم المركزي لعرضها في لوحة التحكم"""
+        query = """
+        query {
+          findAllCollections {
+            success
+            message
+            data {
+              qid
+              title
+              slug
+            }
+          }
+        }
+        """
+        try:
+            response = requests.post(
+                GRAPHQL_ENDPOINT,
+                headers=self.headers,
+                json={"query": query},
+                timeout=30
+            )
+            if response.status_code != 200:
+                return []
+            
+            result = response.json()
+            if "data" in result and "findAllCollections" in result["data"]:
+                col_res = result["data"]["findAllCollections"]
+                if col_res.get("success"):
+                    return col_res.get("data", [])
+            return []
+        except Exception as e:
+            print(f"Error fetching collections: {e}")
+            return []
+
+    def update_product_data(self, qid: str, info: dict, pricing: dict, dims: dict, weight: dict, ident: dict, desc: str, **kwargs):
         variables = {
             "id": qid,
             "info": info,
