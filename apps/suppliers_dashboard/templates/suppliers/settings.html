@@ -182,7 +182,8 @@
                 </div>
                 <div class="card-body p-4">
 
-                    <form method="POST" action="{{ url_for('suppliers_dashboard.settings') }}" id="settingsForm">
+                    <!-- ✅ تم تعديل action إلى suppliers_settings.settings -->
+                    <form method="POST" action="{{ url_for('suppliers_settings.settings') }}" id="settingsForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
 
                         <!-- ✅ اسم المتجر (إلزامي) -->
@@ -381,7 +382,7 @@
                         {{ "{:,.2f}".format(supplier.wallet.balance_sar|float) if supplier.wallet and supplier.wallet.balance_sar else '0.00' }}
                     </div>
                     <div class="text-muted small">ريال سعودي (SAR)</div>
-                    <a href="{{ url_for('suppliers_dashboard.withdraw') }}" class="btn btn-gold mt-3 w-100">
+                    <a href="{{ url_for('suppliers_wallet.withdraw') }}" class="btn btn-gold mt-3 w-100">
                         <i class="fas fa-hand-holding-usd me-2"></i> طلب سحب
                     </a>
                 </div>
