@@ -17,11 +17,20 @@
         </a>
     </div>
 
+    <!-- ✅ إحصائيات - تم إزالة YER و USD -->
     <div class="row mb-4">
-        <div class="col-md-3"><div class="stat-card text-center"><p>عدد المحافظ</p><h3>{{ pagination.total }}</h3></div></div>
-        <div class="col-md-3"><div class="stat-card text-center"><p>إجمالي رصيد SAR</p><h3>{{ "{:,.2f}".format(stats.total_sar or 0) }}</h3></div></div>
-        <div class="col-md-3"><div class="stat-card text-center"><p>إجمالي رصيد YER</p><h3>{{ "{:,.2f}".format(stats.total_yer or 0) }}</h3></div></div>
-        <div class="col-md-3"><div class="stat-card text-center"><p>إجمالي رصيد USD</p><h3>{{ "{:,.2f}".format(stats.total_usd or 0) }}</h3></div></div>
+        <div class="col-md-6">
+            <div class="stat-card text-center">
+                <p>عدد المحافظ</p>
+                <h3>{{ pagination.total }}</h3>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stat-card text-center">
+                <p>💵 إجمالي رصيد (SAR)</p>
+                <h3>{{ "{:,.2f}".format(stats.total_sar or 0) }}</h3>
+            </div>
+        </div>
     </div>
 
     <div class="card mb-4 card-royal border-0 shadow-sm">
@@ -37,9 +46,7 @@
                     <tr>
                         <th>كود المحفظة</th>
                         <th>المتجر</th>
-                        <th>SAR</th>
-                        <th>YER</th>
-                        <th>USD</th>
+                        <th>💵 الرصيد (SAR)</th>
                         <th>آخر تحديث</th>
                         <th>الإجراءات</th>
                     </tr>
