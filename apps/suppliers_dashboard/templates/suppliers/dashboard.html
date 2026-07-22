@@ -500,7 +500,8 @@
         
         showTypingIndicator();
         
-        fetch('/api/ask-ai', {
+        // ✅ المسار الصحيح مع /supplier/
+        fetch('/supplier/api/ask-ai', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
