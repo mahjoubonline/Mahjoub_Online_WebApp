@@ -132,6 +132,92 @@
         cursor: not-allowed !important;
         opacity: 0.8;
     }
+    
+    /* ✅ تنسيق القوائم المطورة */
+    .search-select-wrapper {
+        position: relative;
+        flex: 1;
+    }
+    
+    .search-select-wrapper .form-control {
+        border-radius: 0.375rem 0 0 0.375rem;
+    }
+    
+    .search-select-wrapper .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        display: none;
+        max-height: 200px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0 0 0.375rem 0.375rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .search-select-wrapper .dropdown-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .search-select-wrapper .dropdown-item:hover {
+        background-color: #f3e8ff;
+        color: var(--royal-purple);
+    }
+    
+    .search-select-wrapper .dropdown-item .text-muted {
+        font-size: 0.75rem;
+    }
+    
+    .input-group .btn-outline-primary {
+        border-radius: 0 0.375rem 0.375rem 0;
+        border-left: none;
+    }
+    
+    .input-group .btn-outline-primary:hover {
+        background: var(--royal-purple);
+        color: white;
+        border-color: var(--royal-purple);
+    }
+    
+    /* ✅ علامات التحقق */
+    .validation-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.2rem;
+        z-index: 10;
+        background: white;
+        padding: 0 4px;
+    }
+    
+    .validation-icon.valid {
+        color: #28a745;
+    }
+    
+    .validation-icon.invalid {
+        color: #dc3545;
+    }
+    
+    .form-control.is-valid {
+        border-color: #28a745 !important;
+        padding-left: 35px;
+    }
+    
+    .form-control.is-invalid {
+        border-color: #dc3545 !important;
+        padding-left: 35px;
+    }
+    
+    .input-group .form-control.is-valid,
+    .input-group .form-control.is-invalid {
+        padding-left: 35px;
+    }
 </style>
 
 <div class="container-fluid py-4">
@@ -231,36 +317,33 @@
                         </div>
 
                         <!-- ✅ البريد الإلكتروني -->
-                        <div class="mb-3">
+                        <div class="mb-3 position-relative">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-envelope text-muted me-1"></i> البريد الإلكتروني
                             </label>
                             <input type="email" name="email" 
+                                   id="emailInput"
                                    value="{{ supplier.supplier_profile.email if supplier.supplier_profile and supplier.supplier_profile.email else '' }}"
                                    class="form-control" 
-                                   placeholder="example@domain.com">
+                                   placeholder="example@domain.com"
+                                   oninput="validateField(this, 'email')">
+                            <div id="emailIcon" class="validation-icon"></div>
+                            <small class="text-muted">سيتم التحقق من صحة البريد الإلكتروني</small>
                         </div>
 
                         <!-- ✅ رقم الهاتف (مع تحقق لحظي من قاعدة البيانات) -->
-                        <div class="mb-3">
+                        <div class="mb-3 position-relative">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-phone text-muted me-1"></i> رقم الهاتف <span class="required-star">*</span>
                             </label>
-                            <div class="position-relative">
-                                <input type="text" name="phone" 
-                                       id="phoneInput"
-                                       value="{{ supplier.phone if supplier.phone else '' }}"
-                                       class="form-control {% if not supplier.phone %}is-invalid{% endif %}" 
-                                       placeholder="05XXXXXXXX" dir="ltr"
-                                       required
-                                       oninput="validatePhone(this)">
-                                <div id="phoneFeedback" class="invalid-feedback">
-                                    <i class="fas fa-times-circle me-1"></i> رقم الهاتف مطلوب
-                                </div>
-                                <div id="phoneSuccess" class="valid-feedback" style="display: none;">
-                                    <i class="fas fa-check-circle me-1"></i> رقم هاتف صحيح
-                                </div>
-                            </div>
+                            <input type="text" name="phone" 
+                                   id="phoneInput"
+                                   value="{{ supplier.phone if supplier.phone else '' }}"
+                                   class="form-control {% if not supplier.phone %}is-invalid{% endif %}" 
+                                   placeholder="05XXXXXXXX" dir="ltr"
+                                   required
+                                   oninput="validatePhone(this)">
+                            <div id="phoneIcon" class="validation-icon"></div>
                             <small class="text-muted">أدخل رقم الهاتف بدون فواصل (9 أرقام)</small>
                         </div>
 
@@ -274,20 +357,33 @@
                             <small class="text-muted">وصف يظهر في صفحة المتجر (اختياري)</small>
                         </div>
 
-                        <!-- ✅ فئة المتجر -->
+                        <!-- ✅ فئة المتجر - مع بحث وإضافة -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-tags text-muted me-1"></i> فئة المتجر
                             </label>
-                            <select name="category" class="form-control">
-                                <option value="">اختر الفئة...</option>
-                                {% for cat in categories %}
-                                <option value="{{ cat.name }}" {% if supplier.supplier_profile and supplier.supplier_profile.category == cat.name %}selected{% endif %}>
-                                    <i class="fas {{ cat.icon }} me-2"></i> {{ cat.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <small class="text-muted">اختر الفئة التي ينتمي إليها متجرك</small>
+                            <div class="input-group">
+                                <div class="search-select-wrapper" id="categoryWrapper">
+                                    <input type="text" class="form-control search-select-input" 
+                                           id="categorySearchInput"
+                                           placeholder="ابحث أو اكتب فئة جديدة..."
+                                           autocomplete="off"
+                                           oninput="filterSelectOptions('categorySelect', this.value)"
+                                           onfocus="showDropdown('categorySelect')">
+                                    <input type="hidden" name="category" id="categorySelect" value="{{ supplier.supplier_profile.category if supplier.supplier_profile and supplier.supplier_profile.category else '' }}">
+                                    <div class="dropdown-menu" id="categoryDropdown">
+                                        {% for cat in categories %}
+                                        <div class="dropdown-item" data-value="{{ cat.name }}" onclick="selectOption('categorySelect', '{{ cat.name }}', 'categorySearchInput')">
+                                            <i class="fas {{ cat.icon }} me-2"></i> {{ cat.name }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary" onclick="addNewItem('category')" title="إضافة فئة جديدة">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">ابحث عن فئة أو أضف فئة جديدة</small>
                         </div>
 
                         <!-- ✅ المحافظة -->
@@ -328,81 +424,119 @@
                                       placeholder="العنوان التفصيلي (الشارع، الحي، المبنى)">{{ supplier.supplier_profile.address if supplier.supplier_profile and supplier.supplier_profile.address else '' }}</textarea>
                         </div>
 
-                        <!-- ✅ البنك -->
+                        <!-- ✅ البنك - مع بحث وإضافة -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-university text-muted me-1"></i> البنك
                             </label>
-                            <select name="bank_name" class="form-control">
-                                <option value="">اختر البنك...</option>
-                                {% for bank in banks %}
-                                <option value="{{ bank.name }}" {% if supplier.supplier_profile and supplier.supplier_profile.bank_name == bank.name %}selected{% endif %}>
-                                    <i class="fas {{ bank.icon }} me-2"></i> {{ bank.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <small class="text-muted">اختر البنك الذي تتعامل معه</small>
+                            <div class="input-group">
+                                <div class="search-select-wrapper" id="bankWrapper">
+                                    <input type="text" class="form-control search-select-input" 
+                                           id="bankSearchInput"
+                                           placeholder="ابحث أو اكتب بنكاً جديداً..."
+                                           autocomplete="off"
+                                           oninput="filterSelectOptions('bankSelect', this.value)"
+                                           onfocus="showDropdown('bankSelect')">
+                                    <input type="hidden" name="bank_name" id="bankSelect" value="{{ supplier.supplier_profile.bank_name if supplier.supplier_profile and supplier.supplier_profile.bank_name else '' }}">
+                                    <div class="dropdown-menu" id="bankDropdown">
+                                        {% for bank in banks %}
+                                        <div class="dropdown-item" data-value="{{ bank.name }}" onclick="selectOption('bankSelect', '{{ bank.name }}', 'bankSearchInput')">
+                                            <i class="fas {{ bank.icon }} me-2"></i> {{ bank.name }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary" onclick="addNewItem('bank')" title="إضافة بنك جديد">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">ابحث عن بنك أو أضف بنكاً جديداً</small>
                         </div>
 
                         <!-- ✅ رقم الحساب البنكي -->
-                        <div class="mb-3">
+                        <div class="mb-3 position-relative">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-credit-card text-muted me-1"></i> رقم الحساب البنكي
                             </label>
                             <input type="text" name="bank_account" 
+                                   id="bankAccountInput"
                                    value="{{ supplier.supplier_profile.bank_account if supplier.supplier_profile and supplier.supplier_profile.bank_account else '' }}"
                                    class="form-control" 
-                                   placeholder="أدخل رقم الحساب البنكي">
+                                   placeholder="أدخل رقم الحساب البنكي"
+                                   oninput="validateField(this, 'bank_account')">
+                            <div id="bankAccountIcon" class="validation-icon"></div>
                         </div>
 
-                        <!-- ✅ الشركة المالية -->
+                        <!-- ✅ الشركة المالية - مع بحث وإضافة -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-handshake text-muted me-1"></i> الشركة المالية
                             </label>
-                            <select name="financial_company" class="form-control">
-                                <option value="">اختر الشركة المالية...</option>
-                                {% for comp in financial_companies %}
-                                <option value="{{ comp.name }}" {% if supplier.supplier_profile and supplier.supplier_profile.company_name == comp.name %}selected{% endif %}>
-                                    <i class="fas {{ comp.icon }} me-2"></i> {{ comp.name }}
-                                    <span class="badge bg-light text-muted ms-1">{{ comp.type }}</span>
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <small class="text-muted">اختر الشركة المالية التي تتعامل معها</small>
+                            <div class="input-group">
+                                <div class="search-select-wrapper" id="companyWrapper">
+                                    <input type="text" class="form-control search-select-input" 
+                                           id="companySearchInput"
+                                           placeholder="ابحث أو اكتب شركة جديدة..."
+                                           autocomplete="off"
+                                           oninput="filterSelectOptions('companySelect', this.value)"
+                                           onfocus="showDropdown('companySelect')">
+                                    <input type="hidden" name="financial_company" id="companySelect" value="{{ supplier.supplier_profile.company_name if supplier.supplier_profile and supplier.supplier_profile.company_name else '' }}">
+                                    <div class="dropdown-menu" id="companyDropdown">
+                                        {% for comp in financial_companies %}
+                                        <div class="dropdown-item" data-value="{{ comp.name }}" onclick="selectOption('companySelect', '{{ comp.name }}', 'companySearchInput')">
+                                            <i class="fas {{ comp.icon }} me-2"></i> {{ comp.name }}
+                                            <span class="text-muted small">({{ comp.type }})</span>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary" onclick="addNewItem('company')" title="إضافة شركة مالية جديدة">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">ابحث عن شركة مالية أو أضف شركة جديدة</small>
                         </div>
 
                         <!-- ✅ رقم الهوية -->
-                        <div class="mb-3">
+                        <div class="mb-3 position-relative">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-id-card text-muted me-1"></i> رقم الهوية
                             </label>
                             <input type="text" name="id_number" 
+                                   id="idNumberInput"
                                    value="{{ supplier.supplier_profile.id_number if supplier.supplier_profile and supplier.supplier_profile.id_number else '' }}"
                                    class="form-control" 
-                                   placeholder="أدخل رقم الهوية">
+                                   placeholder="أدخل رقم الهوية"
+                                   oninput="validateField(this, 'id_number')">
+                            <div id="idNumberIcon" class="validation-icon"></div>
                         </div>
 
                         <!-- ✅ السجل التجاري -->
-                        <div class="mb-3">
+                        <div class="mb-3 position-relative">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-building text-muted me-1"></i> السجل التجاري
                             </label>
                             <input type="text" name="commercial_reg" 
+                                   id="commercialRegInput"
                                    value="{{ supplier.supplier_profile.commercial_reg if supplier.supplier_profile and supplier.supplier_profile.commercial_reg else '' }}"
                                    class="form-control" 
-                                   placeholder="أدخل رقم السجل التجاري">
+                                   placeholder="أدخل رقم السجل التجاري"
+                                   oninput="validateField(this, 'commercial_reg')">
+                            <div id="commercialRegIcon" class="validation-icon"></div>
                         </div>
 
                         <!-- ✅ اسم الشركة -->
-                        <div class="mb-3">
+                        <div class="mb-3 position-relative">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-building text-muted me-1"></i> اسم الشركة
                             </label>
                             <input type="text" name="company_name" 
+                                   id="companyNameInput"
                                    value="{{ supplier.supplier_profile.company_name if supplier.supplier_profile and supplier.supplier_profile.company_name else '' }}"
                                    class="form-control" 
-                                   placeholder="أدخل اسم الشركة">
+                                   placeholder="أدخل اسم الشركة"
+                                   oninput="validateField(this, 'company_name')">
+                            <div id="companyNameIcon" class="validation-icon"></div>
                         </div>
 
                         <!-- ✅ أزرار الإجراء -->
@@ -553,124 +687,145 @@
     // ✅ التحقق من رقم الهاتف لحظياً
     // ============================================================
     function validatePhone(input) {
-        const feedback = document.getElementById('phoneFeedback');
-        const success = document.getElementById('phoneSuccess');
+        const icon = document.getElementById('phoneIcon');
         const value = input.value.trim();
         
         if (value.length === 0) {
-            input.classList.remove('is-valid');
-            input.classList.add('is-invalid');
-            feedback.style.display = 'block';
-            success.style.display = 'none';
+            input.classList.remove('is-valid', 'is-invalid');
+            icon.className = 'validation-icon';
+            icon.innerHTML = '';
             return;
         }
         
-        // التحقق من أن الرقم مكون من 9 أرقام
         if (/^\d{9}$/.test(value)) {
             input.classList.remove('is-invalid');
             input.classList.add('is-valid');
-            feedback.style.display = 'none';
-            success.style.display = 'block';
+            icon.className = 'validation-icon valid';
+            icon.innerHTML = '<i class="fas fa-check-circle"></i>';
         } else {
             input.classList.remove('is-valid');
             input.classList.add('is-invalid');
-            feedback.textContent = '⚠️ رقم الهاتف يجب أن يكون 9 أرقام';
-            feedback.style.display = 'block';
-            success.style.display = 'none';
+            icon.className = 'validation-icon invalid';
+            icon.innerHTML = '<i class="fas fa-times-circle"></i>';
         }
     }
 
     // ============================================================
-    // ✅ قائمة المدن الديناميكية بناءً على المحافظة
+    // ✅ التحقق من الحقول العامة
     // ============================================================
-    const citiesByGovernorate = {{ governorates|tojson }};
-
-    function updateCities() {
-        const governorateSelect = document.getElementById('governorateSelect');
-        const citySelect = document.getElementById('citySelect');
-        const selectedGovernorate = governorateSelect.value;
+    function validateField(input, fieldName) {
+        const icon = document.getElementById(fieldName + 'Icon');
+        const value = input.value.trim();
         
-        citySelect.innerHTML = '<option value="">اختر المدينة...</option>';
+        if (!icon) return;
         
-        if (selectedGovernorate && citiesByGovernorate[selectedGovernorate]) {
-            const cities = citiesByGovernorate[selectedGovernorate];
-            cities.forEach(function(city) {
-                const option = document.createElement('option');
-                option.value = city;
-                option.textContent = city;
-                citySelect.appendChild(option);
-            });
+        if (value.length === 0) {
+            input.classList.remove('is-valid', 'is-invalid');
+            icon.className = 'validation-icon';
+            icon.innerHTML = '';
+            return;
+        }
+        
+        // التحقق حسب النوع
+        let isValid = true;
+        if (fieldName === 'email') {
+            isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        } else if (fieldName === 'bank_account' || fieldName === 'id_number' || fieldName === 'commercial_reg') {
+            isValid = value.length >= 3;
+        } else {
+            isValid = value.length > 0;
+        }
+        
+        if (isValid) {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            icon.className = 'validation-icon valid';
+            icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+        } else {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            icon.className = 'validation-icon invalid';
+            icon.innerHTML = '<i class="fas fa-times-circle"></i>';
         }
     }
 
     // ============================================================
-    // ✅ التحقق من صحة النموذج قبل الإرسال
+    // ✅ البحث في القوائم المنسدلة
     // ============================================================
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('settingsForm');
-        const phoneInput = document.getElementById('phoneInput');
+    function filterSelectOptions(selectId, searchText) {
+        const dropdown = document.getElementById(selectId + 'Dropdown');
+        if (!dropdown) return;
         
-        // ✅ تفعيل التحقق لحظياً عند الكتابة
-        if (phoneInput) {
-            phoneInput.addEventListener('input', function() {
-                validatePhone(this);
-            });
-        }
+        const items = dropdown.querySelectorAll('.dropdown-item');
+        const search = searchText.toLowerCase().trim();
         
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                const tradeName = form.querySelector('[name="trade_name"]');
-                const phone = form.querySelector('[name="phone"]');
-                
-                let hasError = false;
-                
-                // التحقق من اسم المتجر
-                if (!tradeName.value.trim()) {
-                    tradeName.classList.add('is-invalid');
-                    hasError = true;
-                } else {
-                    tradeName.classList.remove('is-invalid');
-                }
-                
-                // التحقق من رقم الهاتف
-                if (!phone.value.trim() || phone.value.length < 9) {
-                    phone.classList.add('is-invalid');
-                    hasError = true;
-                } else {
-                    phone.classList.remove('is-invalid');
-                }
-                
-                if (hasError) {
-                    e.preventDefault();
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'alert alert-danger mt-3';
-                    errorDiv.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i> يرجى تعبئة جميع الحقول المطلوبة';
-                    const existingAlert = form.querySelector('.alert-danger');
-                    if (existingAlert) existingAlert.remove();
-                    form.prepend(errorDiv);
-                }
-            });
-        }
-        
-        // ✅ تحديث المدن عند تحميل الصفحة إذا كانت هناك محافظة محددة
-        const govSelect = document.getElementById('governorateSelect');
-        if (govSelect && govSelect.value) {
-            updateCities();
-            // تحديد المدينة المحفوظة
-            {% if supplier.supplier_profile and supplier.supplier_profile.city %}
-            const savedCity = "{{ supplier.supplier_profile.city }}";
-            const citySelect = document.getElementById('citySelect');
-            if (citySelect) {
-                for (let i = 0; i < citySelect.options.length; i++) {
-                    if (citySelect.options[i].value === savedCity) {
-                        citySelect.options[i].selected = true;
-                        break;
-                    }
-                }
+        let hasResults = false;
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(search) || search === '') {
+                item.style.display = '';
+                hasResults = true;
+            } else {
+                item.style.display = 'none';
             }
-            {% endif %}
-        }
-    });
-</script>
+        });
+        
+        dropdown.style.display = (search !== '' && hasResults) ? 'block' : 'none';
+    }
 
-{% endblock %}
+    function showDropdown(selectId) {
+        const dropdown = document.getElementById(selectId + 'Dropdown');
+        const input = document.getElementById(selectId + 'SearchInput');
+        if (dropdown && input && input.value.trim() !== '') {
+            dropdown.style.display = 'block';
+        }
+    }
+
+    function selectOption(selectId, value, inputId) {
+        document.getElementById(selectId).value = value;
+        document.getElementById(inputId).value = value;
+        const dropdown = document.getElementById(selectId + 'Dropdown');
+        if (dropdown) dropdown.style.display = 'none';
+    }
+
+    // ============================================================
+    // ✅ إضافة عنصر جديد
+    // ============================================================
+    function addNewItem(type) {
+        const names = {
+            'category': 'الفئة',
+            'bank': 'البنك',
+            'company': 'الشركة المالية'
+        };
+        
+        const name = prompt(`📝 أدخل اسم ${names[type]} الجديد:`);
+        if (!name || name.trim() === '') return;
+        
+        const value = name.trim();
+        let selectId, inputId, dropdownId, endpoint;
+        
+        if (type === 'category') {
+            selectId = 'categorySelect';
+            inputId = 'categorySearchInput';
+            dropdownId = 'categoryDropdown';
+            endpoint = '/supplier/settings/add-category';
+        } else if (type === 'bank') {
+            selectId = 'bankSelect';
+            inputId = 'bankSearchInput';
+            dropdownId = 'bankDropdown';
+            endpoint = '/supplier/settings/add-bank';
+        } else {
+            selectId = 'companySelect';
+            inputId = 'companySearchInput';
+            dropdownId = 'companyDropdown';
+            endpoint = '/supplier/settings/add-financial-company';
+        }
+        
+        // إرسال الطلب
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name="csrf_token"]')?.value || ''
+            },
+            body: JSON.stringify({ name
