@@ -7,7 +7,7 @@ import traceback
 
 from apps.models import db, Supplier, SupplierWallet
 from apps.models.supplier_profile_db import SupplierProfile
-from apps.data.yemen_data import YEMEN_GOVERNORATES
+from apps.data.yemen_governorates import YEMEN_GOVERNORATES  # ✅ تم التعديل
 
 settings_bp = Blueprint(
     'suppliers_settings',
