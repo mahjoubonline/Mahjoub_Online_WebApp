@@ -78,7 +78,8 @@ class Config:
     # ============================================================
     OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
     OPENROUTER_API_URL = os.environ.get('OPENROUTER_API_URL', 'https://openrouter.ai/api/v1/chat/completions')
-    OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'mistralai/mistral-7b-instruct:free')
+    # ✅ نموذج مجاني مؤكد
+    OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'google/gemma-2-9b-it:free')
     
     # ✅ طباعة للتأكد من وجود المفتاح (في السجلات)
     print(f"🔑 DEEPSEEK_API_KEY: {DEEPSEEK_API_KEY[:10] if DEEPSEEK_API_KEY else '❌ غير موجود'}...")
