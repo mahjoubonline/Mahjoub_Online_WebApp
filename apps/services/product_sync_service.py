@@ -8,37 +8,41 @@ GRAPHQL_ENDPOINT = "https://mahjoub.online/admin/graphql"
 
 GET_PRODUCT_DETAIL_QUERY = """
 query($qid: String!) {
-  findProductByQid(qid: $qid) {
-    success
-    message
-    data {
-      qid
-      title
-      slug
-      description
-      status
-      quantity
-      pricing {
-        price
-        compareAtPrice
-      }
-      images {
-        _id
-        fileUrl
-      }
-      collections {
-        qid
-        title
-        slug
-      }
-      variants {
-        quantity
-        pricing {
-          price
+    findProductByQid(qid: $qid) {
+        success
+        message
+        data {
+            qid
+            title
+            slug
+            description
+            status
+            quantity
+            pricing {
+                price
+                compareAtPrice
+                costPrice
+                currency
+            }
+            images {
+                _id
+                fileUrl
+            }
+            collections {
+                qid
+                title
+                slug
+            }
+            variants {
+                _id
+                sku
+                quantity
+                pricing {
+                    price
+                }
+            }
         }
-      }
     }
-  }
 }
 """
 
@@ -52,29 +56,31 @@ class ProductSyncService:
     def fetch_products(self, page: int = 1, limit: int = 50, title: str = ""):
         query = """
         query($page: Int!, $limit: Int!, $title: String) {
-          findAllProducts(input: { page: $page, limit: $limit, title: $title }) {
-            success
-            message
-            data {
-              qid
-              title
-              description
-              pricing {
-                price
-                compareAtPrice
-              }
-              quantity
-              images {
-                _id
-                fileUrl
-              }
+            findAllProducts(input: { page: $page, limit: $limit, title: $title }) {
+                success
+                message
+                data {
+                    qid
+                    title
+                    slug
+                    description
+                    pricing {
+                        price
+                        compareAtPrice
+                        costPrice
+                    }
+                    quantity
+                    images {
+                        _id
+                        fileUrl
+                    }
+                }
+                pagination {
+                    totalPages
+                    currentPage
+                    limit
+                }
             }
-            pagination {
-              totalPages
-              currentPage
-              limit
-            }
-          }
         }
         """
 
@@ -143,15 +149,15 @@ class ProductSyncService:
         """جلب قائمة المجموعات الكاملة من الخادم المركزي بدون حدود للاكتمال"""
         query = """
         query {
-          findAllCollections(input: { page: 1, limit: 100 }) {
-            success
-            message
-            data {
-              qid
-              title
-              slug
+            findAllCollections(input: { page: 1, limit: 100 }) {
+                success
+                message
+                data {
+                    qid
+                    title
+                    slug
+                }
             }
-          }
         }
         """
         try:
@@ -185,7 +191,7 @@ class ProductSyncService:
             "ident": ident,
             "desc": desc
         }
-        
+         
         if kwargs:
             variables.update(kwargs)
          
