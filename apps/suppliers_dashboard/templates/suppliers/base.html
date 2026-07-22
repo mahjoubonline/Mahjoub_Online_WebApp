@@ -18,9 +18,149 @@
         .nav-link { display: flex; align-items: center; padding: 12px 15px; color: rgba(255,255,255,0.7); text-decoration: none; border-radius: 10px; transition: var(--transition); font-size: 0.95rem; cursor: pointer; }
         .nav-link:hover, .nav-link.active { background: rgba(212, 175, 55, 0.2); color: var(--mahjoub-gold); }
         .main-wrapper { margin-right: var(--sidebar-width); transition: var(--transition); min-height: 100vh; }
-        .top-navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        /* ✅ شريط العلوي المحسن */
+        .top-navbar { 
+            background: #fff; 
+            padding: 12px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            position: sticky;
+            top: 0;
+            z-index: 1040;
+            min-height: 70px;
+        }
+        
+        /* ✅ أيقونة الإعدادات */
+        .settings-dropdown-toggle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #f8f5fa;
+            border: 2px solid transparent;
+            color: var(--royal-purple);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .settings-dropdown-toggle:hover {
+            background: var(--royal-purple);
+            color: #fff;
+            border-color: var(--mahjoub-gold);
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(26, 11, 46, 0.2);
+        }
+        
+        .settings-dropdown-toggle .badge-dot {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 10px;
+            height: 10px;
+            background: var(--mahjoub-gold);
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+        
+        .dropdown-menu-settings {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+            padding: 8px 0;
+            min-width: 220px;
+            margin-top: 10px;
+            border: 1px solid rgba(26, 11, 46, 0.06);
+            overflow: hidden;
+        }
+        
+        .dropdown-menu-settings .dropdown-item {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            color: #333;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .dropdown-menu-settings .dropdown-item i {
+            width: 20px;
+            color: var(--royal-purple);
+            font-size: 1rem;
+        }
+        
+        .dropdown-menu-settings .dropdown-item:hover {
+            background: #f8f5fa;
+            color: var(--royal-purple);
+        }
+        
+        .dropdown-menu-settings .dropdown-item.text-danger:hover {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        
+        .dropdown-menu-settings .dropdown-divider {
+            margin: 4px 0;
+            border-color: #f0ecf3;
+        }
+        
+        /* ✅ الشارة (Badge) */
+        .badge-portal {
+            background: var(--mahjoub-gold);
+            color: #000;
+            padding: 6px 18px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+        
+        /* ✅ زر القائمة الجانبية للهواتف */
+        .btn-sidebar-toggle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--royal-purple);
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-sidebar-toggle:hover {
+            background: #f8f5fa;
+        }
+        
         .flash-messages { position: fixed; top: 80px; left: 20px; z-index: 2000; width: 350px; }
-        @media (max-width: 992px) { .sidebar { right: calc(-1 * var(--sidebar-width)); } .sidebar.active { right: 0; } .main-wrapper { margin-right: 0; } }
+        
+        /* ✅ التجاوب مع الهواتف والأجهزة اللوحية */
+        @media (max-width: 992px) { 
+            .sidebar { right: calc(-1 * var(--sidebar-width)); } 
+            .sidebar.active { right: 0; } 
+            .main-wrapper { margin-right: 0; } 
+        }
+        
+        @media (max-width: 576px) {
+            .top-navbar { padding: 10px 12px; min-height: 60px; }
+            .badge-portal { font-size: 0.65rem; padding: 4px 12px; }
+            .settings-dropdown-toggle { width: 36px; height: 36px; font-size: 1rem; }
+            .btn-sidebar-toggle { width: 36px; height: 36px; font-size: 1.1rem; }
+            .dropdown-menu-settings { min-width: 180px; }
+        }
+        
+        @media (min-width: 577px) and (max-width: 992px) {
+            .top-navbar { padding: 12px 20px; }
+        }
     </style>
 </head>
 <body>
@@ -40,7 +180,6 @@
                 {% for key, module in supplier_modules.items() %}
                     {% if key != 'suppliers_dashboard' and module.links is mapping %}
                         {% for endpoint, link_title in module.links.items() %}
-                            {# ✅ استخدام safe_url_for بدلاً من current_app #}
                             <a href="{{ safe_url_for(endpoint) }}" class="nav-link {% if request.endpoint == endpoint %}active{% endif %}">
                                 <i class="{{ module.icon|default('fas fa-folder') }} me-3"></i> <span>{{ link_title }}</span>
                             </a>
@@ -56,9 +195,51 @@
     </aside>
 
     <main class="main-wrapper" id="main">
+        
+        <!-- ✅ شريط العلوي المحسن مع أيقونة الإعدادات -->
         <header class="top-navbar">
-            <button class="btn d-lg-none" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="fas fa-bars"></i></button>
-            <div class="badge p-2" style="background-color: var(--mahjoub-gold); color: #000;">بوابة المورد</div>
+            <div class="d-flex align-items-center gap-2 gap-sm-3">
+                <!-- زر القائمة الجانبية (للشاشات الصغيرة) -->
+                <button class="btn-sidebar-toggle d-lg-none" onclick="document.getElementById('sidebar').classList.toggle('active')">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <!-- ✅ أيقونة الإعدادات مع قائمة منسدلة -->
+                <div class="dropdown">
+                    <button class="settings-dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="الإعدادات">
+                        <i class="fas fa-user-cog"></i>
+                        <span class="badge-dot"></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-settings dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('suppliers_settings.settings') }}">
+                                <i class="fas fa-store"></i> إعدادات المتجر
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('suppliers_wallet.wallet') }}">
+                                <i class="fas fa-wallet"></i> المحفظة
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('suppliers_dashboard.dashboard') }}">
+                                <i class="fas fa-chart-pie"></i> لوحة التحكم
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{{ url_for('suppliers_auth.logout') }}">
+                                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- شارة بوابة المورد -->
+            <div class="badge-portal">
+                <i class="fas fa-crown me-1"></i> بوابة المورد
+            </div>
         </header>
 
         <div class="flash-messages">
@@ -83,7 +264,7 @@
     <script>
         document.addEventListener('click', function(e) {
             const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.querySelector('.d-lg-none');
+            const toggleBtn = document.querySelector('.btn-sidebar-toggle');
             if (window.innerWidth < 992 && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
                 sidebar.classList.remove('active');
             }
