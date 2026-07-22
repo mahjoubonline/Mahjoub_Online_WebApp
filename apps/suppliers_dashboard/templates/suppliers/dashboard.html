@@ -30,6 +30,7 @@
     </div>
 
     <div class="row g-4 mb-5">
+        <!-- ✅ بطاقة المحفظة - عملة واحدة SAR -->
         <div class="col-12 col-xl-6">
             <div class="card dynamic-card gradient-wallet p-4 h-100 shadow">
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -37,7 +38,7 @@
                     <div>
                         <span class="badge bg-dark border border-gold me-2">{{ wallet.wallet_code if wallet else '---' }}</span>
                         
-                        {# رابط سحب آمن: يتم التحقق من وجود المسار في url_map قبل استخدامه لمنع انهيار الصفحة #}
+                        {# رابط سحب آمن #}
                         {% set withdraw_url = url_for('suppliers_dashboard.withdraw') if 'suppliers_dashboard.withdraw' in url_map._rules_by_endpoint else '#' %}
                         
                         <a href="{{ withdraw_url }}" class="btn btn-withdraw btn-sm">
@@ -46,41 +47,57 @@
                     </div>
                 </div>
                 
-                <div class="row text-center row-cols-3">
-                    <div class="col">
-                        <div class="balance-label">الريال اليمني</div>
-                        <div class="balance-val">{{ "{:,.0f}".format(wallet.balance_yer|float) if wallet else '0' }}</div>
+                <!-- ✅ عرض الرصيد بالريال السعودي فقط -->
+                <div class="row text-center">
+                    <div class="col-12">
+                        <div class="balance-label">💵 الرصيد الحالي (SAR)</div>
+                        <div class="balance-val" style="font-size: 2.5rem;">
+                            {{ "{:,.2f}".format(wallet.balance_sar|float) if wallet else '0.00' }}
+                        </div>
                     </div>
-                    <div class="col border-end border-light border-opacity-25">
-                        <div class="balance-label">الدولار</div>
-                        <div class="balance-val">{{ "{:,.2f}".format(wallet.balance_usd|float) if wallet else '0.00' }}</div>
-                    </div>
-                    <div class="col border-end border-light border-opacity-25">
-                        <div class="balance-label">السعودي</div>
-                        <div class="balance-val">{{ "{:,.2f}".format(wallet.balance_sar|float) if wallet else '0.00' }}</div>
+                </div>
+                
+                <!-- ✅ عرض الرصيد المعلق -->
+                <div class="row text-center mt-3 pt-3 border-top border-light border-opacity-25">
+                    <div class="col-12">
+                        <div class="balance-label">⏳ رصيد معلق (SAR)</div>
+                        <div class="balance-val" style="font-size: 1.5rem;">
+                            {{ "{:,.2f}".format(wallet.balance_pending|float) if (wallet and wallet.balance_pending) else '0.00' }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ✅ بطاقة الطلبات قيد التنفيذ -->
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card dynamic-card white-glass-card p-4 shadow-sm h-100 d-flex flex-column justify-content-center">
                 <div class="stat-card-icon mb-3"><i class="fas fa-box-open fa-2x"></i></div>
-                <h6 class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">طلبات قيد التنفيذ</h6>
+                <h6 class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">📦 طلبات قيد التنفيذ</h6>
                 <h2 class="fw-bold mt-2 mb-0">{{ pending_orders_count | default(0) }}</h2>
             </div>
         </div>
 
+        <!-- ✅ بطاقة إجمالي المبيعات -->
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card dynamic-card white-glass-card p-4 shadow-sm h-100 d-flex flex-column justify-content-center">
-                <div class="stat-card-icon mb-3 text-warning"><i class="fas fa-clock fa-2x"></i></div>
-                <h6 class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">رصيد معلق</h6>
-                <h2 class="fw-bold mt-2 mb-0">
-                    {{ "{:,.2f}".format(wallet.balance_pending|float) if (wallet and wallet.balance_pending) else '0.00' }} 
-                    <span class="fs-6 text-muted fw-normal">ر.س</span>
+                <div class="stat-card-icon mb-3 text-success"><i class="fas fa-chart-line fa-2x"></i></div>
+                <h6 class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">💰 إجمالي المبيعات (SAR)</h6>
+                <h2 class="fw-bold mt-2 mb-0" style="color: #28a745;">
+                    {{ "{:,.2f}".format(total_sales|float) if total_sales else '0.00' }}
                 </h2>
             </div>
         </div>
     </div>
+
+    <!-- ✅ إشعار إذا لم توجد محفظة -->
+    {% if not wallet %}
+    <div class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 16px; border-right: 4px solid #ffc107;">
+        <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+        <strong>تنبيه:</strong> لا توجد محفظة مرتبطة بحسابك. يرجى التواصل مع الإدارة.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
