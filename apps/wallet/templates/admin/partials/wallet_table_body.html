@@ -1,9 +1,7 @@
-<!-- أزرار الفلترة -->
+<!-- ✅ أزرار الفلترة - عملة واحدة فقط SAR -->
 <div class="mb-3 d-flex gap-2">
     <button onclick="filterTable('ALL')" class="btn btn-outline-dark btn-sm">الكل</button>
-    <button onclick="filterTable('SAR')" class="btn btn-primary btn-sm">SAR</button>
-    <button onclick="filterTable('YER')" class="btn btn-success btn-sm">YER</button>
-    <button onclick="filterTable('USD')" class="btn btn-warning btn-sm">USD</button>
+    <button onclick="filterTable('SAR')" class="btn btn-primary btn-sm">💰 SAR</button>
 </div>
 
 <!-- محتوى الجدول -->
@@ -12,16 +10,12 @@
         <tbody id="walletTableBody">
             {% for wallet in wallets %}
             <tr class="wallet-row" 
-                data-sar="{{ wallet.balance_sar or 0 }}" 
-                data-yer="{{ wallet.balance_yer or 0 }}" 
-                data-usd="{{ wallet.balance_usd or 0 }}">
+                data-sar="{{ wallet.balance_sar or 0 }}">
                 
                 <td class="font-monospace">{{ wallet.wallet_code }}</td>
                 <td class="fw-bold">{{ wallet.supplier.trade_name }}</td>
                 
                 <td>{{ "{:,.2f}".format(wallet.balance_sar if wallet.balance_sar is not none else 0) }} <small class="text-muted">SAR</small></td>
-                <td>{{ "{:,.2f}".format(wallet.balance_yer if wallet.balance_yer is not none else 0) }} <small class="text-muted">YER</small></td>
-                <td>{{ "{:,.2f}".format(wallet.balance_usd if wallet.balance_usd is not none else 0) }} <small class="text-muted">USD</small></td>
                 
                 <td class="text-muted" dir="ltr">
                     <small>{{ wallet.updated_at.strftime('%Y-%m-%d %I:%M %p') if wallet.updated_at else '---' }}</small>
@@ -36,7 +30,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="7" class="text-center py-4 text-muted">
+                <td colspan="5" class="text-center py-4 text-muted">
                     لا توجد محافظ مطابقة لمعايير البحث.
                 </td>
             </tr>
@@ -45,7 +39,7 @@
     </table>
 </div>
 
-<!-- سكربت الفلترة -->
+<!-- ✅ سكربت الفلترة - مبسط لعملة واحدة -->
 <script>
 function filterTable(currency) {
     const rows = document.querySelectorAll('.wallet-row');
