@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from cryptography.fernet import Fernet
 from apps.extensions import db
-from apps.models.exchange_db import ExchangeRate
+# ❌ تم إزالة: from apps.models.exchange_db import ExchangeRate
 
 def get_cipher():
     key = os.getenv('ENCRYPTION_KEY', 'w1Kk9P7zY5mZg4tE8Lp2nJvR6cXsA9qB0xU3jH5oI8Vq=')
@@ -53,11 +53,9 @@ class Order(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # العلاقات (Relationships)
-    # استخدام lazy='joined' يضمن جلب البيانات المرتبطة في استعلام واحد (SQL Join)
     supplier = db.relationship('Supplier', back_populates='orders', lazy='joined')
     marketer = db.relationship('Marketer', back_populates='orders', lazy='joined')
     
-    # تأكد أن 'items' تستخدم back_populates='order' لتطابق OrderItem.order
     items = db.relationship(
         'OrderItem', 
         back_populates='order', 
@@ -76,11 +74,11 @@ class Order(db.Model):
     # --- جسر البيانات المالية ---
     @property
     def amount(self):
+        """إجمالي المبلغ المدفوع (بالريال السعودي SAR)."""
         return self.financials.total_paid if self.financials else 0.0
 
-    def get_amount_in_currency(self, currency_code):
-        rate = ExchangeRate.get_rate(currency_code)
-        return self.amount * rate
+    # ✅ تم إزالة دالة تحويل العملات لأن العملة ثابتة SAR
+    # ❌ تم حذف: def get_amount_in_currency(self, currency_code):
 
     # --- منطق التشفير الاحترافي ---
     @property
@@ -114,4 +112,4 @@ class Order(db.Model):
         if value: self._customer_address = cipher.encrypt(str(value).encode()).decode()
 
     def __repr__(self):
-        return f'<Order {self.order_id_display or self.id} | Status: {self.status}>'
+        return f'<Order {self.order_id_display or self.id} | Status: {self.status} | Amount: {self.amount} SAR>'
