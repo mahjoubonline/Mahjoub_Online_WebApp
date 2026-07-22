@@ -6,6 +6,7 @@ from apps.services.update_product_data import UPDATE_PRODUCT_MUTATION
 
 GRAPHQL_ENDPOINT = "https://mahjoub.online/admin/graphql"
 
+# ✅ الاستعلام المعدل - تم إزالة حقل sku
 GET_PRODUCT_DETAIL_QUERY = """
 query($qid: String!) {
     findProductByQid(qid: $qid) {
@@ -33,7 +34,6 @@ query($qid: String!) {
             }
             variants {
                 _id
-                sku
                 quantity
                 pricing {
                     price
