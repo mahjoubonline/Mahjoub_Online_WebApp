@@ -9,10 +9,10 @@
     
     <!-- خط القاهرة -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- أيقونات FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Bootstrap 5 RTL -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <!-- أيقونات FontAwesome (تم وضعها قبل تايلد ويند لتجنب أي تعارض في الخطوط) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/tailwindcss-cdn@3.4.10/tailwindcss.min.js"></script>
     
@@ -25,7 +25,14 @@
             --royal-purple-accent: #6b21a8;
             --royal-purple-light: #f3e8ff;
         }
-        body { font-family: 'Cairo', sans-serif; background-color: #f4f7f6; margin: 0; }
+        body { font-family: 'Cairo', sans-serif !important; background-color: #f4f7f6; margin: 0; }
+        
+        /* إصلاح نهائي لمشكلة المربعات عبر إجبار عناصر الأيقونات على استخدام خط FontAwesome الصحيح */
+        i.fas, i.far, i.fab, .fa, .fas, .far, .fab {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+            font-style: normal;
+        }
+
         .sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, var(--royal-purple) 0%, var(--deep-black) 100%); height: 100vh; position: fixed; right: 0; top: 0; z-index: 1050; transition: all 0.3s; box-shadow: 2px 0 10px rgba(0,0,0,0.3); overflow-y: auto; }
         .logo-container { padding: 30px 10px; text-align: center; border-bottom: 1px solid rgba(212, 175, 55, 0.3); }
         .sidebar-logo { width: 70px; filter: brightness(0) invert(1); }
@@ -39,7 +46,6 @@
         .main-wrapper { margin-right: var(--sidebar-width); transition: 0.3s; }
         .top-navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         
-        /* تنسيق مخصص للحقول والقوائم المنسدلة لتجنب التداخل وضمان الاحترافية */
         .royal-focus:focus {
             border-color: var(--royal-purple-accent) !important;
             box-shadow: 0 0 0 3px rgba(107, 33, 168, 0.15) !important;
