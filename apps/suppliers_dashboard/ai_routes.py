@@ -15,48 +15,52 @@ ai_bp = Blueprint(
     template_folder='templates'
 )
 
+# ✅ مفتاح OpenRouter
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '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')
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "mistralai/mistral-7b-instruct:free"  # ✅ نموذج مجاني ومتاح
+
 
 # ============================================================
-# ✅ مسار اختبار الاتصال بـ DeepSeek API
+# ✅ مسار اختبار الاتصال بـ OpenRouter
 # ============================================================
 @ai_bp.route('/api/test-ai', methods=['GET'])
 @login_required
 def test_ai():
     """
-    مسار اختبار للتحقق من اتصال DeepSeek API
+    مسار اختبار للتحقق من اتصال OpenRouter
     """
-    api_key = os.environ.get('DEEPSEEK_API_KEY')
-    
-    # ✅ بناء رسالة النتيجة
     result = {
-        'api_key_exists': bool(api_key),
-        'api_key_preview': api_key[:15] + '...' if api_key else '❌ غير موجود',
-        'api_url': Config.DEEPSEEK_API_URL,
-        'model': Config.DEEPSEEK_MODEL,
+        'api_key_exists': bool(OPENROUTER_API_KEY),
+        'api_key_preview': OPENROUTER_API_KEY[:15] + '...' if OPENROUTER_API_KEY else '❌ غير موجود',
+        'api_url': OPENROUTER_API_URL,
+        'model': OPENROUTER_MODEL,
         'test_result': None
     }
     
-    if not api_key:
-        result['error'] = 'مفتاح DeepSeek غير موجود'
+    if not OPENROUTER_API_KEY:
+        result['error'] = 'مفتاح OpenRouter غير موجود'
         return jsonify(result), 500
     
     try:
         response = requests.post(
-            Config.DEEPSEEK_API_URL,
+            OPENROUTER_API_URL,
             headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json'
+                'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://mahjoub-online-webapp-j9ef.onrender.com',
+                'X-Title': 'Mahjoub Online'
             },
             json={
-                'model': Config.DEEPSEEK_MODEL,
+                'model': OPENROUTER_MODEL,
                 'messages': [
                     {'role': 'system', 'content': 'أنت مساعد مفيد.'},
                     {'role': 'user', 'content': 'مرحباً، قل لي كلمة واحدة فقط: مرحباً'}
                 ],
-                'max_tokens': 20,
+                'max_tokens': 50,
                 'temperature': 0.5
             },
-            timeout=10
+            timeout=15
         )
         
         result['status_code'] = response.status_code
@@ -81,13 +85,13 @@ def test_ai():
 
 
 # ============================================================
-# ✅ مساعد DeepSeek AI
+# ✅ مساعد OpenRouter AI
 # ============================================================
 @ai_bp.route('/api/ask-ai', methods=['POST'])
 @login_required
 def ask_ai():
     """
-    واجهة API للتواصل مع DeepSeek AI
+    واجهة API للتواصل مع OpenRouter (Mistral 7B مجاناً)
     """
     try:
         data = request.get_json()
@@ -100,21 +104,23 @@ def ask_ai():
             }), 400
         
         # ✅ التحقق من وجود مفتاح API
-        if not Config.DEEPSEEK_API_KEY:
+        if not OPENROUTER_API_KEY:
             return jsonify({
                 'success': False,
-                'error': 'مفتاح DeepSeek غير موجود'
+                'error': 'مفتاح OpenRouter غير موجود'
             }), 500
         
-        # ✅ إرسال الطلب إلى DeepSeek
+        # ✅ إرسال الطلب إلى OpenRouter
         response = requests.post(
-            Config.DEEPSEEK_API_URL,
+            OPENROUTER_API_URL,
             headers={
-                'Authorization': f'Bearer {Config.DEEPSEEK_API_KEY}',
-                'Content-Type': 'application/json'
+                'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://mahjoub-online-webapp-j9ef.onrender.com',
+                'X-Title': 'Mahjoub Online'
             },
             json={
-                'model': Config.DEEPSEEK_MODEL,
+                'model': OPENROUTER_MODEL,
                 'messages': [
                     {
                         'role': 'system',
@@ -147,7 +153,7 @@ def ask_ai():
                 'answer': answer
             })
         else:
-            print(f"❌ خطأ في DeepSeek API: {response.status_code} - {response.text}")
+            print(f"❌ خطأ في OpenRouter API: {response.status_code} - {response.text}")
             return jsonify({
                 'success': False,
                 'error': 'خطأ في الاتصال بالذكاء الاصطناعي'
@@ -159,7 +165,7 @@ def ask_ai():
             'error': 'انتهى وقت الانتظار، يرجى المحاولة مرة أخرى'
         }), 408
     except requests.exceptions.RequestException as e:
-        print(f"❌ خطأ في طلب DeepSeek: {e}")
+        print(f"❌ خطأ في طلب OpenRouter: {e}")
         return jsonify({
             'success': False,
             'error': 'حدث خطأ في الاتصال'
