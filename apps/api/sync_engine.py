@@ -63,3 +63,7 @@ class ProductSyncEngine:
         # حفظ التغييرات دفعة واحدة
         db.session.commit()
         return synced_count
+
+
+# ✅ إضافة اسم مستعار للتوافق مع الكود القديم
+SyncEngine = ProductSyncEngine
