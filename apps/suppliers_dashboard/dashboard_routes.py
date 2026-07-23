@@ -6,7 +6,6 @@ from flask_login import login_required, current_user
 import traceback
 
 from apps.models import db, Supplier, Order, SupplierWallet
-from apps import SUPPLIER_MODULES  # ✅ استيراد SUPPLIER_MODULES
 
 # ✅ تعريف الـ Blueprint بالاسم الصحيح
 suppliers_dashboard_bp = Blueprint(
@@ -66,13 +65,13 @@ def dashboard():
             supplier_id=supplier.id, status='pending'
         ).count()
         
-        # ✅ عرض القالب مع تمرير supplier_modules
+        # ✅ عرض القالب (المتغيرات العامة من context_processor ستكون متاحة تلقائياً)
         return render_template(
             'suppliers/dashboard.html',
             supplier=supplier,
             pending_orders_count=pending_orders_count,
-            total_sales=0,
-            supplier_modules=SUPPLIER_MODULES  # ✅ إضافة هذا السطر
+            total_sales=0
+            # ❌ لا حاجة لتمرير supplier_modules هنا لأنه موجود في context_processor
         )
         
     except Exception as e:
