@@ -4,17 +4,18 @@
 from apps.services.graphql_client import QomrahGraphQLClient
 import requests
 import os
+import base64
 
 class ProductSyncService:
     def __init__(self):
         self.client = QomrahGraphQLClient()
 
     # ============================================================
-    # ✅ رفع صورة إلى قمرة
+    # ✅ رفع صورة إلى قمرة (طريقة GraphQL مع base64)
     # ============================================================
     def upload_image(self, image_data: bytes, filename: str) -> str:
         """
-        رفع صورة إلى مكتبة قمرة
+        رفع صورة إلى مكتبة قمرة باستخدام GraphQL Mutation مع base64
         
         Args:
             image_data: بيانات الصورة (bytes)
@@ -24,33 +25,33 @@ class ProductSyncService:
             str: رابط الصورة في قمرة
         """
         try:
-            # ✅ تحضير الملف للرفع
-            files = {
-                'file': (filename, image_data, 'image/jpeg'),
-                'filename': (None, filename)
+            # ✅ تحويل الصورة إلى base64
+            image_base64 = base64.b64encode(image_data).decode('utf-8')
+            image_type = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpeg'
+            
+            # ✅ Mutation لرفع الصورة
+            mutation = """
+            mutation($file: String!, $filename: String!) {
+                uploadFile(file: $file, filename: $filename) {
+                    success
+                    message
+                    data {
+                        fileUrl
+                        _id
+                    }
+                }
+            }
+            """
+            
+            variables = {
+                "file": f"data:image/{image_type};base64,{image_base64}",
+                "filename": filename
             }
             
-            # ✅ إضافة رأس Authorization
-            api_key = os.environ.get('QUMRA_API_KEY')
-            if not api_key:
-                print("❌ QUMRA_API_KEY غير موجود")
-                return None
+            # ✅ تنفيذ الاستعلام
+            result = self.client.execute_query(mutation, variables)
             
-            headers = {
-                'Authorization': f'Bearer {api_key}',
-                'Accept': 'application/json'
-            }
-            
-            # ✅ رفع الصورة إلى قمرة
-            response = requests.post(
-                'https://mahjoub.online/admin/graphql',
-                files=files,
-                headers=headers,
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
+            if result:
                 upload_result = result.get('data', {}).get('uploadFile', {})
                 if upload_result.get('success'):
                     file_url = upload_result.get('data', {}).get('fileUrl')
@@ -60,11 +61,13 @@ class ProductSyncService:
                     print(f"❌ فشل رفع الصورة: {upload_result.get('message')}")
                     return None
             else:
-                print(f"❌ HTTP Error {response.status_code}: {response.text}")
+                print("❌ لا توجد نتيجة من الخادم")
                 return None
                 
         except Exception as e:
             print(f"❌ خطأ في رفع الصورة: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
     # ============================================================
