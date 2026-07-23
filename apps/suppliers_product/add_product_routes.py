@@ -24,7 +24,7 @@ add_product_bp = Blueprint(
 )
 
 
-def compress_image(image_data, max_size=(800, 800), quality=50):
+def compress_image(image_data, max_size=(600, 600), quality=40):
     """
     ضغط الصورة وتقليل حجمها
     """
@@ -105,27 +105,24 @@ def save_product():
             flash('⚠️ صورة المنتج مطلوبة', 'danger')
             return redirect(url_for('add_product_bp.add_product'))
         
-        # ✅ قراءة الصورة وضغطها
+        # ✅ قراءة الصورة وضغطها (حجم أصغر)
         image_data = image.read()
-        compressed_data = compress_image(image_data, max_size=(800, 800), quality=50)
+        compressed_data = compress_image(image_data, max_size=(600, 600), quality=40)
         
-        # ✅ رفع المنتج إلى Qumra
+        # ✅ تحويل الصورة المضغوطة إلى base64
+        image_base64 = base64.b64encode(compressed_data).decode('utf-8')
+        image_type = image.filename.rsplit('.', 1)[1].lower()
+        image_base64 = f"data:image/{image_type};base64,{image_base64}"
+        
+        # ✅ رفع المنتج إلى Qumra (بدون token)
         sync_service = ProductSyncService()
         
-        # ✅ رفع الصورة إلى مكتبة قمرة (بدلاً من base64)
-        image_url = sync_service.upload_image(compressed_data, image.filename)
-        
-        if not image_url:
-            flash('❌ فشل رفع الصورة إلى قمرة', 'danger')
-            return redirect(url_for('add_product_bp.add_product'))
-        
-        # ✅ إنشاء المنتج مع رابط الصورة
         product_data = {
             'title': name,
             'price': float(cost_price),
             'quantity': 0,
             'supplier_id': str(supplier_id),
-            'images': [image_url],  # ✅ رابط الصورة من قمرة
+            'images': [image_base64],
             'description': description
         }
         
