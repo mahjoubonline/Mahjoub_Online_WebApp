@@ -150,7 +150,9 @@ def create_app():
     except ImportError:
         pass
 
-    # تسجيل الموديولات ديناميكياً
+    # ============================================================
+    # ✅ تسجيل الموديولات ديناميكياً
+    # ============================================================
     apps_dir = app.root_path
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api', 'admin']
     if os.path.exists(apps_dir):
@@ -177,15 +179,31 @@ def create_app():
                     except Exception as e:
                         print(f"❌ [Registry]: خطأ في تسجيل موديول {item}: {e}")
 
+    # ============================================================
+    # ✅ إضافة الموديول الرئيسي (الرئيسية) يدوياً
+    # ============================================================
+    SUPPLIER_MODULES['suppliers_dashboard'] = {
+        "display_name": "الرئيسية",
+        "icon": "fas fa-home",
+        "links": {
+            "suppliers_dashboard.dashboard": "الرئيسية"
+        }
+    }
+
+    # ============================================================
     # ✅ إضافة فلتر Jinja لتوليد CSRF token داخل القوالب
+    # ============================================================
     @app.context_processor
     def inject_vars():
         def safe_url_for(endpoint, **values):
-            try: return url_for(endpoint, **values)
+            try: 
+                return url_for(endpoint, **values)
             except BuildError:
                 alt_endpoint = f"{endpoint}_bp" if not endpoint.endswith('_bp') else endpoint.replace('_bp', '')
-                try: return url_for(alt_endpoint, **values)
-                except BuildError: return '#'
+                try: 
+                    return url_for(alt_endpoint, **values)
+                except BuildError: 
+                    return '#'
         return dict(
             csrf_token=generate_csrf,
             registered_modules=ADMIN_MODULES,
