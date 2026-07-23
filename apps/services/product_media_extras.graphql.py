@@ -1,53 +1,16 @@
 # coding: utf-8
-# 📂 apps/services/product_media_extras.graphql.py
+# 📂 apps/services/update_product_data.py
 
-PRODUCT_MEDIA_EXTRAS_QUERY = """
-query GetProductMediaAndExtras($qid: String!) {
-  findProductByQid(qid: $qid) {
-    data {
-      slug        # حقل الرابط (Slug)
-      images {
-        _id
-        fileUrl
-      }
-      tags
-      collections {
-        qid
-        title
-        slug
-      }
+UPDATE_PRODUCT_MUTATION = """
+mutation UpdateProduct($id: ID!, $input: UpdateProductInput!) {
+    updateProduct(id: $id, input: $input) {
+        success
+        message
+        data {
+            qid
+            title
+            status
+        }
     }
-  }
-}
-"""
-
-MANAGE_MEDIA_AND_EXTRAS_MUTATION = """
-mutation ManageMediaAndExtras(
-  $productId: ID!,
-  $slug: String!,       
-  $removedImages: [String!],
-  $newImages: [String!],
-  $tags: [String!]!,
-  $collectionIds: [String!]!
-) {
-  # تحديث الرابط (Slug)
-  updateProductInfo(id: $productId, updateProductInfoInput: { slug: $slug }) {
-    success message
-  }
-
-  # تحديث الصور (إزالة وإضافة)
-  updateProductImages(id: $productId, removedImages: $removedImages, newImages: $newImages) {
-    success message
-  }
-
-  # تحديث وسوم المنتج
-  updateProductInfo(id: $productId, updateProductInfoInput: { tags: $tags }) {
-    success message
-  }
-
-  # تحديث التصنيفات
-  updateProductCollections(id: $productId, collectionIds: $collectionIds) {
-    success message
-  }
 }
 """
