@@ -12,12 +12,12 @@ MODULE_NAME = "منتجاتي"
 MODULE_ICON = "fas fa-boxes"
 SHOW_IN_SUPPLIER = True
 
-# ✅ الروابط - تأكد من أن الاسم صحيح
+# ✅ الروابط
 LINKS = {
     'suppliers_product_bp.products': '📦 منتجاتي'
 }
 
-# ✅ تعريف الـ Blueprint (تم نقله إلى هنا)
+# ✅ تعريف الـ Blueprint
 suppliers_product_bp = Blueprint(
     'suppliers_product_bp',
     __name__,
@@ -29,12 +29,19 @@ suppliers_product_bp = Blueprint(
 
 def register_module(app):
     """تسجيل الموديول في التطبيق"""
-    # ✅ استيراد الـ routes بعد تعريف الـ Blueprint
-    from apps.suppliers_product import routes
+    try:
+        # ✅ استيراد الـ Blueprint من الملف الصحيح
+        from apps.suppliers_product.suppliers_product_routes import suppliers_product_bp as bp
+        
+        if 'suppliers_product_bp' not in app.blueprints:
+            app.register_blueprint(bp, url_prefix='/supplier')
+            print("✅ [Registry]: تم تسجيل 'suppliers_product' بنجاح.")
+            
+    except ImportError as e:
+        print(f"❌ [Registry]: خطأ في استيراد suppliers_product_routes: {e}")
+    except Exception as e:
+        print(f"❌ [Registry]: خطأ في تسجيل suppliers_product: {e}")
     
-    if 'suppliers_product_bp' not in app.blueprints:
-        app.register_blueprint(suppliers_product_bp, url_prefix='/supplier')
-        print("✅ [Registry]: تم تسجيل 'suppliers_product' بنجاح.")
     return app
 
 
@@ -42,21 +49,11 @@ def register_module(app):
 # ✅ دالة للحصول على إحصائيات المنتجات للمورد
 # ============================================================
 def get_module_stats(supplier_id):
-    """
-    جلب إحصائيات منتجات المورد لعرضها في لوحة التحكم
-    
-    Args:
-        supplier_id: معرف المورد
-        
-    Returns:
-        dict: إحصائيات المنتجات
-    """
     from apps.models.product_supplier_map import ProductSupplierMapping
     from apps.services.product_sync_service import ProductSyncService
     import os
     
     try:
-        # جلب جميع المنتجات المرتبطة بالمورد
         mappings = ProductSupplierMapping.query.filter_by(
             supplier_id=supplier_id,
             status='active'
@@ -65,7 +62,6 @@ def get_module_stats(supplier_id):
         product_qids = [m.product_qid for m in mappings]
         total_products = len(product_qids)
         
-        # جلب بيانات المنتجات من Qumra (للحصول على الحالات)
         token = os.environ.get('QUMRA_API_KEY', '')
         sync_service = ProductSyncService(token=token)
         
@@ -112,7 +108,6 @@ def get_module_stats(supplier_id):
 # ✅ دالة للحصول على رابط الموديول
 # ============================================================
 def get_module_link():
-    """الحصول على رابط صفحة المنتجات"""
     return url_for('suppliers_product_bp.products')
 
 
@@ -120,15 +115,6 @@ def get_module_link():
 # ✅ دالة للحصول على بيانات الموديول للعرض في لوحة التحكم
 # ============================================================
 def get_dashboard_card(supplier_id):
-    """
-    الحصول على بيانات بطاقة الموديول لعرضها في لوحة التحكم
-    
-    Args:
-        supplier_id: معرف المورد
-        
-    Returns:
-        dict: بيانات البطاقة
-    """
     stats = get_module_stats(supplier_id)
     
     return {
