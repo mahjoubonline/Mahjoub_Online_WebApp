@@ -19,12 +19,12 @@ ai_bp = Blueprint(
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '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')
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# ✅ قائمة النماذج المجانية (سيتم تجربتها تلقائياً)
+# ✅ قائمة النماذج المجانية - qwen أولاً لأنه النموذج العامل
 FREE_MODELS = [
+    'qwen/qwen-2.5-7b-instruct',  # ✅ يعمل
     'meta-llama/llama-3-8b-instruct',
     'google/gemma-2-9b-it',
     'microsoft/phi-3-mini-128k-instruct',
-    'qwen/qwen-2.5-7b-instruct',
     'mistralai/mistral-7b-instruct-v0.1'
 ]
 
