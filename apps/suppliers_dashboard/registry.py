@@ -10,9 +10,10 @@ MODULE_NAME = "لوحة التحكم"
 MODULE_ICON = "fas fa-home"
 SHOW_IN_SUPPLIER = True
 
-# ✅ الروابط التي تظهر في القائمة الجانبية للمورد
+# ✅ جميع الروابط في مكان واحد
 LINKS = {
     'suppliers_dashboard.dashboard': '📊 لوحة التحكم',
+    'suppliers_wallet.wallet': '💰 المحفظة',
     'suppliers_wallet.withdraw': '💳 سحب الرصيد',
     'suppliers_settings.settings': '⚙️ إعدادات المتجر'
 }
