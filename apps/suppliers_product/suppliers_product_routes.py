@@ -141,7 +141,8 @@ def products():
             return render_template(
                 'suppliers/includes/_table_products.html',
                 products=page_products,
-                pagination=pagination
+                pagination=pagination,
+                filter_status=filter_status
             )
         
         # ✅ عرض الصفحة كاملة
