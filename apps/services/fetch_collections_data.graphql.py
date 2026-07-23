@@ -1,33 +1,40 @@
 # coding: utf-8
-# 📂 apps/services/fetch_collections_data.graphql.py
+# 📂 apps/services/fetch_product_data.graphql.py
 
-GET_ALL_COLLECTIONS_QUERY = """
-query Data($input: GetAllCollectionsInput) {
-  findAllCollections(input: $input) {
-    data {
-      qid
-      app
-      title
-      slug
-      handle
-      description
-      operation
-      productCount
-      products {
-        
-      }
-      image {
-        
-      }
-      condations {
-        
-      }
+GET_PRODUCT_DETAIL_QUERY = """
+query($qid: String!) {
+    findProductByQid(qid: $qid) {
+        success
+        message
+        data {
+            qid
+            title
+            slug
+            description
+            status
+            quantity
+            pricing {
+                price
+                compareAtPrice
+            }
+            images {
+                _id
+                fileUrl
+            }
+            collections {
+                qid
+                title
+                slug
+            }
+            variants {
+                _id
+                quantity
+                pricing {
+                    price
+                    compareAtPrice
+                }
+            }
+        }
     }
-    success
-    message
-    pagination {
-      
-    }
-  }
 }
 """
