@@ -50,7 +50,8 @@ def add_product():
     except Exception as e:
         error_details = traceback.format_exc()
         print(f"❌ خطأ في add_product: {error_details}")
-        return f"❌ خطأ: {error_details}", 500
+        flash('❌ حدث خطأ في تحميل الصفحة', 'danger')
+        return redirect(url_for('suppliers_product_bp.products'))
 
 
 @add_product_bp.route('/add-product', methods=['POST'])
@@ -70,6 +71,7 @@ def save_product():
         # ✅ جلب البيانات من النموذج
         name = request.form.get('name', '').strip()
         cost_price = request.form.get('cost_price', '').strip()
+        description = request.form.get('description', '').strip()
         image = request.files.get('image')
         
         # ✅ التحقق من البيانات
@@ -81,13 +83,23 @@ def save_product():
             flash('⚠️ سعر التكلفة يجب أن يكون أكبر من 0', 'danger')
             return redirect(url_for('add_product_bp.add_product'))
         
+        if not image:
+            flash('⚠️ صورة المنتج مطلوبة', 'danger')
+            return redirect(url_for('add_product_bp.add_product'))
+        
+        # ✅ التحقق من حجم الصورة (حد أقصى 5MB)
+        image.seek(0, os.SEEK_END)
+        image_size = image.tell()
+        image.seek(0)
+        if image_size > 5 * 1024 * 1024:
+            flash('⚠️ حجم الصورة يجب أن يكون أقل من 5MB', 'danger')
+            return redirect(url_for('add_product_bp.add_product'))
+        
         # ✅ تحويل الصورة إلى base64
-        image_base64 = None
-        if image:
-            image_data = image.read()
-            image_base64 = base64.b64encode(image_data).decode('utf-8')
-            image_type = image.filename.rsplit('.', 1)[1].lower()
-            image_base64 = f"data:image/{image_type};base64,{image_base64}"
+        image_data = image.read()
+        image_base64 = base64.b64encode(image_data).decode('utf-8')
+        image_type = image.filename.rsplit('.', 1)[1].lower()
+        image_base64 = f"data:image/{image_type};base64,{image_base64}"
         
         # ✅ رفع المنتج إلى Qumra
         sync_service = ProductSyncService(token=GRAPHQL_TOKEN)
@@ -97,8 +109,8 @@ def save_product():
             'price': float(cost_price),
             'quantity': 0,
             'supplier_id': str(supplier_id),
-            'images': [image_base64] if image_base64 else [],
-            'description': request.form.get('description', '').strip()
+            'images': [image_base64],
+            'description': description
         }
         
         result = sync_service.create_product(product_data)
