@@ -7,6 +7,146 @@ class ProductSyncService:
     def __init__(self):
         self.client = QomrahGraphQLClient()
 
+    # ============================================================
+    # ✅ جلب المنتجات
+    # ============================================================
+    def fetch_products(self, page: int = 1, limit: int = 50, title: str = ""):
+        """جلب قائمة المنتجات من قمرة"""
+        query = """
+        query($page: Int!, $limit: Int!, $title: String) {
+            findAllProducts(input: { page: $page, limit: $limit, title: $title }) {
+                success
+                message
+                data {
+                    qid
+                    title
+                    slug
+                    description
+                    status
+                    quantity
+                    pricing {
+                        price
+                        compareAtPrice
+                    }
+                    images {
+                        _id
+                        fileUrl
+                    }
+                    collections {
+                        qid
+                        title
+                        slug
+                    }
+                    variants {
+                        _id
+                        quantity
+                        pricing {
+                            price
+                            compareAtPrice
+                        }
+                    }
+                }
+                pagination {
+                    totalPages
+                    currentPage
+                    limit
+                }
+            }
+        }
+        """
+        variables = {"page": page, "limit": limit}
+        if title:
+            variables["title"] = title
+
+        result = self.client.execute_query(query, variables)
+        
+        if result:
+            data = result.get('data', {}).get('findAllProducts', {})
+            return {
+                "data": data.get('data', []),
+                "pagination": data.get('pagination', {"currentPage": page, "totalPages": 1, "limit": limit})
+            }
+        return {"data": [], "pagination": None}
+
+    # ============================================================
+    # ✅ جلب منتج بواسطة QID
+    # ============================================================
+    def fetch_product_by_qid(self, qid: str):
+        """جلب منتج محدد من قمرة بواسطة QID"""
+        query = """
+        query($qid: String!) {
+            findProductByQid(qid: $qid) {
+                success
+                message
+                data {
+                    qid
+                    title
+                    slug
+                    description
+                    status
+                    quantity
+                    pricing {
+                        price
+                        compareAtPrice
+                    }
+                    images {
+                        _id
+                        fileUrl
+                    }
+                    collections {
+                        qid
+                        title
+                        slug
+                    }
+                    variants {
+                        _id
+                        quantity
+                        pricing {
+                            price
+                            compareAtPrice
+                        }
+                    }
+                }
+            }
+        }
+        """
+        result = self.client.execute_query(query, {"qid": qid})
+        
+        if result:
+            data = result.get('data', {}).get('findProductByQid', {})
+            if data.get('success'):
+                return data.get('data')
+        return None
+
+    # ============================================================
+    # ✅ جلب المجموعات
+    # ============================================================
+    def fetch_collections(self):
+        """جلب قائمة المجموعات من قمرة"""
+        query = """
+        query {
+            findAllCollections(input: { page: 1, limit: 100 }) {
+                success
+                message
+                data {
+                    qid
+                    title
+                    slug
+                }
+            }
+        }
+        """
+        result = self.client.execute_query(query)
+        
+        if result:
+            data = result.get('data', {}).get('findAllCollections', {})
+            if data.get('success'):
+                return data.get('data', [])
+        return []
+
+    # ============================================================
+    # ✅ إنشاء منتج
+    # ============================================================
     def create_product(self, product_data: dict) -> dict:
         """إنشاء منتج جديد في قمرة"""
         mutation = """
@@ -58,3 +198,80 @@ class ProductSyncService:
                 'message': 'فشل الاتصال بقمرة',
                 'qid': None
             }
+
+    # ============================================================
+    # ✅ تحديث حالة المنتج
+    # ============================================================
+    def update_product_status(self, qid: str, status: str) -> bool:
+        """تحديث حالة المنتج في قمرة"""
+        mutation = """
+        mutation($qid: String!, $status: String!) {
+            updateProductStatus(qid: $qid, status: $status) {
+                success
+                message
+            }
+        }
+        """
+        result = self.client.execute_query(mutation, {"qid": qid, "status": status})
+        
+        if result:
+            update_result = result.get('data', {}).get('updateProductStatus', {})
+            return update_result.get('success', False)
+        return False
+
+    # ============================================================
+    # ✅ حذف المنتج
+    # ============================================================
+    def delete_product(self, qid: str) -> bool:
+        """حذف منتج من قمرة"""
+        mutation = """
+        mutation($qid: String!) {
+            deleteProduct(qid: $qid) {
+                success
+                message
+            }
+        }
+        """
+        result = self.client.execute_query(mutation, {"qid": qid})
+        
+        if result:
+            delete_result = result.get('data', {}).get('deleteProduct', {})
+            return delete_result.get('success', False)
+        return False
+
+    # ============================================================
+    # ✅ تحديث بيانات المنتج
+    # ============================================================
+    def update_product_data(self, qid: str, **kwargs):
+        """تحديث بيانات المنتج في قمرة"""
+        # هذه دالة مبسطة، يمكن توسيعها حسب الحاجة
+        info = kwargs.get('info', {})
+        pricing = kwargs.get('pricing', {})
+        weight = kwargs.get('weight', {})
+        ident = kwargs.get('ident', {})
+        description = kwargs.get('desc', '')
+        
+        mutation = """
+        mutation($qid: String!, $info: UpdateProductInfo!, $pricing: PricingInput!, $weight: WeightInput!, $ident: IdentificationInput!, $desc: String!) {
+            updateProductInfo(id: $qid, updateProductInfoInput: $info) { success }
+            updateProductPricing(id: $qid, pricing: $pricing) { success }
+            updateProductWeight(id: $qid, data: $weight) { success }
+            updateProductIdentification(id: $qid, data: $ident) { success }
+            updateProductDescription(id: $qid, data: $desc) { success }
+        }
+        """
+        
+        variables = {
+            "qid": qid,
+            "info": info,
+            "pricing": pricing,
+            "weight": weight,
+            "ident": ident,
+            "desc": description
+        }
+        
+        result = self.client.execute_query(mutation, variables)
+        
+        if result:
+            return True
+        return False
