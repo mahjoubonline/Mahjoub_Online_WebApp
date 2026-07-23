@@ -1,1 +1,219 @@
-includes/_table_products.html	
+<!-- 📂 apps/suppliers_product/templates/suppliers/includes/_table_products.html -->
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 50px;">#</th>
+                <th style="width: 80px;">الصورة</th>
+                <th>اسم المنتج</th>
+                <th style="width: 120px;">SKU</th>
+                <th style="width: 120px;">السعر (SAR)</th>
+                <th style="width: 100px;">الكمية</th>
+                <th style="width: 130px;">الحالة</th>
+                <th style="width: 130px;">الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if products and products|length > 0 %}
+                {% for product in products %}
+                <tr>
+                    <td>{{ loop.index + ((pagination.current_page - 1) * pagination.per_page if pagination else 0) }}</td>
+                    <td>
+                        {% if product.images and product.images|length > 0 %}
+                            <img src="{{ product.images[0].fileUrl }}" alt="{{ product.title }}" 
+                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
+                        {% else %}
+                            <div style="width: 50px; height: 50px; background: #f8f5fa; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-image text-muted" style="opacity: 0.3;"></i>
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ product.title }}</strong>
+                        {% if product.description %}
+                            <br><small class="text-muted">{{ product.description|striptags|truncate(50) }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <code class="small">{{ product.ident.sku if product.ident and product.ident.sku else '---' }}</code>
+                    </td>
+                    <td>
+                        <span class="fw-bold">{{ "%.2f"|format(product.pricing.price if product.pricing and product.pricing.price else 0) }}</span>
+                    </td>
+                    <td>
+                        <span class="badge 
+                            {% if product.quantity > 10 %}bg-success
+                            {% elif product.quantity > 0 %}bg-warning text-dark
+                            {% else %}bg-danger{% endif %}">
+                            {{ product.quantity if product.quantity is not none else 0 }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge 
+                            {% if product.status == 'PUBLISHED' %}bg-success
+                            {% elif product.status == 'DRAFT' %}bg-warning text-dark
+                            {% elif product.status == 'REJECTED' %}bg-danger
+                            {% elif product.status == 'ARCHIVED' %}bg-secondary
+                            {% else %}bg-light text-dark{% endif %}">
+                            {% if product.status == 'PUBLISHED' %}
+                                <i class="fas fa-check-circle me-1"></i> منشور
+                            {% elif product.status == 'DRAFT' %}
+                                <i class="fas fa-clock me-1"></i> مراجعة
+                            {% elif product.status == 'REJECTED' %}
+                                <i class="fas fa-times-circle me-1"></i> مرفوض
+                            {% elif product.status == 'ARCHIVED' %}
+                                <i class="fas fa-archive me-1"></i> مؤرشف
+                            {% else %}
+                                {{ product.status }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('suppliers_product_bp.view_product', qid=product.qid) }}" 
+                               class="btn btn-outline-primary" title="عرض التفاصيل">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('suppliers_product_bp.edit_product_page', qid=product.qid) }}" 
+                               class="btn btn-outline-warning" title="تعديل المنتج">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-outline-secondary" onclick="copyProductLink('{{ product.qid }}')" title="نسخ الرابط">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-4">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3 d-block" style="opacity: 0.3;"></i>
+                        <h5 class="text-muted">لا توجد منتجات</h5>
+                        <p class="text-muted small">لم تقم بإضافة أي منتجات حتى الآن</p>
+                        <a href="{{ url_for('add_product_bp.add_product') }}" class="btn btn-custom btn-sm">
+                            <i class="fas fa-plus me-1"></i> إضافة منتج
+                        </a>
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ✅ الترقيم -->
+{% if pagination and pagination.pages > 1 %}
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <div class="text-muted small">
+        عرض {{ pagination.start }} - {{ pagination.end }} من {{ pagination.total }} منتج
+    </div>
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="#" onclick="goToPage({{ pagination.prev_page or 1 }})">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% for page in pagination.pages_list %}
+                {% if page == '...' %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% else %}
+                    <li class="page-item {% if page == pagination.current_page %}active{% endif %}">
+                        <a class="page-link" href="#" onclick="goToPage({{ page }})">{{ page }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="#" onclick="goToPage({{ pagination.next_page or pagination.pages }})">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<script>
+    function goToPage(page) {
+        if (page) {
+            const search = document.getElementById('searchInput')?.value || '';
+            const filter = document.querySelector('.filter-btn.active')?.dataset?.filter || 'all';
+            window.location.href = `?page=${page}&search=${encodeURIComponent(search)}&filter=${filter}`;
+        }
+    }
+    
+    function copyProductLink(qid) {
+        const url = `{{ request.host_url }}supplier/product/${qid}`;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('✅ تم نسخ الرابط بنجاح!', 'success');
+            }).catch(() => {
+                fallbackCopy(url);
+            });
+        } else {
+            fallbackCopy(url);
+        }
+    }
+    
+    function fallbackCopy(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+        showToast('✅ تم نسخ الرابط بنجاح!', 'success');
+    }
+    
+    function showToast(message, type = 'info') {
+        const colors = {
+            success: '#28a745',
+            info: '#0d6efd',
+            warning: '#ffc107',
+            danger: '#dc3545'
+        };
+        
+        const toast = document.createElement('div');
+        toast.className = 'position-fixed bottom-0 end-0 p-3';
+        toast.style.zIndex = '9999';
+        toast.innerHTML = `
+            <div class="toast show border-0 shadow-lg" role="alert" style="border-right: 4px solid ${colors[type] || colors.info}; background: white; border-radius: 12px;">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <span>${message}</span>
+                    <button type="button" class="btn-close btn-close-sm ms-2" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+</script>
+
+<style>
+    .btn-custom {
+        background-color: var(--dark-purple, #2d0b36);
+        color: #fff;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-custom:hover {
+        background-color: #4a1558;
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(45, 11, 54, 0.3);
+    }
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .table td {
+        vertical-align: middle;
+    }
+    .table-hover tbody tr:hover {
+        background-color: rgba(45, 11, 54, 0.02);
+    }
+</style>
