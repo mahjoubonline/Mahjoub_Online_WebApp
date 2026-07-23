@@ -1,0 +1,36 @@
+<!-- apps/suppliers_product/templates/suppliers/includes/_product_scripts.html -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // ✅ فلتر المنتجات
+        window.applyFilter = function(filter, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const search = document.getElementById('searchInput')?.value || '';
+            fetch(`{{ url_for('suppliers_product_bp.products') }}?filter=${filter}&search=${encodeURIComponent(search)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newResults = doc.getElementById('results-container');
+                if (newResults) {
+                    resultsContainer.innerHTML = newResults.innerHTML;
+                }
+            })
+            .catch(err => console.error("خطأ في الفلتر:", err));
+        };
+
+        // ✅ التنقل بين الصفحات
+        window.goToPage = function(page) {
+            if (page) {
+                const search = document.getElementById('searchInput')?.value || '';
+                const filter = document.querySelector('.filter-btn.active')?.dataset?.filter || 'all';
+                window.location.href = `?page=${page}&search=${encodeURIComponent(search)}&filter=${filter}`;
+            }
+        };
+
+    });
+</script>
