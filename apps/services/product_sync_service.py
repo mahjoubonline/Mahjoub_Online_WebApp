@@ -4,8 +4,7 @@
 from apps.services.graphql_client import QomrahGraphQLClient
 
 class ProductSyncService:
-    def __init__(self, token: str):
-        self.token = token
+    def __init__(self):
         self.client = QomrahGraphQLClient()
 
     def create_product(self, product_data: dict) -> dict:
