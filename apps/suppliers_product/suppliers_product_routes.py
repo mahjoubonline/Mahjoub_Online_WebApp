@@ -15,8 +15,6 @@ from apps.extensions import db
 # ✅ استيراد الـ Blueprint من registry.py
 from apps.suppliers_product.registry import suppliers_product_bp
 
-GRAPHQL_TOKEN = os.environ.get('QUMRA_API_KEY', 'YOUR_ADMIN_API_TOKEN')
-
 
 # ============================================================
 # 🟣 دالة مساعدة لإنشاء بيانات الترقيم (Pagination)
@@ -84,7 +82,7 @@ def products():
         product_qids = [m.product_qid for m in mappings]
         
         # ✅ جلب بيانات المنتجات من Qumra
-        sync_service = ProductSyncService(token=GRAPHQL_TOKEN)
+        sync_service = ProductSyncService()
         all_products = []
         
         for qid in product_qids:
@@ -189,7 +187,7 @@ def view_product(qid):
             abort(404)
         
         # جلب بيانات المنتج من Qumra
-        sync_service = ProductSyncService(token=GRAPHQL_TOKEN)
+        sync_service = ProductSyncService()
         product = sync_service.fetch_product_by_qid(qid)
         
         if not product:
