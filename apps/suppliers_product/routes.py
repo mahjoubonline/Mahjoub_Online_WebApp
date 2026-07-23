@@ -11,12 +11,8 @@ from apps.models.product_supplier_map import ProductSupplierMapping
 from apps.models.supplier_db import Supplier
 from apps.extensions import db
 
-# تعريف الـ Blueprint
-suppliers_product_bp = Blueprint(
-    'suppliers_product_bp',
-    __name__,
-    template_folder='templates'
-)
+# ✅ استيراد الـ Blueprint من registry.py (بدلاً من تعريفه هنا)
+from apps.suppliers_product.registry import suppliers_product_bp
 
 GRAPHQL_TOKEN = os.environ.get('QUMRA_API_KEY', 'YOUR_ADMIN_API_TOKEN')
 
