@@ -1,5 +1,5 @@
 <!-- apps/suppliers_product/templates/includes/_product_stats.html -->
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4" id="productStats">
     {% set total = products|length if products else 0 %}
     {% set published = products|selectattr('status', 'equalto', 'PUBLISHED')|list|length if products else 0 %}
     {% set draft = products|selectattr('status', 'equalto', 'DRAFT')|list|length if products else 0 %}
@@ -40,6 +40,7 @@
         box-shadow: 0 2px 12px rgba(0,0,0,0.06);
         border-right: 4px solid var(--dark-purple, #2d0b36);
         transition: all 0.3s ease;
+        height: 100%;
     }
     .stat-card:hover {
         transform: translateY(-3px);
@@ -60,4 +61,12 @@
     .stat-card.draft { border-right-color: #ffc107; }
     .stat-card.rejected { border-right-color: #dc3545; }
     .stat-card.archived { border-right-color: #6c757d; }
+    
+    /* ✅ تأثيرات إضافية */
+    .stat-card .stat-number {
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover .stat-number {
+        transform: scale(1.05);
+    }
 </style>
