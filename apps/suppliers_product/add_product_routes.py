@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from apps.models.supplier_db import Supplier
 from apps.models.product_supplier_map import ProductSupplierMapping
 from apps.extensions import db
-from apps.services.product_sync_service import ProductSyncService
+from apps.services.product_rest_api import ProductRestAPI  # ✅ استخدام REST API بدلاً من GraphQL
 import os
 import traceback
 import base64
@@ -75,7 +75,7 @@ def add_product():
 @add_product_bp.route('/add-product', methods=['POST'])
 @login_required
 def save_product():
-    """حفظ منتج جديد للمورد"""
+    """حفظ منتج جديد للمورد باستخدام REST API"""
     try:
         user_type = session.get('user_type')
         if user_type not in ['supplier', 'staff']:
@@ -114,19 +114,19 @@ def save_product():
         image_type = image.filename.rsplit('.', 1)[1].lower()
         image_base64 = f"data:image/{image_type};base64,{image_base64}"
         
-        # ✅ رفع المنتج إلى Qumra (بدون token)
-        sync_service = ProductSyncService()
+        # ✅ إنشاء المنتج عبر REST API (بدلاً من GraphQL)
+        rest_api = ProductRestAPI()
         
         product_data = {
             'title': name,
             'price': float(cost_price),
             'quantity': 0,
-            'supplier_id': str(supplier_id),
             'images': [image_base64],
-            'description': description
+            'description': description,
+            'status': 'DRAFT'
         }
         
-        result = sync_service.create_product(product_data)
+        result = rest_api.create_product(product_data)
         
         if result.get('success'):
             # ✅ حفظ الربط في قاعدة البيانات المحلية
