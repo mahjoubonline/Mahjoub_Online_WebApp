@@ -87,15 +87,7 @@ def save_product():
             flash('⚠️ صورة المنتج مطلوبة', 'danger')
             return redirect(url_for('add_product_bp.add_product'))
         
-        # ✅ التحقق من حجم الصورة (حد أقصى 5MB)
-        image.seek(0, os.SEEK_END)
-        image_size = image.tell()
-        image.seek(0)
-        if image_size > 5 * 1024 * 1024:
-            flash('⚠️ حجم الصورة يجب أن يكون أقل من 5MB', 'danger')
-            return redirect(url_for('add_product_bp.add_product'))
-        
-        # ✅ تحويل الصورة إلى base64
+        # ✅ قراءة الصورة وتحويلها إلى base64 (بدون تقييد الحجم)
         image_data = image.read()
         image_base64 = base64.b64encode(image_data).decode('utf-8')
         image_type = image.filename.rsplit('.', 1)[1].lower()
