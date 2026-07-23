@@ -126,14 +126,12 @@
         padding: 8px;
     }
     
-    /* ✅ تنسيق الحقول المقروءة فقط */
     .readonly-field {
         background-color: #e9ecef !important;
         cursor: not-allowed !important;
         opacity: 0.8;
     }
     
-    /* ✅ تنسيق القوائم المطورة */
     .search-select-wrapper {
         position: relative;
         flex: 1;
@@ -184,7 +182,6 @@
         border-color: var(--royal-purple);
     }
     
-    /* ✅ علامات التحقق */
     .validation-icon {
         position: absolute;
         left: 12px;
@@ -290,7 +287,7 @@
                     <form method="POST" action="{{ url_for('suppliers_settings.settings') }}" id="settingsForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
 
-                        <!-- ✅ اسم المتجر (إلزامي) -->
+                        <!-- ✅ اسم المتجر -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-tag text-muted me-1"></i> اسم المتجر <span class="required-star">*</span>
@@ -303,7 +300,7 @@
                             <small class="text-muted">هذا الاسم سيظهر للعملاء في المتجر</small>
                         </div>
 
-                        <!-- ✅ اسم المالك (للقراءة فقط - لا يمكن تعديله) -->
+                        <!-- ✅ اسم المالك (للقراءة فقط) -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-user text-muted me-1"></i> اسم المالك
@@ -331,7 +328,7 @@
                             <small class="text-muted">سيتم التحقق من صحة البريد الإلكتروني</small>
                         </div>
 
-                        <!-- ✅ رقم الهاتف (مع تحقق لحظي من قاعدة البيانات) -->
+                        <!-- ✅ رقم الهاتف -->
                         <div class="mb-3 position-relative">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-phone text-muted me-1"></i> رقم الهاتف <span class="required-star">*</span>
@@ -357,7 +354,7 @@
                             <small class="text-muted">وصف يظهر في صفحة المتجر (اختياري)</small>
                         </div>
 
-                        <!-- ✅ فئة المتجر - مع بحث وإضافة -->
+                        <!-- ✅ فئة المتجر -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-tags text-muted me-1"></i> فئة المتجر
@@ -401,7 +398,7 @@
                             </select>
                         </div>
 
-                        <!-- ✅ المدينة / المديرية -->
+                        <!-- ✅ المدينة -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-city text-muted me-1"></i> المدينة / المديرية
@@ -424,7 +421,7 @@
                                       placeholder="العنوان التفصيلي (الشارع، الحي، المبنى)">{{ supplier.supplier_profile.address if supplier.supplier_profile and supplier.supplier_profile.address else '' }}</textarea>
                         </div>
 
-                        <!-- ✅ البنك - مع بحث وإضافة -->
+                        <!-- ✅ البنك -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-university text-muted me-1"></i> البنك
@@ -467,7 +464,7 @@
                             <div id="bankAccountIcon" class="validation-icon"></div>
                         </div>
 
-                        <!-- ✅ الشركة المالية - مع بحث وإضافة -->
+                        <!-- ✅ الشركة المالية -->
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark">
                                 <i class="fas fa-handshake text-muted me-1"></i> الشركة المالية
@@ -726,7 +723,6 @@
             return;
         }
         
-        // التحقق حسب النوع
         let isValid = true;
         if (fieldName === 'email') {
             isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -831,4 +827,7 @@
             body: JSON.stringify({ name: value })
         })
         .then(res => res.json())
-        .
+        .then(data => {
+            if (data.success) {
+                // إضافة العنصر إلى القائمة
+                const dropdown = document.getElementById(dropdownId
