@@ -151,7 +151,7 @@ def create_app():
         pass
 
     # ============================================================
-    # ✅ تسجيل الموديولات ديناميكياً
+    # ✅ تسجيل الموديولات ديناميكياً (بدون إضافة يدوية)
     # ============================================================
     apps_dir = app.root_path
     ignored_dirs = ['__pycache__', 'models', 'extensions', 'static', 'templates', 'migrations', 'utils', 'api', 'admin']
@@ -179,16 +179,8 @@ def create_app():
                     except Exception as e:
                         print(f"❌ [Registry]: خطأ في تسجيل موديول {item}: {e}")
 
-    # ============================================================
-    # ✅ إضافة الموديول الرئيسي (الرئيسية) يدوياً
-    # ============================================================
-    SUPPLIER_MODULES['suppliers_dashboard'] = {
-        "display_name": "الرئيسية",
-        "icon": "fas fa-home",
-        "links": {
-            "suppliers_dashboard.dashboard": "الرئيسية"
-        }
-    }
+    # ✅ هنا تم حذف الإضافة اليدوية
+    # SUPPLIER_MODULES['suppliers_dashboard'] = { ... } ❌ حذف
 
     # ============================================================
     # ✅ إضافة فلتر Jinja لتوليد CSRF token داخل القوالب
