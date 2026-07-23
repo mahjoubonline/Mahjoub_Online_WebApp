@@ -10,6 +10,10 @@ from urllib3.util.retry import Retry
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# ✅ للتحقق من وجود المفتاح عند بدء التشغيل
+print(f"🔍 QUMRA_API_KEY exists: {bool(os.environ.get('QUMRA_API_KEY'))}")
+print(f"🔍 GRAPHQL_ENDPOINT: {os.environ.get('GRAPHQL_ENDPOINT', 'NOT SET')}")
+
 _session = requests.Session()
 _retry_strategy = Retry(
     total=3,
