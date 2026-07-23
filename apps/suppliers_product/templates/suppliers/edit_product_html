@@ -1,1 +1,163 @@
+<!-- apps/suppliers_product/templates/suppliers/edit_product.html -->
+{% extends "suppliers/base.html" %}
 
+{% block title %}تعديل المنتج | محجوب{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center mb-4">
+        <div class="bg-white p-3 rounded-circle shadow-sm me-3" style="border: 2px solid var(--dark-purple, #2d0b36);">
+            <i class="fas fa-edit fa-2x" style="color: var(--dark-purple, #2d0b36);"></i>
+        </div>
+        <div>
+            <h3 class="fw-bold text-dark mb-0">تعديل المنتج</h3>
+            <p class="text-muted mb-0">✏️ تحديث بيانات المنتج</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('edit_product_bp.update_product', qid=product.qid) }}" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+
+                        <!-- ✅ اسم المنتج -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-tag text-muted me-1"></i> اسم المنتج <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="name" class="form-control form-control-lg" value="{{ product.title }}" required>
+                        </div>
+
+                        <!-- ✅ الوصف -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-align-right text-muted me-1"></i> الوصف
+                            </label>
+                            <textarea name="description" class="form-control" rows="4">{{ product.description if product.description else '' }}</textarea>
+                        </div>
+
+                        <!-- ✅ السعر والكمية -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-money-bill-wave text-muted me-1"></i> السعر (SAR) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" name="price" class="form-control" value="{{ product.pricing.price if product.pricing and product.pricing.price else 0 }}" step="0.01" min="0" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-boxes text-muted me-1"></i> الكمية
+                                </label>
+                                <input type="number" name="quantity" class="form-control" value="{{ product.quantity if product.quantity is not none else 0 }}" min="0">
+                            </div>
+                        </div>
+
+                        <!-- ✅ SKU (للقراءة فقط) -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-barcode text-muted me-1"></i> SKU
+                            </label>
+                            <input type="text" class="form-control" value="{{ product.ident.sku if product.ident and product.ident.sku else '---' }}" readonly disabled>
+                            <small class="text-muted">🔒 لا يمكن تعديل SKU</small>
+                        </div>
+
+                        <!-- ✅ صورة المنتج -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-image text-muted me-1"></i> صورة المنتج
+                            </label>
+                            {% if product.images and product.images|length > 0 %}
+                                <div class="mb-2">
+                                    <img src="{{ product.images[0].fileUrl }}" alt="{{ product.title }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #e9ecef;">
+                                </div>
+                            {% endif %}
+                            <input type="file" name="image" class="form-control" accept="image/*">
+                            <small class="text-muted">اتركه فارغاً للحفاظ على الصورة الحالية</small>
+                        </div>
+
+                        <!-- ✅ حالة المنتج -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-info-circle text-muted me-1"></i> حالة المنتج
+                            </label>
+                            <div>
+                                <span class="badge 
+                                    {% if product.status == 'PUBLISHED' %}bg-success
+                                    {% elif product.status == 'DRAFT' %}bg-warning text-dark
+                                    {% elif product.status == 'REJECTED' %}bg-danger
+                                    {% elif product.status == 'ARCHIVED' %}bg-secondary
+                                    {% else %}bg-light text-dark{% endif %}">
+                                    {% if product.status == 'PUBLISHED' %}
+                                        <i class="fas fa-check-circle me-1"></i> منشور
+                                    {% elif product.status == 'DRAFT' %}
+                                        <i class="fas fa-clock me-1"></i> قيد المراجعة
+                                    {% elif product.status == 'REJECTED' %}
+                                        <i class="fas fa-times-circle me-1"></i> مرفوض
+                                    {% elif product.status == 'ARCHIVED' %}
+                                        <i class="fas fa-archive me-1"></i> مؤرشف
+                                    {% else %}
+                                        {{ product.status }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <small class="text-muted">لا يمكن تغيير الحالة من هنا</small>
+                        </div>
+
+                        <!-- ✅ معلومات إضافية -->
+                        <div class="alert alert-info border-0 rounded-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>سيتم مراجعة التعديلات من قبل الإدارة قبل النشر</small>
+                        </div>
+
+                        <!-- ✅ أزرار الإجراء -->
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-custom px-5 py-2" id="submitBtn">
+                                <i class="fas fa-save me-2"></i> حفظ التغييرات
+                            </button>
+                            <a href="{{ url_for('suppliers_product_bp.products') }}" class="btn btn-outline-secondary px-4 py-2">
+                                <i class="fas fa-arrow-right me-1"></i> رجوع
+                            </a>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-custom {
+        background-color: var(--dark-purple, #2d0b36);
+        color: #fff;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-custom:hover {
+        background-color: #4a1558;
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(45, 11, 54, 0.3);
+    }
+    .form-control:focus {
+        border-color: var(--dark-purple, #2d0b36);
+        box-shadow: 0 0 0 0.2rem rgba(45, 11, 54, 0.15);
+    }
+    .form-control:disabled,
+    .form-control[readonly] {
+        background-color: #e9ecef;
+        opacity: 1;
+        cursor: not-allowed;
+    }
+</style>
+
+<script>
+    document.getElementById('productForm')?.addEventListener('submit', function(e) {
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> جاري الحفظ...';
+    });
+</script>
+{% endblock %}
